@@ -22,11 +22,12 @@ The project integrates four main technological areas:
 This repository contains the different applications, modules, and documentation developed throughout the semester. 
 
 *(Note to team: Map the specific folder structure here once initialized)*
-* `/backend` - Back-end application and REST APIs.
-* `/frontend` - Web application.
-* `/visualization` - 3D interaction modules.
 * `/ai` - Prolog scheduling logic.
-* `/docs` - DDD documentation and PlantUML diagrams.
+* `/backend` - Back-end application and REST APIs in Node.js.
+* `/docs` - User Story documentation, PlantUML diagrams and System Architecture.
+* `/frontend` - Web application.
+* `/infra` - Deployment and systems-administration configuration and scripts.
+* `/visualization3d` - 3D interaction modules (WebGL and Three.js).
 
 ## Setup and Development Environment
 
