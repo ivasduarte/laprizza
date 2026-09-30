@@ -1,0 +1,193 @@
+@startuml Domain_Model
+
+title LaPrizza - Domain Model
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #444444
+}
+skinparam stereotypeCBackgroundColor #DDDDDD
+hide empty members
+hide circle
+
+
+package "Users  [Used in Sprint 1]" #E8F0FE{
+
+    class User <AggregateRoot> {
+        id: long
+        name : String
+        email : String
+        passwordHash : String
+        active : boolean
+    }
+
+    class Role <ValueObject>{
+        name : String
+    }
+
+}
+
+
+package "Customers [Used in Sprint 1]" #E8F0F1 {
+
+    class Customer <AggregateRoot> {
+        marketingConsent : boolean
+    }
+
+    class Address <ValueObject>{
+        street : String
+        city : String
+        postalCode : String
+    }
+
+    class DietaryRestriction <ValueObject> {
+        description : String
+    }
+
+}
+
+
+package "Product [Used in Sprint 1]" #E8F0F1 {
+
+    class Product <AggregateRoot>{
+        id : long
+        name : String
+        price : double
+        description : String
+        active : boolean
+        sellable : boolean
+        stockControlled : boolean
+        --
+        isPizzaComponent() : boolean
+    }
+
+    class ProductCategory <AggregateRoot>{
+        id : long
+        description : String
+    }
+
+    class Allergen <AggregateRoot> {
+        id : long
+        description : String
+    }
+
+}
+
+
+package "Stock [Used in Sprint 1]" #E8F0F1 {
+
+    class StockInformation <Entity> {
+        quantity : int
+        ---
+        increase() : int
+        decrease() : int    
+    }
+
+}
+
+
+package "Pizza [Used in Sprint 1]" #E8F0F1 {
+
+    class PizzaSize <AggregateRoot> {
+        id : long
+        name : String
+    }
+
+    class PizzaComponentType <AggregateRoot>{
+        id : long
+        name : String
+        assemblyOrder : int {unique}
+        minQuantity : int
+        maxQuantity : int  
+    }
+
+    class ComponentSizeConfiguration <ValueObject> {
+        price : double
+        stockUnitsConsumed : int
+    }
+
+    class PizzaConfiguration <ValueObject> {
+        ---
+        validate()
+    }
+
+    class PredefinedPizza <AggregateRoot>{
+        ---
+        validate()
+    }
+
+}
+
+
+package "Orders [Used in Future Sprints]" #EEEEEE {
+
+    class Order <AggregateRoot> {
+        id : long
+        state : String
+        createdAt : date
+    }
+    
+    class OrderItem <Entity>{
+        quantity : int
+        unitPrice : double
+        state : String
+    }
+
+}
+
+
+package "Kitchen [Used in Future Sprints]" #EEEEEE {
+
+    class KitchenResource <AggregateRoot>{
+        id : long
+        name : String
+        type : String
+        capacity : int
+        available : boolean
+    }
+
+    class PreparationActivity <Entity>{
+        name : String
+        expectedDurationMinutes : int
+        resourceType : String
+        state : String
+    }
+
+}
+
+User "*" -- "1..*" Role : has >
+Customer --|> User
+
+Customer *-- "0..*" Address
+Customer *-- "0..*" DietaryRestriction : records >
+DietaryRestriction "*" -- "0..*" Allergen : may relate to >
+
+Product "*" -- "1" ProductCategory : classified by >
+Product "*" -- "0..*" Allergen : may contain >
+Product "*" -- "0..1" PizzaComponentType : component role >
+Product "1" -- "0..1" StockInformation : may maintain >
+
+ComponentSizeConfiguration "*" -- "1" Product : component >
+ComponentSizeConfiguration "*" -- "1" PizzaSize : for >
+
+PizzaConfiguration "*" -- "1" PizzaSize : has >
+PizzaConfiguration "*" -- "1..*" Product : composed of >
+
+PredefinedPizza "1" -- "1" Product : represented by >
+PredefinedPizza "1" *-- "1" PizzaConfiguration : defaultConfiguration
+PizzaConfiguration "*" .. "0..1" PredefinedPizza : originatedFrom >
+
+Customer "1" -- "0..*" Order : places >
+Order "1" *-- "1..*" OrderItem : contains >
+OrderItem "*" -- "0..1" Product : catalogue product >
+OrderItem "1" *-- "0..1" PizzaConfiguration : preserved configuration >
+OrderItem "1" -- "0..*" PreparationActivity : may require >
+PreparationActivity "*" -- "*" PreparationActivity : dependsOn >
+PreparationActivity "*" -- "*" KitchenResource : uses >
+
+
+@enduml
