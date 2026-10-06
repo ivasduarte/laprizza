@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { test } from 'node:test';
+import { createApp, loadConfig } from '../src/index.js';
+
+test('GET /api/v1/health reports the service as ok', async (t) => {
+  const server = createApp(loadConfig({ NODE_ENV: 'test' })).listen(0);
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+  await once(server, 'listening');
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/health`);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, 'ok');
+  assert.equal(typeof body.version, 'string');
+  assert.equal(new Date(body.timestamp).toISOString(), body.timestamp);
+});
