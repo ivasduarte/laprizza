@@ -162,12 +162,12 @@ package "Kitchen [Used in Future Sprints]" #EEEEEE {
 User "*" -- "1..*" Role : has >
 Customer --|> User
 
-Customer *-- "0..*" Address
+Customer *-- "1..*" Address
 Customer *-- "0..*" DietaryRestriction : records >
 DietaryRestriction "*" -- "0..*" Allergen : may relate to >
 
 Product "*" -- "1" ProductCategory : classified by >
-Product "*" -- "0..*" Allergen : may contain >
+Product "*" -- "1..*" Allergen : may contain >
 Product "*" -- "0..1" PizzaComponentType : component role >
 Product "1" -- "0..1" StockInformation : may maintain >
 
