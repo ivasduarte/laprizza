@@ -51,7 +51,7 @@ relevant to the architecture in modules, like requested by ARC02.
 
 According to the project Domain Model, the aggregate dependencies are represented by the following graph:
 
-![Aggregate Dependencies Graph](docs/Sprint 1/DomainModel/DependenciesJustification/svg/aggregateDependencies.svg)
+![Aggregate Dependencies Graph](\svg\aggregateDependencies.svg)
 
 #### Graph Clarification
 
@@ -59,4 +59,3 @@ According to the project Domain Model, the aggregate dependencies are represente
 2. `Stock` and `Kitchen` are not dependent on any other aggregates.
 3. `Customer` depends on `Product` as this may maintain information about `DietaryRestriction`.
 4. `Order` depends on everything that is set to be implemented in **Sprint 1**.
-
