@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+        env:
+          NODE_ENV: test
+      - uses: actions/upload-artifact@v4
+        if: matrix.node == 24
+        with:
+          name: coverage
+          path: backend/coverage
+
+  pr-title:
+    name: PR title (Conventional Commits)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          regex='^(feat|fix|docs|style|refactor|test|build|ci|chore|perf|revert)(\([A-Za-z0-9_-]+\))?!?: .+'
+          if [[ ! "$TITLE" =~ $regex ]]; then
+            echo "The PR title must follow Conventional Commits, e.g. 'feat(BCK01): add user authentication'"
+            exit 1
+          fi
