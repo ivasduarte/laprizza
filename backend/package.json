@@ -17,8 +17,11 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "argon2": "^0.45.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "joi": "^18.2.9",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.0",
     "morgan": "^1.12.1",
     "swagger-ui-express": "^5.0.1"

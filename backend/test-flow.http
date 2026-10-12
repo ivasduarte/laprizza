@@ -1,0 +1,184 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicEmail = real_{{$timestamp}}@laprizza.pt
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Admin (Seeder)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração de variáveis base
+@token = {{login.response.body.$.token}}
+
+### 1.2 Login com Username (200 OK)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "admin",
+  "password": "{{managerPassword}}"
+}
+
+### 1.3 Login sem password (400 Bad Request)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "admin"
+}
+
+### 1.4 Login com password errada (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "admin",
+  "password": "WrongPassword999!"
+}
+
+
+### ==========================================
+### 2: GESTÃO E PROVA DE PASSWORD REAL E ÍNDICES
+### ==========================================
+
+### 2. POST Utilizador Novo (201 Created)
+# @name createUser
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{dynamicEmail}}",
+  "password": "StrongPassword123!",
+  "role": "EMPLOYEE"
+}
+
+### Extração do estado (Email Fixo e ID)
+@userId = {{createUser.response.body.$.id}}
+@createdEmail = {{createUser.response.body.$.email}}
+
+### 2.1 Login do utilizador criado (200 OK)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ 
+  "identifier": "{{createdEmail}}", 
+  "password": "StrongPassword123!" 
+}
+
+### 2.2 PATCH password (200 OK)
+PATCH {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ 
+  "password": "NewStrongPassword123!" 
+}
+
+### 2.3 Login com a password nova (200 OK)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ 
+  "identifier": "{{createdEmail}}", 
+  "password": "NewStrongPassword123!" 
+}
+
+### 2.4 Login com a password antiga (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ 
+  "identifier": "{{createdEmail}}", 
+  "password": "StrongPassword123!" 
+}
+
+### 3. POST Duplicado usando o email fixo (409 Conflict - Prova índice unique do email)
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{createdEmail}}",
+  "password": "StrongPassword123!",
+  "role": "EMPLOYEE"
+}
+
+### 3.1 POST Duplicado usando username do Admin (409 Conflict - Prova índice unique do username)
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "outro_email_{{$timestamp}}@laprizza.pt",
+  "username": "admin",
+  "password": "StrongPassword123!",
+  "role": "EMPLOYEE"
+}
+
+
+### ==========================================
+### 3: CONSULTAS E AUTO-PROTEÇÃO
+### ==========================================
+
+### 4. GET Lista
+# @name list
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+### Extração do Admin ID (Confirmar visualmente se é o índice 0)
+@adminId = {{list.response.body.$[0].id}}
+
+### 4.1 PATCH Auto-proteção do Admin (403 Forbidden)
+PATCH {{baseUrl}}/users/{{adminId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 5. GET Por ID
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### 5.1 GET ID Inexistente Válido (404 Not Found - Prova devolução null do Mongoose)
+GET {{baseUrl}}/users/000000000000000000000000
+Authorization: Bearer {{token}}
+
+### 5.2 GET ID Inválido (400 Bad Request - Prova bloqueio do Joi evitando CastError)
+GET {{baseUrl}}/users/abc
+Authorization: Bearer {{token}}
+
+
+### ==========================================
+### 4: DESATIVAÇÃO
+### ==========================================
+
+### 6. PATCH Desativar Utilizador
+PATCH {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 7. Login de Conta Desativada com a nova password (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{createdEmail}}",
+  "password": "NewStrongPassword123!"
+}
