@@ -17,15 +17,16 @@ hide circle
 
 package "Users  [Used in Sprint 1]" #E8F0FE{
 
-    class User <AggregateRoot> {
+    class User <<AggregateRoot>> {
         id: long
         name : String
+        username : String
         email : String
         passwordHash : String
         active : boolean
     }
 
-    class Role <ValueObject>{
+    class Role <<ValueObject>> {
         name : String
     }
 
@@ -34,17 +35,21 @@ package "Users  [Used in Sprint 1]" #E8F0FE{
 
 package "Customers [Used in Sprint 1]" #E8F0F1 {
 
-    class Customer <AggregateRoot> {
+    class Customer <<AggregateRoot>> {
+        id : long
+        name : String
+        phoneNumber : String
+        email : String
         marketingConsent : boolean
     }
 
-    class Address <ValueObject>{
+    class Address <<ValueObject>> {
         street : String
         city : String
         postalCode : String
     }
 
-    class DietaryRestriction <ValueObject> {
+    class DietaryRestriction <<ValueObject>> {
         description : String
     }
 
@@ -53,7 +58,7 @@ package "Customers [Used in Sprint 1]" #E8F0F1 {
 
 package "Product [Used in Sprint 1]" #E8F0F1 {
 
-    class Product <AggregateRoot>{
+    class Product <<AggregateRoot>> {
         id : long
         name : String
         price : double
@@ -65,14 +70,14 @@ package "Product [Used in Sprint 1]" #E8F0F1 {
         isPizzaComponent() : boolean
     }
 
-    class ProductCategory <AggregateRoot>{
+    class ProductCategory <<AggregateRoot>> {
         id : long
-        description : String
+        name : String
     }
 
-    class Allergen <AggregateRoot> {
+    class Allergen <<AggregateRoot>> {
         id : long
-        description : String
+        name : String
     }
 
 }
@@ -80,7 +85,7 @@ package "Product [Used in Sprint 1]" #E8F0F1 {
 
 package "Stock [Used in Sprint 1]" #E8F0F1 {
 
-    class StockInformation <Entity> {
+    class StockInformation <<Entity>> {
         quantity : int
         ---
         increase() : int
@@ -92,12 +97,12 @@ package "Stock [Used in Sprint 1]" #E8F0F1 {
 
 package "Pizza [Used in Sprint 1]" #E8F0F1 {
 
-    class PizzaSize <AggregateRoot> {
+    class PizzaSize <<AggregateRoot>> {
         id : long
         name : String
     }
 
-    class PizzaComponentType <AggregateRoot>{
+    class PizzaComponentType <<AggregateRoot>>{
         id : long
         name : String
         assemblyOrder : int {unique}
@@ -105,33 +110,36 @@ package "Pizza [Used in Sprint 1]" #E8F0F1 {
         maxQuantity : int  
     }
 
-    class ComponentSizeConfiguration <ValueObject> {
+    class ComponentSizeConfiguration <<ValueObject>> {
         price : double
         stockUnitsConsumed : int
     }
 
-    class PizzaConfiguration <ValueObject> {
+    class PizzaConfiguration <<ValueObject>> {
         ---
         validate()
     }
 
-    class PredefinedPizza <AggregateRoot>{
+    class PredefinedPizza <<AggregateRoot>> {
         ---
         validate()
     }
+
+    note right of PizzaComponentType
+        maxQuantity = null means unbounded
+    end note
 
 }
 
-
 package "Orders [Used in Future Sprints]" #EEEEEE {
 
-    class Order <AggregateRoot> {
+    class Order <<AggregateRoot>> {
         id : long
         state : String
         createdAt : date
     }
     
-    class OrderItem <Entity>{
+    class OrderItem <<Entity>> {
         quantity : int
         unitPrice : double
         state : String
@@ -142,7 +150,7 @@ package "Orders [Used in Future Sprints]" #EEEEEE {
 
 package "Kitchen [Used in Future Sprints]" #EEEEEE {
 
-    class KitchenResource <AggregateRoot>{
+    class KitchenResource <<AggregateRoot>> {
         id : long
         name : String
         type : String
@@ -150,7 +158,7 @@ package "Kitchen [Used in Future Sprints]" #EEEEEE {
         available : boolean
     }
 
-    class PreparationActivity <Entity>{
+    class PreparationActivity <<Entity>> {
         name : String
         expectedDurationMinutes : int
         resourceType : String
@@ -160,14 +168,14 @@ package "Kitchen [Used in Future Sprints]" #EEEEEE {
 }
 
 User "*" -- "1..*" Role : has >
-Customer --|> User
+Customer "0..1" -- "0..1" User : can be >
 
-Customer *-- "1..*" Address
+Customer *-- "0..*" Address
 Customer *-- "0..*" DietaryRestriction : records >
 DietaryRestriction "*" -- "0..*" Allergen : may relate to >
 
 Product "*" -- "1" ProductCategory : classified by >
-Product "*" -- "1..*" Allergen : may contain >
+Product "*" -- "0..*" Allergen : may contain >
 Product "*" -- "0..1" PizzaComponentType : component role >
 Product "1" -- "0..1" StockInformation : may maintain >
 
@@ -178,16 +186,16 @@ PizzaConfiguration "*" -- "1" PizzaSize : has >
 PizzaConfiguration "*" -- "1..*" Product : composed of >
 
 PredefinedPizza "1" -- "1" Product : represented by >
-PredefinedPizza "1" *-- "1" PizzaConfiguration : defaultConfiguration
+PredefinedPizza "1" *-- "*" PizzaConfiguration : defaultConfiguration
+PredefinedPizza "1" -- "1..*" PizzaSize : avalaible in >
 PizzaConfiguration "*" .. "0..1" PredefinedPizza : originatedFrom >
 
-Customer "1" -- "0..*" Order : places >
+Customer "0..1" -- "0..*" Order : places >
 Order "1" *-- "1..*" OrderItem : contains >
 OrderItem "*" -- "0..1" Product : catalogue product >
 OrderItem "1" *-- "0..1" PizzaConfiguration : preserved configuration >
 OrderItem "1" -- "0..*" PreparationActivity : may require >
 PreparationActivity "*" -- "*" PreparationActivity : dependsOn >
 PreparationActivity "*" -- "*" KitchenResource : uses >
-
 
 @enduml
