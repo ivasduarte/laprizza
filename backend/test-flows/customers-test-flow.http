@@ -1,0 +1,208 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicEmail = cliente_{{$timestamp}}@laprizza.pt
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Admin (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+
+### ==========================================
+### 2: CRIAÇÃO E VALIDAÇÕES DO CLIENTE
+### ==========================================
+
+### 2. POST Cliente Novo com Restrições (201 Created)
+# @name createCustomer
+POST {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Maria Santos",
+  "email": "{{dynamicEmail}}",
+  "phoneNumber": "91{{$randomInt 1000000 9999999}}",
+  "address": {
+    "street": "Rua Principal",
+    "houseNumber": "10",
+    "postalCode": "4460-123",
+    "city": "Senhora da Hora",
+    "district": "Porto"
+  },
+  "dietaryRestrictions": ["65231abcd345678901234567"]
+}
+
+### Variáveis
+@customerId = {{createCustomer.response.body.$.id}}
+@createdEmail = {{createCustomer.response.body.$.email}}
+@createdPhone = {{createCustomer.response.body.$.phoneNumber}}
+
+### 2.1 POST Email Duplicado (409 Conflict)
+POST {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro Cliente",
+  "email": "{{createdEmail}}",
+  "phoneNumber": "929999999",
+  "address": {
+    "street": "Rua B",
+    "houseNumber": "1",
+    "postalCode": "4000-000",
+    "city": "Porto",
+    "district": "Porto"
+  }
+}
+
+### 2.2 POST Alergénios Duplicados no Array - Joi (400 Bad Request)
+POST {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Teste Duplicados",
+  "email": "duplicados_{{$timestamp}}@laprizza.pt",
+  "phoneNumber": "912345678",
+  "address": {
+    "street": "Rua B",
+    "houseNumber": "1",
+    "postalCode": "4000-000",
+    "city": "Porto",
+    "district": "Porto"
+  },
+  "dietaryRestrictions": [
+    "65231abcd345678901234567",
+    "65231abcd345678901234567"
+  ]
+}
+
+
+### 2.3 POST Telefone já usado, noutro formato (409 Conflict)
+POST {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Telefone Repetido",
+  "email": "telefone_{{$timestamp}}@laprizza.pt",
+  "phoneNumber": "+351 {{createdPhone}}",
+  "address": {
+    "street": "Rua B",
+    "houseNumber": "1",
+    "postalCode": "4000-000",
+    "city": "Porto",
+    "district": "Porto"
+  }
+}
+
+### ==========================================
+### 3: PESQUISA E CONSULTAS
+### ==========================================
+
+### 3. GET Listar Todos (200 OK)
+GET {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+
+### 3.1 GET Pesquisa por Nome (200 OK)
+GET {{baseUrl}}/customers?search=Maria
+Authorization: Bearer {{adminToken}}
+
+### 3.2 GET Pesquisa por Email (200 OK)
+GET {{baseUrl}}/customers?search={{createdEmail}}
+Authorization: Bearer {{adminToken}}
+
+### 4. GET Por ID (200 OK)
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 4: ATUALIZAÇÃO E VALIDAÇÕES DO PATCH
+### ==========================================
+
+### 5. PATCH Telefone Inválido (400 Bad Request - Proteção de Domínio no Update)
+PATCH {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "phoneNumber": "telefone_invalido"
+}
+
+### 5.1 POST Segundo Cliente (necessário para provar o conflito de email no PATCH)
+# @name createSecondCustomer
+POST {{baseUrl}}/customers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Segundo Cliente",
+  "email": "segundo_{{$timestamp}}@laprizza.pt",
+  "phoneNumber": "92{{$randomInt 1000000 9999999}}",
+  "address": {
+    "street": "Rua C",
+    "houseNumber": "2",
+    "postalCode": "4000-000",
+    "city": "Porto",
+    "district": "Porto"
+  }
+}
+
+### Variáveis
+@secondEmail = {{createSecondCustomer.response.body.$.email}}
+@secondPhone = {{createSecondCustomer.response.body.$.phoneNumber}}
+
+### 5.2 PATCH Email de outro cliente (409 Conflict)
+PATCH {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "{{secondEmail}}"
+}
+
+
+### 5.2.1 PATCH Telefone de outro cliente, noutro formato (409 Conflict)
+PATCH {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "phoneNumber": "+351 {{secondPhone}}"
+}
+
+### 5.3 PATCH Alergénios Duplicados - Joi (400 Bad Request)
+PATCH {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "dietaryRestrictions": [
+    "65231abcd345678901234567",
+    "65231abcd345678901234567"
+  ]
+}
+
+### 5.4 PATCH Válido - Atualizar Dados e Inativar (200 OK)
+PATCH {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "phoneNumber": "93{{$randomInt 1000000 9999999}}",
+  "isActive": false
+}

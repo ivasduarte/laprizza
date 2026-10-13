@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDummyUsersRepository } from './users.dummy.repository.js';
-import { registerUser, login } from '../src/application/auth.service.js';
-import { listUsers, getUserById, updateUser } from '../src/application/users.service.js';
+import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { registerUser, login } from '../../src/application/auth.service.js';
+import { listUsers, getUserById, updateUser } from '../../src/application/users.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 

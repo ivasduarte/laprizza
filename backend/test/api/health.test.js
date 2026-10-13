@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { createApp, loadConfig } from '../src/index.js';
+import { createApp, loadConfig } from '../../src/index.js';
 
 /**
  * Integration test: Health check endpoint.

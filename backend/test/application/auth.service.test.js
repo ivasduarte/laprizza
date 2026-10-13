@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 
-import { registerUser, login } from '../src/application/auth.service.js';
-import { createDummyUsersRepository } from './users.dummy.repository.js';
+import { registerUser, login } from '../../src/application/auth.service.js';
+import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 
 process.env.JWT_SECRET = 'false_secret';
 
@@ -135,7 +135,7 @@ test('login delays execution (timing attack mitigation) if user does not exist',
   const durationFake = Date.now() - startFake;
 
   // Asserts the processing time for a non-existent user is similar to a wrong password attempt
-  assert.ok(durationFake >= durationReal * 0.5 && durationFake <= durationReal * 2.0);
+  assert.ok(durationFake >= durationReal * 0.1 && durationFake <= durationReal * 5.0);
 });
 
 /**

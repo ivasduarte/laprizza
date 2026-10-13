@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { connectDB } from './infrastructure/database.js';
 import { errorHandler } from './api/middleware/error-handler.js';
 import { seedInitialManager } from './infrastructure/seeder.js';
+import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.validator.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -13,7 +14,7 @@ import authRouterFactory from './api/auth.routes.js';
 import usersRouterFactory from './api/users.routes.js';
 import productsRouter from './api/products.routes.js';
 import allergenRouter from './api/allergen.routes.js';
-import customersRouter from './api/customers.routes.js';
+import customersRouterFactory from './api/customers.routes.js';
 import pizzaCTypeRouter from './api/pizza-component-type.routes.js';
 import pizzaSizeRouter from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
@@ -42,6 +43,11 @@ export function loadConfig(env = process.env) {
     mongoUri: env.MONGODB_URI,
   };
 }
+
+const errorResponse = (description) => ({
+  description,
+  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+});
 
 /**
  * OpenAPI description of the API.
@@ -147,9 +153,194 @@ const openApiSpec = {
       },
     },
   },
+  '/customers': {
+    get: {
+      summary: 'List customers (MANAGER only)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          name: 'search',
+          in: 'query',
+          required: false,
+          description: 'Case-insensitive partial match on name, email or phone number.',
+          schema: { type: 'string', maxLength: 100 },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Success',
+          content: {
+            'application/json': {
+              schema: { type: 'array', items: { $ref: '#/components/schemas/Customer' } },
+            },
+          },
+        },
+        400: errorResponse('Validation error'),
+        401: errorResponse('Unauthorized'),
+        403: errorResponse('Forbidden'),
+      },
+    },
+    post: {
+      summary: 'Create customer (MANAGER only)',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['name', 'email', 'phoneNumber', 'address'],
+              properties: {
+                name: { type: 'string', minLength: 3, maxLength: 50 },
+                email: { type: 'string', format: 'email' },
+                phoneNumber: {
+                  type: 'string',
+                  description:
+                    'Portuguese phone number in any common format. Stored as 9 national digits and must be unique.',
+                  example: '+351 912 345 678',
+                },
+                address: { $ref: '#/components/schemas/Address' },
+                dietaryRestrictions: {
+                  type: 'array',
+                  uniqueItems: true,
+                  items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: 'Created',
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Customer' } },
+          },
+        },
+        400: errorResponse('Validation error'),
+        401: errorResponse('Unauthorized'),
+        403: errorResponse('Forbidden'),
+        409: errorResponse('Email or phone number already in use'),
+      },
+    },
+  },
+  '/customers/{id}': {
+    get: {
+      summary: 'Get customer by ID (MANAGER only)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Success',
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Customer' } },
+          },
+        },
+        400: errorResponse('Invalid ID'),
+        401: errorResponse('Unauthorized'),
+        403: errorResponse('Forbidden'),
+        404: errorResponse('Customer not found'),
+      },
+    },
+    patch: {
+      summary: 'Update customer (MANAGER only)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              minProperties: 1,
+              properties: {
+                name: { type: 'string', minLength: 3, maxLength: 50 },
+                email: { type: 'string', format: 'email' },
+                phoneNumber: { type: 'string', example: '+351 912 345 678' },
+                address: { $ref: '#/components/schemas/Address' },
+                dietaryRestrictions: {
+                  type: 'array',
+                  uniqueItems: true,
+                  items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                },
+                isActive: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Success',
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Customer' } },
+          },
+        },
+        400: errorResponse('Validation error'),
+        401: errorResponse('Unauthorized'),
+        403: errorResponse('Forbidden'),
+        404: errorResponse('Customer not found'),
+        409: errorResponse('Email or phone number already in use'),
+      },
+    },
+  },
   components: {
     securitySchemes: {
       BearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+    },
+    schemas: {
+      Error: {
+        type: 'object',
+        properties: {
+          error: {
+            type: 'object',
+            properties: {
+              status: { type: 'integer', example: 400 },
+              code: { type: 'string', example: 'BAD_REQUEST' },
+              message: { type: 'string', example: 'Validation failed' },
+              details: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+      Address: {
+        type: 'object',
+        required: ['street', 'houseNumber', 'postalCode', 'city', 'district'],
+        properties: {
+          street: { type: 'string' },
+          houseNumber: { type: 'string' },
+          complement: { type: 'string' },
+          postalCode: { type: 'string', pattern: '^\\d{4}-\\d{3}$', example: '4460-123' },
+          city: { type: 'string' },
+          district: { type: 'string' },
+        },
+      },
+      Customer: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          phoneNumber: { type: 'string', example: '912345678' },
+          address: { $ref: '#/components/schemas/Address' },
+          dietaryRestrictions: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+        },
+      },
     },
   },
 };
@@ -176,6 +367,7 @@ function notFoundHandler(req, _res, next) {
  * @param {Object} [repos={}] - The repository dependencies to inject into the routes.
  * @param {Object} [repos.usersRepository] - The users repository instance (optional).
  * @returns {import('express').Application} The configured Express application instance.
+ * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
  */
 export function createApp(config = loadConfig(), repos = {}) {
   const app = express();
@@ -196,12 +388,18 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/users', usersRouterFactory(repos.usersRepository));
   api.use('/products', productsRouter);
   api.use('/allergen', allergenRouter);
-  api.use('/customers', customersRouter);
   api.use('/pizza-component-type', pizzaCTypeRouter);
   api.use('/pizza-size', pizzaSizeRouter);
   api.use('/predefined-pizza', predPIzzaRouter);
   api.use('/product-categories', prodCatRouter);
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+  api.use(
+    '/customers',
+    customersRouterFactory(
+      repos.customersRepository,
+      repos.postalCodeValidator ?? dummyPostalCodeValidator,
+    ),
+  );
   app.use(API_PREFIX, api);
 
   app.use(notFoundHandler);

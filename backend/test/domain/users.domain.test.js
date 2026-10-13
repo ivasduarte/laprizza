@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePasswordStrength } from '../src/domain/users.domain.js';
+import { validatePasswordStrength } from '../../src/domain/users.domain.js';
 
 /**
  * Unit test: validatePasswordStrength domain function.

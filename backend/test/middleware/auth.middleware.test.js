@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
-import { verifyToken, requireRole } from '../src/api/middleware/auth.middleware.js';
+import { verifyToken, requireRole } from '../../src/api/middleware/auth.middleware.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 
