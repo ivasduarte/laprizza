@@ -14,7 +14,7 @@ import pkg from '../package.json' with { type: 'json' };
 import authRouterFactory from './api/auth.routes.js';
 import usersRouterFactory from './api/users.routes.js';
 import productsRouter from './api/products.routes.js';
-import allergenRouter from './api/allergen.routes.js';
+import allergenRouterFactory from './api/allergen.routes.js';
 import customersRouterFactory from './api/customers.routes.js';
 import pizzaCTypeRouter from './api/pizza-component-type.routes.js';
 import pizzaSizeRouter from './api/pizza-size.routes.js';
@@ -66,6 +66,7 @@ function notFoundHandler(req, _res, next) {
  * @param {Object} [config=loadConfig()] - The application configuration object.
  * @param {Object} [repos={}] - The repository dependencies to inject into the routes.
  * @param {Object} [repos.usersRepository] - The users repository instance (optional).
+ * @param {Object} [repos.allergenRepository] - The allergens repository instance (optional).
  * @returns {import('express').Application} The configured Express application instance.
  * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
  */
@@ -87,7 +88,7 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/auth', authRouterFactory(repos.usersRepository));
   api.use('/users', usersRouterFactory(repos.usersRepository));
   api.use('/products', productsRouter);
-  api.use('/allergen', allergenRouter);
+  api.use('/allergens', allergenRouterFactory(repos.allergenRepository));
   api.use('/pizza-component-type', pizzaCTypeRouter);
   api.use('/pizza-size', pizzaSizeRouter);
   api.use('/predefined-pizza', predPIzzaRouter);

@@ -1,0 +1,294 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicName = Gluten_{{$timestamp}}
+@missingId = 507f1f77bcf86cd799439011
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Manager (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+
+### ==========================================
+### 2: CRIAÇÃO E VALIDAÇÕES (POST)
+### ==========================================
+
+### 2. POST Alergénio Novo - com espaços à volta para provar o trim (201 Created)
+# @name createAllergen
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   {{dynamicName}}   "
+}
+
+### Variáveis
+@allergenId = {{createAllergen.response.body.$.id}}
+@createdName = {{createAllergen.response.body.$.name}}
+
+### 2.1 POST Nome Duplicado (409 Conflict)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}"
+}
+
+### 2.2 POST Nome Duplicado com outras maiúsculas (409 Conflict)
+# Altera manualmente o nome abaixo para MAIÚSCULAS (ex.: GLUTEN_1760000000)
+# para validar que a unicidade ignora maiúsculas/minúsculas.
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}"
+}
+
+### 2.3 POST Sem name - Joi (400 Bad Request)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 2.4 POST name vazio - Joi (400 Bad Request)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": ""
+}
+
+### 2.5 POST name só com espaços - Joi (400 Bad Request)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "     "
+}
+
+### 2.6 POST name não-string - Joi (400 Bad Request)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": 123
+}
+
+### 2.7 POST Segundo Alergénio, com campos extra ignorados (201 Created, isActive = true)
+# @name createSecondAllergen
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Lactose_{{$randomInt 1000 9999}}",
+  "isActive": false,
+  "role": "MANAGER"
+}
+
+### Variáveis
+@secondId = {{createSecondAllergen.response.body.$.id}}
+@secondName = {{createSecondAllergen.response.body.$.name}}
+
+
+### ==========================================
+### 3: PESQUISA E CONSULTAS (GET)
+### ==========================================
+
+### 3. GET Listar Todos (200 OK)
+GET {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+
+### 3.1 GET Pesquisa parcial por nome (200 OK)
+GET {{baseUrl}}/allergens?name=Gluten
+Authorization: Bearer {{adminToken}}
+
+### 3.2 GET Pesquisa sem resultados (200 OK, [])
+GET {{baseUrl}}/allergens?name=zzz_inexistente
+Authorization: Bearer {{adminToken}}
+
+### 3.3 GET Pesquisa com caracteres de regex tratados como texto (200 OK, [])
+GET {{baseUrl}}/allergens?name=.*
+Authorization: Bearer {{adminToken}}
+
+### 3.4 GET name vazio - Joi (400 Bad Request)
+GET {{baseUrl}}/allergens?name=
+Authorization: Bearer {{adminToken}}
+
+### 3.5 GET name enviado duas vezes - Joi (400 Bad Request)
+GET {{baseUrl}}/allergens?name=a&name=b
+Authorization: Bearer {{adminToken}}
+
+### 4. GET Por ID (200 OK)
+GET {{baseUrl}}/allergens/{{allergenId}}
+Authorization: Bearer {{adminToken}}
+
+### 4.1 GET Por ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/allergens/abc123
+Authorization: Bearer {{adminToken}}
+
+### 4.2 GET Por ID inexistente (404 Not Found)
+GET {{baseUrl}}/allergens/{{missingId}}
+Authorization: Bearer {{adminToken}}
+
+### 4.3 GET Por Nome, exato (200 OK)
+GET {{baseUrl}}/allergens/name/{{createdName}}
+Authorization: Bearer {{adminToken}}
+
+### 4.4 GET Por Nome inexistente (404 Not Found)
+GET {{baseUrl}}/allergens/name/nome_que_nao_existe
+Authorization: Bearer {{adminToken}}
+
+### 4.5 GET Por Nome parcial não faz match (404 Not Found)
+GET {{baseUrl}}/allergens/name/Gluten
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 5: DESATIVAR (PUT com isActive:false)
+### ==========================================
+# O PUT só aceita { "isActive": false } - não renomeia.
+
+### 5. PUT Body vazio - Joi (400 Bad Request)
+PUT {{baseUrl}}/allergens/{{allergenId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 5.1 PUT Só com name - Joi (400 Bad Request - não é possível renomear)
+PUT {{baseUrl}}/allergens/{{allergenId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro_Nome"
+}
+
+### 5.2 PUT isActive:true - Joi (400 Bad Request)
+PUT {{baseUrl}}/allergens/{{allergenId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}
+
+### 5.3 PUT isActive inválido - Joi (400 Bad Request)
+PUT {{baseUrl}}/allergens/{{allergenId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": "abc"
+}
+
+### 5.4 PUT ID com formato inválido (400 Bad Request)
+PUT {{baseUrl}}/allergens/abc
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 5.5 PUT ID inexistente (404 Not Found)
+PUT {{baseUrl}}/allergens/{{missingId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 5.6 PUT Desativar alergénio SEM referências (200 OK, isActive = false; o name enviado é ignorado)
+PUT {{baseUrl}}/allergens/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Nome_Ignorado",
+  "isActive": false
+}
+
+
+### ==========================================
+### 6: CONSISTÊNCIA APÓS DESATIVAR
+### ==========================================
+
+### 6. GET Por ID do desativado (404 Not Found)
+GET {{baseUrl}}/allergens/{{secondId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.1 GET Por nome do desativado (404 Not Found)
+GET {{baseUrl}}/allergens/name/{{secondName}}
+Authorization: Bearer {{adminToken}}
+
+### 6.2 GET Listar - o desativado já não aparece (200 OK)
+GET {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+
+### 6.3 PUT Desativar outra vez (404 Not Found)
+PUT {{baseUrl}}/allergens/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 6.4 POST Mesmo nome do desativado (409 Conflict - o nome continua reservado)
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{secondName}}"
+}
+
+### ==========================================
+### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
+### ==========================================
+
+### 7. GET Sem token (401 Unauthorized)
+GET {{baseUrl}}/allergens
+
+### 7.1 POST Sem token (401 Unauthorized)
+POST {{baseUrl}}/allergens
+Content-Type: application/json
+
+{
+  "name": "Sem_Token"
+}
+
+### 7.2 PUT Sem token (401 Unauthorized)
+PUT {{baseUrl}}/allergens/{{allergenId}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 7.3 GET Com token inválido (401 Unauthorized)
+GET {{baseUrl}}/allergens
+Authorization: Bearer token_invalido

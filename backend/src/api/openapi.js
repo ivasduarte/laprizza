@@ -255,6 +255,132 @@ export const openApiSpec = {
         },
       },
     },
+    '/allergens': {
+      get: {
+        summary: 'List allergens (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'name',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on name.',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Allergen' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create allergen (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: { name: { type: 'string', minLength: 1, example: 'Gluten' } },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Allergen' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          409: errorResponse('Allergen name already in use'),
+        },
+      },
+    },
+    '/allergens/name/{name}': {
+      get: {
+        summary: 'Get allergen by exact name, case-insensitive (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'name', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Allergen' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Allergen not found'),
+        },
+      },
+    },
+    '/allergens/{id}': {
+      get: {
+        summary: 'Get allergen by ID (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' } }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Allergen' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Allergen not found'),
+        },
+      },
+      put: {
+        summary: 'Deactivate allergen (MANAGER only). Only { "isActive": false } is accepted.',
+        description:
+          'Logical removal. An allergen referenced by existing products or customers cannot be deactivated.',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['isActive'],
+                properties: { isActive: { type: 'boolean', enum: [false] } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Deactivated',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Allergen' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Allergen not found'),
+          409: errorResponse('Allergen is referenced by existing products or customers'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -285,6 +411,14 @@ export const openApiSpec = {
           postalCode: { type: 'string', pattern: '^\\d{4}-\\d{3}$', example: '4460-123' },
           city: { type: 'string' },
           district: { type: 'string' },
+        },
+      },
+      Allergen: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Gluten' },
+          isActive: { type: 'boolean' },
         },
       },
       Customer: {
