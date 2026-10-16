@@ -19,7 +19,7 @@ import customersRouterFactory from './api/customers.routes.js';
 import pizzaCTypeRouter from './api/pizza-component-type.routes.js';
 import pizzaSizeRouter from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
-import prodCatRouter from './api/product-categories.routes.js';
+import productCategoriesRouterFactory from './api/product-categories.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -66,6 +66,8 @@ function notFoundHandler(req, _res, next) {
  * @param {Object} [config=loadConfig()] - The application configuration object.
  * @param {Object} [repos={}] - The repository dependencies to inject into the routes.
  * @param {Object} [repos.usersRepository] - The users repository instance (optional).
+ * @param {Object} [repos.productCategoriesRepository] - The product categories repository instance (optional).
+ * @param {Object} [repos.productsRepository] - The products repository instance (optional).
  * @param {Object} [repos.allergenRepository] - The allergens repository instance (optional).
  * @returns {import('express').Application} The configured Express application instance.
  * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
@@ -92,7 +94,10 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/pizza-component-type', pizzaCTypeRouter);
   api.use('/pizza-size', pizzaSizeRouter);
   api.use('/predefined-pizza', predPIzzaRouter);
-  api.use('/product-categories', prodCatRouter);
+  api.use(
+    '/product-categories',
+    productCategoriesRouterFactory(repos.productCategoriesRepository, repos.productsRepository),
+  );
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(
     '/customers',

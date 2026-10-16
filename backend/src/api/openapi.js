@@ -255,6 +255,153 @@ export const openApiSpec = {
         },
       },
     },
+    '/product-categories': {
+      get: {
+        summary: 'List or search product categories (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'name',
+            in: 'query',
+            required: false,
+            description:
+              'Exact name, ignoring case and accents. A partial or blank name returns an empty list. Without this parameter, all categories are returned.',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/ProductCategory' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create product category (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: { name: { type: 'string', example: 'Beverages' } },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            headers: {
+              Location: {
+                description: 'URL of the created product category.',
+                schema: { type: 'string' },
+              },
+            },
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ProductCategory' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+    },
+    '/product-categories/{id}': {
+      get: {
+        summary: 'Get product category by ID (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ProductCategory' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product category not found'),
+        },
+      },
+      put: {
+        summary: 'Update product category name (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: { name: { type: 'string', example: 'Soft Drinks' } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ProductCategory' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product category not found'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+      delete: {
+        summary: 'Remove product category (MANAGER only)',
+        description: 'A category referenced by products cannot be removed.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          204: { description: 'Removed' },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product category not found'),
+          409: errorResponse('Category is referenced by products'),
+        },
+      },
+    },
     '/allergens': {
       get: {
         summary: 'List allergens (MANAGER and EMPLOYEE)',
@@ -431,6 +578,13 @@ export const openApiSpec = {
           address: { $ref: '#/components/schemas/Address' },
           dietaryRestrictions: { type: 'array', items: { type: 'string' } },
           isActive: { type: 'boolean' },
+        },
+      },
+      ProductCategory: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Beverages' },
         },
       },
     },
