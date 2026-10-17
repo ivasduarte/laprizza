@@ -11,7 +11,6 @@ const errorResponse = (description) => ({
  * OpenAPI description of the API.
  * Defines the available endpoints, request bodies, and responses for Swagger UI.
  *
- * @todo Add new paths here as endpoints are created.
  * @type {Object}
  */
 export const openApiSpec = {
@@ -255,6 +254,130 @@ export const openApiSpec = {
         },
       },
     },
+    '/pizza-size': {
+      get: {
+        summary: 'List pizza sizes (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on name.',
+            schema: { type: 'string', maxLength: 100 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/PizzaSize' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create pizza size (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaSize' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+    },
+    '/pizza-size/{id}': {
+      get: {
+        summary: 'Get pizza size by ID (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaSize' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Pizza Size not found'),
+        },
+      },
+      patch: {
+        summary: 'Update pizza size (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                minProperties: 1,
+                properties: {
+                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                  isActive: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaSize' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Pizza Size not found'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+    },
     '/product-categories': {
       get: {
         summary: 'List or search product categories (MANAGER only)',
@@ -481,7 +604,14 @@ export const openApiSpec = {
       get: {
         summary: 'Get allergen by ID (MANAGER and EMPLOYEE)',
         security: [{ BearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' } }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
         responses: {
           200: {
             description: 'Success',
@@ -500,7 +630,14 @@ export const openApiSpec = {
         description:
           'Logical removal. An allergen referenced by existing products or customers cannot be deactivated.',
         security: [{ BearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' } }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
         requestBody: {
           required: true,
           content: {
@@ -524,7 +661,7 @@ export const openApiSpec = {
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
           404: errorResponse('Allergen not found'),
-          409: errorResponse('Allergen is referenced by existing products or customers'),
+          409: errorResponse('Allergen is referenced by existing products ou customers'),
         },
       },
     },
@@ -577,6 +714,14 @@ export const openApiSpec = {
           phoneNumber: { type: 'string', example: '912345678' },
           address: { $ref: '#/components/schemas/Address' },
           dietaryRestrictions: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+        },
+      },
+      PizzaSize: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '96427abcd2569873265480325' },
+          name: { type: 'string', example: 'Medium' },
           isActive: { type: 'boolean' },
         },
       },

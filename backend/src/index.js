@@ -17,7 +17,7 @@ import productsRouter from './api/products.routes.js';
 import allergenRouterFactory from './api/allergen.routes.js';
 import customersRouterFactory from './api/customers.routes.js';
 import pizzaCTypeRouter from './api/pizza-component-type.routes.js';
-import pizzaSizeRouter from './api/pizza-size.routes.js';
+import sizesRouterFactory from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
 import productCategoriesRouterFactory from './api/product-categories.routes.js';
 
@@ -62,15 +62,16 @@ function notFoundHandler(req, _res, next) {
 
 /**
  * Bootstraps the Express application, configures middleware, and registers all API routes.
- *
  * @param {Object} [config=loadConfig()] - The application configuration object.
  * @param {Object} [repos={}] - The repository dependencies to inject into the routes.
  * @param {Object} [repos.usersRepository] - The users repository instance (optional).
+ * @param {Object} [repos.customersRepository] - The customers repository instance (optional).
+ * @param {Object} [repos.sizeRepository] - The pizza size repository instance (optional).
  * @param {Object} [repos.productCategoriesRepository] - The product categories repository instance (optional).
  * @param {Object} [repos.productsRepository] - The products repository instance (optional).
  * @param {Object} [repos.allergenRepository] - The allergens repository instance (optional).
- * @returns {import('express').Application} The configured Express application instance.
  * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
+ * @returns {import('express').Application} The configured Express application instance.
  */
 export function createApp(config = loadConfig(), repos = {}) {
   const app = express();
@@ -92,12 +93,9 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/products', productsRouter);
   api.use('/allergens', allergenRouterFactory(repos.allergenRepository));
   api.use('/pizza-component-type', pizzaCTypeRouter);
-  api.use('/pizza-size', pizzaSizeRouter);
+  api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository));
   api.use('/predefined-pizza', predPIzzaRouter);
-  api.use(
-    '/product-categories',
-    productCategoriesRouterFactory(repos.productCategoriesRepository, repos.productsRepository),
-  );
+  api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(
     '/customers',

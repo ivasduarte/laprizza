@@ -1,5 +1,48 @@
-import * as sizeRepository from '../infrastructure/pizza-size.repository.js';
+import * as defaultSizeRepo from '../infrastructure/pizza-size.repository.js';
+import { AppError } from './AppError.js';
 
-export async function listSizes() {
-  return sizeRepository.list();
+export function toSizeDto(size) {
+  return {
+    id: size._id || size.id,
+    name: size.name,
+    isActive: size.isActive ?? true,
+  };
+}
+
+export async function createSize(sizeData, sizeRepository = defaultSizeRepo) {
+  try {
+    const newSize = await sizeRepository.create(sizeData);
+    return toSizeDto(newSize);
+  } catch (err) {
+    if (err.code === 11000) throw toConflictError(err);
+    throw err;
+  }
+}
+
+export async function listSizes(query = {}, sizeRepository = defaultSizeRepo) {
+  const sizes = await sizeRepository.listPizzaSizes(query);
+  return sizes.map(toSizeDto);
+}
+
+export async function getSizeById(id, sizeRepository = defaultSizeRepo) {
+  const size = await sizeRepository.findById(id);
+  if (!size) throw new AppError('Pizza size not found.', 404);
+  return toSizeDto(size);
+}
+
+export async function updateSize(id, updateData, sizeRepository = defaultSizeRepo) {
+  const size = await sizeRepository.findById(id);
+  if (!size) throw new AppError('Pizza size not found.', 404);
+
+  try {
+    const updatedSize = await sizeRepository.update(id, updateData);
+    return toSizeDto(updatedSize);
+  } catch (err) {
+    if (err.code === 11000) throw toConflictError(err);
+    throw err;
+  }
+}
+
+function toConflictError(err) {
+  return new AppError('Pizza size already in use.', 409);
 }

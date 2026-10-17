@@ -1,0 +1,187 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@employeeEmail = emp_{{$timestamp}}@laprizza.pt
+
+### ==========================================
+### 1: AUTENTICAÇÃO E SETUP
+### ==========================================
+
+### 1.1 Login do Admin (Manager)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do token
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### 1.2 Criar um Funcionário (Employee) para testar RBAC
+# @name createEmployee
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{managerPassword}}",
+  "role": "EMPLOYEE"
+}
+
+### Extração do email exato que foi gravado na base de dados
+@createdEmpEmail = {{createEmployee.response.body.$.email}}
+
+### 1.3 Login do Funcionário (Employee)
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{createdEmpEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do token do funcionário
+@empToken = {{loginEmployee.response.body.$.token}}
+
+### ==========================================
+### 2: SEGURANÇA E ACESSOS (RBAC)
+### ==========================================
+
+### 2.1 Sem Token (401 Unauthorized)
+GET {{baseUrl}}/pizza-size
+
+### 2.2 Token de Employee (403 Forbidden - Apenas Manager tem acesso)
+GET {{baseUrl}}/pizza-size
+Authorization: Bearer {{empToken}}
+
+
+### ==========================================
+### 3: CRIAÇÃO (POST) E VALIDAÇÕES (JOI)
+### ==========================================
+
+### 3.1 Criar Tamanho Válido (201 Created)
+# @name createSize
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Medium {{$timestamp}}"
+}
+
+### Extração de variáveis do tamanho criado
+@sizeId = {{createSize.response.body.$.id}}
+@sizeName = {{createSize.response.body.$.name}}
+
+### 3.2 Criar Tamanho Duplicado (409 Conflict)
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{sizeName}}"
+}
+
+### 3.3 Falha de Joi: Nome muito curto (400 Bad Request)
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sm"
+}
+
+### 3.4 Falha de Joi: Payload Vazio (400 Bad Request)
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 3.5 Joi Strip Unknown: Enviar campos extra (201 Created - O Joi limpa "extraField")
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Large {{$timestamp}}",
+  "extraField": "Isto deve ser ignorado"
+}
+
+
+### ==========================================
+### 4: CONSULTAS (GET) E EXCEÇÕES DE ID
+### ==========================================
+
+### 4.1 Listar Todos (200 OK)
+GET {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+
+### 4.2 Pesquisar por Nome (200 OK)
+GET {{baseUrl}}/pizza-size?search=Medium
+Authorization: Bearer {{adminToken}}
+
+### 4.3 Obter por ID Válido (200 OK)
+GET {{baseUrl}}/pizza-size/{{sizeId}}
+Authorization: Bearer {{adminToken}}
+
+### 4.4 Formato de ID Inválido (400 Bad Request - Bloqueado pelo Joi)
+GET {{baseUrl}}/pizza-size/123
+Authorization: Bearer {{adminToken}}
+
+### 4.5 ID Inexistente (404 Not Found)
+GET {{baseUrl}}/pizza-size/abcdef000000000000000999
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 5: ATUALIZAÇÃO (PATCH)
+### ==========================================
+
+### 5.1 Renomear Tamanho (200 OK)
+PATCH {{baseUrl}}/pizza-size/{{sizeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Medium Updated {{$timestamp}}"
+}
+
+### 5.2 Desativar Tamanho (200 OK)
+PATCH {{baseUrl}}/pizza-size/{{sizeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 5.3 Falha de Joi: PATCH Vazio (400 Bad Request - Exige pelo menos 1 campo)
+PATCH {{baseUrl}}/pizza-size/{{sizeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 5.4 Formato de ID Inválido no PATCH (400 Bad Request)
+PATCH {{baseUrl}}/pizza-size/abc
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}
+
+### 5.5 ID Inexistente no PATCH (404 Not Found)
+PATCH {{baseUrl}}/pizza-size/abcdef000000000000000999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}
