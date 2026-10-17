@@ -1,7 +1,13 @@
 import * as argon2 from 'argon2';
 import Users from './users.model.js';
 
+import * as pizzaComponentTypesRepository from './pizza-component-type.repository.js';
+
 import { Roles, validatePasswordStrength } from '../domain/users.domain.js';
+import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-types.domain.js';
+
+/** MongoDB error code for violation of a unique index. */
+const DUPLICATE_KEY_ERROR_CODE = 11000;
 
 /**
  * Bootstrapping function that seeds the initial Manager account into the database.
@@ -33,5 +39,21 @@ export async function seedInitialManager() {
     console.log('Initial Manager account created successfully.');
   } else {
     console.log('Account Manager already exists. Seeder ignored.');
+  }
+}
+
+export async function seedInitialPizzaComponentTypes() {
+  for (const type of DEFAULT_PIZZA_COMPONENT_TYPES) {
+    const existing = await pizzaComponentTypesRepository.searchByName(type.name);
+
+    if (existing.length > 0) continue;
+
+    try {
+      await pizzaComponentTypesRepository.create({ ...type });
+      console.log(`Pizza component type "${type.name}" created.`);
+    } catch (err) {
+      if (err.code !== DUPLICATE_KEY_ERROR_CODE) throw err;
+      console.warn(`Pizza component type "${type.name}" skipped: its assembly order is already in use.`);
+    }
   }
 }

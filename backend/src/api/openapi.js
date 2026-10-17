@@ -665,6 +665,166 @@ export const openApiSpec = {
         },
       },
     },
+    '/pizza-component-type': {
+      get: {
+        summary: 'List or search pizza component types (MANAGER only)',
+        description:
+          'Without the name parameter, only active types are returned, sorted by assembly order. With it, removed (inactive) types can also be found.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'name',
+            in: 'query',
+            required: false,
+            description:
+              'Exact name, ignoring case and accents. A partial or blank name returns an empty list.',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/PizzaComponentType' },
+                },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create pizza component type (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'assemblyOrder', 'minQuantity'],
+                properties: {
+                  name: { type: 'string', example: 'Cheese' },
+                  assemblyOrder: { type: 'integer', minimum: 1, example: 3 },
+                  minQuantity: { type: 'integer', minimum: 0, example: 0 },
+                  maxQuantity: { type: 'integer', minimum: 1, nullable: true, example: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaComponentType' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          409: errorResponse('Name or assembly order already in use'),
+        },
+      },
+    },
+    '/pizza-component-type/{id}': {
+      get: {
+        summary: 'Get pizza component type by ID (MANAGER only)',
+        description: 'Removed (inactive) types are also returned, with isActive = false.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaComponentType' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Pizza component type not found'),
+        },
+      },
+      put: {
+        summary: 'Update pizza component type (MANAGER only)',
+        description:
+          'Replaces name, assembly order and quantity limits. Not applicable to removed types.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'assemblyOrder', 'minQuantity'],
+                properties: {
+                  name: { type: 'string', example: 'Cheese' },
+                  assemblyOrder: { type: 'integer', minimum: 1, example: 3 },
+                  minQuantity: { type: 'integer', minimum: 0, example: 0 },
+                  maxQuantity: { type: 'integer', minimum: 1, nullable: true, example: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PizzaComponentType' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Pizza component type not found'),
+          409: errorResponse('Name or assembly order already in use'),
+        },
+      },
+      delete: {
+        summary: 'Remove pizza component type (MANAGER only)',
+        description:
+          'Logical removal (isActive = false). A type referenced by products cannot be removed.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          204: { description: 'Removed' },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Pizza component type not found or already removed'),
+          409: errorResponse('Pizza component type is referenced by products'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -730,6 +890,17 @@ export const openApiSpec = {
         properties: {
           id: { type: 'string', example: '65231abcd345678901234567' },
           name: { type: 'string', example: 'Beverages' },
+        },
+      },
+      PizzaComponentType: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Cheese' },
+          assemblyOrder: { type: 'integer', example: 3 },
+          minQuantity: { type: 'integer', example: 0 },
+          maxQuantity: { type: 'integer', nullable: true, example: 1 },
+          isActive: { type: 'boolean' },
         },
       },
     },

@@ -1,0 +1,636 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicEmail = real_{{$timestamp}}@laprizza.pt
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Admin (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+ 
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+ 
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### ==========================================
+### 2: CRIAÇÃO E VALIDAÇÕES DO TIPO DE COMPONENTES DA PIZZA
+### ==========================================
+
+# A ordem de montagem é única entre os tipos ativos e os 4 tipos iniciais ocupam as ordens 1 a 4.
+# Por isso cada tipo criado usa um intervalo próprio de ordens altas (aleatórias), guardado a partir da resposta.
+# O nome do tipo de referência é um número aleatório, reutilizado nos nomes seguintes para serem únicos em cada execução.
+
+### 2.0 POST Tipo de referência (201 Created)
+# @name createReferenceType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{$randomInt 100000 999999}}",
+  "assemblyOrder": {{$randomInt 10000 19999}},
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### Variáveis
+@runId = {{createReferenceType.response.body.$.name}}
+@seedTypeId = {{createReferenceType.response.body.$.id}}
+@seedOrder = {{createReferenceType.response.body.$.assemblyOrder}}
+
+### 2.1 POST Tipo novo (201 Created - isActive: true)
+# @name createType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Café {{runId}}",
+  "assemblyOrder": {{$randomInt 20000 29999}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### Variáveis
+@typeId = {{createType.response.body.$.id}}
+@typeName = {{createType.response.body.$.name}}
+@typeOrder = {{createType.response.body.$.assemblyOrder}}
+
+### 2.2 POST Sem máximo (201 Created - maxQuantity: null, ilimitado)
+# @name createUnboundedType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem Maximo {{runId}}",
+  "assemblyOrder": {{$randomInt 30000 39999}},
+  "minQuantity": 0
+}
+
+### Variáveis
+@unboundedId = {{createUnboundedType.response.body.$.id}}
+
+### 2.3 POST Máximo null explícito (201 Created - maxQuantity: null, ilimitado)
+# @name createNullMaxType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Maximo Nulo {{runId}}",
+  "assemblyOrder": {{$randomInt 40000 49999}},
+  "minQuantity": 0,
+  "maxQuantity": null
+}
+
+### Variáveis
+@nullMaxId = {{createNullMaxType.response.body.$.id}}
+
+### 2.4 POST Mínimo igual ao máximo (201 Created)
+# @name createEqualType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Igual {{runId}}",
+  "assemblyOrder": {{$randomInt 50000 59999}},
+  "minQuantity": 1,
+  "maxQuantity": 1
+}
+
+### Variáveis
+@equalId = {{createEqualType.response.body.$.id}}
+
+### 2.5 POST isActive enviado pelo cliente é ignorado (201 Created - isActive: true)
+# @name createIgnoreActiveType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ignora Ativo {{runId}}",
+  "assemblyOrder": {{$randomInt 60000 69999}},
+  "minQuantity": 0,
+  "maxQuantity": 2,
+  "isActive": false
+}
+
+### Variáveis
+@ignoreActiveId = {{createIgnoreActiveType.response.body.$.id}}
+@ignoreActiveOrder = {{createIgnoreActiveType.response.body.$.assemblyOrder}}
+
+### 2.6 POST Espaços a mais são normalizados (201 Created - o nome devolvido é "Sopa {{runId}}")
+# @name createNormalizedType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   Sopa     {{runId}}   ",
+  "assemblyOrder": {{$randomInt 70000 79999}},
+  "minQuantity": 0,
+  "maxQuantity": 5
+}
+
+### Variáveis
+@normalizedId = {{createNormalizedType.response.body.$.id}}
+
+### 2.7 POST Nome duplicado, igual (409 Conflict)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{typeName}}",
+  "assemblyOrder": {{$randomInt 80000 89999}},
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.8 POST Nome duplicado, com outras maiúsculas e sem acento (409 Conflict - colação do índice único)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "CAFE {{runId}}",
+  "assemblyOrder": {{$randomInt 80000 89999}},
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.9 POST Ordem de montagem duplicada (409 Conflict)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ordem Repetida {{runId}}",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.10 POST Ordem de montagem de um tipo inicial (409 Conflict - a ordem 1 é do Base Dough; requer o seeder)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ordem Inicial {{runId}}",
+  "assemblyOrder": 1,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.11 POST Nome só com espaços (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   ",
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.12 POST Sem nome - Joi (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.13 POST Nome que não é texto - Joi (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": 123,
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.14 POST Sem ordem de montagem - Joi (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem Ordem {{runId}}",
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.15 POST Ordem de montagem igual a 0 (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ordem Zero {{runId}}",
+  "assemblyOrder": 0,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.16 POST Ordem de montagem decimal (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ordem Decimal {{runId}}",
+  "assemblyOrder": 1.5,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.17 POST Ordem de montagem em texto (400 Bad Request - sem conversão de tipos)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ordem Texto {{runId}}",
+  "assemblyOrder": "100000",
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 2.18 POST Sem mínimo - Joi (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem Minimo {{runId}}",
+  "assemblyOrder": 100000,
+  "maxQuantity": 1
+}
+
+### 2.19 POST Mínimo negativo (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Minimo Negativo {{runId}}",
+  "assemblyOrder": 100000,
+  "minQuantity": -1,
+  "maxQuantity": 1
+}
+
+### 2.20 POST Máximo igual a 0 (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Maximo Zero {{runId}}",
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": 0
+}
+
+### 2.21 POST Máximo em texto (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Maximo Texto {{runId}}",
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": "a"
+}
+
+### 2.22 POST Máximo menor do que o mínimo (400 Bad Request)
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Intervalo Invalido {{runId}}",
+  "assemblyOrder": 100000,
+  "minQuantity": 3,
+  "maxQuantity": 1
+}
+
+### 2.23 POST Sem token (401 Unauthorized)
+POST {{baseUrl}}/pizza-component-type
+Content-Type: application/json
+
+{
+  "name": "Sem Token {{runId}}",
+  "assemblyOrder": 100000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### ==========================================
+### 3: PESQUISA E CONSULTAS
+### ==========================================
+
+### 3. GET Listar Todos (200 OK - só tipos ativos, ordenados por ordem de montagem)
+GET {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+
+### 3.1 GET Pesquisa por nome exato, ignorando maiúsculas e acentos (200 OK - devolve 1 tipo)
+GET {{baseUrl}}/pizza-component-type?name=CAFE%20{{runId}}
+Authorization: Bearer {{adminToken}}
+
+### 3.2 GET Pesquisa por nome parcial (200 OK - devolve [])
+GET {{baseUrl}}/pizza-component-type?name=Caf
+Authorization: Bearer {{adminToken}}
+
+### 3.3 GET Pesquisa por nome inexistente (200 OK - devolve [])
+GET {{baseUrl}}/pizza-component-type?name=NomeQueNaoExiste
+Authorization: Bearer {{adminToken}}
+
+### 3.4 GET Pesquisa com nome vazio (200 OK - devolve [])
+GET {{baseUrl}}/pizza-component-type?name=
+Authorization: Bearer {{adminToken}}
+
+### 3.5 GET Sem token (401 Unauthorized)
+GET {{baseUrl}}/pizza-component-type
+
+### 3.6 GET Tipo inicial Base Dough (200 OK - mínimo 1, máximo 1, ordem 1; requer o seeder)
+GET {{baseUrl}}/pizza-component-type?name=Base%20Dough
+Authorization: Bearer {{adminToken}}
+
+### 3.7 GET Tipo inicial Base Sauce (200 OK - mínimo 0, máximo 1, ordem 2; requer o seeder)
+GET {{baseUrl}}/pizza-component-type?name=Base%20Sauce
+Authorization: Bearer {{adminToken}}
+
+### 3.8 GET Tipo inicial Cheese (200 OK - mínimo 0, máximo 1, ordem 3; requer o seeder)
+GET {{baseUrl}}/pizza-component-type?name=cheese
+Authorization: Bearer {{adminToken}}
+
+### 3.9 GET Tipo inicial Topping (200 OK - mínimo 0, máximo null (ilimitado), ordem 4; requer o seeder)
+GET {{baseUrl}}/pizza-component-type?name=Topping
+Authorization: Bearer {{adminToken}}
+
+### 4. GET Por ID (200 OK)
+GET {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+
+### 4.1 GET ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/pizza-component-type/id_invalido
+Authorization: Bearer {{adminToken}}
+
+### 4.2 GET ID válido mas inexistente (404 Not Found)
+GET {{baseUrl}}/pizza-component-type/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+### 4.3 GET Por ID sem token (401 Unauthorized)
+GET {{baseUrl}}/pizza-component-type/{{typeId}}
+
+### ==========================================
+### 5: ATUALIZAÇÃO E VALIDAÇÕES DO PUT
+### ==========================================
+
+### 5. PUT Mudar só as maiúsculas do próprio nome (200 OK - não entra em conflito consigo próprio)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "café {{runId}}",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### 5.1 PUT Nome de outro tipo (409 Conflict - usa o tipo de referência 2.0)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{runId}}",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### 5.2 PUT Ordem de montagem de outro tipo (409 Conflict - usa o tipo de referência 2.0)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "café {{runId}}",
+  "assemblyOrder": {{seedOrder}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### 5.3 PUT Nome só com espaços (400 Bad Request)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   ",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### 5.4 PUT Corpo vazio - Joi (400 Bad Request)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 5.5 PUT Máximo menor do que o mínimo (400 Bad Request)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "café {{runId}}",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 5,
+  "maxQuantity": 2
+}
+
+### 5.6 PUT ID com formato inválido (400 Bad Request)
+PUT {{baseUrl}}/pizza-component-type/id_invalido
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Qualquer {{runId}}",
+  "assemblyOrder": 110000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 5.7 PUT ID válido mas inexistente (404 Not Found)
+PUT {{baseUrl}}/pizza-component-type/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Qualquer {{runId}}",
+  "assemblyOrder": 110000,
+  "minQuantity": 0,
+  "maxQuantity": 1
+}
+
+### 5.8 PUT Sem token (401 Unauthorized)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Content-Type: application/json
+
+{
+  "name": "Sem Token {{runId}}",
+  "assemblyOrder": {{typeOrder}},
+  "minQuantity": 1,
+  "maxQuantity": 3
+}
+
+### 5.9 PUT isActive enviado pelo cliente é ignorado (200 OK - isActive continua true)
+PUT {{baseUrl}}/pizza-component-type/{{ignoreActiveId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ignora Ativo {{runId}}",
+  "assemblyOrder": {{ignoreActiveOrder}},
+  "minQuantity": 0,
+  "maxQuantity": 2,
+  "isActive": false
+}
+
+### 5.10 PUT Válido - Mudar nome, ordem e limites (200 OK - o máximo passa a ilimitado)
+# @name updateType
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Queijo {{runId}}",
+  "assemblyOrder": {{$randomInt 90000 99999}},
+  "minQuantity": 0,
+  "maxQuantity": null
+}
+
+### Variáveis
+@updatedName = {{updateType.response.body.$.name}}
+@updatedOrder = {{updateType.response.body.$.assemblyOrder}}
+
+### ==========================================
+### 6: REMOÇÃO (SOFT DELETE)
+### ==========================================
+# Atenção: a validação de tipos referenciados por produtos ainda não existe. Enquanto não for implementada,
+# a remoção não verifica produtos e o caso 409 (tipo em uso) não é testável aqui.
+
+### 6. DELETE ID com formato inválido (400 Bad Request)
+DELETE {{baseUrl}}/pizza-component-type/id_invalido
+Authorization: Bearer {{adminToken}}
+
+### 6.1 DELETE ID válido mas inexistente (404 Not Found)
+DELETE {{baseUrl}}/pizza-component-type/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+### 6.2 DELETE Sem token (401 Unauthorized)
+DELETE {{baseUrl}}/pizza-component-type/{{typeId}}
+
+### 6.3 DELETE Tipo sem produtos (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.4 GET Tipo removido por ID (200 OK - isActive: false)
+GET {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.5 GET Listar Todos (200 OK - o tipo removido já não aparece)
+GET {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+
+### 6.6 GET Pesquisa por nome do tipo removido (200 OK - devolve 1 tipo com isActive: false)
+GET {{baseUrl}}/pizza-component-type?name=queijo%20{{runId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.7 DELETE Tipo já removido (404 Not Found)
+DELETE {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.8 PUT Tipo removido (404 Not Found - não pode ser editado)
+PUT {{baseUrl}}/pizza-component-type/{{typeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro Nome {{runId}}",
+  "assemblyOrder": {{updatedOrder}},
+  "minQuantity": 0,
+  "maxQuantity": null
+}
+
+### 6.9 POST Reutilizar o nome e a ordem do tipo removido (201 Created - os índices únicos só contam tipos ativos)
+# @name recreateType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{updatedName}}",
+  "assemblyOrder": {{updatedOrder}},
+  "minQuantity": 0,
+  "maxQuantity": null
+}
+
+### Variáveis
+@recreatedId = {{recreateType.response.body.$.id}}
+
+### 6.10 DELETE Limpeza: tipo de referência (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{seedTypeId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.11 DELETE Limpeza: tipo sem máximo (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{unboundedId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.12 DELETE Limpeza: tipo com máximo null (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{nullMaxId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.13 DELETE Limpeza: tipo com mínimo igual ao máximo (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{equalId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.14 DELETE Limpeza: tipo com isActive ignorado (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{ignoreActiveId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.15 DELETE Limpeza: tipo com nome normalizado (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{normalizedId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.16 DELETE Limpeza: tipo recriado (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{recreatedId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.17 (Quando a validação por produtos existir) Criar um produto com este tipo e tentar remover o tipo (409 Conflict)
+# POST {{baseUrl}}/products ... com o tipo criado, seguido de DELETE do tipo.

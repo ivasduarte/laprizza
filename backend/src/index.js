@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { connectDB } from './infrastructure/database.js';
 import { errorHandler } from './api/middleware/error-handler.js';
-import { seedInitialManager } from './infrastructure/seeder.js';
+import { seedInitialManager, seedInitialPizzaComponentTypes } from './infrastructure/seeder.js';
 import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.validator.js';
 import { openApiSpec } from './api/openapi.js';
 
@@ -16,7 +16,7 @@ import usersRouterFactory from './api/users.routes.js';
 import productsRouter from './api/products.routes.js';
 import allergenRouterFactory from './api/allergen.routes.js';
 import customersRouterFactory from './api/customers.routes.js';
-import pizzaCTypeRouter from './api/pizza-component-type.routes.js';
+import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.js';
 import sizesRouterFactory from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
 import productCategoriesRouterFactory from './api/product-categories.routes.js';
@@ -70,6 +70,8 @@ function notFoundHandler(req, _res, next) {
  * @param {Object} [repos.productCategoriesRepository] - The product categories repository instance (optional).
  * @param {Object} [repos.productsRepository] - The products repository instance (optional).
  * @param {Object} [repos.allergenRepository] - The allergens repository instance (optional).
+ * @param {Object} [repos.pizzaComponentTypesRepository] - The pizza component types repository instance (optional).
+ * @returns {import('express').Application} The configured Express application instance.
  * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
  * @returns {import('express').Application} The configured Express application instance.
  */
@@ -92,7 +94,10 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/users', usersRouterFactory(repos.usersRepository));
   api.use('/products', productsRouter);
   api.use('/allergens', allergenRouterFactory(repos.allergenRepository));
-  api.use('/pizza-component-type', pizzaCTypeRouter);
+  api.use(
+    '/pizza-component-type',
+    pizzaComponentTypesRouterFactory(repos.pizzaComponentTypesRepository, repos.productsRepository),
+  );
   api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository));
   api.use('/predefined-pizza', predPIzzaRouter);
   api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
@@ -117,6 +122,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     const config = loadConfig();
     await connectDB(config.mongoUri);
     await seedInitialManager();
+    await seedInitialPizzaComponentTypes();
 
     createApp(config).listen(config.port, () => {
       console.log(`LaPrizza API listening on http://localhost:${config.port}${API_PREFIX}`);
