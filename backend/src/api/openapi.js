@@ -825,6 +825,171 @@ export const openApiSpec = {
         },
       },
     },
+    '/products': {
+      get: {
+        summary: 'List products',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on name or description.',
+            schema: { type: 'string', maxLength: 100 },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            description: 'Filter by category ID.',
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+          {
+            name: 'isActive',
+            in: 'query',
+            required: false,
+            description: 'Filter by active status.',
+            schema: { type: 'boolean' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Product' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+        },
+      },
+      post: {
+        summary: 'Create product (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'description', 'sellable', 'stockControlled', 'categoryId'],
+                properties: {
+                  name: { type: 'string', minLength: 1, maxLength: 100 },
+                  description: { type: 'string' },
+                  price: { type: 'number', minimum: 0 },
+                  sellable: { type: 'boolean' },
+                  stockControlled: { type: 'boolean' },
+                  categoryId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  pizzaComponentTypeId: {
+                    type: 'string',
+                    pattern: '^[0-9a-fA-F]{24}$',
+                    nullable: true,
+                  },
+                  allergenIds: {
+                    type: 'array',
+                    uniqueItems: true,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Product' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Referenced entity not found'),
+        },
+      },
+    },
+    '/products/{id}': {
+      get: {
+        summary: 'Get product by ID',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Product' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          404: errorResponse('Product not found'),
+        },
+      },
+      patch: {
+        summary: 'Update product (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                minProperties: 1,
+                properties: {
+                  name: { type: 'string', minLength: 1, maxLength: 100 },
+                  description: { type: 'string' },
+                  price: { type: 'number', minimum: 0 },
+                  sellable: { type: 'boolean' },
+                  stockControlled: { type: 'boolean' },
+                  categoryId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  pizzaComponentTypeId: {
+                    type: 'string',
+                    pattern: '^[0-9a-fA-F]{24}$',
+                    nullable: true,
+                  },
+                  allergenIds: {
+                    type: 'array',
+                    uniqueItems: true,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                  isActive: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Product' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product or referenced entity not found'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -901,6 +1066,22 @@ export const openApiSpec = {
           minQuantity: { type: 'integer', example: 0 },
           maxQuantity: { type: 'integer', nullable: true, example: 1 },
           isActive: { type: 'boolean' },
+        },
+      },
+      Product: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Pepperoni Pizza' },
+          description: { type: 'string', example: 'Delicious classic pepperoni pizza' },
+          price: { type: 'number', example: 12.5 },
+          sellable: { type: 'boolean' },
+          stockControlled: { type: 'boolean' },
+          categoryId: { type: 'string', example: '65231abcd345678901234567' },
+          pizzaComponentTypeId: { type: 'string', nullable: true, example: null },
+          allergenIds: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+          isPizzaComponent: { type: 'boolean' }
         },
       },
     },

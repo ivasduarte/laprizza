@@ -13,7 +13,7 @@ import pkg from '../package.json' with { type: 'json' };
 
 import authRouterFactory from './api/auth.routes.js';
 import usersRouterFactory from './api/users.routes.js';
-import productsRouter from './api/products.routes.js';
+import productsRouterFactory from './api/products.routes.js';
 import allergenRouterFactory from './api/allergen.routes.js';
 import customersRouterFactory from './api/customers.routes.js';
 import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.js';
@@ -92,7 +92,19 @@ export function createApp(config = loadConfig(), repos = {}) {
 
   api.use('/auth', authRouterFactory(repos.usersRepository));
   api.use('/users', usersRouterFactory(repos.usersRepository));
-  api.use('/products', productsRouter);
+
+  const isTesting = Object.keys(repos).length > 0;
+  api.use(
+    '/products',
+    productsRouterFactory(
+      isTesting ? {
+        productsRepository: repos.productsRepository,
+        categoriesRepository: repos.productCategoriesRepository || repos.categoriesRepository,
+        allergensRepository: repos.allergenRepository || repos.allergensRepository,
+        pizzaComponentTypesRepository: repos.pizzaComponentTypesRepository || repos.pizzaComponentTypeRepository,
+      } : undefined
+    ),
+  );
   api.use('/allergens', allergenRouterFactory(repos.allergenRepository));
   api.use(
     '/pizza-component-type',

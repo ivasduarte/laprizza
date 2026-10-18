@@ -1,0 +1,239 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { createApp, loadConfig } from '../../src/index.js';
+import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
+import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
+import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
+import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { registerUser } from '../../src/application/auth.service.js';
+
+process.env.JWT_SECRET = 'test_secret_key';
+
+const NON_EXISTENT_ID = 'abcdef000000000000000999';
+
+async function setupTestServer() {
+  const usersRepo = createDummyUsersRepository();
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const allergensRepo = createDummyAllergenRepository();
+  const typesRepo = createDummyPizzaComponentTypesRepository();
+
+  const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    usersRepository: usersRepo,
+    productsRepository: productsRepo,
+    allergensRepository: allergensRepo,
+    categoriesRepository: categoriesRepo,
+    productCategoriesRepository: categoriesRepo,
+    pizzaComponentTypesRepository: typesRepo,
+    pizzaComponentTypeRepository: typesRepo,
+  }).listen(0);
+
+  await once(server, 'listening');
+  const port = server.address().port;
+
+  await registerUser(
+    { email: 'admin@laprizza.pt', password: 'StrongPassword123!', role: 'MANAGER' },
+    usersRepo,
+  );
+  await registerUser(
+    { email: 'emp@laprizza.pt', password: 'StrongPassword123!', role: 'EMPLOYEE' },
+    usersRepo,
+  );
+
+  const cat = await categoriesRepo.create({ name: 'Bebidas' });
+
+  return { server, port, categoriesRepo, catId: String(cat._id) };
+}
+
+async function loginAs(port, email) {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: email, password: 'StrongPassword123!' }),
+  });
+  return (await res.json()).token;
+}
+
+function request(port, method, path, { token, body } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  return fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+test('API /products RBAC: 401 Sem Token e 403 Funcionário a tentar Criar/Editar', async (t) => {
+  const { server, port } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const empToken = await loginAs(port, 'emp@laprizza.pt');
+
+  assert.equal((await request(port, 'GET', '/products')).status, 401);
+  assert.equal((await request(port, 'POST', '/products')).status, 401);
+
+  assert.equal(
+    (await request(port, 'POST', '/products', { token: empToken, body: {} })).status,
+    403,
+  );
+  assert.equal(
+    (await request(port, 'PATCH', `/products/${NON_EXISTENT_ID}`, { token: empToken, body: {} }))
+      .status,
+    403,
+  );
+
+  assert.equal((await request(port, 'GET', '/products', { token: empToken })).status, 200);
+});
+
+test('API POST /products Joi e Respostas', async (t) => {
+  const { server, port, catId } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+
+  const validPayload = {
+    name: 'Água',
+    description: 'Água lisa',
+    price: 1,
+    sellable: true,
+    stockControlled: true,
+    categoryId: catId,
+  };
+
+  assert.equal(
+    (
+      await request(port, 'POST', '/products', {
+        token: adminToken,
+        body: { name: 'X', description: 'Y', stockControlled: true, categoryId: catId },
+      })
+    ).status,
+    400,
+  );
+
+  assert.equal(
+    (
+      await request(port, 'POST', '/products', {
+        token: adminToken,
+        body: { ...validPayload, categoryId: 'abc' },
+      })
+    ).status,
+    400,
+  );
+
+  const createRes = await request(port, 'POST', '/products', {
+    token: adminToken,
+    body: validPayload,
+  });
+  assert.equal(createRes.status, 201);
+  const createdBody = await createRes.json();
+  assert.equal(createdBody.name, 'Água');
+});
+
+test('API POST /products returns 409 for duplicate product name', async (t) => {
+  const { server, port, catId } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+
+  const payload = {
+    name: 'Sumo Laranja',
+    description: 'Sumo natural',
+    price: 2.5,
+    sellable: true,
+    stockControlled: true,
+    categoryId: catId,
+  };
+
+  const res1 = await request(port, 'POST', '/products', { token: adminToken, body: payload });
+  assert.equal(res1.status, 201);
+
+  const res2 = await request(port, 'POST', '/products', { token: adminToken, body: payload });
+  assert.equal(res2.status, 409);
+});
+
+test('API POST /products Joi validates allergens and pizza component types', async (t) => {
+  const { server, port, catId } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+  const validPayload = {
+    name: 'Pizza',
+    description: 'Teste',
+    price: 1,
+    sellable: true,
+    stockControlled: true,
+    categoryId: catId,
+  };
+
+  const resDup = await request(port, 'POST', '/products', {
+    token: adminToken,
+    body: {
+      ...validPayload,
+      allergenIds: ['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439011'],
+    },
+  });
+  assert.equal(resDup.status, 400);
+
+  const resFormat = await request(port, 'POST', '/products', {
+    token: adminToken,
+    body: { ...validPayload, pizzaComponentTypeId: 'formato_invalido_123' },
+  });
+  assert.equal(resFormat.status, 400);
+});
+
+test('API GET e PATCH /products/:id Atualizações Parciais', async (t) => {
+  const { server, port, catId } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+
+  const createRes = await request(port, 'POST', '/products', {
+    token: adminToken,
+    body: {
+      name: 'Pizza',
+      description: 'Teste',
+      price: 10,
+      sellable: true,
+      stockControlled: true,
+      categoryId: catId,
+    },
+  });
+  const id = (await createRes.json()).id;
+
+  const patchRes = await request(port, 'PATCH', `/products/${id}`, {
+    token: adminToken,
+    body: { isActive: false },
+  });
+  assert.equal(patchRes.status, 200);
+  assert.equal((await patchRes.json()).isActive, false);
+
+  assert.equal(
+    (await request(port, 'PATCH', `/products/${id}`, { token: adminToken, body: {} })).status,
+    400,
+  );
+
+  assert.equal(
+    (await request(port, 'GET', `/products/${NON_EXISTENT_ID}`, { token: adminToken })).status,
+    404,
+  );
+});
