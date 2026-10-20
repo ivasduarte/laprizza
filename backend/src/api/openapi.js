@@ -1147,6 +1147,107 @@ export const openApiSpec = {
         },
       },
     },
+    '/stock': {
+      get: {
+        summary: 'List stock (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on product name.',
+            schema: { type: 'string', maxLength: 100 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Stock' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
+    '/stock/{productId}': {
+      get: {
+        summary: 'Get stock by Product ID (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'productId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Stock' } },
+            },
+          },
+          400: errorResponse('Invalid Product ID or Product is not stock controlled'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product not found'),
+        },
+      },
+      patch: {
+        summary: 'Adjust stock quantity (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'productId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['amount', 'operation'],
+                properties: {
+                  amount: {
+                    type: 'integer',
+                    minimum: 1,
+                    description: 'Positive integer amount to adjust.',
+                  },
+                  operation: {
+                    type: 'string',
+                    enum: ['increase', 'decrease'],
+                    description: 'Type of adjustment. Cannot decrease below 0.',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Stock' } },
+            },
+          },
+          400: errorResponse('Validation error, not stock controlled, or negative stock result'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product not found'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1248,6 +1349,20 @@ export const openApiSpec = {
           allergenIds: { type: 'array', items: { type: 'string' } },
           isActive: { type: 'boolean' },
           isPizzaComponent: { type: 'boolean' },
+        },
+      },
+      Stock: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '76342abcd345678901234568' },
+          productId: { type: 'string', example: '65231abcd345678901234567' },
+          product: { $ref: '#/components/schemas/Product' },
+          quantity: {
+            type: 'integer',
+            minimum: 0,
+            example: 25,
+            description: 'Non-negative integer representing the abstract stock units.',
+          },
         },
       },
     },

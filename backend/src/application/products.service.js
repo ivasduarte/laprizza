@@ -2,6 +2,7 @@ import * as productsRepository from '../infrastructure/products.repository.js';
 import * as categoriesRepository from '../infrastructure/product-categories.repository.js';
 import * as allergensRepository from '../infrastructure/allergen.repository.js';
 import * as pizzaComponentTypesRepository from '../infrastructure/pizza-component-type.repository.js';
+import * as stockRepository from '../infrastructure/stock.repository.js';
 import { AppError } from './AppError.js';
 
 export function toProductDTO(product) {
@@ -62,6 +63,7 @@ export async function createProduct(
     categoriesRepository,
     allergensRepository,
     pizzaComponentTypesRepository,
+    stockRepository,
   },
 ) {
   if (data.sellable && (data.price === undefined || data.price === null || data.price < 0)) {
@@ -76,6 +78,14 @@ export async function createProduct(
   }
 
   const product = await repos.productsRepository.create(data);
+
+  if (product.stockControlled) {
+    await repos.stockRepository.create({
+      productId: product._id,
+      quantity: 0,
+    });
+  }
+
   return toProductDTO(product);
 }
 

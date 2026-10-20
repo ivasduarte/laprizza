@@ -20,6 +20,7 @@ import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.
 import sizesRouterFactory from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
 import productCategoriesRouterFactory from './api/product-categories.routes.js';
+import stockRouterFactory from './api/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration.routes.js';
 
 const API_PREFIX = '/api/v1';
@@ -110,6 +111,18 @@ export function createApp(config = loadConfig(), repos = {}) {
             allergensRepository: repos.allergenRepository || repos.allergensRepository,
             pizzaComponentTypesRepository:
               repos.pizzaComponentTypesRepository || repos.pizzaComponentTypeRepository,
+            stockRepository: repos.stockRepository,
+          }
+        : undefined,
+    ),
+  );
+  api.use(
+    '/stock',
+    stockRouterFactory(
+      isTesting
+        ? {
+            stockRepository: repos.stockRepository,
+            productsRepository: repos.productsRepository,
           }
         : undefined,
     ),

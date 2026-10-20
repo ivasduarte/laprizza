@@ -7,6 +7,7 @@ import { createDummyProductsRepository } from '../infrastructure/products.dummy.
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
 import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
 import { createSize } from '../../src/application/pizza-size.service.js';
 import { registerUser } from '../../src/application/auth.service.js';
@@ -21,6 +22,7 @@ async function setupTestServer() {
   const productsRepo = createDummyProductsRepository();
   const allergensRepo = createDummyAllergenRepository();
   const typesRepo = createDummyPizzaComponentTypesRepository();
+  const stockRepo = createDummyStockRepository();
   const sizeRepo = createDummyPizzaSizeRepository();
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
@@ -31,6 +33,7 @@ async function setupTestServer() {
     productCategoriesRepository: categoriesRepo,
     pizzaComponentTypesRepository: typesRepo,
     pizzaComponentTypeRepository: typesRepo,
+    stockRepository: stockRepo,
     sizeRepository: sizeRepo,
   }).listen(0);
 

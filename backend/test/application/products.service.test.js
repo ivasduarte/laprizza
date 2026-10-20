@@ -5,6 +5,7 @@ import { createDummyProductsRepository } from '../infrastructure/products.dummy.
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
 import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
 import {
   createProduct,
   listProducts,
@@ -27,11 +28,14 @@ async function setupRepos() {
     maxQuantity: 1,
   });
 
+  const stockRepo = createDummyStockRepository();
+
   return {
     productsRepository: createDummyProductsRepository(),
     categoriesRepository: categoriesRepo,
     allergensRepository: allergensRepo,
     pizzaComponentTypesRepository: typeRepo,
+    stockRepository: stockRepo,
     validCategory: cat,
     validAllergen: allergen,
     validType: type,

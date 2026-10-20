@@ -1,0 +1,222 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@missingId = 507f1f77bcf86cd799439011
+@timestamp = {{$timestamp}}
+
+### ==========================================
+### 1: AUTENTICAÇÃO E SETUP DE DEPENDÊNCIAS
+### ==========================================
+
+### 1.1 Login do Admin (Manager)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### 1.2 Criar Categoria de Referência
+# @name createCategory
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Categoria Stock {{$timestamp}}"
+}
+
+### Guarda Categoria
+@categoryId = {{createCategory.response.body.$.id}}
+
+### 1.3 Criar Produto COM controlo de stock
+# @name createStockProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto Com Stock {{$timestamp}}",
+  "description": "Este produto controla stock",
+  "price": 5.0,
+  "sellable": true,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}"
+}
+
+### Guarda ID do Produto com stock
+@stockProductId = {{createStockProduct.response.body.$.id}}
+@stockProductName = {{createStockProduct.response.body.$.name}}
+
+### 1.4 Criar Produto SEM controlo de stock
+# @name createNoStockProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto Sem Stock {{$timestamp}}",
+  "description": "Este produto NAO controla stock",
+  "price": 10.0,
+  "sellable": true,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}"
+}
+
+### Guarda ID do Produto sem stock
+@noStockProductId = {{createNoStockProduct.response.body.$.id}}
+
+
+### ==========================================
+### 2: CONSULTAS DE STOCK (GET) E REGRAS DE NEGÓCIO
+### ==========================================
+
+### 2.1 GET Stock de produto recém-criado (200 OK - Lazy Creation retorna 0)
+GET {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+
+### 2.2 GET Stock de produto que NÃO controla stock (400 Bad Request)
+GET {{baseUrl}}/stock/{{noStockProductId}}
+Authorization: Bearer {{adminToken}}
+
+### 2.3 GET Stock por ID de produto em formato inválido (400 Bad Request - Joi)
+GET {{baseUrl}}/stock/abc
+Authorization: Bearer {{adminToken}}
+
+### 2.4 GET Stock por ID de produto inexistente (404 Not Found)
+GET {{baseUrl}}/stock/{{missingId}}
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 3: AJUSTE DE STOCK (PATCH) E VALIDAÇÕES
+### ==========================================
+
+### 3.1 PATCH Aumentar Stock (200 OK - quantity passa a 50)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 50,
+  "operation": "increase"
+}
+
+### 3.2 PATCH Diminuir Stock validamente (200 OK - quantity passa a 30)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 20,
+  "operation": "decrease"
+}
+
+### 3.3 Regra de Negócio: PATCH Diminuir Stock abaixo de 0 (400 Bad Request)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 40,
+  "operation": "decrease"
+}
+
+### 3.4 Regra de Negócio: PATCH Ajustar produto sem controlo de stock (400 Bad Request)
+PATCH {{baseUrl}}/stock/{{noStockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 10,
+  "operation": "increase"
+}
+
+### 3.5 Falha Joi: Body Vazio (400 Bad Request)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 3.6 Falha Joi: Amount igual a zero (400 Bad Request - Tem de ser positivo)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 0,
+  "operation": "increase"
+}
+
+### 3.7 Falha Joi: Amount negativo (400 Bad Request - Operação e Amount tratam a direção)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": -5,
+  "operation": "increase"
+}
+
+### 3.8 Falha Joi: Operation inválida (400 Bad Request)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 10,
+  "operation": "add"
+}
+
+### 3.9 Falha Joi: Amount não é inteiro (400 Bad Request)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 10.5,
+  "operation": "increase"
+}
+
+
+### ==========================================
+### 4: LISTAGEM E PESQUISA DE STOCK (GET)
+### ==========================================
+
+### 4.1 GET Listar Todo o Stock Ativo (200 OK)
+GET {{baseUrl}}/stock
+Authorization: Bearer {{adminToken}}
+
+### 4.2 GET Pesquisa Parcial pelo nome do Produto (200 OK)
+GET {{baseUrl}}/stock?search=Produto%20Com%20Stock
+Authorization: Bearer {{adminToken}}
+
+### 4.3 GET Pesquisa sem resultados (200 OK, array vazio)
+GET {{baseUrl}}/stock?search=NomeQueNaoExisteNenhumProduto
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 5: SEGURANÇA E ACESSOS (RBAC)
+### ==========================================
+
+### 5.1 GET Listar Sem Token (401 Unauthorized)
+GET {{baseUrl}}/stock
+
+### 5.2 GET Stock de Produto Sem Token (401 Unauthorized)
+GET {{baseUrl}}/stock/{{stockProductId}}
+
+### 5.3 PATCH Ajustar Stock Sem Token (401 Unauthorized)
+PATCH {{baseUrl}}/stock/{{stockProductId}}
+Content-Type: application/json
+
+{
+  "amount": 10,
+  "operation": "increase"
+}
