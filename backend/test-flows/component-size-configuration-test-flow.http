@@ -1,0 +1,535 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicEmail = real_{{$timestamp}}@laprizza.pt
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Admin (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### ==========================================
+### 2: PREPARAÇÃO DOS DADOS DE APOIO
+### ==========================================
+
+# As configurações de tamanho ligam um produto (componente de pizza) a um tamanho de pizza.
+# Por isso é preciso criar primeiro uma categoria, um tipo de componente, quatro tamanhos e três produtos.
+# O nome da categoria é um número aleatório, reutilizado nos nomes seguintes para serem únicos em cada execução.
+# Tamanhos: A e B têm configurações, C nunca tem (serve para os testes de validação) e D fica inativo.
+# Produtos: o componente com stock controlado exige stockUnitsConsumed, o sem stock exige null e o simples não é componente.
+
+### 2.1 POST Categoria de referência (201 Created)
+# @name createCategory
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{$randomInt 100000 999999}}"
+}
+
+### Variáveis
+@runId = {{createCategory.response.body.$.name}}
+@categoryId = {{createCategory.response.body.$.id}}
+
+### 2.2 POST Tipo de componente (201 Created - a ordem de montagem é única entre os tipos ativos)
+# @name createType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Queijo {{runId}}",
+  "assemblyOrder": {{$randomInt 10000 19999}},
+  "minQuantity": 0,
+  "maxQuantity": 2
+}
+
+### Variáveis
+@typeId = {{createType.response.body.$.id}}
+
+### 2.3 POST Tamanho A (201 Created)
+# @name createSizeA
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Pequena {{runId}}"
+}
+
+### Variáveis
+@sizeAId = {{createSizeA.response.body.$.id}}
+
+### 2.4 POST Tamanho B (201 Created)
+# @name createSizeB
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Grande {{runId}}"
+}
+
+### Variáveis
+@sizeBId = {{createSizeB.response.body.$.id}}
+
+### 2.5 POST Tamanho C (201 Created - nunca terá configurações)
+# @name createSizeC
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Media {{runId}}"
+}
+
+### Variáveis
+@sizeCId = {{createSizeC.response.body.$.id}}
+
+### 2.6 POST Tamanho D (201 Created - será desativado a seguir)
+# @name createSizeD
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Familiar {{runId}}"
+}
+
+### Variáveis
+@sizeDId = {{createSizeD.response.body.$.id}}
+
+### 2.7 PATCH Desativar o tamanho D (200 OK - isActive: false, não tem configurações)
+PATCH {{baseUrl}}/pizza-size/{{sizeDId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### 2.8 POST Componente com stock controlado (201 Created - isPizzaComponent: true)
+# @name createStockComponent
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Mozzarella {{runId}}",
+  "description": "Componente com stock controlado",
+  "sellable": false,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}",
+  "pizzaComponentTypeId": "{{typeId}}"
+}
+
+### Variáveis
+@stockId = {{createStockComponent.response.body.$.id}}
+
+### 2.9 POST Componente sem stock controlado (201 Created - isPizzaComponent: true)
+# @name createFreeComponent
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oregãos {{runId}}",
+  "description": "Componente sem stock controlado",
+  "sellable": false,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}",
+  "pizzaComponentTypeId": "{{typeId}}"
+}
+
+### Variáveis
+@freeId = {{createFreeComponent.response.body.$.id}}
+
+### 2.10 POST Produto que não é componente de pizza (201 Created - isPizzaComponent: false)
+# @name createPlainProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Água {{runId}}",
+  "description": "Não é um componente de pizza",
+  "price": 1,
+  "sellable": true,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}"
+}
+
+### Variáveis
+@plainId = {{createPlainProduct.response.body.$.id}}
+
+### ==========================================
+### 3: CRIAÇÃO DE CONFIGURAÇÕES
+### ==========================================
+
+### 3.1 GET Listar um produto sem configurações (200 OK - devolve [])
+GET {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+
+### 3.2 POST Configuração para o tamanho A (201 Created - preço 1.5 e 2 unidades de stock)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeAId}}",
+  "price": 1.5,
+  "stockUnitsConsumed": 2
+}
+
+### 3.3 POST Configuração para o tamanho B (201 Created - preço 2.5 e 3 unidades de stock)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeBId}}",
+  "price": 2.5,
+  "stockUnitsConsumed": 3
+}
+
+### 3.4 POST Componente sem stock com null explícito (201 Created - stockUnitsConsumed: null)
+POST {{baseUrl}}/products/{{freeId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeBId}}",
+  "price": 0.5,
+  "stockUnitsConsumed": null
+}
+
+### ==========================================
+### 4: VALIDAÇÕES DO POST
+### ==========================================
+
+### 4.1 POST Tamanho já configurado no produto (409 Conflict)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeAId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.2 POST Componente com stock sem stockUnitsConsumed (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1
+}
+
+### 4.3 POST Componente com stock e stockUnitsConsumed null (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": null
+}
+
+### 4.4 POST Componente sem stock com stockUnitsConsumed (400 Bad Request - só os produtos com stock o definem)
+POST {{baseUrl}}/products/{{freeId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 2
+}
+
+### 4.5 POST Produto que não é componente de pizza (400 Bad Request)
+POST {{baseUrl}}/products/{{plainId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.6 POST Sem preço - Joi (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "stockUnitsConsumed": 1
+}
+
+### 4.7 POST Preço negativo (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": -1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.8 POST Preço em texto (400 Bad Request - sem conversão de tipos)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": "1.5",
+  "stockUnitsConsumed": 1
+}
+
+### 4.9 POST stockUnitsConsumed igual a 0 (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 0
+}
+
+### 4.10 POST stockUnitsConsumed decimal (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1.5
+}
+
+### 4.11 POST stockUnitsConsumed em texto (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": "2"
+}
+
+### 4.12 POST Sem tamanho - Joi (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.13 POST Tamanho com formato de ID inválido (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "id_invalido",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.14 POST Produto com formato de ID inválido (400 Bad Request)
+POST {{baseUrl}}/products/id_invalido/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.15 POST Corpo vazio - Joi (400 Bad Request)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 4.16 POST Produto inexistente (404 Not Found)
+POST {{baseUrl}}/products/000000000000000000000000/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.17 POST Tamanho inexistente (404 Not Found)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "000000000000000000000000",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.18 POST Tamanho inativo (404 Not Found - o tamanho D foi desativado em 2.7)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeDId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### 4.19 POST Sem token (401 Unauthorized)
+POST {{baseUrl}}/products/{{stockId}}/size-configurations
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeCId}}",
+  "price": 1,
+  "stockUnitsConsumed": 1
+}
+
+### ==========================================
+### 5: PESQUISA E CONSULTAS
+### ==========================================
+
+### 5.1 GET Listar as configurações do produto (200 OK - devolve 2: tamanhos A e B)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+
+### 5.2 GET Listar as do componente sem stock (200 OK - devolve 1, com stockUnitsConsumed: null)
+GET {{baseUrl}}/products/{{freeId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+
+### 5.3 GET Por tamanho (200 OK - preço 1.5 e 2 unidades)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+
+### 5.4 GET Tamanho sem configuração neste produto (404 Not Found)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeCId}}
+Authorization: Bearer {{adminToken}}
+
+### 5.5 GET Produto com formato de ID inválido (400 Bad Request)
+GET {{baseUrl}}/products/id_invalido/size-configurations
+Authorization: Bearer {{adminToken}}
+
+### 5.6 GET Tamanho com formato de ID inválido (400 Bad Request)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations/id_invalido
+Authorization: Bearer {{adminToken}}
+
+### 5.7 GET Produto inexistente (404 Not Found)
+GET {{baseUrl}}/products/000000000000000000000000/size-configurations
+Authorization: Bearer {{adminToken}}
+
+### 5.8 GET Listar sem token (401 Unauthorized)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations
+
+### 5.9 GET Por tamanho sem token (401 Unauthorized)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+
+### ==========================================
+### 6: ATUALIZAÇÃO E VALIDAÇÕES DO PUT
+### ==========================================
+
+# O PUT substitui o preço e o stockUnitsConsumed. O tamanho não pode ser alterado (remove-se e cria-se de novo).
+
+### 6.1 PUT Válido - Mudar preço e unidades de stock (200 OK - preço 1.8 e 4 unidades)
+PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": 1.8,
+  "stockUnitsConsumed": 4
+}
+
+### 6.2 GET Confirmar a alteração (200 OK - preço 1.8 e 4 unidades)
+GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+
+### 6.3 PUT Componente sem stock - só o preço (200 OK - stockUnitsConsumed: null)
+PUT {{baseUrl}}/products/{{freeId}}/size-configurations/{{sizeBId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": 0.75
+}
+
+### 6.4 PUT Componente com stock sem stockUnitsConsumed (400 Bad Request)
+PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": 2
+}
+
+### 6.5 PUT Componente sem stock com stockUnitsConsumed (400 Bad Request)
+PUT {{baseUrl}}/products/{{freeId}}/size-configurations/{{sizeBId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": 1,
+  "stockUnitsConsumed": 2
+}
+
+### 6.6 PUT Sem preço - Joi (400 Bad Request)
+PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "stockUnitsConsumed": 2
+}
+
+### 6.7 PUT Preço negativo (400 Bad Request)
+PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": -1,
+  "stockUnitsConsumed": 2
+}
+
+### 6.8 PUT Preço em texto (400 Bad Request - sem conversão de tipos)
+PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "price": "1.5",

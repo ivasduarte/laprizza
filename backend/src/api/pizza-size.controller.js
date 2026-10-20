@@ -60,12 +60,13 @@ export const getById = async (req, res, next, sizeRepository) => {
  * @param {import('express').NextFunction} next - The Express next middleware function.
  * @param {Object} [sizeRepository] - The injected repository for pizza size-related database operations.
  */
-export const update = async (req, res, next, sizeRepository) => {
+export const update = async (req, res, next, sizeRepository, productsRepository) => {
   try {
     const updatedSize = await sizeService.updateSize(
       req.params.id,
       req.body,
       sizeRepository,
+      productsRepository,
     );
     res.status(200).json(updatedSize);
   } catch (err) {

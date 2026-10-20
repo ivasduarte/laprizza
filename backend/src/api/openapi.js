@@ -7,6 +7,15 @@ const errorResponse = (description) => ({
   content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
 });
 
+const objectIdPathParam = (name) => ({
+  name,
+  in: 'path',
+  required: true,
+  schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+});
+const productIdParam = objectIdPathParam('productId');
+const sizeIdParam = objectIdPathParam('sizeId');
+
 /**
  * OpenAPI description of the API.
  * Defines the available endpoints, request bodies, and responses for Swagger UI.
@@ -339,6 +348,8 @@ export const openApiSpec = {
       },
       patch: {
         summary: 'Update pizza size (MANAGER only)',
+        description:
+          'Setting isActive to false is refused while the pizza size is used in size configurations of any product. Remove them first.',
         security: [{ BearerAuth: [] }],
         parameters: [
           {
@@ -374,7 +385,9 @@ export const openApiSpec = {
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
           404: errorResponse('Pizza Size not found'),
-          409: errorResponse('Name already in use'),
+          409: errorResponse(
+            'Name already in use, or the pizza size has size configurations and cannot be removed',
+          ),
         },
       },
     },
@@ -825,6 +838,145 @@ export const openApiSpec = {
         },
       },
     },
+    '/products/{productId}/size-configurations': {
+      get: {
+        summary: 'List the size configurations of a product (MANAGER, EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [productIdParam],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ComponentSizeConfiguration' },
+                },
+              },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product not found'),
+        },
+      },
+      post: {
+        summary: 'Create a size configuration (MANAGER only)',
+        description:
+          'Defines the price of a pizza component for a pizza size. Only pizza components can have size configurations, and each size can be configured once per product. stockUnitsConsumed is mandatory for stock controlled products and must be null or omitted otherwise.',
+        security: [{ BearerAuth: [] }],
+        parameters: [productIdParam],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['pizzaSizeId', 'price'],
+                properties: {
+                  pizzaSizeId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  price: { type: 'number', minimum: 0, example: 1.5 },
+                  stockUnitsConsumed: { type: 'integer', minimum: 1, nullable: true, example: 2 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ComponentSizeConfiguration' },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product or pizza size not found, or inactive'),
+          409: errorResponse('The pizza size is already configured for this product'),
+        },
+      },
+    },
+    '/products/{productId}/size-configurations/{sizeId}': {
+      get: {
+        summary: 'Get a size configuration (MANAGER, EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [productIdParam, sizeIdParam],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ComponentSizeConfiguration' },
+              },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product or size configuration not found'),
+        },
+      },
+      put: {
+        summary: 'Update a size configuration (MANAGER only)',
+        description:
+          'Replaces price and stockUnitsConsumed. The pizza size cannot be changed: remove the configuration and create a new one.',
+        security: [{ BearerAuth: [] }],
+        parameters: [productIdParam, sizeIdParam],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['price'],
+                properties: {
+                  price: { type: 'number', minimum: 0, example: 2 },
+                  stockUnitsConsumed: { type: 'integer', minimum: 1, nullable: true, example: 3 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ComponentSizeConfiguration' },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product, pizza size or size configuration not found'),
+        },
+      },
+      delete: {
+        summary: 'Remove a size configuration (MANAGER only)',
+        description: 'Physical removal. Returns the removed configuration.',
+        security: [{ BearerAuth: [] }],
+        parameters: [productIdParam, sizeIdParam],
+        responses: {
+          200: {
+            description: 'Removed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ComponentSizeConfiguration' },
+              },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product or size configuration not found'),
+        },
+      },
+    },
     '/products': {
       get: {
         summary: 'List products',
@@ -937,6 +1089,8 @@ export const openApiSpec = {
       },
       patch: {
         summary: 'Update product (MANAGER only)',
+        description:
+          'Setting isActive to false is refused while the product has size configurations. Remove them first.',
         security: [{ BearerAuth: [] }],
         parameters: [
           {
@@ -987,6 +1141,9 @@ export const openApiSpec = {
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
           404: errorResponse('Product or referenced entity not found'),
+          409: errorResponse(
+            'Name already in use, or the product has size configurations and cannot be removed',
+          ),
         },
       },
     },
@@ -1068,6 +1225,15 @@ export const openApiSpec = {
           isActive: { type: 'boolean' },
         },
       },
+      ComponentSizeConfiguration: {
+        type: 'object',
+        properties: {
+          productId: { type: 'string', example: '65231abcd345678901234567' },
+          pizzaSizeId: { type: 'string', example: '65231abcd345678901234568' },
+          price: { type: 'number', example: 1.5 },
+          stockUnitsConsumed: { type: 'integer', nullable: true, example: 2 },
+        },
+      },
       Product: {
         type: 'object',
         properties: {
@@ -1081,7 +1247,7 @@ export const openApiSpec = {
           pizzaComponentTypeId: { type: 'string', nullable: true, example: null },
           allergenIds: { type: 'array', items: { type: 'string' } },
           isActive: { type: 'boolean' },
-          isPizzaComponent: { type: 'boolean' }
+          isPizzaComponent: { type: 'boolean' },
         },
       },
     },

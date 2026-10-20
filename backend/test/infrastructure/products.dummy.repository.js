@@ -2,6 +2,10 @@ export function createDummyProductsRepository() {
   const products = [];
   let idCounter = 1;
 
+  const indexOfId = (id) => products.findIndex((p) => String(p._id) === String(id));
+  const isForSize = (pizzaSizeId) => (configuration) =>
+    String(configuration.pizzaSizeId) === String(pizzaSizeId);
+
   return {
     listProducts: async (query = {}) => {
       let result = [...products];
@@ -39,6 +43,7 @@ export function createDummyProductsRepository() {
         isActive: true,
         pizzaComponentTypeId: null,
         allergenIds: [],
+        sizeConfigurations: [],
         ...productData,
       };
       products.push(newProduct);
@@ -50,6 +55,57 @@ export function createDummyProductsRepository() {
       if (index === -1) return null;
 
       products[index] = { ...products[index], ...data };
+      return products[index];
+    },
+
+    existsWithSizeConfigurationForPizzaSize: async (pizzaSizeId) => {
+      return products.some((p) =>
+        (p.sizeConfigurations ?? []).some((c) => String(c.pizzaSizeId) === String(pizzaSizeId)),
+      );
+    },
+
+        // Like the real repository, it only adds when the product has no configuration for the pizza
+    // size yet (otherwise, as well as for unknown products, it returns null).
+    addSizeConfiguration: async (productId, configuration) => {
+      const index = indexOfId(productId);
+      if (index === -1) return null;
+
+      const current = products[index].sizeConfigurations ?? [];
+      if (current.some(isForSize(configuration.pizzaSizeId))) return null;
+
+      products[index] = { ...products[index], sizeConfigurations: [...current, { ...configuration }] };
+      return products[index];
+    },
+
+    // Returns null if the product does not exist or has no configuration for the pizza size.
+    updateSizeConfiguration: async (productId, pizzaSizeId, { price, stockUnitsConsumed }) => {
+      const index = indexOfId(productId);
+      if (index === -1) return null;
+
+      const current = products[index].sizeConfigurations ?? [];
+      if (!current.some(isForSize(pizzaSizeId))) return null;
+
+      products[index] = {
+        ...products[index],
+        sizeConfigurations: current.map((c) =>
+          isForSize(pizzaSizeId)(c) ? { ...c, price, stockUnitsConsumed } : c,
+        ),
+      };
+      return products[index];
+    },
+
+    // Returns null if the product does not exist or has no configuration for the pizza size.
+    removeSizeConfiguration: async (productId, pizzaSizeId) => {
+      const index = indexOfId(productId);
+      if (index === -1) return null;
+
+      const current = products[index].sizeConfigurations ?? [];
+      if (!current.some(isForSize(pizzaSizeId))) return null;
+
+      products[index] = {
+        ...products[index],
+        sizeConfigurations: current.filter((c) => !isForSize(pizzaSizeId)(c)),
+      };
       return products[index];
     },
 

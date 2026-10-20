@@ -226,3 +226,77 @@ test('listProducts returns products and applies filters correctly', async () => 
   assert.equal(inactiveOnly.length, 1);
   assert.equal(inactiveOnly[0].name, 'Produto B');
 });
+
+// Pizza size the size configurations of the tests refer to (the products service does not validate it)
+const SIZE_ID = 'abcdef000000000000000050';
+
+async function createPizzaComponent(repos, name = 'Mozzarella') {
+  return createProduct(
+    {
+      ...VALID_PRODUCT_DATA,
+      name,
+      categoryId: repos.validCategory._id,
+      pizzaComponentTypeId: repos.validType._id,
+    },
+    repos,
+  );
+}
+
+async function addSizeConfiguration(repos, productId) {
+  await repos.productsRepository.addSizeConfiguration(productId, {
+    pizzaSizeId: SIZE_ID,
+    price: 1,
+    stockUnitsConsumed: 2,
+  });
+}
+
+test('updateProduct refuses to deactivate a product with size configurations', async () => {
+  const repos = await setupRepos();
+  const product = await createPizzaComponent(repos);
+  await addSizeConfiguration(repos, product.id);
+
+  await assert.rejects(
+    async () => await updateProduct(product.id, { isActive: false }, repos),
+    (err) => err.status === 409 && /size configurations/i.test(err.message),
+  );
+
+  // The product is still active and keeps its configuration
+  assert.equal((await getProductById(product.id, repos)).isActive, true);
+  assert.equal((await repos.productsRepository.findById(product.id)).sizeConfigurations.length, 1);
+});
+
+test('updateProduct deactivates a product once its size configurations are removed', async () => {
+  const repos = await setupRepos();
+  const product = await createPizzaComponent(repos);
+  await addSizeConfiguration(repos, product.id);
+  await repos.productsRepository.removeSizeConfiguration(product.id, SIZE_ID);
+
+  const updated = await updateProduct(product.id, { isActive: false }, repos);
+
+  assert.equal(updated.isActive, false);
+});
+
+test('updateProduct deactivates a pizza component that has no size configurations', async () => {
+  const repos = await setupRepos();
+  const product = await createPizzaComponent(repos);
+
+  const updated = await updateProduct(product.id, { isActive: false }, repos);
+
+  assert.equal(updated.isActive, false);
+});
+
+test('updateProduct still allows other changes to a product with size configurations', async () => {
+  const repos = await setupRepos();
+  const product = await createPizzaComponent(repos);
+  await addSizeConfiguration(repos, product.id);
+
+  const updated = await updateProduct(
+    product.id,
+    { name: 'Mozzarella Extra', price: 2, isActive: true },
+    repos,
+  );
+
+  assert.equal(updated.name, 'Mozzarella Extra');
+  assert.equal(updated.isActive, true);
+  assert.equal((await repos.productsRepository.findById(product.id)).sizeConfigurations.length, 1);
+});

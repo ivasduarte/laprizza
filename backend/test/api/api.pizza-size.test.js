@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { registerUser } from '../../src/application/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
@@ -11,9 +12,11 @@ process.env.JWT_SECRET = 'test_secret_key';
 async function setupTestServer() {
   const usersRepo = createDummyUsersRepository();
   const sizeRepo = createDummyPizzaSizeRepository();
+  const productsRepo = createDummyProductsRepository();
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     usersRepository: usersRepo,
     sizeRepository: sizeRepo,
+    productsRepository: productsRepo,
   }).listen(0);
   await once(server, 'listening');
   const port = server.address().port;
@@ -27,7 +30,7 @@ async function setupTestServer() {
     usersRepo,
   );
 
-  return { server, port };
+  return { server, port, productsRepo };
 }
 
 async function loginAs(port, email) {
@@ -159,4 +162,42 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   });
   assert.equal(patchRes.status, 200);
   assert.equal((await patchRes.json()).isActive, false);
+});
+
+test('API PATCH /pizza-size/:id refuses to deactivate a size used by a size configuration', async (t) => {
+  const { server, port, productsRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+
+  const createRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Large' }),
+  });
+  const id = (await createRes.json()).id;
+
+  await productsRepo.create({
+    name: 'Mozzarella',
+    description: 'Cheese',
+    pizzaComponentTypeId: 'type1',
+    sizeConfigurations: [{ pizzaSizeId: id, price: 1.5, stockUnitsConsumed: null }],
+  });
+
+  // 409 Conflict (tamanho usado por uma configuração)
+  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isActive: false }),
+  });
+  assert.equal(patchRes.status, 409);
+
+  // Continua ativo
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal((await getRes.json()).isActive, true);
 });

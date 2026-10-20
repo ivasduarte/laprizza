@@ -20,6 +20,7 @@ import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.
 import sizesRouterFactory from './api/pizza-size.routes.js';
 import predPIzzaRouter from './api/predefined-pizza.routes.js';
 import productCategoriesRouterFactory from './api/product-categories.routes.js';
+import componentSizeConfigurationRouterFactory from './api/component-size-configuration.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -71,7 +72,6 @@ function notFoundHandler(req, _res, next) {
  * @param {Object} [repos.productsRepository] - The products repository instance (optional).
  * @param {Object} [repos.allergenRepository] - The allergens repository instance (optional).
  * @param {Object} [repos.pizzaComponentTypesRepository] - The pizza component types repository instance (optional).
- * @returns {import('express').Application} The configured Express application instance.
  * @param {Object} [repos.postalCodeValidator] - The postal code validator instance (optional).
  * @returns {import('express').Application} The configured Express application instance.
  */
@@ -92,17 +92,26 @@ export function createApp(config = loadConfig(), repos = {}) {
 
   api.use('/auth', authRouterFactory(repos.usersRepository));
   api.use('/users', usersRouterFactory(repos.usersRepository));
-
+  api.use(
+    '/products/:productId/size-configurations',
+    componentSizeConfigurationRouterFactory({
+      productsRepository: repos.productsRepository,
+      sizeRepository: repos.sizeRepository,
+    }),
+  );
   const isTesting = Object.keys(repos).length > 0;
   api.use(
     '/products',
     productsRouterFactory(
-      isTesting ? {
-        productsRepository: repos.productsRepository,
-        categoriesRepository: repos.productCategoriesRepository || repos.categoriesRepository,
-        allergensRepository: repos.allergenRepository || repos.allergensRepository,
-        pizzaComponentTypesRepository: repos.pizzaComponentTypesRepository || repos.pizzaComponentTypeRepository,
-      } : undefined
+      isTesting
+        ? {
+            productsRepository: repos.productsRepository,
+            categoriesRepository: repos.productCategoriesRepository || repos.categoriesRepository,
+            allergensRepository: repos.allergenRepository || repos.allergensRepository,
+            pizzaComponentTypesRepository:
+              repos.pizzaComponentTypesRepository || repos.pizzaComponentTypeRepository,
+          }
+        : undefined,
     ),
   );
   api.use('/allergens', allergenRouterFactory(repos.allergenRepository));
@@ -110,7 +119,7 @@ export function createApp(config = loadConfig(), repos = {}) {
     '/pizza-component-type',
     pizzaComponentTypesRouterFactory(repos.pizzaComponentTypesRepository, repos.productsRepository),
   );
-  api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository));
+  api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository, repos.productsRepository));
   api.use('/predefined-pizza', predPIzzaRouter);
   api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));

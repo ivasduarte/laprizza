@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { componentSizeConfigurationSchema } from './component-size-configuration.model.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -14,6 +15,7 @@ const productSchema = new mongoose.Schema(
       default: null,
     },
     allergenIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Allergen' }],
+    sizeConfigurations: { type: [componentSizeConfigurationSchema], default: [] },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

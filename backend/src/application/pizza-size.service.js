@@ -1,4 +1,5 @@
 import * as defaultSizeRepo from '../infrastructure/pizza-size.repository.js';
+import * as defaultProductsRepo from '../infrastructure/products.repository.js';
 import { AppError } from './AppError.js';
 
 export function toSizeDto(size) {
@@ -30,9 +31,21 @@ export async function getSizeById(id, sizeRepository = defaultSizeRepo) {
   return toSizeDto(size);
 }
 
-export async function updateSize(id, updateData, sizeRepository = defaultSizeRepo) {
+export async function updateSize(
+  id,
+  updateData,
+  sizeRepository = defaultSizeRepo,
+  productsRepository = defaultProductsRepo,
+) {
   const size = await sizeRepository.findById(id);
   if (!size) throw new AppError('Pizza size not found.', 404);
+
+  if (updateData.isActive === false && size.isActive !== false) {
+    const isInUse = await productsRepository.existsWithSizeConfigurationForPizzaSize(id);
+    if (isInUse) {
+      throw new AppError('Pizza size has size configurations and cannot be removed.', 409);
+    }
+  }
 
   try {
     const updatedSize = await sizeRepository.update(id, updateData);

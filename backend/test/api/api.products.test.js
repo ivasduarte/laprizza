@@ -7,6 +7,8 @@ import { createDummyProductsRepository } from '../infrastructure/products.dummy.
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
 import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
+import { createSize } from '../../src/application/pizza-size.service.js';
 import { registerUser } from '../../src/application/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
@@ -19,6 +21,7 @@ async function setupTestServer() {
   const productsRepo = createDummyProductsRepository();
   const allergensRepo = createDummyAllergenRepository();
   const typesRepo = createDummyPizzaComponentTypesRepository();
+  const sizeRepo = createDummyPizzaSizeRepository();
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     usersRepository: usersRepo,
@@ -28,6 +31,7 @@ async function setupTestServer() {
     productCategoriesRepository: categoriesRepo,
     pizzaComponentTypesRepository: typesRepo,
     pizzaComponentTypeRepository: typesRepo,
+    sizeRepository: sizeRepo,
   }).listen(0);
 
   await once(server, 'listening');
@@ -44,7 +48,7 @@ async function setupTestServer() {
 
   const cat = await categoriesRepo.create({ name: 'Bebidas' });
 
-  return { server, port, categoriesRepo, catId: String(cat._id) };
+  return { server, port, categoriesRepo, typesRepo, sizeRepo, catId: String(cat._id) };
 }
 
 async function loginAs(port, email) {
@@ -236,4 +240,74 @@ test('API GET e PATCH /products/:id Atualizações Parciais', async (t) => {
     (await request(port, 'GET', `/products/${NON_EXISTENT_ID}`, { token: adminToken })).status,
     404,
   );
+});
+
+test('API PATCH /products/:id refuses to deactivate a product with size configurations', async (t) => {
+  const { server, port, catId, typesRepo, sizeRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const adminToken = await loginAs(port, 'admin@laprizza.pt');
+
+  // A pizza component with a size configuration
+  const type = await typesRepo.create({
+    name: 'Cheese',
+    assemblyOrder: 3,
+    minQuantity: 0,
+    maxQuantity: 1,
+  });
+  const createRes = await request(port, 'POST', '/products', {
+    token: adminToken,
+    body: {
+      name: 'Mozzarella',
+      description: 'Cheese',
+      sellable: false,
+      stockControlled: true,
+      categoryId: catId,
+      pizzaComponentTypeId: String(type._id),
+    },
+  });
+  assert.equal(createRes.status, 201);
+  const id = (await createRes.json()).id;
+
+  const size = await createSize({ name: 'Small' }, sizeRepo);
+  const configRes = await request(port, 'POST', `/products/${id}/size-configurations`, {
+    token: adminToken,
+    body: { pizzaSizeId: size.id, price: 1.5, stockUnitsConsumed: 2 },
+  });
+  assert.equal(configRes.status, 201);
+
+  // 409 Conflict - the product has size configurations and cannot be removed
+  const blocked = await request(port, 'PATCH', `/products/${id}`, {
+    token: adminToken,
+    body: { isActive: false },
+  });
+  assert.equal(blocked.status, 409);
+
+  // The product is still active
+  const found = await request(port, 'GET', `/products/${id}`, { token: adminToken });
+  assert.equal((await found.json()).isActive, true);
+
+  // Other changes are still allowed
+  const renamed = await request(port, 'PATCH', `/products/${id}`, {
+    token: adminToken,
+    body: { name: 'Mozzarella Extra' },
+  });
+  assert.equal(renamed.status, 200);
+  assert.equal((await renamed.json()).name, 'Mozzarella Extra');
+
+  // 200 OK - once the configuration is removed the product can be deactivated
+  const removed = await request(port, 'DELETE', `/products/${id}/size-configurations/${size.id}`, {
+    token: adminToken,
+  });
+  assert.equal(removed.status, 200);
+
+  const deactivated = await request(port, 'PATCH', `/products/${id}`, {
+    token: adminToken,
+    body: { isActive: false },
+  });
+  assert.equal(deactivated.status, 200);
+  assert.equal((await deactivated.json()).isActive, false);
 });

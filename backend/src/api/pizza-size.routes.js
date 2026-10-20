@@ -5,7 +5,7 @@ import { Roles } from '../domain/users.domain.js';
 import { AppError } from '../application/AppError.js';
 import { requireRole, verifyToken } from './middleware/auth.middleware.js';
 
-export default function sizesRouterFactory(sizeRepository) {
+export default function sizesRouterFactory(sizeRepository, productsRepository) {
   const router = Router();
 
   const createSizeSchema = Joi.object({
@@ -110,7 +110,7 @@ export default function sizesRouterFactory(sizeRepository) {
         next(err);
       }
     },
-    (req, res, next) => controller.update(req, res, next, sizeRepository),
+    (req, res, next) => controller.update(req, res, next, sizeRepository, productsRepository),
   );
 
   return router;

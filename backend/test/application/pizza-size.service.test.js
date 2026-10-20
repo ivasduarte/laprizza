@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import {
   createSize,
   listSizes,
@@ -56,11 +57,65 @@ test('getSizeById returns correct size or throws 404', async () => {
 
 test('updateSize modifies partial data safely', async () => {
   const repo = createDummyPizzaSizeRepository();
+  const productsRepo = createDummyProductsRepository();
   const size = await createSize({ name: 'Family' }, repo);
 
-  const updated = await updateSize(size.id, { isActive: false }, repo);
+  const updated = await updateSize(size.id, { isActive: false }, repo, productsRepo);
   assert.equal(updated.isActive, false);
   assert.equal(updated.name, 'Family'); // Mantém o nome original
+});
+
+test('updateSize refuses to deactivate a size used by a size configuration', async () => {
+  const repo = createDummyPizzaSizeRepository();
+  const productsRepo = createDummyProductsRepository();
+  const size = await createSize({ name: 'Large' }, repo);
+  await productsRepo.create({
+    name: 'Mozzarella',
+    description: 'Cheese',
+    pizzaComponentTypeId: 'type1',
+    sizeConfigurations: [{ pizzaSizeId: size.id, price: 1.5, stockUnitsConsumed: null }],
+  });
+
+  await assert.rejects(
+    async () => await updateSize(size.id, { isActive: false }, repo, productsRepo),
+    (err) =>
+      err.status === 409 &&
+      err.message === 'Pizza size has size configurations and cannot be removed.',
+  );
+
+  assert.equal((await getSizeById(size.id, repo)).isActive, true); // Não foi desativado
+});
+
+test('updateSize deactivates a size when only other sizes are used by configurations', async () => {
+  const repo = createDummyPizzaSizeRepository();
+  const productsRepo = createDummyProductsRepository();
+  const used = await createSize({ name: 'Medium' }, repo);
+  const free = await createSize({ name: 'Small' }, repo);
+  await productsRepo.create({
+    name: 'Mozzarella',
+    description: 'Cheese',
+    pizzaComponentTypeId: 'type1',
+    sizeConfigurations: [{ pizzaSizeId: used.id, price: 1.5, stockUnitsConsumed: null }],
+  });
+
+  const updated = await updateSize(free.id, { isActive: false }, repo, productsRepo);
+  assert.equal(updated.isActive, false);
+});
+
+test('updateSize still allows renaming a size used by a size configuration', async () => {
+  const repo = createDummyPizzaSizeRepository();
+  const productsRepo = createDummyProductsRepository();
+  const size = await createSize({ name: 'Large' }, repo);
+  await productsRepo.create({
+    name: 'Mozzarella',
+    description: 'Cheese',
+    pizzaComponentTypeId: 'type1',
+    sizeConfigurations: [{ pizzaSizeId: size.id, price: 1.5, stockUnitsConsumed: null }],
+  });
+
+  const updated = await updateSize(size.id, { name: 'Extra Large' }, repo, productsRepo);
+  assert.equal(updated.name, 'Extra Large');
+  assert.equal(updated.isActive, true);
 });
 
 test('updateSize throws 404 for unknown IDs and 409 for duplicate names', async () => {

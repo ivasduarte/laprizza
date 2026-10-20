@@ -92,6 +92,14 @@ export async function updateProduct(
   const product = await repos.productsRepository.findById(id);
   if (!product) throw new AppError('Product not found.', 404);
 
+  if (
+    updateData.isActive === false &&
+    product.isActive !== false &&
+    product.sizeConfigurations?.length > 0
+  ) {
+    throw new AppError('Product has size configurations and cannot be removed.', 409);
+  }
+
   const isSellable = updateData.sellable !== undefined ? updateData.sellable : product.sellable;
   const price = updateData.price !== undefined ? updateData.price : product.price;
 
