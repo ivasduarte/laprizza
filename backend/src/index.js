@@ -18,7 +18,7 @@ import allergenRouterFactory from './api/allergen.routes.js';
 import customersRouterFactory from './api/customers.routes.js';
 import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.js';
 import sizesRouterFactory from './api/pizza-size.routes.js';
-import predPIzzaRouter from './api/predefined-pizza.routes.js';
+import predefinedPizzaRouterFactory from './api/predefined-pizza.routes.js';
 import productCategoriesRouterFactory from './api/product-categories.routes.js';
 import stockRouterFactory from './api/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration.routes.js';
@@ -133,7 +133,7 @@ export function createApp(config = loadConfig(), repos = {}) {
     pizzaComponentTypesRouterFactory(repos.pizzaComponentTypesRepository, repos.productsRepository),
   );
   api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository, repos.productsRepository));
-  api.use('/predefined-pizza', predPIzzaRouter);
+  api.use('/predefined-pizzas', predefinedPizzaRouterFactory(isTesting ? { predefinedPizzaRepository: repos.predefinedPizzaRepository,productsRepository: repos.productsRepository} : undefined));
   api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(

@@ -678,6 +678,177 @@ export const openApiSpec = {
         },
       },
     },
+        '/predefined-pizzas': {
+      get: {
+        summary: 'List predefined pizzas (MANAGER and EMPLOYEE)',
+        description: 'Only active predefined pizzas are returned.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'name',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on the name of the represented product.',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/PredefinedPizza' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create predefined pizza (MANAGER only)',
+        description:
+          'The pizza is represented by an active sellable product. The default configuration only accepts active pizza components without repetitions, respecting the minimum/maximum of each pizza component type. Every size needs a component size configuration for every component.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['productId', 'sizeIds', 'componentIds'],
+                properties: {
+                  productId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  sizeIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                  componentIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PredefinedPizza' } },
+            },
+          },
+          400: errorResponse('Validation error or broken business rule'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          409: errorResponse('A predefined pizza already exists for this product'),
+        },
+      },
+    },
+    '/predefined-pizzas/name/{name}': {
+      get: {
+        summary:
+          'Get predefined pizza by exact product name, case-insensitive (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'name', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PredefinedPizzaDetails' },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Predefined pizza not found'),
+        },
+      },
+    },
+    '/predefined-pizzas/{id}': {
+      get: {
+        summary: 'Get predefined pizza and its default configuration by ID (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PredefinedPizzaDetails' },
+              },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Predefined pizza not found'),
+        },
+      },
+      put: {
+        summary: 'Update or deactivate predefined pizza (MANAGER only)',
+        description:
+          'Accepts sizeIds, componentIds and/or { "isActive": false }. When sizes or components change, the full validation of the creation is repeated. Reactivation is not supported.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                minProperties: 1,
+                properties: {
+                  sizeIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                  componentIds: {
+                    type: 'array',
+                    minItems: 1,
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                  },
+                  isActive: { type: 'boolean', enum: [false] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Updated',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PredefinedPizza' } },
+            },
+          },
+          400: errorResponse('Validation error or broken business rule'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Predefined pizza not found'),
+        },
+      },
+    },
     '/pizza-component-type': {
       get: {
         summary: 'List or search pizza component types (MANAGER only)',
@@ -1363,6 +1534,26 @@ export const openApiSpec = {
             example: 25,
             description: 'Non-negative integer representing the abstract stock units.',
           },
+        },
+      },
+      PredefinedPizza: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          productId: { type: 'string', example: '65231abcd345678901234567' },
+          sizeIds: { type: 'array', items: { type: 'string' } },
+          componentIds: { type: 'array', items: { type: 'string' } },
+          isActive: { type: 'boolean' },
+        },
+      },
+      PredefinedPizzaDetails: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          product: { $ref: '#/components/schemas/Product' },
+          sizes: { type: 'array', items: { $ref: '#/components/schemas/PizzaSize' } },
+          components: { type: 'array', items: { $ref: '#/components/schemas/PizzaComponentType' } },
+          isActive: { type: 'boolean' },
         },
       },
     },
