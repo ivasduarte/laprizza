@@ -9,8 +9,8 @@ import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
 import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
-import { createSize } from '../../src/application/pizza-size.service.js';
-import { registerUser } from '../../src/application/auth.service.js';
+import { createSize } from '../../src/application/pizza-size/pizza-size.service.js';
+import { registerUser } from '../../src/application/auth/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 

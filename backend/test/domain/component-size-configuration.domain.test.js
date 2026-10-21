@@ -9,7 +9,7 @@ import {
   validatePizzaSizeId,
   validatePrice,
   validateStockUnitsConsumed,
-} from '../../src/domain/component-size-configuration.domain.js';
+} from '../../src/domain/component-size-configuration/component-size-configuration.domain.js';
 
 const SIZE_A = '64b7f0c2a1b2c3d4e5f60001';
 const SIZE_B = '64b7f0c2a1b2c3d4e5f60002';

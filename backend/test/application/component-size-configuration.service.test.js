@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
-import { createSize } from '../../src/application/pizza-size.service.js';
+import { createSize } from '../../src/application/pizza-size/pizza-size.service.js';
 import {
   toComponentSizeConfigurationDTO,
   listComponentSizeConfigurations,
@@ -10,7 +10,7 @@ import {
   getComponentSizeConfiguration,
   updateComponentSizeConfiguration,
   removeComponentSizeConfiguration,
-} from '../../src/application/component-size-configuration.service.js';
+} from '../../src/application/component-size-configuration/component-size-configuration.service.js';
 
 // Valid identifier format (24 hex characters) that does not belong to any product or pizza size
 const NON_EXISTENT_ID = 'abcdef000000000000000999';

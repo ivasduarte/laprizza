@@ -18,8 +18,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 
 ### 1.2 Criar Categoria de Referência
@@ -32,8 +34,10 @@ Content-Type: application/json
   "name": "Categoria {{$timestamp}}"
 }
 
+?? status == 201
+
 ### Guarda Categoria
-@categoryId = {{createCategory.response.body.$.id}}
+@categoryId = {{createCategory.id}}
 
 
 ### 1.3 Criar Alergénio de Referência
@@ -46,8 +50,10 @@ Content-Type: application/json
   "name": "Alergenio {{$timestamp}}"
 }
 
+?? status == 201
+
 ### Guarda Alergenio
-@allergenId = {{createAllergen.response.body.$.id}}
+@allergenId = {{createAllergen.id}}
 
 
 ### 1.4 Criar Tipo de Componente de Referência
@@ -63,8 +69,10 @@ Content-Type: application/json
   "maxQuantity": 1
 }
 
+?? status == 201
+
 ### Guarda Tipo de Componente
-@typeId = {{createComponentType.response.body.$.id}}
+@typeId = {{createComponentType.id}}
 
 
 ### ==========================================
@@ -90,8 +98,10 @@ Content-Type: application/json
   ]
 }
 
+?? status == 201
+
 ### Variáveis do Produto
-@productId = {{createProduct.response.body.$.id}}
+@productId = {{createProduct.id}}
 
 ### 2.2 POST Produto Simples Vendável (201 Created)
 POST {{baseUrl}}/products
@@ -107,6 +117,8 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 201
+
 ### 2.3 Regra de Negócio: Vendável mas sem preço válido (400 Bad Request)
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
@@ -121,6 +133,8 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 400
+
 ### 2.4 Integridade Referencial: Categoria Inexistente (404 Not Found)
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
@@ -134,6 +148,8 @@ Content-Type: application/json
   "categoryId": "{{missingId}}"
 }
 
+?? status == 404
+
 ### 2.5 Falha Joi: Nome vazio e falta de campos obrigatórios (400 Bad Request)
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
@@ -144,6 +160,8 @@ Content-Type: application/json
   "stockControlled": true,
   "categoryId": "{{categoryId}}"
 }
+
+?? status == 400
 
 ### 2.6 Falha Joi: ID de Categoria em formato inválido (400 Bad Request)
 POST {{baseUrl}}/products
@@ -158,6 +176,8 @@ Content-Type: application/json
   "categoryId": "123_formato_errado"
 }
 
+?? status == 400
+
 ### 2.7 Integridade Referencial: Tipo de Componente Inexistente (404 Not Found)
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
@@ -171,6 +191,8 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}",
   "pizzaComponentTypeId": "{{missingId}}"
 }
+
+?? status == 404
 
 ### 2.8 Integridade Referencial: Alergénio Inexistente (404 Not Found)
 POST {{baseUrl}}/products
@@ -187,6 +209,8 @@ Content-Type: application/json
     "{{missingId}}"
   ]
 }
+
+?? status == 404
 
 ### 2.9 Falha Joi: Formato inválido nos Alergénios e Tipo de Componente (400 Bad Request)
 POST {{baseUrl}}/products
@@ -205,6 +229,8 @@ Content-Type: application/json
   ]
 }
 
+?? status == 400
+
 ### 2.10 Falha Joi: Alergénios Duplicados no Array (400 Bad Request)
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
@@ -222,6 +248,8 @@ Content-Type: application/json
   ]
 }
 
+?? status == 400
+
 ### ==========================================
 ### 3: PESQUISA E CONSULTAS (GET)
 ### ==========================================
@@ -230,30 +258,44 @@ Content-Type: application/json
 GET {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 3.2 GET Pesquisa Parcial por Texto (200 OK)
 GET {{baseUrl}}/products?search=Massa
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 3.3 GET Por ID Válido (200 OK)
 GET {{baseUrl}}/products/{{productId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 3.4 GET Por ID com Formato Inválido (400 Bad Request - Joi)
 GET {{baseUrl}}/products/abc
 Authorization: Bearer {{adminToken}}
+
+?? status == 400
 
 ### 3.5 GET Por ID Inexistente (404 Not Found)
 GET {{baseUrl}}/products/{{missingId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 404
+
 ### 3.6 GET Filtrar por Categoria (200 OK)
 GET {{baseUrl}}/products?categoryId={{categoryId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 3.7 GET Filtrar por Produtos Inativos (200 OK)
 # Deve retornar os produtos que desativaste anteriormente
 GET {{baseUrl}}/products?isActive=false
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 
 ### ==========================================
@@ -270,8 +312,10 @@ Content-Type: application/json
   "name": "Massa Fina Integral Atualizada {{$timestamp}}"
 }
 
+?? status == 200
+
 ### Guarda o novo nome para garantir a duplicação no 4.8
-@patchedName = {{updateProduct.response.body.$.name}}
+@patchedName = {{updateProduct.name}}
 
 ### 4.2 PATCH Nular Ref de Componente e Limpar Alergénios (200 OK)
 # Verifica na resposta se `isPizzaComponent` passou para `false`
@@ -283,6 +327,8 @@ Content-Type: application/json
   "pizzaComponentTypeId": null,
   "allergenIds": []
 }
+
+?? status == 200
 
 ### 4.3 Regra de Negócio no PATCH: Tornar vendável sem fornecer preço (400 Bad Request)
 # Como o produto do passo 2.1 foi criado com price 0 e sellable false, 
@@ -297,12 +343,16 @@ Content-Type: application/json
   "price": -5.0
 }
 
+?? status == 400
+
 ### 4.4 Falha Joi: Body Vazio (400 Bad Request)
 PATCH {{baseUrl}}/products/{{productId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 4.5 PATCH Desativar Produto (Soft Delete) (200 OK)
 PATCH {{baseUrl}}/products/{{productId}}
@@ -312,6 +362,8 @@ Content-Type: application/json
 {
   "isActive": false
 }
+
+?? status == 200
 
 ### 4.6 PATCH Integridade Referencial: Atualizar para um Alergénio Inexistente (404 Not Found)
 PATCH {{baseUrl}}/products/{{productId}}
@@ -324,6 +376,8 @@ Content-Type: application/json
   ]
 }
 
+?? status == 404
+
 ### 4.7 PATCH Integridade Referencial: Atualizar para um Tipo de Componente Inexistente (404 Not Found)
 PATCH {{baseUrl}}/products/{{productId}}
 Authorization: Bearer {{adminToken}}
@@ -332,6 +386,8 @@ Content-Type: application/json
 {
   "pizzaComponentTypeId": "{{missingId}}"
 }
+
+?? status == 404
 
 ### 4.8 POST Produto com Nome Duplicado (409 Conflict)
 # Usa exatamente o mesmo nome gerado no passo 4.1
@@ -348,9 +404,13 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 409
+
 ### 4.9 Setup: Desativar a Categoria de Referência
 DELETE {{baseUrl}}/product-categories/{{categoryId}}
 Authorization: Bearer {{adminToken}}
+
+?? status startsWith 2
 
 ### 4.10 POST Produto com Categoria Inativa (404 Not Found)
 # A BD tem o ID, mas como está inativa, a regra de domínio bloqueia
@@ -365,6 +425,8 @@ Content-Type: application/json
   "stockControlled": false,
   "categoryId": "{{categoryId}}"
 }
+
+?? status == 404
 
 ### ==========================================
 ### 5: SEGURANÇA E ACESSOS (RBAC)
@@ -382,6 +444,8 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 401
+
 ### 5.2 PATCH Sem Token (401 Unauthorized)
 PATCH {{baseUrl}}/products/{{productId}}
 Content-Type: application/json
@@ -389,3 +453,5 @@ Content-Type: application/json
 {
   "name": "Tentativa sem token {{$timestamp}}"
 }
+
+?? status == 401

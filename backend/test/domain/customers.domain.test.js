@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePhoneNumber, validateAddress, normalizePhoneNumber } from '../../src/domain/customers.domain.js';
+import { validatePhoneNumber, validateAddress, normalizePhoneNumber } from '../../src/domain/customers/customers.domain.js';
 import { DomainError } from '../../src/domain/domain-error.js';
 
 process.env.JWT_SECRET = 'test_secret_key';

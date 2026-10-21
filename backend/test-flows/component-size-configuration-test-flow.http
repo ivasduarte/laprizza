@@ -17,8 +17,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 ### ==========================================
 ### 2: PREPARAÇÃO DOS DADOS DE APOIO
@@ -40,9 +42,11 @@ Content-Type: application/json
   "name": "{{$randomInt 100000 999999}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@runId = {{createCategory.response.body.$.name}}
-@categoryId = {{createCategory.response.body.$.id}}
+@runId = {{createCategory.name}}
+@categoryId = {{createCategory.id}}
 
 ### 2.2 POST Tipo de componente (201 Created - a ordem de montagem é única entre os tipos ativos)
 # @name createType
@@ -57,8 +61,10 @@ Content-Type: application/json
   "maxQuantity": 2
 }
 
+?? status == 201
+
 ### Variáveis
-@typeId = {{createType.response.body.$.id}}
+@typeId = {{createType.id}}
 
 ### 2.3 POST Tamanho A (201 Created)
 # @name createSizeA
@@ -70,8 +76,10 @@ Content-Type: application/json
   "name": "Pequena {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeAId = {{createSizeA.response.body.$.id}}
+@sizeAId = {{createSizeA.id}}
 
 ### 2.4 POST Tamanho B (201 Created)
 # @name createSizeB
@@ -83,8 +91,10 @@ Content-Type: application/json
   "name": "Grande {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeBId = {{createSizeB.response.body.$.id}}
+@sizeBId = {{createSizeB.id}}
 
 ### 2.5 POST Tamanho C (201 Created - nunca terá configurações)
 # @name createSizeC
@@ -96,8 +106,10 @@ Content-Type: application/json
   "name": "Media {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeCId = {{createSizeC.response.body.$.id}}
+@sizeCId = {{createSizeC.id}}
 
 ### 2.6 POST Tamanho D (201 Created - será desativado a seguir)
 # @name createSizeD
@@ -109,8 +121,10 @@ Content-Type: application/json
   "name": "Familiar {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeDId = {{createSizeD.response.body.$.id}}
+@sizeDId = {{createSizeD.id}}
 
 ### 2.7 PATCH Desativar o tamanho D (200 OK - isActive: false, não tem configurações)
 PATCH {{baseUrl}}/pizza-size/{{sizeDId}}
@@ -120,6 +134,8 @@ Content-Type: application/json
 {
   "isActive": false
 }
+
+?? status == 200
 
 ### 2.8 POST Componente com stock controlado (201 Created - isPizzaComponent: true)
 # @name createStockComponent
@@ -136,8 +152,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{typeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@stockId = {{createStockComponent.response.body.$.id}}
+@stockId = {{createStockComponent.id}}
 
 ### 2.9 POST Componente sem stock controlado (201 Created - isPizzaComponent: true)
 # @name createFreeComponent
@@ -154,8 +172,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{typeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@freeId = {{createFreeComponent.response.body.$.id}}
+@freeId = {{createFreeComponent.id}}
 
 ### 2.10 POST Produto que não é componente de pizza (201 Created - isPizzaComponent: false)
 # @name createPlainProduct
@@ -172,8 +192,10 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@plainId = {{createPlainProduct.response.body.$.id}}
+@plainId = {{createPlainProduct.id}}
 
 ### ==========================================
 ### 3: CRIAÇÃO DE CONFIGURAÇÕES
@@ -182,6 +204,8 @@ Content-Type: application/json
 ### 3.1 GET Listar um produto sem configurações (200 OK - devolve [])
 GET {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 3.2 POST Configuração para o tamanho A (201 Created - preço 1.5 e 2 unidades de stock)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -194,6 +218,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 2
 }
 
+?? status == 201
+
 ### 3.3 POST Configuração para o tamanho B (201 Created - preço 2.5 e 3 unidades de stock)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -205,6 +231,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 3
 }
 
+?? status == 201
+
 ### 3.4 POST Componente sem stock com null explícito (201 Created - stockUnitsConsumed: null)
 POST {{baseUrl}}/products/{{freeId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -215,6 +243,8 @@ Content-Type: application/json
   "price": 0.5,
   "stockUnitsConsumed": null
 }
+
+?? status == 201
 
 ### ==========================================
 ### 4: VALIDAÇÕES DO POST
@@ -231,6 +261,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 409
+
 ### 4.2 POST Componente com stock sem stockUnitsConsumed (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -240,6 +272,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeCId}}",
   "price": 1
 }
+
+?? status == 400
 
 ### 4.3 POST Componente com stock e stockUnitsConsumed null (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -252,6 +286,8 @@ Content-Type: application/json
   "stockUnitsConsumed": null
 }
 
+?? status == 400
+
 ### 4.4 POST Componente sem stock com stockUnitsConsumed (400 Bad Request - só os produtos com stock o definem)
 POST {{baseUrl}}/products/{{freeId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -262,6 +298,8 @@ Content-Type: application/json
   "price": 1,
   "stockUnitsConsumed": 2
 }
+
+?? status == 400
 
 ### 4.5 POST Produto que não é componente de pizza (400 Bad Request)
 POST {{baseUrl}}/products/{{plainId}}/size-configurations
@@ -274,6 +312,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 400
+
 ### 4.6 POST Sem preço - Joi (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -283,6 +323,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeCId}}",
   "stockUnitsConsumed": 1
 }
+
+?? status == 400
 
 ### 4.7 POST Preço negativo (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -295,6 +337,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 400
+
 ### 4.8 POST Preço em texto (400 Bad Request - sem conversão de tipos)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -305,6 +349,8 @@ Content-Type: application/json
   "price": "1.5",
   "stockUnitsConsumed": 1
 }
+
+?? status == 400
 
 ### 4.9 POST stockUnitsConsumed igual a 0 (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -317,6 +363,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 0
 }
 
+?? status == 400
+
 ### 4.10 POST stockUnitsConsumed decimal (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -327,6 +375,8 @@ Content-Type: application/json
   "price": 1,
   "stockUnitsConsumed": 1.5
 }
+
+?? status == 400
 
 ### 4.11 POST stockUnitsConsumed em texto (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -339,6 +389,8 @@ Content-Type: application/json
   "stockUnitsConsumed": "2"
 }
 
+?? status == 400
+
 ### 4.12 POST Sem tamanho - Joi (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -348,6 +400,8 @@ Content-Type: application/json
   "price": 1,
   "stockUnitsConsumed": 1
 }
+
+?? status == 400
 
 ### 4.13 POST Tamanho com formato de ID inválido (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -360,6 +414,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 400
+
 ### 4.14 POST Produto com formato de ID inválido (400 Bad Request)
 POST {{baseUrl}}/products/id_invalido/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -371,12 +427,16 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 400
+
 ### 4.15 POST Corpo vazio - Joi (400 Bad Request)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 4.16 POST Produto inexistente (404 Not Found)
 POST {{baseUrl}}/products/000000000000000000000000/size-configurations
@@ -389,6 +449,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 404
+
 ### 4.17 POST Tamanho inexistente (404 Not Found)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -399,6 +461,8 @@ Content-Type: application/json
   "price": 1,
   "stockUnitsConsumed": 1
 }
+
+?? status == 404
 
 ### 4.18 POST Tamanho inativo (404 Not Found - o tamanho D foi desativado em 2.7)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
@@ -411,6 +475,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 404
+
 ### 4.19 POST Sem token (401 Unauthorized)
 POST {{baseUrl}}/products/{{stockId}}/size-configurations
 Content-Type: application/json
@@ -421,6 +487,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 1
 }
 
+?? status == 401
+
 ### ==========================================
 ### 5: PESQUISA E CONSULTAS
 ### ==========================================
@@ -429,35 +497,53 @@ Content-Type: application/json
 GET {{baseUrl}}/products/{{stockId}}/size-configurations
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 5.2 GET Listar as do componente sem stock (200 OK - devolve 1, com stockUnitsConsumed: null)
 GET {{baseUrl}}/products/{{freeId}}/size-configurations
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 5.3 GET Por tamanho (200 OK - preço 1.5 e 2 unidades)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 5.4 GET Tamanho sem configuração neste produto (404 Not Found)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeCId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 ### 5.5 GET Produto com formato de ID inválido (400 Bad Request)
 GET {{baseUrl}}/products/id_invalido/size-configurations
 Authorization: Bearer {{adminToken}}
 
+?? status == 400
+
 ### 5.6 GET Tamanho com formato de ID inválido (400 Bad Request)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations/id_invalido
 Authorization: Bearer {{adminToken}}
+
+?? status == 400
 
 ### 5.7 GET Produto inexistente (404 Not Found)
 GET {{baseUrl}}/products/000000000000000000000000/size-configurations
 Authorization: Bearer {{adminToken}}
 
+?? status == 404
+
 ### 5.8 GET Listar sem token (401 Unauthorized)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations
 
+?? status == 401
+
 ### 5.9 GET Por tamanho sem token (401 Unauthorized)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
+
+?? status == 401
 
 ### ==========================================
 ### 6: ATUALIZAÇÃO E VALIDAÇÕES DO PUT
@@ -475,9 +561,13 @@ Content-Type: application/json
   "stockUnitsConsumed": 4
 }
 
+?? status == 200
+
 ### 6.2 GET Confirmar a alteração (200 OK - preço 1.8 e 4 unidades)
 GET {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 6.3 PUT Componente sem stock - só o preço (200 OK - stockUnitsConsumed: null)
 PUT {{baseUrl}}/products/{{freeId}}/size-configurations/{{sizeBId}}
@@ -488,6 +578,8 @@ Content-Type: application/json
   "price": 0.75
 }
 
+?? status == 200
+
 ### 6.4 PUT Componente com stock sem stockUnitsConsumed (400 Bad Request)
 PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
 Authorization: Bearer {{adminToken}}
@@ -496,6 +588,8 @@ Content-Type: application/json
 {
   "price": 2
 }
+
+?? status == 400
 
 ### 6.5 PUT Componente sem stock com stockUnitsConsumed (400 Bad Request)
 PUT {{baseUrl}}/products/{{freeId}}/size-configurations/{{sizeBId}}
@@ -507,6 +601,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 2
 }
 
+?? status == 400
+
 ### 6.6 PUT Sem preço - Joi (400 Bad Request)
 PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
 Authorization: Bearer {{adminToken}}
@@ -515,6 +611,8 @@ Content-Type: application/json
 {
   "stockUnitsConsumed": 2
 }
+
+?? status == 400
 
 ### 6.7 PUT Preço negativo (400 Bad Request)
 PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
@@ -526,6 +624,8 @@ Content-Type: application/json
   "stockUnitsConsumed": 2
 }
 
+?? status == 400
+
 ### 6.8 PUT Preço em texto (400 Bad Request - sem conversão de tipos)
 PUT {{baseUrl}}/products/{{stockId}}/size-configurations/{{sizeAId}}
 Authorization: Bearer {{adminToken}}
@@ -533,3 +633,5 @@ Content-Type: application/json
 
 {
   "price": "1.5",
+
+?? status == 400

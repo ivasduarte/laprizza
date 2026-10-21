@@ -17,8 +17,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 
 ### ==========================================
@@ -45,10 +47,12 @@ Content-Type: application/json
   "dietaryRestrictions": ["65231abcd345678901234567"]
 }
 
+?? status == 201
+
 ### Variáveis
-@customerId = {{createCustomer.response.body.$.id}}
-@createdEmail = {{createCustomer.response.body.$.email}}
-@createdPhone = {{createCustomer.response.body.$.phoneNumber}}
+@customerId = {{createCustomer.id}}
+@createdEmail = {{createCustomer.email}}
+@createdPhone = {{createCustomer.phoneNumber}}
 
 ### 2.1 POST Email Duplicado (409 Conflict)
 POST {{baseUrl}}/customers
@@ -67,6 +71,8 @@ Content-Type: application/json
     "district": "Porto"
   }
 }
+
+?? status == 409
 
 ### 2.2 POST Alergénios Duplicados no Array - Joi (400 Bad Request)
 POST {{baseUrl}}/customers
@@ -90,6 +96,8 @@ Content-Type: application/json
   ]
 }
 
+?? status == 400
+
 
 ### 2.3 POST Telefone já usado, noutro formato (409 Conflict)
 POST {{baseUrl}}/customers
@@ -109,6 +117,8 @@ Content-Type: application/json
   }
 }
 
+?? status == 409
+
 ### ==========================================
 ### 3: PESQUISA E CONSULTAS
 ### ==========================================
@@ -117,17 +127,25 @@ Content-Type: application/json
 GET {{baseUrl}}/customers
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 3.1 GET Pesquisa por Nome (200 OK)
 GET {{baseUrl}}/customers?search=Maria
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 3.2 GET Pesquisa por Email (200 OK)
 GET {{baseUrl}}/customers?search={{createdEmail}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 4. GET Por ID (200 OK)
 GET {{baseUrl}}/customers/{{customerId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 
 ### ==========================================
@@ -142,6 +160,8 @@ Content-Type: application/json
 {
   "phoneNumber": "telefone_invalido"
 }
+
+?? status == 400
 
 ### 5.1 POST Segundo Cliente (necessário para provar o conflito de email no PATCH)
 # @name createSecondCustomer
@@ -162,9 +182,11 @@ Content-Type: application/json
   }
 }
 
+?? status == 201
+
 ### Variáveis
-@secondEmail = {{createSecondCustomer.response.body.$.email}}
-@secondPhone = {{createSecondCustomer.response.body.$.phoneNumber}}
+@secondEmail = {{createSecondCustomer.email}}
+@secondPhone = {{createSecondCustomer.phoneNumber}}
 
 ### 5.2 PATCH Email de outro cliente (409 Conflict)
 PATCH {{baseUrl}}/customers/{{customerId}}
@@ -175,6 +197,8 @@ Content-Type: application/json
   "email": "{{secondEmail}}"
 }
 
+?? status == 409
+
 
 ### 5.2.1 PATCH Telefone de outro cliente, noutro formato (409 Conflict)
 PATCH {{baseUrl}}/customers/{{customerId}}
@@ -184,6 +208,8 @@ Content-Type: application/json
 {
   "phoneNumber": "+351 {{secondPhone}}"
 }
+
+?? status == 409
 
 ### 5.3 PATCH Alergénios Duplicados - Joi (400 Bad Request)
 PATCH {{baseUrl}}/customers/{{customerId}}
@@ -197,6 +223,8 @@ Content-Type: application/json
   ]
 }
 
+?? status == 400
+
 ### 5.4 PATCH Válido - Atualizar Dados e Inativar (200 OK)
 PATCH {{baseUrl}}/customers/{{customerId}}
 Authorization: Bearer {{adminToken}}
@@ -206,3 +234,5 @@ Content-Type: application/json
   "phoneNumber": "93{{$randomInt 1000000 9999999}}",
   "isActive": false
 }
+
+?? status == 200

@@ -7,7 +7,7 @@ import {
   listSizes,
   getSizeById,
   updateSize,
-} from '../../src/application/pizza-size.service.js';
+} from '../../src/application/pizza-size/pizza-size.service.js';
 
 test('createSize creates a new size and returns DTO', async () => {
   const repo = createDummyPizzaSizeRepository();

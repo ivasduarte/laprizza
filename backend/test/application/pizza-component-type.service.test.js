@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
 import {
-    listPizzaComponentTypes,
-    createPizzaComponentType,
-    getPizzaComponentTypeById,
-    updatePizzaComponentType,
-    removePizzaComponentType,
-    toPizzaComponentTypeDTO,
-} from '../../src/application/pizza-component-type.service.js';
+  listPizzaComponentTypes,
+  createPizzaComponentType,
+  getPizzaComponentTypeById,
+  updatePizzaComponentType,
+  removePizzaComponentType,
+  toPizzaComponentTypeDTO,
+} from '../../src/application/pizza-component-type/pizza-component-type.service.js';
 
 // Valid identifier format (24 hex characters) that does not belong to any category
 const NON_EXISTENT_ID = 'abcdef000000000000000999';

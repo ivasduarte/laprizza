@@ -7,7 +7,7 @@ import {
   createDummyPredefinedPizzaRepository,
   SEED_IDS as I,
 } from '../infrastructure/predefined-pizzas.dummy.repository.js';
-import { registerUser } from '../../src/application/auth.service.js';
+import { registerUser } from '../../src/application/auth/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 

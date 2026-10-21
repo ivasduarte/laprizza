@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AppError } from '../../src/application/AppError.js';
+import { AppError } from '../../src/application/app-error.js';
 import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
 import {
   createAllergen,
@@ -8,7 +8,7 @@ import {
   getAllergenByName,
   listAllergens,
   updateAllergen,
-} from '../../src/application/allergen.service.js';
+} from '../../src/application/allergen/allergen.service.js';
 
 test('createAllergen validates domain before storing and mapping DTO', async () => {
   const dummyRepo = createDummyAllergenRepository();

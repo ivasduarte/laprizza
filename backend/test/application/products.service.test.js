@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AppError } from '../../src/application/AppError.js';
+import { AppError } from '../../src/application/app-error.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
 import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
@@ -11,7 +11,7 @@ import {
   listProducts,
   getProductById,
   updateProduct,
-} from '../../src/application/products.service.js';
+} from '../../src/application/products/products.service.js';
 
 async function setupRepos() {
   const categoriesRepo = createDummyProductCategoriesRepository();

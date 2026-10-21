@@ -11,17 +11,17 @@ import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import pkg from '../package.json' with { type: 'json' };
 
-import authRouterFactory from './api/auth.routes.js';
-import usersRouterFactory from './api/users.routes.js';
-import productsRouterFactory from './api/products.routes.js';
-import allergenRouterFactory from './api/allergen.routes.js';
-import customersRouterFactory from './api/customers.routes.js';
-import pizzaComponentTypesRouterFactory from './api/pizza-component-type.routes.js';
-import sizesRouterFactory from './api/pizza-size.routes.js';
-import predefinedPizzaRouterFactory from './api/predefined-pizza.routes.js';
-import productCategoriesRouterFactory from './api/product-categories.routes.js';
-import stockRouterFactory from './api/stock.routes.js';
-import componentSizeConfigurationRouterFactory from './api/component-size-configuration.routes.js';
+import authRouterFactory from './api/auth/auth.routes.js';
+import usersRouterFactory from './api/users/users.routes.js';
+import productsRouterFactory from './api/products/products.routes.js';
+import allergenRouterFactory from './api/allergen/allergen.routes.js';
+import customersRouterFactory from './api/customers/customers.routes.js';
+import pizzaComponentTypesRouterFactory from './api/pizza-component-type/pizza-component-type.routes.js';
+import sizesRouterFactory from './api/pizza-size/pizza-size.routes.js';
+import predefinedPizzaRouterFactory from './api/predefined-pizza/predefined-pizza.routes.js';
+import productCategoriesRouterFactory from './api/product-categories/product-categories.routes.js';
+import stockRouterFactory from './api/stock/stock.routes.js';
+import componentSizeConfigurationRouterFactory from './api/component-size-configuration/component-size-configuration.routes.js';
 
 const API_PREFIX = '/api/v1';
 

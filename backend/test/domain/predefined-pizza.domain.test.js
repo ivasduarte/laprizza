@@ -9,7 +9,7 @@ import {
   validateSizeAvailability,
   validatePredefinedPizza,
   createPredefinedPizzaData,
-} from '../../src/domain/predefined-pizza.domain.js';
+} from '../../src/domain/predefined-pizza/predefined-pizza.domain.js';
 import { DomainError } from '../../src/domain/domain-error.js';
 
 const isDomainError = (err) => err instanceof DomainError;

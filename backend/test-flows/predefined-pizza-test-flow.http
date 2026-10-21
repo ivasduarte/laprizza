@@ -24,8 +24,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 ### 1.2 POST Criar Employee (201 Created)
 # O email é aleatório para o flow poder correr mais do que uma vez.
@@ -40,8 +42,10 @@ Content-Type: application/json
   "role": "EMPLOYEE"
 }
 
+?? status == 201
+
 ### Variáveis
-@employeeEmail = {{createEmployee.response.body.$.email}}
+@employeeEmail = {{createEmployee.email}}
 
 ### 1.3 Login do Employee
 # @name loginEmployee
@@ -53,8 +57,10 @@ Content-Type: application/json
   "password": "{{employeePassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Employee
-@employeeToken = {{loginEmployee.response.body.$.token}}
+@employeeToken = {{loginEmployee.token}}
 
 # Os pedidos 1.4 a 1.29 criam todos os dados de que a pizza precisa, com nomes únicos por execução.
 # Os tipos de componente (Base Dough, Base Sauce, Cheese e Topping) vêm do seeder e são só consultados.
@@ -70,9 +76,11 @@ Content-Type: application/json
   "name": "{{$randomInt 100000 999999}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@runId = {{createCategory.response.body.$.name}}
-@categoryId = {{createCategory.response.body.$.id}}
+@runId = {{createCategory.name}}
+@categoryId = {{createCategory.id}}
 
 ### 1.5 GET Listar os tipos de componente (200 OK - só para consulta)
 # Se a pizza falhar com 'Pizza Component Type "X" requires at least N', o tipo X tem mínimo maior que 0
@@ -80,37 +88,47 @@ Content-Type: application/json
 GET {{baseUrl}}/pizza-component-type
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 1.6 GET Tipo Base Dough (200 OK)
 # @name getTypeDough
 GET {{baseUrl}}/pizza-component-type?name=Base%20Dough
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### Variáveis
-@doughTypeId = {{getTypeDough.response.body.$[0].id}}
+@doughTypeId = {{getTypeDough[0].id}}
 
 ### 1.7 GET Tipo Base Sauce (200 OK)
 # @name getTypeSauce
 GET {{baseUrl}}/pizza-component-type?name=Base%20Sauce
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### Variáveis
-@sauceTypeId = {{getTypeSauce.response.body.$[0].id}}
+@sauceTypeId = {{getTypeSauce[0].id}}
 
 ### 1.8 GET Tipo Cheese (200 OK)
 # @name getTypeCheese
 GET {{baseUrl}}/pizza-component-type?name=Cheese
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### Variáveis
-@cheeseTypeId = {{getTypeCheese.response.body.$[0].id}}
+@cheeseTypeId = {{getTypeCheese[0].id}}
 
 ### 1.9 GET Tipo Topping (200 OK)
 # @name getTypeTopping
 GET {{baseUrl}}/pizza-component-type?name=Topping
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### Variáveis
-@toppingTypeId = {{getTypeTopping.response.body.$[0].id}}
+@toppingTypeId = {{getTypeTopping[0].id}}
 
 ### 1.10 POST Tamanho pequeno (201 Created)
 # @name createSizeSmall
@@ -122,8 +140,10 @@ Content-Type: application/json
   "name": "Pequena {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeSmall = {{createSizeSmall.response.body.$.id}}
+@sizeSmall = {{createSizeSmall.id}}
 
 ### 1.11 POST Tamanho grande (201 Created)
 # @name createSizeLarge
@@ -135,8 +155,10 @@ Content-Type: application/json
   "name": "Grande {{runId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sizeLarge = {{createSizeLarge.response.body.$.id}}
+@sizeLarge = {{createSizeLarge.id}}
 
 ### 1.12 POST Produto da pizza: vendável e sem tipo de componente (201 Created)
 # O nome não tem espaços para poder ir no URL das pesquisas por nome.
@@ -154,9 +176,11 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@pizzaProductId = {{createPizzaProduct.response.body.$.id}}
-@pizzaProductName = {{createPizzaProduct.response.body.$.name}}
+@pizzaProductId = {{createPizzaProduct.id}}
+@pizzaProductName = {{createPizzaProduct.name}}
 
 ### 1.13 POST Componente massa, tipo Base Dough (201 Created)
 # @name createDough
@@ -174,8 +198,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{doughTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@dough = {{createDough.response.body.$.id}}
+@dough = {{createDough.id}}
 
 ### 1.14 POST Componente molho, tipo Base Sauce (201 Created)
 # @name createSauce
@@ -193,8 +219,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{sauceTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@sauce = {{createSauce.response.body.$.id}}
+@sauce = {{createSauce.id}}
 
 ### 1.15 POST Componente queijo, tipo Cheese (201 Created)
 # @name createCheese
@@ -212,8 +240,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{cheeseTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@cheese = {{createCheese.response.body.$.id}}
+@cheese = {{createCheese.id}}
 
 ### 1.16 POST Segundo queijo, tipo Cheese (201 Created)
 # @name createCheeseExtra1
@@ -231,8 +261,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{cheeseTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@cheeseExtra1 = {{createCheeseExtra1.response.body.$.id}}
+@cheeseExtra1 = {{createCheeseExtra1.id}}
 
 ### 1.17 POST Terceiro queijo, tipo Cheese (201 Created)
 # @name createCheeseExtra2
@@ -250,8 +282,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{cheeseTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@cheeseExtra2 = {{createCheeseExtra2.response.body.$.id}}
+@cheeseExtra2 = {{createCheeseExtra2.id}}
 
 ### 1.18 POST Componente que vai ficar inativo, tipo Topping (201 Created)
 # @name createInactive
@@ -269,8 +303,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{toppingTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@inactiveComponent = {{createInactive.response.body.$.id}}
+@inactiveComponent = {{createInactive.id}}
 
 ### 1.19 PATCH Desativar o componente anterior (200 OK)
 PATCH {{baseUrl}}/products/{{inactiveComponent}}
@@ -280,6 +316,8 @@ Content-Type: application/json
 {
   "isActive": false
 }
+
+?? status == 200
 
 ### 1.20 POST Componente que só vai ter configuração para o tamanho pequeno, tipo Topping (201 Created)
 # @name createNoLargeConfig
@@ -297,8 +335,10 @@ Content-Type: application/json
   "pizzaComponentTypeId": "{{toppingTypeId}}"
 }
 
+?? status == 201
+
 ### Variáveis
-@noLargeConfig = {{createNoLargeConfig.response.body.$.id}}
+@noLargeConfig = {{createNoLargeConfig.id}}
 
 ### 1.21 POST Configuração da massa, tamanho pequeno (201 Created)
 POST {{baseUrl}}/products/{{dough}}/size-configurations
@@ -310,6 +350,8 @@ Content-Type: application/json
   "price": 2
 }
 
+?? status == 201
+
 ### 1.22 POST Configuração da massa, tamanho grande (201 Created)
 POST {{baseUrl}}/products/{{dough}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -319,6 +361,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeLarge}}",
   "price": 3
 }
+
+?? status == 201
 
 ### 1.23 POST Configuração do molho, tamanho pequeno (201 Created)
 POST {{baseUrl}}/products/{{sauce}}/size-configurations
@@ -330,6 +374,8 @@ Content-Type: application/json
   "price": 0.5
 }
 
+?? status == 201
+
 ### 1.24 POST Configuração do molho, tamanho grande (201 Created)
 POST {{baseUrl}}/products/{{sauce}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -339,6 +385,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeLarge}}",
   "price": 1
 }
+
+?? status == 201
 
 ### 1.25 POST Configuração do queijo, tamanho pequeno (201 Created)
 POST {{baseUrl}}/products/{{cheese}}/size-configurations
@@ -350,6 +398,8 @@ Content-Type: application/json
   "price": 1.5
 }
 
+?? status == 201
+
 ### 1.26 POST Configuração do queijo, tamanho grande (201 Created)
 POST {{baseUrl}}/products/{{cheese}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -359,6 +409,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeLarge}}",
   "price": 2.5
 }
+
+?? status == 201
 
 ### 1.27 POST Configuração do segundo queijo, tamanho pequeno (201 Created)
 POST {{baseUrl}}/products/{{cheeseExtra1}}/size-configurations
@@ -370,6 +422,8 @@ Content-Type: application/json
   "price": 1.5
 }
 
+?? status == 201
+
 ### 1.28 POST Configuração do segundo queijo, tamanho grande (201 Created)
 POST {{baseUrl}}/products/{{cheeseExtra1}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -380,6 +434,8 @@ Content-Type: application/json
   "price": 2.5
 }
 
+?? status == 201
+
 ### 1.29 POST Configuração das anchovas, só tamanho pequeno (201 Created)
 POST {{baseUrl}}/products/{{noLargeConfig}}/size-configurations
 Authorization: Bearer {{adminToken}}
@@ -389,6 +445,8 @@ Content-Type: application/json
   "pizzaSizeId": "{{sizeSmall}}",
   "price": 1
 }
+
+?? status == 201
 
 
 ### ==========================================
@@ -414,8 +472,10 @@ Content-Type: application/json
   ]
 }
 
+?? status == 201
+
 ### Variáveis
-@pizzaId = {{createPizza.response.body.$.id}}
+@pizzaId = {{createPizza.id}}
 
 ### 2.1 POST Segunda pizza para o mesmo produto (409 Conflict)
 POST {{baseUrl}}/predefined-pizzas
@@ -428,6 +488,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 409
+
 ### 2.2 POST Sem productId - Joi (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
@@ -437,6 +499,8 @@ Content-Type: application/json
   "sizeIds": ["{{sizeSmall}}"],
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
+
+?? status == 400
 
 ### 2.3 POST Com id inválido (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
@@ -449,6 +513,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 400
+
 ### 2.4 POST Com lista de tamanhos vazia - Joi (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
@@ -459,6 +525,8 @@ Content-Type: application/json
   "sizeIds": [],
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
+
+?? status == 400
 
 ### 2.5 POST Com componente repetido (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
@@ -471,6 +539,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}", "{{cheese}}"]
 }
 
+?? status == 400
+
 ### 2.6 POST Com componente inativo (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
@@ -481,6 +551,8 @@ Content-Type: application/json
   "sizeIds": ["{{sizeSmall}}"],
   "componentIds": ["{{dough}}", "{{sauce}}", "{{inactiveComponent}}"]
 }
+
+?? status == 400
 
 ### 2.7 POST Sem massa, tipo Base Dough com minQuantity 1 (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
@@ -493,6 +565,8 @@ Content-Type: application/json
   "componentIds": ["{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 400
+
 ### 2.8 POST Acima do maxQuantity, dois queijos (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
@@ -503,6 +577,8 @@ Content-Type: application/json
   "sizeIds": ["{{sizeSmall}}"],
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheeseExtra1}}", "{{cheeseExtra2}}"]
 }
+
+?? status == 400
 
 ### 2.9 POST Com tamanho sem ComponentSizeConfiguration (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
@@ -515,6 +591,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{noLargeConfig}}"]
 }
 
+?? status == 400
+
 ### 2.10 POST Com produto componente a representar a pizza (400 Bad Request)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
@@ -526,6 +604,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 400
+
 
 ### ==========================================
 ### 3: PESQUISA E CONSULTAS (GET)
@@ -535,41 +615,61 @@ Content-Type: application/json
 GET {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 3.1 GET Listar Todas como Employee (200 OK)
 GET {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{employeeToken}}
+
+?? status == 200
 
 ### 3.2 GET Pesquisa por nome do produto, como Employee (200 OK - devolve a pizza criada)
 GET {{baseUrl}}/predefined-pizzas?name={{pizzaProductName}}
 Authorization: Bearer {{employeeToken}}
 
+?? status == 200
+
 ### 3.3 GET Pesquisa sem resultados (200 OK - devolve [])
 GET {{baseUrl}}/predefined-pizzas?name=nao-existe-xyz
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 3.4 GET Nome vazio - Joi (400 Bad Request)
 GET {{baseUrl}}/predefined-pizzas?name=
 Authorization: Bearer {{adminToken}}
 
+?? status == 400
+
 ### 4. GET Por ID, como Employee (200 OK)
 GET {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{employeeToken}}
+
+?? status == 200
 
 ### 4.1 GET ID com formato inválido (400 Bad Request)
 GET {{baseUrl}}/predefined-pizzas/abc
 Authorization: Bearer {{adminToken}}
 
+?? status == 400
+
 ### 4.2 GET ID válido mas inexistente (404 Not Found)
 GET {{baseUrl}}/predefined-pizzas/000000000000000000000000
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 ### 4.3 GET Por nome exato, como Employee (200 OK)
 GET {{baseUrl}}/predefined-pizzas/name/{{pizzaProductName}}
 Authorization: Bearer {{employeeToken}}
 
+?? status == 200
+
 ### 4.4 GET Por nome inexistente (404 Not Found)
 GET {{baseUrl}}/predefined-pizzas/name/NaoExiste
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 
 ### ==========================================
@@ -585,6 +685,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheeseExtra1}}"]
 }
 
+?? status == 200
+
 ### 5.1 PUT Atualizar tamanhos (200 OK)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{adminToken}}
@@ -593,6 +695,8 @@ Content-Type: application/json
 {
   "sizeIds": ["{{sizeSmall}}"]
 }
+
+?? status == 200
 
 ### 5.2 PUT Atualizar com configuração inválida (400 Bad Request)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
@@ -603,12 +707,16 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{inactiveComponent}}"]
 }
 
+?? status == 400
+
 ### 5.3 PUT Body vazio - Joi (400 Bad Request)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 5.4 PUT isActive: true - Joi (400 Bad Request)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
@@ -619,6 +727,8 @@ Content-Type: application/json
   "isActive": true
 }
 
+?? status == 400
+
 ### 5.5 PUT Desativar pizza (200 OK)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{adminToken}}
@@ -627,6 +737,8 @@ Content-Type: application/json
 {
   "isActive": false
 }
+
+?? status == 200
 
 
 ### ==========================================
@@ -637,9 +749,13 @@ Content-Type: application/json
 GET {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 404
+
 ### 6.1 GET Por nome da pizza desativada (404 Not Found)
 GET {{baseUrl}}/predefined-pizzas/name/{{pizzaProductName}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 
 ### ==========================================
@@ -656,6 +772,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 401
+
 ### 7.1 POST Como Employee (403 Forbidden)
 POST {{baseUrl}}/predefined-pizzas
 Authorization: Bearer {{employeeToken}}
@@ -667,6 +785,8 @@ Content-Type: application/json
   "componentIds": ["{{dough}}", "{{sauce}}", "{{cheese}}"]
 }
 
+?? status == 403
+
 ### 7.2 PUT Como Employee (403 Forbidden)
 PUT {{baseUrl}}/predefined-pizzas/{{pizzaId}}
 Authorization: Bearer {{employeeToken}}
@@ -675,3 +795,5 @@ Content-Type: application/json
 {
   "isActive": false
 }
+
+?? status == 403

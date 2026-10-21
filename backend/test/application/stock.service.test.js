@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AppError } from '../../src/application/AppError.js';
+import { AppError } from '../../src/application/app-error.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
-import { getStockByProductId, adjustStock } from '../../src/application/stock.service.js';
+import { getStockByProductId, adjustStock } from '../../src/application/stock/stock.service.js';
 
 async function setupRepos() {
   const productsRepo = createDummyProductsRepository();

@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { AppError } from '../../src/application/AppError.js';
+import { AppError } from '../../src/application/app-error.js';
 import { createDummyCustomersRepository } from '../infrastructure/customers.dummy.repository.js';
 import {
   createCustomer,
   getCustomerById,
   updateCustomer,
   listCustomers,
-} from '../../src/application/customers.service.js';
+} from '../../src/application/customers/customers.service.js';
 
 const dummyValidator = { isValidMatch: async () => true };
 

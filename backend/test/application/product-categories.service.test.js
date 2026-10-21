@@ -7,9 +7,8 @@ import {
   getProductCategoryById,
   updateProductCategory,
   removeProductCategory,
-} from '../../src/application/product-categories.service.js';
+} from '../../src/application/product-categories/product-categories.service.js';
 
-import { AppError } from '../../src/application/AppError.js';
 
 // Valid identifier format (24 hex characters) that does not belong to any category
 const NON_EXISTENT_ID = 'abcdef000000000000000999';

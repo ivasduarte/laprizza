@@ -17,8 +17,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do token
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 ### 1.2 Criar um Funcionário (Employee) para testar RBAC
 # @name createEmployee
@@ -32,8 +34,10 @@ Content-Type: application/json
   "role": "EMPLOYEE"
 }
 
+?? status == 201
+
 ### Extração do email exato que foi gravado na base de dados
-@createdEmpEmail = {{createEmployee.response.body.$.email}}
+@createdEmpEmail = {{createEmployee.email}}
 
 ### 1.3 Login do Funcionário (Employee)
 # @name loginEmployee
@@ -45,8 +49,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do token do funcionário
-@empToken = {{loginEmployee.response.body.$.token}}
+@empToken = {{loginEmployee.token}}
 
 ### ==========================================
 ### 2: SEGURANÇA E ACESSOS (RBAC)
@@ -55,9 +61,13 @@ Content-Type: application/json
 ### 2.1 Sem Token (401 Unauthorized)
 GET {{baseUrl}}/pizza-size
 
+?? status == 401
+
 ### 2.2 Token de Employee (403 Forbidden - Apenas Manager tem acesso)
 GET {{baseUrl}}/pizza-size
 Authorization: Bearer {{empToken}}
+
+?? status == 403
 
 
 ### ==========================================
@@ -74,9 +84,11 @@ Content-Type: application/json
   "name": "Medium {{$timestamp}}"
 }
 
+?? status == 201
+
 ### Extração de variáveis do tamanho criado
-@sizeId = {{createSize.response.body.$.id}}
-@sizeName = {{createSize.response.body.$.name}}
+@sizeId = {{createSize.id}}
+@sizeName = {{createSize.name}}
 
 ### 3.2 Criar Tamanho Duplicado (409 Conflict)
 POST {{baseUrl}}/pizza-size
@@ -87,6 +99,8 @@ Content-Type: application/json
   "name": "{{sizeName}}"
 }
 
+?? status == 409
+
 ### 3.3 Falha de Joi: Nome muito curto (400 Bad Request)
 POST {{baseUrl}}/pizza-size
 Authorization: Bearer {{adminToken}}
@@ -96,12 +110,16 @@ Content-Type: application/json
   "name": "Sm"
 }
 
+?? status == 400
+
 ### 3.4 Falha de Joi: Payload Vazio (400 Bad Request)
 POST {{baseUrl}}/pizza-size
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 3.5 Joi Strip Unknown: Enviar campos extra (201 Created - O Joi limpa "extraField")
 POST {{baseUrl}}/pizza-size
@@ -113,6 +131,8 @@ Content-Type: application/json
   "extraField": "Isto deve ser ignorado"
 }
 
+?? status == 201
+
 
 ### ==========================================
 ### 4: CONSULTAS (GET) E EXCEÇÕES DE ID
@@ -122,21 +142,31 @@ Content-Type: application/json
 GET {{baseUrl}}/pizza-size
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 4.2 Pesquisar por Nome (200 OK)
 GET {{baseUrl}}/pizza-size?search=Medium
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 ### 4.3 Obter por ID Válido (200 OK)
 GET {{baseUrl}}/pizza-size/{{sizeId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 4.4 Formato de ID Inválido (400 Bad Request - Bloqueado pelo Joi)
 GET {{baseUrl}}/pizza-size/123
 Authorization: Bearer {{adminToken}}
 
+?? status == 400
+
 ### 4.5 ID Inexistente (404 Not Found)
 GET {{baseUrl}}/pizza-size/abcdef000000000000000999
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 
 ### ==========================================
@@ -152,6 +182,8 @@ Content-Type: application/json
   "name": "Medium Updated {{$timestamp}}"
 }
 
+?? status == 200
+
 ### 5.2 Desativar Tamanho (200 OK)
 PATCH {{baseUrl}}/pizza-size/{{sizeId}}
 Authorization: Bearer {{adminToken}}
@@ -161,12 +193,16 @@ Content-Type: application/json
   "isActive": false
 }
 
+?? status == 200
+
 ### 5.3 Falha de Joi: PATCH Vazio (400 Bad Request - Exige pelo menos 1 campo)
 PATCH {{baseUrl}}/pizza-size/{{sizeId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 5.4 Formato de ID Inválido no PATCH (400 Bad Request)
 PATCH {{baseUrl}}/pizza-size/abc
@@ -177,6 +213,8 @@ Content-Type: application/json
   "isActive": true
 }
 
+?? status == 400
+
 ### 5.5 ID Inexistente no PATCH (404 Not Found)
 PATCH {{baseUrl}}/pizza-size/abcdef000000000000000999
 Authorization: Bearer {{adminToken}}
@@ -185,3 +223,5 @@ Content-Type: application/json
 {
   "isActive": true
 }
+
+?? status == 404

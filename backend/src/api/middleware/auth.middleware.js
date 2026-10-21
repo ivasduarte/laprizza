@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { AppError } from '../../application/AppError.js';
+import { AppError } from '../../application/app-error.js';
 
 /**
  * Express middleware to verify the JSON Web Token (JWT) provided in the Authorization header.

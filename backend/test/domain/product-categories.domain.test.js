@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeName, validateName } from '../../src/domain/product-categories.domain.js';
+import { normalizeName, validateName } from '../../src/domain/product-categories/product-categories.domain.js';
 
 test('normalizeName trims and collapses whitespaces', () => {
     assert.equal(normalizeName('  Soft  Drinks '), 'Soft Drinks');

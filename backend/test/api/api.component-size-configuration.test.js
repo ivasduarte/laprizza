@@ -5,8 +5,8 @@ import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
-import { createSize } from '../../src/application/pizza-size.service.js';
-import { registerUser } from '../../src/application/auth.service.js';
+import { createSize } from '../../src/application/pizza-size/pizza-size.service.js';
+import { registerUser } from '../../src/application/auth/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 

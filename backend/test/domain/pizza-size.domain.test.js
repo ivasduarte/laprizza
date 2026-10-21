@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePizzaSize } from '../../src/domain/pizza-size.domain.js';
+import { validatePizzaSize } from '../../src/domain/pizza-size/pizza-size.domain.js';
 
 test('validatePizzaSize rejects invalid data types and formats', async () => {
   await assert.rejects(async () => await validatePizzaSize(''), /Name cannot be empty/);

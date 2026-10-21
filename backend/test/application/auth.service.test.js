@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 
-import { registerUser, login } from '../../src/application/auth.service.js';
+import { registerUser, login } from '../../src/application/auth/auth.service.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 
 process.env.JWT_SECRET = 'false_secret';

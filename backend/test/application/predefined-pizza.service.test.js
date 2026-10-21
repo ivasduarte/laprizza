@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AppError } from '../../src/application/AppError.js';
+import { AppError } from '../../src/application/app-error.js';
 import {
   createDummyPredefinedPizzaRepository,
   SEED_IDS as I,
@@ -11,7 +11,7 @@ import {
   getPredefinedPizzaByName,
   listPredefinedPizzas,
   updatePredefinedPizza,
-} from '../../src/application/predefined-pizza.service.js';
+} from '../../src/application/predefined-pizza/predefined-pizza.service.js';
 
 const validPizza = (overrides = {}) => ({
   productId: I.pizzaProduct,

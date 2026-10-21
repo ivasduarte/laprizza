@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    DEFAULT_PIZZA_COMPONENT_TYPES,
-    normalizeName,
-    validateName,
-    validateAssemblyOrder,
-    validateMinQuantity,
-    normalizeMaxQuantity,
-    validateMaxQuantity,
-    validateQuantityRange,
-} from '../../src/domain/pizza-component-types.domain.js';
+  DEFAULT_PIZZA_COMPONENT_TYPES,
+  normalizeName,
+  validateName,
+  validateAssemblyOrder,
+  validateMinQuantity,
+  normalizeMaxQuantity,
+  validateMaxQuantity,
+  validateQuantityRange,
+} from '../../src/domain/pizza-component-type/pizza-component-types.domain.js';
 
 test('normalizeName trims and collapses whitespaces', () => {
   assert.equal(normalizeName('  Base  Dough '), 'Base Dough');

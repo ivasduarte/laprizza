@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateStockQuantity, validateStockChange } from '../../src/domain/stock.domain.js';
+import { validateStockQuantity, validateStockChange } from '../../src/domain/stock/stock.domain.js';
 import { DomainError } from '../../src/domain/domain-error.js';
 
 test('validateStockQuantity accepts non-negative integers', () => {

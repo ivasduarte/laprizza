@@ -1,10 +1,10 @@
 import * as argon2 from 'argon2';
-import Users from './users.model.js';
+import Users from './users/users.model.js';
 
-import * as pizzaComponentTypesRepository from './pizza-component-type.repository.js';
+import * as pizzaComponentTypesRepository from './pizza-component-type/pizza-component-type.repository.js';
 
-import { Roles, validatePasswordStrength } from '../domain/users.domain.js';
-import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-types.domain.js';
+import { Roles, validatePasswordStrength } from '../domain/users/users.domain.js';
+import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-type/pizza-component-types.domain.js';
 
 /** MongoDB error code for violation of a unique index. */
 const DUPLICATE_KEY_ERROR_CODE = 11000;

@@ -18,8 +18,10 @@ Content-Type: application/json
   "password": "{{managerPassword}}"
 }
 
+?? status == 200
+
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.response.body.$.token}}
+@adminToken = {{loginAdmin.token}}
 
 ### 1.2 Criar Categoria de Referência
 # @name createCategory
@@ -31,8 +33,10 @@ Content-Type: application/json
   "name": "Categoria Stock {{$timestamp}}"
 }
 
+?? status == 201
+
 ### Guarda Categoria
-@categoryId = {{createCategory.response.body.$.id}}
+@categoryId = {{createCategory.id}}
 
 ### 1.3 Criar Produto COM controlo de stock
 # @name createStockProduct
@@ -49,9 +53,11 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 201
+
 ### Guarda ID do Produto com stock
-@stockProductId = {{createStockProduct.response.body.$.id}}
-@stockProductName = {{createStockProduct.response.body.$.name}}
+@stockProductId = {{createStockProduct.id}}
+@stockProductName = {{createStockProduct.name}}
 
 ### 1.4 Criar Produto SEM controlo de stock
 # @name createNoStockProduct
@@ -68,8 +74,10 @@ Content-Type: application/json
   "categoryId": "{{categoryId}}"
 }
 
+?? status == 201
+
 ### Guarda ID do Produto sem stock
-@noStockProductId = {{createNoStockProduct.response.body.$.id}}
+@noStockProductId = {{createNoStockProduct.id}}
 
 
 ### ==========================================
@@ -80,17 +88,25 @@ Content-Type: application/json
 GET {{baseUrl}}/stock/{{stockProductId}}
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 2.2 GET Stock de produto que NÃO controla stock (400 Bad Request)
 GET {{baseUrl}}/stock/{{noStockProductId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 400
 
 ### 2.3 GET Stock por ID de produto em formato inválido (400 Bad Request - Joi)
 GET {{baseUrl}}/stock/abc
 Authorization: Bearer {{adminToken}}
 
+?? status == 400
+
 ### 2.4 GET Stock por ID de produto inexistente (404 Not Found)
 GET {{baseUrl}}/stock/{{missingId}}
 Authorization: Bearer {{adminToken}}
+
+?? status == 404
 
 
 ### ==========================================
@@ -107,6 +123,8 @@ Content-Type: application/json
   "operation": "increase"
 }
 
+?? status == 200
+
 ### 3.2 PATCH Diminuir Stock validamente (200 OK - quantity passa a 30)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
 Authorization: Bearer {{adminToken}}
@@ -116,6 +134,8 @@ Content-Type: application/json
   "amount": 20,
   "operation": "decrease"
 }
+
+?? status == 200
 
 ### 3.3 Regra de Negócio: PATCH Diminuir Stock abaixo de 0 (400 Bad Request)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
@@ -127,6 +147,8 @@ Content-Type: application/json
   "operation": "decrease"
 }
 
+?? status == 400
+
 ### 3.4 Regra de Negócio: PATCH Ajustar produto sem controlo de stock (400 Bad Request)
 PATCH {{baseUrl}}/stock/{{noStockProductId}}
 Authorization: Bearer {{adminToken}}
@@ -137,12 +159,16 @@ Content-Type: application/json
   "operation": "increase"
 }
 
+?? status == 400
+
 ### 3.5 Falha Joi: Body Vazio (400 Bad Request)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+?? status == 400
 
 ### 3.6 Falha Joi: Amount igual a zero (400 Bad Request - Tem de ser positivo)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
@@ -154,6 +180,8 @@ Content-Type: application/json
   "operation": "increase"
 }
 
+?? status == 400
+
 ### 3.7 Falha Joi: Amount negativo (400 Bad Request - Operação e Amount tratam a direção)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
 Authorization: Bearer {{adminToken}}
@@ -163,6 +191,8 @@ Content-Type: application/json
   "amount": -5,
   "operation": "increase"
 }
+
+?? status == 400
 
 ### 3.8 Falha Joi: Operation inválida (400 Bad Request)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
@@ -174,6 +204,8 @@ Content-Type: application/json
   "operation": "add"
 }
 
+?? status == 400
+
 ### 3.9 Falha Joi: Amount não é inteiro (400 Bad Request)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
 Authorization: Bearer {{adminToken}}
@@ -184,6 +216,8 @@ Content-Type: application/json
   "operation": "increase"
 }
 
+?? status == 400
+
 
 ### ==========================================
 ### 4: LISTAGEM E PESQUISA DE STOCK (GET)
@@ -193,13 +227,19 @@ Content-Type: application/json
 GET {{baseUrl}}/stock
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 4.2 GET Pesquisa Parcial pelo nome do Produto (200 OK)
 GET {{baseUrl}}/stock?search=Produto%20Com%20Stock
 Authorization: Bearer {{adminToken}}
 
+?? status == 200
+
 ### 4.3 GET Pesquisa sem resultados (200 OK, array vazio)
 GET {{baseUrl}}/stock?search=NomeQueNaoExisteNenhumProduto
 Authorization: Bearer {{adminToken}}
+
+?? status == 200
 
 
 ### ==========================================
@@ -209,8 +249,12 @@ Authorization: Bearer {{adminToken}}
 ### 5.1 GET Listar Sem Token (401 Unauthorized)
 GET {{baseUrl}}/stock
 
+?? status == 401
+
 ### 5.2 GET Stock de Produto Sem Token (401 Unauthorized)
 GET {{baseUrl}}/stock/{{stockProductId}}
+
+?? status == 401
 
 ### 5.3 PATCH Ajustar Stock Sem Token (401 Unauthorized)
 PATCH {{baseUrl}}/stock/{{stockProductId}}
@@ -220,3 +264,5 @@ Content-Type: application/json
   "amount": 10,
   "operation": "increase"
 }
+
+?? status == 401
