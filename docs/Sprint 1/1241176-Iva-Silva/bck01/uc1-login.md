@@ -1,7 +1,7 @@
 # UC1: Authenticate User (Login)
 
 ## 1. Domain Assumptions
-Due to a lack of client clarification, the following domain restrictions were inquired in the code:
+* Due to a lack of client clarification, the following domain restrictions were inquired in the code:
     * Authentication uses `Argon2` for password hashing verification;
     * Upon successful authentication, a JSON Web Token (JWT) is generated with a 35-minute expiration time;
     * A timing attack mitigation mechanism is implemented: if a user is not found or is inactive, the system performs a dummy `Argon2` hash calculation to maintain consistent response times.
