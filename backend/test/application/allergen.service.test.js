@@ -12,10 +12,9 @@ import {
 
 test('createAllergen validates domain before storing and mapping DTO', async () => {
   const dummyRepo = createDummyAllergenRepository();
-
   await assert.rejects(
     async () => await createAllergen({ name: '' }, dummyRepo),
-    (err) => err instanceof AppError && err.status === 400
+    (err) => err instanceof AppError && err.status === 400,
   );
   assert.equal((await dummyRepo.list()).length, 0);
 
@@ -32,28 +31,26 @@ test('createAllergen rejects duplicate names', async () => {
 
   await assert.rejects(
     async () => await createAllergen({ name: 'lactose' }, dummyRepo),
-    (err) => err.status === 409 && err.message.includes('already in use')
+    (err) => err.status === 409 && err.message.includes('already in use'),
   );
 });
 
 test('getAllergenById, getAllergenByName and listAllergens filter inactives and map DTO', async () => {
   const dummyRepo = createDummyAllergenRepository();
   const created = await createAllergen({ name: 'Mostarda' }, dummyRepo);
-  
   await dummyRepo.update(created.id, { isActive: false });
 
   await assert.rejects(
     async () => await getAllergenById(created.id, dummyRepo),
-    (err) => err.status === 404
+    (err) => err.status === 404,
   );
-
   await assert.rejects(
     async () => await getAllergenByName('Mostarda', dummyRepo),
-    (err) => err.status === 404
+    (err) => err.status === 404,
   );
 
   const list = await listAllergens({}, dummyRepo);
-  assert.equal(list.length, 0); // O inativo não deve ser retornado
+  assert.equal(list.length, 0);
 });
 
 test('updateAllergen allows only deactivation and checks references', async () => {
@@ -62,18 +59,16 @@ test('updateAllergen allows only deactivation and checks references', async () =
 
   await assert.rejects(
     async () => await updateAllergen(allergen.id, { name: 'Outro' }, dummyRepo),
-    (err) => err.status === 400 && err.message.includes('Only deactivation is supported')
+    (err) => err.status === 400 && err.message.includes('Only deactivation is supported'),
   );
 
   dummyRepo._setReferenced(allergen.id);
-
   await assert.rejects(
     async () => await updateAllergen(allergen.id, { isActive: false }, dummyRepo),
-    (err) => err.status === 409 && err.message.includes('referenced')
+    (err) => err.status === 409 && err.message.includes('referenced'),
   );
 
-  const freeAllergen = await createAllergen({ name: 'Aipo' }, dummyRepo);
-  const deactivated = await updateAllergen(freeAllergen.id, { isActive: false }, dummyRepo);
-  
+  dummyRepo._removeReference(allergen.id);
+  const deactivated = await updateAllergen(allergen.id, { isActive: false }, dummyRepo);
   assert.equal(deactivated.isActive, false);
 });

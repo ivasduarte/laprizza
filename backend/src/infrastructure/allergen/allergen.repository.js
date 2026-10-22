@@ -38,12 +38,15 @@ export async function update(id, data) {
 
 export async function isReferenced(id) {
   const objectId = new mongoose.Types.ObjectId(id);
-  const byProduct = await Products.exists({ allergenIds: objectId }).setOptions({
-    strictQuery: false,
-  });
+  const byProduct = await Products.exists({ allergenIds: objectId, ...activeCondition }).setOptions(
+    {
+      strictQuery: false,
+    },
+  );
   if (byProduct) return true;
   const byCustomer = await Customers.exists({
-    'dietaryRestrictions.allergenIds': objectId,
+    dietaryRestrictions: objectId,
+    ...activeCondition,
   }).setOptions({
     strictQuery: false,
   });
