@@ -30,6 +30,8 @@ export async function listProducts(query = {}) {
   if (query.categoryId) filter.categoryId = query.categoryId;
   if (query.isActive !== undefined) filter.isActive = query.isActive;
 
+  if (query.sellable !== undefined) filter.sellable = query.sellable;
+
   return Products.find(filter)
     .populate('categoryId')
     .populate('allergenIds')

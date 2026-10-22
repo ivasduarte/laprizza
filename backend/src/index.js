@@ -22,6 +22,7 @@ import predefinedPizzaRouterFactory from './api/predefined-pizza/predefined-pizz
 import productCategoriesRouterFactory from './api/product-categories/product-categories.routes.js';
 import stockRouterFactory from './api/stock/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration/component-size-configuration.routes.js';
+import productCatalogueRouterFactory from './api/product-catalogue/product-catalogue.route.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -133,7 +134,17 @@ export function createApp(config = loadConfig(), repos = {}) {
     pizzaComponentTypesRouterFactory(repos.pizzaComponentTypesRepository, repos.productsRepository),
   );
   api.use('/pizza-size', sizesRouterFactory(repos.sizeRepository, repos.productsRepository));
-  api.use('/predefined-pizzas', predefinedPizzaRouterFactory(isTesting ? { predefinedPizzaRepository: repos.predefinedPizzaRepository,productsRepository: repos.productsRepository} : undefined));
+  api.use(
+    '/predefined-pizzas',
+    predefinedPizzaRouterFactory(
+      isTesting
+        ? {
+            predefinedPizzaRepository: repos.predefinedPizzaRepository,
+            productsRepository: repos.productsRepository,
+          }
+        : undefined,
+    ),
+  );
   api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(
@@ -141,6 +152,12 @@ export function createApp(config = loadConfig(), repos = {}) {
     customersRouterFactory(
       repos.customersRepository,
       repos.postalCodeValidator ?? dummyPostalCodeValidator,
+    ),
+  );
+  api.use(
+    '/catalogue',
+    productCatalogueRouterFactory(
+      isTesting ? { productsRepository: repos.productsRepository } : undefined,
     ),
   );
   app.use(API_PREFIX, api);

@@ -25,6 +25,10 @@ export function createDummyProductsRepository() {
         result = result.filter((p) => p.isActive === query.isActive);
       }
 
+      if (query.sellable !== undefined) {
+        result = result.filter((p) => p.sellable === query.sellable);
+      }
+
       return result;
     },
 
@@ -64,7 +68,7 @@ export function createDummyProductsRepository() {
       );
     },
 
-        // Like the real repository, it only adds when the product has no configuration for the pizza
+    // Like the real repository, it only adds when the product has no configuration for the pizza
     // size yet (otherwise, as well as for unknown products, it returns null).
     addSizeConfiguration: async (productId, configuration) => {
       const index = indexOfId(productId);
@@ -73,7 +77,10 @@ export function createDummyProductsRepository() {
       const current = products[index].sizeConfigurations ?? [];
       if (current.some(isForSize(configuration.pizzaSizeId))) return null;
 
-      products[index] = { ...products[index], sizeConfigurations: [...current, { ...configuration }] };
+      products[index] = {
+        ...products[index],
+        sizeConfigurations: [...current, { ...configuration }],
+      };
       return products[index];
     },
 

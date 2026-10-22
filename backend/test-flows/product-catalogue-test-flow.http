@@ -1,0 +1,294 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicSuffix = {{$timestamp}}
+
+### ==========================================
+### 1: AUTENTICAÇÃO E SETUP DE DEPENDÊNCIAS
+### ==========================================
+
+### 1.1 Login do Admin (Manager)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.token}}
+
+### 1.2 Criar um Cliente (Customer) para testar RBAC
+# @name createCustomerAuth
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "customer_{{dynamicSuffix}}@laprizza.pt",
+  "password": "{{managerPassword}}",
+  "role": "CUSTOMER"
+}
+?? status == 201
+
+@createdCustomerEmail = {{createCustomerAuth.email}}
+
+### 1.3 Login do Cliente
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{createdCustomerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+@customerToken = {{loginCustomer.token}}
+
+### 1.4 Criar Categoria de Referência
+# @name createCategory
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Pizzas {{dynamicSuffix}}"
+}
+?? status == 201
+
+@categoryId = {{createCategory.id}}
+
+### 1.5 Criar Alergénio de Referência
+# @name createAllergen
+POST {{baseUrl}}/allergens
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Glúten {{dynamicSuffix}}"
+}
+?? status == 201
+
+@allergenId = {{createAllergen.id}}
+
+### 1.6 Criar Tamanho de Referência
+# @name createSize
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Familiar {{dynamicSuffix}}"
+}
+?? status == 201
+
+@sizeId = {{createSize.id}}
+
+### 1.7 Criar Tipo de Componente de Referência
+# @name createComponentType
+POST {{baseUrl}}/pizza-component-type
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Topping {{dynamicSuffix}}",
+  "assemblyOrder": {{$randomInt 10000 99999}},
+  "minQuantity": 0,
+  "maxQuantity": null
+}
+?? status == 201
+
+@typeId = {{createComponentType.id}}
+
+### ==========================================
+### 2: INSERÇÃO DE PRODUTOS NO CATÁLOGO
+### ==========================================
+
+### 2.1 Produto Vendável e Ativo (Deve aparecer no catálogo)
+# @name createCatalogueItem
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Pizza Catálogo {{dynamicSuffix}}",
+  "description": "Produto visível para os clientes",
+  "price": 12.50,
+  "sellable": true,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}",
+  "allergenIds": ["{{allergenId}}"]
+}
+?? status == 201
+
+@visibleProductId = {{createCatalogueItem.id}}
+
+### 2.2 Produto Vendável, Ativo e com Configurações de Tamanho
+# @name createConfigurableItem
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Ingrediente Visível {{dynamicSuffix}}",
+  "description": "Produto visível e configurável",
+  "price": 5.00,
+  "sellable": true,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}",
+  "pizzaComponentTypeId": "{{typeId}}"
+}
+?? status == 201
+
+@configurableProductId = {{createConfigurableItem.id}}
+
+### 2.3 Adicionar Configuração de Tamanho ao Ingrediente
+POST {{baseUrl}}/products/{{configurableProductId}}/size-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "pizzaSizeId": "{{sizeId}}",
+  "price": 6.50
+}
+?? status == 201
+
+### 2.4 Produto Ativo mas NÃO vendável (NÃO deve aparecer)
+# @name createInternalItem
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Molho Secreto {{dynamicSuffix}}",
+  "description": "Exclusivo de cozinha",
+  "price": 0,
+  "sellable": false,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+@internalProductId = {{createInternalItem.id}}
+
+### 2.5 Produto Vendável mas INATIVO (NÃO deve aparecer)
+# @name createInactiveItem
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Pizza Descontinuada {{dynamicSuffix}}",
+  "description": "Fora de catálogo",
+  "price": 9.99,
+  "sellable": true,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+@inactiveProductId = {{createInactiveItem.id}}
+
+### 2.6 Desativar o Produto
+PATCH {{baseUrl}}/products/{{inactiveProductId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 200
+
+### ==========================================
+### 3: PESQUISAS NO CATÁLOGO (CUSTOMER E REGRAS)
+### ==========================================
+
+### 3.1 Listar o Catálogo (200 OK)
+# Verifica se a API aceita CUSTOMER.
+GET {{baseUrl}}/catalogue
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.2 Listar Catálogo e Procurar Item Vendável
+# O cliente só deverá ver a 'Pizza Catálogo' (2.1) e o 'Ingrediente Visível' (2.2).
+GET {{baseUrl}}/catalogue?search=Catálogo%20{{dynamicSuffix}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.3 Listar Catálogo e Ocultar Item Interno (200 OK, Vazio)
+# Não pode devolver o Molho Secreto.
+GET {{baseUrl}}/catalogue?search=Secreto%20{{dynamicSuffix}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.4 Listar Catálogo e Ocultar Item Inativo (200 OK, Vazio)
+# Não pode devolver a Pizza Descontinuada.
+GET {{baseUrl}}/catalogue?search=Descontinuada%20{{dynamicSuffix}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.5 Pesquisar Catálogo por Categoria
+GET {{baseUrl}}/catalogue?categoryId={{categoryId}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.6 Filtrar por Categoria Inválida (400 Bad Request - Joi)
+GET {{baseUrl}}/catalogue?categoryId=invalid_id_format
+Authorization: Bearer {{customerToken}}
+?? status == 400
+
+### ==========================================
+### 4: CONSULTA POR ID NO CATÁLOGO
+### ==========================================
+
+### 4.1 Obter Item Válido (200 OK)
+GET {{baseUrl}}/catalogue/{{visibleProductId}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 4.2 Obter Item Válido com Array de Tamanhos (200 OK)
+GET {{baseUrl}}/catalogue/{{configurableProductId}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 4.3 Obter Item Interno/Não Vendável (404 Not Found)
+# Apesar do produto existir, não existe no conceito do catálogo.
+GET {{baseUrl}}/catalogue/{{internalProductId}}
+Authorization: Bearer {{customerToken}}
+?? status == 404
+
+### 4.4 Obter Item Inativo (404 Not Found)
+GET {{baseUrl}}/catalogue/{{inactiveProductId}}
+Authorization: Bearer {{customerToken}}
+?? status == 404
+
+### 4.5 Obter com ID com formato Inválido (400 Bad Request - Joi)
+GET {{baseUrl}}/catalogue/xyz
+Authorization: Bearer {{customerToken}}
+?? status == 400
+
+### 4.6 Obter com ID Inexistente (404 Not Found)
+GET {{baseUrl}}/catalogue/000000000000000000000000
+Authorization: Bearer {{customerToken}}
+?? status == 404
+
+### ==========================================
+### 5: SEGURANÇA E ACESSOS (RBAC)
+### ==========================================
+
+### 5.1 Sem Token - GET Listar (401 Unauthorized)
+GET {{baseUrl}}/catalogue
+?? status == 401
+
+### 5.2 Sem Token - GET Por ID (401 Unauthorized)
+GET {{baseUrl}}/catalogue/{{visibleProductId}}
+?? status == 401
+
+### 5.3 O Manager Também Pode Consultar o Catálogo (200 OK)
+GET {{baseUrl}}/catalogue/{{visibleProductId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200

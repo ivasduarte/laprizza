@@ -678,7 +678,7 @@ export const openApiSpec = {
         },
       },
     },
-        '/predefined-pizzas': {
+    '/predefined-pizzas': {
       get: {
         summary: 'List predefined pizzas (MANAGER and EMPLOYEE)',
         description: 'Only active predefined pizzas are returned.',
@@ -1318,6 +1318,68 @@ export const openApiSpec = {
         },
       },
     },
+    '/catalogue': {
+      get: {
+        summary: 'List products in the catalogue (CUSTOMER, MANAGER, EMPLOYEE)',
+        description: 'Returns only active and sellable products, formatted for the catalogue.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Case-insensitive partial match on name or description.',
+            schema: { type: 'string', maxLength: 100 },
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            description: 'Filter by category ID.',
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/CatalogueItem' } },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
+    '/catalogue/{id}': {
+      get: {
+        summary: 'Get catalogue item by ID (CUSTOMER, MANAGER, EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/CatalogueItem' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Product not found in the catalogue'),
+        },
+      },
+    },
     '/stock': {
       get: {
         summary: 'List stock (MANAGER and EMPLOYEE)',
@@ -1520,6 +1582,43 @@ export const openApiSpec = {
           allergenIds: { type: 'array', items: { type: 'string' } },
           isActive: { type: 'boolean' },
           isPizzaComponent: { type: 'boolean' },
+        },
+      },
+      CatalogueItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Pizza Margherita' },
+          description: { type: 'string', example: 'Classic tomato and mozzarella' },
+          price: { type: 'number', example: 9.5 },
+          category: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              id: { type: 'string', example: '65231abcd345678901234567' },
+              name: { type: 'string', example: 'Pizzas' },
+            },
+          },
+          allergens: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: '65231abcd345678901234568' },
+                name: { type: 'string', example: 'Dairy' },
+              },
+            },
+          },
+          availableSizes: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                pizzaSizeId: { type: 'string', example: '65231abcd345678901234569' },
+                price: { type: 'number', example: 12.0 },
+              },
+            },
+          },
         },
       },
       Stock: {
