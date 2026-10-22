@@ -1,0 +1,55 @@
+@startuml "UC2_Register_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "UsersController" as controller
+participant "AuthService" as service
+participant "UsersDomain" as domain
+participant "UsersRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+Manager -> route : POST /users { email, password, role }
+activate route
+
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Payload
+
+route -> controller : create(req, res, next)
+activate controller 
+controller -> service : registerUser(data, repo)
+activate service
+
+service -> domain : validatePasswordStrength(password)
+activate domain
+domain --> service : void / DomainError
+deactivate domain
+
+alt Weak Password
+    service --> controller : AppError(400)
+else Strong Password
+    service -> service : Argon2 hash(password)
+    service -> repo : create(userData)
+    activate repo
+
+    alt Duplicate Email/Username
+        repo --> service : MongoError(11000)
+        deactivate repo 
+        service --> controller : AppError(409, "Email/Username in use.")
+    else Success
+        repo --> service : User Entity
+        deactivate repo 
+
+        service -> service : toUserDto(User)
+        service --> controller : User DTO
+    end
+end
+deactivate service
+
+controller --> Manager : Response (201 Created ou Error)
+deactivate controller
+deactivate route
+@enduml
