@@ -63,11 +63,13 @@ async function validateReferences(rawSizeIds, rawComponentIds, pizzaRepository) 
   const sizeIds = guard(() => validateSizeIds(rawSizeIds));
   const componentIds = guard(() => validateComponentIds(rawComponentIds));
 
-  const [sizes, components, componentTypes] = await Promise.all([
+  const [sizes, components, allComponentTypes] = await Promise.all([
     pizzaRepository.findSizesByIds(sizeIds),
     pizzaRepository.findProductsByIds(componentIds),
     pizzaRepository.listComponentTypes(),
   ]);
+
+  const componentTypes = allComponentTypes.filter((t) => t.isActive !== false);
 
   guard(() =>
     validatePredefinedPizza({ sizeIds, componentIds, sizes, components, componentTypes }),

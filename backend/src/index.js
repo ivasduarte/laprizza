@@ -145,7 +145,10 @@ export function createApp(config = loadConfig(), repos = {}) {
         : undefined,
     ),
   );
-  api.use('/product-categories', productCategoriesRouterFactory(repos.productCategoriesRepository));
+  api.use(
+    '/product-categories',
+    productCategoriesRouterFactory(repos.productCategoriesRepository, repos.productsRepository),
+  );
   api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(
     '/customers',

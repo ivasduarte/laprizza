@@ -27,7 +27,7 @@ const productCategorySchema = new mongoose.Schema({
  * Business Rule: Two product categories cannot have the same name.
  * This index is the last line of defense against duplicates created by simultaneous requests since the service check alone cannot prevent them.
  */
-productCategorySchema.index({name: 1}, {unique: true, collation: NAME_COLLATION});
+productCategorySchema.index({name: 1}, {unique: true, collation: NAME_COLLATION, partialFilterExpression: { isActive: true }});
 
 /**
  * Compiled Mongoose model for the product categories collection.

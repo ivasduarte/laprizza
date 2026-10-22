@@ -13,6 +13,7 @@
     "start": "node src/index.js",
     "test": "node --test",
     "test:flows": "httpyac send --all -o short \"test-flows/**/*.http\"",
+    "test:flows:log": "httpyac send --all -o short \"test-flows/**/*.http\" > test-flows-output.txt 2>&1",
     "test:all": "npm test && npm run test:flows",
     "test:coverage": "node --test --experimental-test-coverage",
     "lint": "eslint .",

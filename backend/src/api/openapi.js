@@ -401,7 +401,7 @@ export const openApiSpec = {
             in: 'query',
             required: false,
             description:
-              'Exact name, ignoring case and accents. A partial or blank name returns an empty list. Without this parameter, all categories are returned.',
+              'Exact name, ignoring case and accents. A partial or blank name returns an empty list. Without this parameter, only active categories are returned.',
             schema: { type: 'string' },
           },
         ],
@@ -437,12 +437,6 @@ export const openApiSpec = {
         responses: {
           201: {
             description: 'Created',
-            headers: {
-              Location: {
-                description: 'URL of the created product category.',
-                schema: { type: 'string' },
-              },
-            },
             content: {
               'application/json': { schema: { $ref: '#/components/schemas/ProductCategory' } },
             },
@@ -450,7 +444,7 @@ export const openApiSpec = {
           400: errorResponse('Validation error'),
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
-          409: errorResponse('Name already in use'),
+          409: errorResponse('An active category already has this name.'),
         },
       },
     },
@@ -534,7 +528,7 @@ export const openApiSpec = {
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
           404: errorResponse('Product category not found'),
-          409: errorResponse('Category is referenced by products'),
+          409: errorResponse('Category is referenced by active products'),
         },
       },
     },
@@ -1546,6 +1540,7 @@ export const openApiSpec = {
         properties: {
           id: { type: 'string', example: '65231abcd345678901234567' },
           name: { type: 'string', example: 'Beverages' },
+          isActive: { type: 'boolean' },
         },
       },
       PizzaComponentType: {

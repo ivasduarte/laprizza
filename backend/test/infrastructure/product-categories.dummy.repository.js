@@ -5,6 +5,7 @@ export function createDummyProductCategoriesRepository() {
   const categories = [];
   let idCounter = 1;
 
+  const isActive = (c) => c.isActive !== false;
   const isSameName = (a, b) => normalizeForComparison(a) === normalizeForComparison(b);
 
   const createDuplicateKeyError = () => {
@@ -14,7 +15,7 @@ export function createDummyProductCategoriesRepository() {
   };
 
   return {
-    listProductCategories: async () => categories,
+    listProductCategories: async () => categories.filter(isActive),
 
     searchByName: async(name) => {
         const term = typeof name === 'string' ? name.trim() : '';
@@ -26,7 +27,7 @@ export function createDummyProductCategoriesRepository() {
     findById: async (id) => categories.find((c) => String(c._id) === String(id)) ?? null,
 
     create: async (categoryData) => {
-        if (categories.some((c) => isSameName(c.name, categoryData.name))) {
+        if (categories.some((c) => isActive(c) && isSameName(c.name, categoryData.name))) {
             throw createDuplicateKeyError();
         }
 
@@ -42,7 +43,7 @@ export function createDummyProductCategoriesRepository() {
         if (index === -1) return null;
 
         const nameTaken = categories.some(
-            (c, i) => i !== index && data.name !== undefined && isSameName(c.name, data.name),
+            (c, i) => i !== index && data.name !== undefined && isActive(c) && isSameName(c.name, data.name),
         );
         if (nameTaken) throw createDuplicateKeyError();
 

@@ -406,11 +406,27 @@ Content-Type: application/json
 
 ?? status == 409
 
-### 4.9 Setup: Desativar a Categoria de Referência
-DELETE {{baseUrl}}/product-categories/{{categoryId}}
+### 4.9 Setup: Criar uma categoria descartável, sem produtos (201 Created)
+# A categoria de referência (categoryId) já tem produtos ativos e não pode ser removida (409).
+# @name createDisposableCategory
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Categoria Descartavel {{$timestamp}}"
+}
+
+?? status == 201
+
+### Guarda Categoria Descartável
+@disposableCategoryId = {{createDisposableCategory.id}}
+
+### 4.9.1 Setup: Desativar a categoria descartável (204 No Content)
+DELETE {{baseUrl}}/product-categories/{{disposableCategoryId}}
 Authorization: Bearer {{adminToken}}
 
-?? status startsWith 2
+?? status == 204
 
 ### 4.10 POST Produto com Categoria Inativa (404 Not Found)
 # A BD tem o ID, mas como está inativa, a regra de domínio bloqueia
@@ -423,7 +439,7 @@ Content-Type: application/json
   "description": "Teste Inativo",
   "sellable": false,
   "stockControlled": false,
-  "categoryId": "{{categoryId}}"
+  "categoryId": "{{disposableCategoryId}}"
 }
 
 ?? status == 404

@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
  
 process.env.JWT_SECRET = 'test_secret_key';
@@ -33,10 +34,12 @@ async function login(port, identifier) {
 async function setupTestServer() {
   const usersRepo = createDummyUsersRepository();
   const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
  
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     usersRepository: usersRepo,
     productCategoriesRepository: categoriesRepo,
+    productsRepository: productsRepo,
   }).listen(0);
  
   await once(server, 'listening');
@@ -55,7 +58,7 @@ async function setupTestServer() {
   const managerToken = await login(port, 'admin@laprizza.pt');
   const employeeToken = await login(port, 'emp@laprizza.pt');
  
-  return { server, port, managerToken, employeeToken, categoriesRepo };
+  return { server, port, managerToken, employeeToken, categoriesRepo, productsRepo };
 }
 
 test('API /product-categories (401 and 403)', async (t) => {
@@ -258,57 +261,103 @@ test('API PUT /product-categories/:id (200, 400, 404, 409)', async (t) => {
   );
 });
 
-test('API DELETE /product-categories/:id (400, 404, 204)', async (t) => {
-  const {
-    server,
-    port,
-    managerToken,
-    categoriesRepo,
-  } = await setupTestServer();
+test('API DELETE /product-categories/:id (400, 404, 409, 204)', async (t) => {
+  const { server, port, managerToken, categoriesRepo, productsRepo } = await setupTestServer();
 
   t.after(() => {
     server.close();
     server.closeAllConnections();
   });
 
-  const createRes = await request(port, 'POST', '/product-categories', {
+  const createCategory = async (name) =>
+    (await request(port, 'POST', '/product-categories', { token: managerToken, body: { name } })).json();
+
+  const pizzas = await createCategory('Pizzas');
+  const drinks = await createCategory('Bebidas');
+
+  // 400 Bad Request - invalid ID format
+  assert.equal(
+    (await request(port, 'DELETE', '/product-categories/id_invalido', { token: managerToken })).status,
+    400,
+  );
+
+  // 404 Not Found
+  assert.equal(
+    (await request(port, 'DELETE', `/product-categories/${NON_EXISTENT_ID}`, { token: managerToken }))
+      .status,
+    404,
+  );
+
+  // 409 Conflict - referenced by an active product
+  await productsRepo.create({ name: 'Coca-Cola', description: 'x', categoryId: drinks.id });
+  assert.equal(
+    (await request(port, 'DELETE', `/product-categories/${drinks.id}`, { token: managerToken })).status,
+    409,
+  );
+
+  // 204 No Content - the category becomes inactive
+  assert.equal(
+    (await request(port, 'DELETE', `/product-categories/${pizzas.id}`, { token: managerToken })).status,
+    204,
+  );
+  assert.equal(
+    categoriesRepo._getCategories().find((c) => c._id === pizzas.id).isActive,
+    false,
+  );
+
+  // 404 Not Found - already removed
+  assert.equal(
+    (await request(port, 'DELETE', `/product-categories/${pizzas.id}`, { token: managerToken })).status,
+    404,
+  );
+});
+
+test('API inactive category (list, search, get, update, reuse of the name)', async (t) => {
+  const { server, port, managerToken } = await setupTestServer();
+
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const created = await (
+    await request(port, 'POST', '/product-categories', { token: managerToken, body: { name: 'Pizzas' } })
+  ).json();
+  await request(port, 'POST', '/product-categories', { token: managerToken, body: { name: 'Bebidas' } });
+  await request(port, 'DELETE', `/product-categories/${created.id}`, { token: managerToken });
+
+  // GET without name - only the active categories
+  const list = await (await request(port, 'GET', '/product-categories', { token: managerToken })).json();
+  assert.deepEqual(list.map((c) => c.name), ['Bebidas']);
+
+  // GET with name - the inactive category can be found
+  const search = await (
+    await request(port, 'GET', '/product-categories?name=pizzas', { token: managerToken })
+  ).json();
+  assert.equal(search.length, 1);
+  assert.equal(search[0].isActive, false);
+
+  // GET by id - the inactive category can be consulted
+  const byId = await request(port, 'GET', `/product-categories/${created.id}`, { token: managerToken });
+  assert.equal(byId.status, 200);
+  assert.equal((await byId.json()).isActive, false);
+
+  // PUT - an inactive category cannot be updated
+  assert.equal(
+    (
+      await request(port, 'PUT', `/product-categories/${created.id}`, {
+        token: managerToken,
+        body: { name: 'Outro' },
+      })
+    ).status,
+    409,
+  );
+
+  // POST - the name of an inactive category can be reused
+  const again = await request(port, 'POST', '/product-categories', {
     token: managerToken,
     body: { name: 'Pizzas' },
   });
-
-  assert.equal(createRes.status, 201);
-
-  const created = await createRes.json();
-
-  const invalidIdRes = await request(
-    port,
-    'DELETE',
-    '/product-categories/id_invalido',
-    { token: managerToken },
-  );
-
-  assert.equal(invalidIdRes.status, 400);
-
-  const notFoundRes = await request(
-    port,
-    'DELETE',
-    `/product-categories/${NON_EXISTENT_ID}`,
-    { token: managerToken },
-  );
-
-  assert.equal(notFoundRes.status, 404);
-
-  const deleteRes = await request(
-    port,
-    'DELETE',
-    `/product-categories/${created.id}`,
-    { token: managerToken },
-  );
-
-  assert.equal(deleteRes.status, 204);
-
-  const categories = categoriesRepo._getCategories();
-  assert.equal(categories.length, 1);
-  assert.equal(categories[0].name, 'Pizzas');
-  assert.equal(categories[0].isActive, false);
+  assert.equal(again.status, 201);
+  assert.notEqual((await again.json()).id, created.id);
 });

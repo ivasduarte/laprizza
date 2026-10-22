@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import {
   listProductCategories,
   createProductCategory,
@@ -156,9 +157,10 @@ test('updateProductCategory throws 404 if the category does not exist', async ()
 
 test('removeProductCategory disables a product category', async () => {
   const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
 
-  await removeProductCategory(created.id, categoriesRepo);
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
 
   const categories = categoriesRepo._getCategories();
 
@@ -170,27 +172,105 @@ test('removeProductCategory disables a product category', async () => {
 
 test('removeProductCategory throws 404 if category does not exist', async () => {
   const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
 
   await assert.rejects(
-    () => removeProductCategory(NON_EXISTENT_ID, categoriesRepo),
+    () => removeProductCategory(NON_EXISTENT_ID, categoriesRepo, productsRepo),
     err => err.status === 404,
   );
 });
 
 test('removeProductCategory throws 404 if the category is already inactive', async () => {
   const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createProductCategory(
     { name: 'Pizzas' },
     categoriesRepo,
   );
 
-  await removeProductCategory(created.id, categoriesRepo);
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
 
   await assert.rejects(
-    () => removeProductCategory(created.id, categoriesRepo),
+    () => removeProductCategory(created.id, categoriesRepo, productsRepo),
     (err) => err.status === 404,
   );
 
   assert.equal(categoriesRepo._getCategories().length, 1);
   assert.equal(categoriesRepo._getCategories()[0].isActive, false);
+});
+
+test('removeProductCategory throws 409 if an active product references the category', async () => {
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+  await productsRepo.create({ name: 'Margherita', description: 'x', categoryId: created.id });
+
+  await assert.rejects(
+    () => removeProductCategory(created.id, categoriesRepo, productsRepo),
+    (err) => err.status === 409,
+  );
+
+  assert.equal(categoriesRepo._getCategories()[0].isActive, true);
+});
+
+test('removeProductCategory ignores inactive products', async () => {
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+  await productsRepo.create({
+    name: 'Margherita',
+    description: 'x',
+    categoryId: created.id,
+    isActive: false,
+  });
+
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
+
+  assert.equal(categoriesRepo._getCategories()[0].isActive, false);
+});
+
+test('an inactive category is not listed but can still be found and consulted', async () => {
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+  await createProductCategory({ name: 'Bebidas' }, categoriesRepo);
+
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
+
+  const listed = await listProductCategories(undefined, categoriesRepo);
+  assert.deepEqual(listed.map((c) => c.name), ['Bebidas']);
+
+  const found = await listProductCategories('pizzas', categoriesRepo);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].isActive, false);
+
+  const byId = await getProductCategoryById(created.id, categoriesRepo);
+  assert.equal(byId.isActive, false);
+});
+
+test('updateProductCategory throws 409 if the category is inactive', async () => {
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
+
+  await assert.rejects(
+    () => updateProductCategory(created.id, { name: 'Outro' }, categoriesRepo),
+    (err) => err.status === 409,
+  );
+
+  assert.equal(categoriesRepo._getCategories()[0].name, 'Pizzas');
+});
+
+test('createProductCategory can reuse the name of an inactive category', async () => {
+  const categoriesRepo = createDummyProductCategoriesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const created = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+  await removeProductCategory(created.id, categoriesRepo, productsRepo);
+
+  const again = await createProductCategory({ name: 'Pizzas' }, categoriesRepo);
+
+  assert.notEqual(again.id, created.id);
+  assert.equal(again.isActive, true);
+  assert.equal(categoriesRepo._getCategories().length, 2);
 });

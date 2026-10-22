@@ -23,7 +23,7 @@ Content-Type: application/json
 @adminToken = {{loginAdmin.token}}
 
 ### ==========================================
-### 2: CRIAÇÃO E VALIDAÇÕES DO CLIENTE
+### 2: CRIAÇÃO E VALIDAÇÕES DA CATEGORIA
 ### ==========================================
 
 ### 2.0 POST Categoria de referência (201 Created)
@@ -273,45 +273,123 @@ Content-Type: application/json
 ?? status == 200
 
 ### ==========================================
-### 5: REMOÇÃO
+### 5: REMOÇÃO E CATEGORIAS INATIVAS
 ### ==========================================
-# Atenção: a remoção precisa do repositório de produtos (BCK05) para verificar se a categoria está em uso.
-# Enquanto o BCK05 não existir, o pedido 6.3 pode falhar com 500, e o caso 409 (categoria em uso) não é testável aqui.
- 
+
 ### 6. DELETE ID com formato inválido (400 Bad Request)
 DELETE {{baseUrl}}/product-categories/id_invalido
 Authorization: Bearer {{adminToken}}
 
 ?? status == 400
- 
+
 ### 6.1 DELETE ID válido mas inexistente (404 Not Found)
 DELETE {{baseUrl}}/product-categories/000000000000000000000000
 Authorization: Bearer {{adminToken}}
 
 ?? status == 404
- 
+
 ### 6.2 DELETE Sem token (401 Unauthorized)
 DELETE {{baseUrl}}/product-categories/{{categoryId}}
 
 ?? status == 401
- 
-### 6.3 DELETE Categoria sem produtos (204 No Content)
+
+### 6.3 POST Produto ativo com a categoria (201 Created)
+# @name createProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto {{runId}}",
+  "description": "Produto para testar a remoção de categorias",
+  "price": 5,
+  "sellable": true,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}"
+}
+
+?? status == 201
+
+### Variáveis
+@productId = {{createProduct.id}}
+
+### 6.4 DELETE Categoria referenciada por um produto ativo (409 Conflict - AC5)
+DELETE {{baseUrl}}/product-categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 409
+
+### 6.5 PATCH Desativar o produto (200 OK)
+PATCH {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+?? status == 200
+
+### 6.6 DELETE Categoria só com produtos inativos (204 No Content - desativa a categoria)
 DELETE {{baseUrl}}/product-categories/{{categoryId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
- 
-### 6.4 GET Categoria removida (200 Ok - isActive: false)
+
+### 6.7 GET Categoria removida por ID (200 OK - isActive: false)
 GET {{baseUrl}}/product-categories/{{categoryId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 200
- 
-### 6.5 DELETE Categoria de referência (204 No Content - limpeza)
+?? body isActive == false
+
+### 6.8 GET Pesquisa por nome encontra a categoria inativa (200 OK)
+GET {{baseUrl}}/product-categories?name=Bebidas%20{{runId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 200
+?? js response.parsedBody[0].isActive == false
+
+### 6.9 DELETE Categoria já removida (404 Not Found)
+DELETE {{baseUrl}}/product-categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 404
+
+### 6.10 PUT Categoria inativa (409 Conflict - não pode ser atualizada)
+PUT {{baseUrl}}/product-categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro {{runId}}"
+}
+
+?? status == 409
+
+### 6.11 POST Reutilizar o nome da categoria removida (201 Created)
+# @name reuseName
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Bebidas {{runId}}"
+}
+
+?? status == 201
+
+### Variáveis
+@reusedCategoryId = {{reuseName.id}}
+
+### 6.12 DELETE Limpeza: categoria com o nome reutilizado (204 No Content)
+DELETE {{baseUrl}}/product-categories/{{reusedCategoryId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 204
+
+### 6.13 DELETE Limpeza: categoria de referência (204 No Content)
 DELETE {{baseUrl}}/product-categories/{{seedCategoryId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
- 
-### 6.6 (Quando o BCK05 existir) Criar um produto com esta categoria e tentar remover a categoria (409 Conflict - AC5)
-# POST {{baseUrl}}/products ... com a categoria criada, seguido de DELETE da categoria.

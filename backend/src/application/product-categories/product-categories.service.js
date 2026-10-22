@@ -1,4 +1,5 @@
 import * as defaultProductCategoriesRepository from '../../infrastructure/product-categories/product-categories.repository.js';
+import * as defaultProductsRepository from '../../infrastructure/products/products.repository.js';
 import {
   normalizeName,
   validateName,
@@ -137,6 +138,13 @@ export async function updateProductCategory(
   productCategoriesRepository = defaultProductCategoriesRepository,
 ) {
   const validData = buildValidProductCategory(updateData);
+
+  const category = await productCategoriesRepository.findById(id);
+  if (!category) throw new AppError('Product category not found', 404);
+  if (category.isActive === false) {
+    throw new AppError(' An inactive product category cannot be updated', 409);
+  }
+
   let updatedCategory;
 
   try {
@@ -161,14 +169,15 @@ export async function updateProductCategory(
 export async function removeProductCategory(
   id,
   productCategoriesRepository = defaultProductCategoriesRepository,
+  productsRepository = defaultProductsRepository,
 ) {
   const category = await productCategoriesRepository.findById(id);
   if (!category || !category.isActive) throw new AppError('Product Category not found.', 404);
 
-  // const isReferenced = await productsRepository.existsByCategory(id);
-  // if (isReferenced) {
-  //   throw new AppError('Cannot remove a referenced product category.', 409);
-  // }
+  const isReferenced = await productsRepository.existsByCategory(id);
+  if (isReferenced) {
+    throw new AppError('Cannot remove a referenced product category.', 409);
+  }
 
   await productCategoriesRepository.update(id, {
     isActive: false,

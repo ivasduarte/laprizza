@@ -124,3 +124,7 @@ export async function removeSizeConfiguration(productId, pizzaSizeId) {
 export async function existsWithSizeConfigurationForPizzaSize(pizzaSizeId) {
   return (await Products.exists({ 'sizeConfigurations.pizzaSizeId': pizzaSizeId })) !== null;
 }
+
+export async function existsByCategory(categoryId) {
+  return (await Products.exists({ categoryId, isActive: { $ne: false } })) !== null;
+}

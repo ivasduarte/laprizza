@@ -10,6 +10,7 @@ node_modules/
 *.log
 npm-debug.log*
 coverage/
+test-flows-output.txt
 
 # Editor and OS files
 .idea/
