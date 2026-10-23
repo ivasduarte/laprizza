@@ -10,4 +10,5 @@ export async function validatePizzaSize(name) {
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
         throw new DomainError('Invalid Pizza Size: Name cannot be empty.');
     }
+    return name.trim();
 }

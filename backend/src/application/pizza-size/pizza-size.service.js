@@ -1,6 +1,8 @@
 import * as defaultSizeRepo from '../../infrastructure/pizza-size/pizza-size.repository.js';
 import * as defaultProductsRepo from '../../infrastructure/products/products.repository.js';
 import { AppError } from '../app-error.js';
+import { DomainError } from '../../domain/domain-error.js';
+import { validatePizzaSize } from '../../domain/pizza-size/pizza-size.domain.js';
 
 export function toSizeDto(size) {
   return {
@@ -12,9 +14,12 @@ export function toSizeDto(size) {
 
 export async function createSize(sizeData, sizeRepository = defaultSizeRepo) {
   try {
+    sizeData.name = await validatePizzaSize(sizeData.name);
+
     const newSize = await sizeRepository.create(sizeData);
     return toSizeDto(newSize);
   } catch (err) {
+    if (err instanceof DomainError) throw new AppError(err.message, 400);
     if (err.code === 11000) throw toConflictError(err);
     throw err;
   }
@@ -48,9 +53,13 @@ export async function updateSize(
   }
 
   try {
+    if (updateData.name !== undefined) {
+      updateData.name = await validatePizzaSize(updateData.name);
+    }
     const updatedSize = await sizeRepository.update(id, updateData);
     return toSizeDto(updatedSize);
   } catch (err) {
+    if (err instanceof DomainError) throw new AppError(err.message, 400);
     if (err.code === 11000) throw toConflictError(err);
     throw err;
   }
