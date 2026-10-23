@@ -70,6 +70,23 @@ All routes live under the `/api/v1` prefix. Errors are returned in a single JSON
 { "error": { "status": 404, "code": "NOT_FOUND", "message": "Route not found: GET /api/v1/x" } }
 ```
 
+## Testing
+
+The system includes automated tests executed without mocking libraries (using in-memory Dummies) and End-to-End (E2E) test flows.
+
+Run the tests using the following commands:
+
+```bash
+# Run all isolated in-memory application and domain tests
+npm test
+
+# Run all E2E HTTP test flows (requires the server to be running)
+npm run test:flows
+
+# Run both in-memory tests and E2E test flows sequentially (requires the server to be running)
+npm run test:all
+```
+
 ## Project Management and Development Processes
  
 This section describes the processes adopted by the team to manage and develop the project. The work is tracked in GitHub Projects, where every User Story (US) has a linked issue.
