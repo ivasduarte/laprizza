@@ -126,7 +126,7 @@ export default function pizzaComponentTypesRouterFactory(
   );
 
   router.delete('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
-    controller.remove(req, res, next, pizzaComponentTypesRepository),
+    controller.remove(req, res, next, pizzaComponentTypesRepository, productsRepository),
   );
 
   return router;

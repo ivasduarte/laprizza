@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
@@ -37,10 +38,12 @@ async function login(port, identifier) {
  
 async function setupTestServer() {
   const usersRepo = createDummyUsersRepository();
+  const productsRepo = createDummyProductsRepository();
  
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     usersRepository: usersRepo,
     pizzaComponentTypesRepository: createDummyPizzaComponentTypesRepository(),
+    productsRepository: productsRepo,
   }).listen(0);
  
   await once(server, 'listening');
@@ -59,7 +62,7 @@ async function setupTestServer() {
   const managerToken = await login(port, 'admin@laprizza.pt');
   const employeeToken = await login(port, 'emp@laprizza.pt');
  
-  return { server, port, managerToken, employeeToken };
+  return { server, port, managerToken, employeeToken, productsRepo };
 }
  
 function closeServer(server) {
@@ -465,4 +468,45 @@ test('API DELETE /pizza-component-type/:id is a soft delete', async (t) => {
   const recreated = await request(port, 'POST', BASE_PATH, { token: managerToken, body: CHEESE });
   assert.equal(recreated.status, 201);
   assert.notEqual((await recreated.json()).id, cheese.id);
+});
+
+test('API DELETE /pizza-component-type/:id (409)', async (t) => {
+  const { server, port, managerToken, productsRepo } = await setupTestServer();
+
+  t.after(() => closeServer(server));
+
+  const cheese = await createType(port, managerToken, CHEESE);
+  const topping = await createType(port, managerToken, TOPPING);
+  const product = await productsRepo.create({
+    name: 'Mozzarella',
+    pizzaComponentTypeId: cheese.id,
+  });
+
+  // 409 Conflict - an active product references the type
+  assert.equal(
+    (await request(port, 'DELETE', `${BASE_PATH}/${cheese.id}`, { token: managerToken })).status,
+    409,
+  );
+
+  // The type is still active and keeps being listed
+  const byId = await request(port, 'GET', `${BASE_PATH}/${cheese.id}`, { token: managerToken });
+  assert.equal((await byId.json()).isActive, true);
+  const list = await request(port, 'GET', BASE_PATH, { token: managerToken });
+  assert.deepEqual(
+    (await list.json()).map((type) => type.name),
+    ['Cheese', 'Topping'],
+  );
+
+  // 204 No Content - a type that no product references can be removed
+  assert.equal(
+    (await request(port, 'DELETE', `${BASE_PATH}/${topping.id}`, { token: managerToken })).status,
+    204,
+  );
+
+  // 204 No Content - an inactive product does not block the removal
+  await productsRepo.update(product._id, { isActive: false });
+  assert.equal(
+    (await request(port, 'DELETE', `${BASE_PATH}/${cheese.id}`, { token: managerToken })).status,
+    204,
+  );
 });

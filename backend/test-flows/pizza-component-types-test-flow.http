@@ -642,8 +642,8 @@ Content-Type: application/json
 ### ==========================================
 ### 6: REMOÇÃO (SOFT DELETE)
 ### ==========================================
-# Atenção: a validação de tipos referenciados por produtos ainda não existe. Enquanto não for implementada,
-# a remoção não verifica produtos e o caso 409 (tipo em uso) não é testável aqui.
+# Um tipo referenciado por produtos ativos não pode ser removido (409 Conflict).
+# Um produto inativo não bloqueia a remoção do tipo.
 
 ### 6. DELETE ID com formato inválido (400 Bad Request)
 DELETE {{baseUrl}}/pizza-component-type/id_invalido
@@ -724,47 +724,111 @@ Content-Type: application/json
 ### Variáveis
 @recreatedId = {{recreateType.id}}
 
-### 6.10 DELETE Limpeza: tipo de referência (204 No Content)
-DELETE {{baseUrl}}/pizza-component-type/{{seedTypeId}}
+### ==========================================
+### 6B: TIPO REFERENCIADO POR PRODUTOS
+### ==========================================
+# Usa o tipo "Igual" (2.4). O produto criado fica inativo no fim, porque os produtos não podem ser apagados.
+
+### 6.10 POST Categoria de apoio para o produto (201 Created)
+# @name createCategory
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Componentes {{runId}}"
+}
+
+?? status == 201
+
+### Variáveis
+@categoryId = {{createCategory.id}}
+
+### 6.11 POST Produto que usa o tipo (201 Created - isPizzaComponent: true)
+# @name createProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Mozzarella {{runId}}",
+  "description": "Componente que referencia o tipo",
+  "sellable": false,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}",
+  "pizzaComponentTypeId": "{{equalId}}"
+}
+
+?? status == 201
+
+### Variáveis
+@productId = {{createProduct.id}}
+
+### 6.12 DELETE Tipo referenciado por um produto ativo (409 Conflict)
+DELETE {{baseUrl}}/pizza-component-type/{{equalId}}
 Authorization: Bearer {{adminToken}}
 
-?? status == 204
+?? status == 409
 
-### 6.11 DELETE Limpeza: tipo sem máximo (204 No Content)
-DELETE {{baseUrl}}/pizza-component-type/{{unboundedId}}
+### 6.13 GET Tipo continua ativo depois do 409 (200 OK - isActive: true)
+GET {{baseUrl}}/pizza-component-type/{{equalId}}
 Authorization: Bearer {{adminToken}}
 
-?? status == 204
+?? status == 200
 
-### 6.12 DELETE Limpeza: tipo com máximo null (204 No Content)
-DELETE {{baseUrl}}/pizza-component-type/{{nullMaxId}}
+### 6.14 PATCH Desativar o produto (200 OK - isActive: false)
+PATCH {{baseUrl}}/products/{{productId}}
 Authorization: Bearer {{adminToken}}
+Content-Type: application/json
 
-?? status == 204
+{
+  "isActive": false
+}
 
-### 6.13 DELETE Limpeza: tipo com mínimo igual ao máximo (204 No Content)
+?? status == 200
+
+### 6.15 DELETE Tipo cujo produto está inativo (204 No Content - os produtos inativos não bloqueiam)
 DELETE {{baseUrl}}/pizza-component-type/{{equalId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
 
-### 6.14 DELETE Limpeza: tipo com isActive ignorado (204 No Content)
+### ==========================================
+### 6C: LIMPEZA
+### ==========================================
+
+### 6.16 DELETE Limpeza: tipo de referência (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{seedTypeId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 204
+
+### 6.17 DELETE Limpeza: tipo sem máximo (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{unboundedId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 204
+
+### 6.18 DELETE Limpeza: tipo com máximo null (204 No Content)
+DELETE {{baseUrl}}/pizza-component-type/{{nullMaxId}}
+Authorization: Bearer {{adminToken}}
+
+?? status == 204
+
+### 6.19 DELETE Limpeza: tipo com isActive ignorado (204 No Content)
 DELETE {{baseUrl}}/pizza-component-type/{{ignoreActiveId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
 
-### 6.15 DELETE Limpeza: tipo com nome normalizado (204 No Content)
+### 6.20 DELETE Limpeza: tipo com nome normalizado (204 No Content)
 DELETE {{baseUrl}}/pizza-component-type/{{normalizedId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
 
-### 6.16 DELETE Limpeza: tipo recriado (204 No Content)
+### 6.21 DELETE Limpeza: tipo recriado (204 No Content)
 DELETE {{baseUrl}}/pizza-component-type/{{recreatedId}}
 Authorization: Bearer {{adminToken}}
 
 ?? status == 204
-
-### 6.17 (Quando a validação por produtos existir) Criar um produto com este tipo e tentar remover o tipo (409 Conflict)
-# POST {{baseUrl}}/products ... com o tipo criado, seguido de DELETE do tipo.

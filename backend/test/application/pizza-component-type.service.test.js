@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
+import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import {
   listPizzaComponentTypes,
   createPizzaComponentType,
@@ -149,9 +150,10 @@ test('listPizzaComponentTypes without a name returns the active types sorted by 
  
 test('listPizzaComponentTypes without a name does not return removed types', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const cheese = await createPizzaComponentType(CHEESE, repo);
   await createPizzaComponentType(TOPPING, repo);
-  await removePizzaComponentType(cheese.id, repo);
+  await removePizzaComponentType(cheese.id, repo, productsRepo);
  
   const types = await listPizzaComponentTypes(undefined, repo);
  
@@ -174,8 +176,9 @@ test('listPizzaComponentTypes finds the exact name ignoring case and accents', a
  
 test('listPizzaComponentTypes finds a removed type by name and flags it as inactive', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const cheese = await createPizzaComponentType(CHEESE, repo);
-  await removePizzaComponentType(cheese.id, repo);
+  await removePizzaComponentType(cheese.id, repo, productsRepo);
  
   const found = await listPizzaComponentTypes('cheese', repo);
  
@@ -208,8 +211,9 @@ test('getPizzaComponentTypeById returns the type or throws 404', async () => {
  
 test('getPizzaComponentTypeById also returns a removed type, flagged as inactive', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createPizzaComponentType(CHEESE, repo);
-  await removePizzaComponentType(created.id, repo);
+  await removePizzaComponentType(created.id, repo, productsRepo);
  
   const found = await getPizzaComponentTypeById(created.id, repo);
  
@@ -304,8 +308,9 @@ test('updatePizzaComponentType validates the data before looking for the type', 
  
 test('updatePizzaComponentType throws 404 for a removed type and leaves it unchanged', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createPizzaComponentType(CHEESE, repo);
-  await removePizzaComponentType(created.id, repo);
+  await removePizzaComponentType(created.id, repo, productsRepo);
  
   await assert.rejects(
     async () => await updatePizzaComponentType(created.id, { ...CHEESE, name: 'Other' }, repo),
@@ -318,9 +323,10 @@ test('updatePizzaComponentType throws 404 for a removed type and leaves it uncha
  
 test('removePizzaComponentType deactivates the type without deleting it', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createPizzaComponentType(CHEESE, repo);
  
-  const result = await removePizzaComponentType(created.id, repo);
+  const result = await removePizzaComponentType(created.id, repo, productsRepo);
  
   assert.equal(result, undefined);
   assert.equal(repo._getTypes().length, 1);
@@ -330,32 +336,112 @@ test('removePizzaComponentType deactivates the type without deleting it', async 
  
 test('removePizzaComponentType throws 404 if the type does not exist', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
  
   await assert.rejects(
-    async () => await removePizzaComponentType(NON_EXISTENT_ID, repo),
+    async () => await removePizzaComponentType(NON_EXISTENT_ID, repo, productsRepo),
     (err) => err.status === 404,
   );
 });
  
 test('removePizzaComponentType throws 404 if the type was already removed', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createPizzaComponentType(CHEESE, repo);
-  await removePizzaComponentType(created.id, repo);
+  await removePizzaComponentType(created.id, repo, productsRepo);
  
   await assert.rejects(
-    async () => await removePizzaComponentType(created.id, repo),
+    async () => await removePizzaComponentType(created.id, repo, productsRepo),
     (err) => err.status === 404,
   );
 });
  
 test('removing a type frees its name and assembly order to be used again', async () => {
   const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
   const created = await createPizzaComponentType(CHEESE, repo);
-  await removePizzaComponentType(created.id, repo);
+  await removePizzaComponentType(created.id, repo, productsRepo);
  
   const recreated = await createPizzaComponentType(CHEESE, repo);
  
   assert.notEqual(recreated.id, created.id);
   assert.equal(recreated.isActive, true);
   assert.equal(repo._getTypes().length, 2);
+});
+
+test('removePizzaComponentType throws 409 Conflict if a product references the type', async () => {
+  const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const cheese = await createPizzaComponentType(CHEESE, repo);
+  await productsRepo.create({ name: 'Mozzarella', pizzaComponentTypeId: cheese.id });
+
+  await assert.rejects(
+    async () => await removePizzaComponentType(cheese.id, repo, productsRepo),
+    (err) => err.status === 409 && /referenced/i.test(err.message),
+  );
+
+  // The type is still active and keeps being listed
+  assert.equal(repo._getTypes()[0].isActive, true);
+  assert.deepEqual(
+    (await listPizzaComponentTypes(undefined, repo)).map((t) => t.name),
+    ['Cheese'],
+  );
+});
+
+test('removePizzaComponentType ignores inactive products', async () => {
+  const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const cheese = await createPizzaComponentType(CHEESE, repo);
+  await productsRepo.create({
+    name: 'Mozzarella',
+    pizzaComponentTypeId: cheese.id,
+    isActive: false,
+  });
+
+  await removePizzaComponentType(cheese.id, repo, productsRepo);
+
+  assert.equal(repo._getTypes()[0].isActive, false);
+});
+
+test('removePizzaComponentType only checks the products of the type being removed', async () => {
+  const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const cheese = await createPizzaComponentType(CHEESE, repo);
+  const topping = await createPizzaComponentType(TOPPING, repo);
+  await productsRepo.create({ name: 'Mozzarella', pizzaComponentTypeId: cheese.id });
+  await productsRepo.create({ name: 'Water', pizzaComponentTypeId: null });
+
+  // The topping type has no products: it can be removed, the cheese type cannot
+  assert.equal(await removePizzaComponentType(topping.id, repo, productsRepo), undefined);
+  assert.equal(repo._getTypes().find((t) => t._id === topping.id).isActive, false);
+  await assert.rejects(
+    async () => await removePizzaComponentType(cheese.id, repo, productsRepo),
+    (err) => err.status === 409,
+  );
+});
+
+test('removePizzaComponentType removes the type once no product references it', async () => {
+  const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
+  const cheese = await createPizzaComponentType(CHEESE, repo);
+  const product = await productsRepo.create({ name: 'Mozzarella', pizzaComponentTypeId: cheese.id });
+
+  // The product stops being a pizza component
+  await productsRepo.update(product._id, { pizzaComponentTypeId: null });
+
+  assert.equal(await removePizzaComponentType(cheese.id, repo, productsRepo), undefined);
+  assert.equal(repo._getTypes()[0].isActive, false);
+});
+
+test('removePizzaComponentType checks that the type exists before looking at the products', async () => {
+  const repo = createDummyPizzaComponentTypesRepository();
+  const productsRepo = createDummyProductsRepository();
+  productsRepo.existsByPizzaComponentType = async () => {
+    throw new Error('The products must not be checked');
+  };
+
+  await assert.rejects(
+    async () => await removePizzaComponentType(NON_EXISTENT_ID, repo, productsRepo),
+    (err) => err.status === 404,
+  );
 });

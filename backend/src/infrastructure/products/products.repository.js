@@ -122,9 +122,16 @@ export async function removeSizeConfiguration(productId, pizzaSizeId) {
  * @returns {Promise<boolean>} True if at least one product has a configuration for the pizza size.
  */
 export async function existsWithSizeConfigurationForPizzaSize(pizzaSizeId) {
+  if (!mongoose.isValidObjectId(pizzaSizeId)) return false;
   return (await Products.exists({ 'sizeConfigurations.pizzaSizeId': pizzaSizeId })) !== null;
 }
 
 export async function existsByCategory(categoryId) {
+  if (!mongoose.isValidObjectId(categoryId)) return false;
   return (await Products.exists({ categoryId, isActive: { $ne: false } })) !== null;
+}
+
+export async function existsByPizzaComponentType(pizzaComponentTypeId) {
+  if (!mongoose.isValidObjectId(pizzaComponentTypeId)) return false;
+  return (await Products.exists({ pizzaComponentTypeId, isActive: { $ne: false } })) !== null;
 }

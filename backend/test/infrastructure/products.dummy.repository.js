@@ -74,6 +74,12 @@ export function createDummyProductsRepository() {
       );
     },
 
+    existsByPizzaComponentType: async (pizzaComponentTypeId) => {
+      return products.some(
+        (p) => String(p.pizzaComponentTypeId) === String(pizzaComponentTypeId) && p.isActive !== false,
+      );
+    },
+
     // Like the real repository, it only adds when the product has no configuration for the pizza
     // size yet (otherwise, as well as for unknown products, it returns null).
     addSizeConfiguration: async (productId, configuration) => {

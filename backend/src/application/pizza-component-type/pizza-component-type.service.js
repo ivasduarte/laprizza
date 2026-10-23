@@ -1,4 +1,5 @@
 import * as defaultPizzaComponentTypeRepository from '../../infrastructure/pizza-component-type/pizza-component-type.repository.js';
+import * as defaultProductsRepository from '../../infrastructure/products/products.repository.js';
 import {
   normalizeName,
   normalizeMaxQuantity,
@@ -117,9 +118,15 @@ export async function updatePizzaComponentType(
 export async function removePizzaComponentType(
   id,
   pizzaComponentTypeRepository = defaultPizzaComponentTypeRepository,
+  productsRepository = defaultProductsRepository,
 ) {
   const type = await pizzaComponentTypeRepository.findById(id);
   if (!type || !type.isActive) throw new AppError('Pizza Component Type not found.', 404);
+
+  const isReferenced = await productsRepository.existsByPizzaComponentType(id);
+  if (isReferenced) {
+    throw new AppError('Cannot remove a referenced pizza component type.', 409);
+  }
 
   await pizzaComponentTypeRepository.update(id, {
     isActive: false,

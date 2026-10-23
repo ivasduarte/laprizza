@@ -49,11 +49,12 @@ export const update = async (req, res, next, pizzaComponentTypeRepository) => {
   }
 };
 
-export const remove = async (req, res, next, pizzaComponentTypeRepository) => {
+export const remove = async (req, res, next, pizzaComponentTypeRepository, productsRepository) => {
   try {
     await pizzaComponentTypeService.removePizzaComponentType(
       req.params.id,
       pizzaComponentTypeRepository,
+      productsRepository,
     );
     res.status(204).send();
   } catch (err) {
