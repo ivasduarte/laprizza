@@ -1,0 +1,15 @@
+@startuml "logical-view"
+!include <C4/C4_Context>
+
+title "Level 1 Logical View"
+
+Person(customer, "Customer", "Places orders and customizes pizzas.")
+Person(staff, "LaPrizza Staff", "Manages catalogue, stock, and kitchen orders.")
+
+System(laprizza, "LaPrizza Information System", "Manages the restaurant operations, from ordering to food preparation.")
+
+Rel(customer, laprizza, "Uses", "HTTPS")
+Rel(staff, laprizza, "Manages", "HTTPS")
+
+SHOW_LEGEND()
+@enduml

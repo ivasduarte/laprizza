@@ -1,0 +1,36 @@
+@startuml "development-view"
+
+title "Level 3 Development View"
+
+skinparam packageStyle rectangle
+
+package "Back-End System (backend/src/)" {
+    package "api" {
+        [Controllers]
+        [Routes]
+        [Authorization Middleware]
+    }
+    package "application" as app {
+        [Use Cases]
+        [DTOs]
+    }
+    package "domain" as dom {
+        [Entities]
+        [Value Objects]
+        [Domain Services]
+        [Repository Interfaces]
+    }
+    package "infrastructure" as infra {
+        [MongoDB Persistence]
+        [Repository Implementations]
+        [Migrations & Seed]
+        [Token Service]
+        [Password Hasher]
+    }
+
+    api -[hidden]down-> app
+    app -[hidden]down-> dom
+    dom -[hidden]down-> infra
+}
+
+@enduml
