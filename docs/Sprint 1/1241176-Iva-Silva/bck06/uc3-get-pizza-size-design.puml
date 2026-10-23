@@ -1,0 +1,40 @@
+@startuml "UC3_Get_Pizza_Size_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "PizzaSizeController" as controller
+participant "PizzaSizeService" as service
+participant "PizzaSizeRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+Manager -> route : GET /pizza-size/:id
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Object ID (Joi)
+route -> controller : getById(req, res, next)
+activate controller
+
+controller -> service : getSizeById(id, repo)
+activate service
+
+service -> repo : findById(id)
+activate repo
+repo --> service : PizzaSize Entity (or null)
+deactivate repo
+
+alt Pizza Size Not Found
+    service --> controller : AppError(404)
+else Pizza Size Found
+    service -> service : toSizeDto(PizzaSize)
+    service --> controller : PizzaSize DTO
+end
+deactivate service
+
+controller --> Manager : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml

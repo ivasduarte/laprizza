@@ -1,0 +1,36 @@
+@startuml "UC2_List_Search_Pizza_Sizes_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "PizzaSizeController" as controller
+participant "PizzaSizeService" as service
+participant "PizzaSizeRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+Manager -> route : GET /pizza-size?search={term}
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Query (Joi)
+route -> controller : list(req, res, next)
+activate controller
+
+controller -> service : listSizes(query, repo)
+activate service
+
+service -> repo : listPizzaSizes(query)
+activate repo
+repo --> service : Array<PizzaSize Entity>
+deactivate repo
+
+service -> service : map(toSizeDto)
+service --> controller : Array<PizzaSize DTO>
+deactivate service
+
+controller --> Manager : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml

@@ -1,0 +1,53 @@
+@startuml "UC1_Create_Pizza_Size_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route 
+participant "PizzaSizeController" as controller 
+participant "PizzaSizeService" as service 
+participant "PizzaSizeDomain" as domain
+participant "PizzaSizeRepository\n(MongoDb/Dummy)" as repo 
+
+activate Manager
+Manager -> route : POST /pizza-size { name }
+activate route 
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Payload (Joi)
+route -> controller : create(req, res, next)
+activate controller
+
+controller -> service : createSize(data, repo)
+activate service 
+
+service -> domain : validatePizzaSize(data.name)
+activate domain
+
+alt Invalid Name
+    domain --> service : DomainError
+    service --> controller : AppError(400)
+else Valid Name
+    domain --> service : normalizedName
+    deactivate domain
+    
+    service -> repo : create(sizeData)
+    activate repo
+
+    alt Duplicate Name 
+        repo --> service : MongoError(11000)
+        service --> controller : AppError(409, "Pizza size already in use.")
+    else Success 
+        repo --> service : PizzaSize Entity
+        deactivate repo 
+        service -> service : toSizeDto(PizzaSize)
+        service --> controller : PizzaSize DTO
+    end 
+end
+deactivate service 
+
+controller --> Manager : Response (201 Created or Error)
+deactivate controller 
+deactivate route 
+@enduml

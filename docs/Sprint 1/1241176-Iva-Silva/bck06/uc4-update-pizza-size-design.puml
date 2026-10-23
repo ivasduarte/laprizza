@@ -1,0 +1,74 @@
+@startuml "UC4_Update_Pizza_Size_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "PizzaSizeController" as controller
+participant "PizzaSizeService" as service
+participant "PizzaSizeDomain" as domain
+participant "ProductsRepository\n(MongoDB/Dummy)" as prodRepo
+participant "PizzaSizeRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+Manager -> route : PATCH /pizza-size/:id { ...updates }
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Object ID & Payload (Joi)
+route -> controller : update(req, res, next)
+activate controller
+
+controller -> service : updateSize(id, data, repo, prodRepo)
+activate service
+
+service -> repo : findById(id)
+activate repo
+repo --> service : PizzaSize Entity (or null)
+deactivate repo
+
+alt Pizza Size Not Found
+    service --> controller : AppError(404)
+else Pizza Size Found
+    opt If isActive is being set to false
+        service -> prodRepo : existsWithSizeConfigurationForPizzaSize(id)
+        activate prodRepo
+        prodRepo --> service : boolean
+        deactivate prodRepo
+    end
+
+    alt Is in use (isActive: false attempted)
+        service --> controller : AppError(409, "Pizza size has size configurations...")
+    else Validation Passed
+    
+        opt If name is being updated
+            service -> domain : validatePizzaSize(data.name)
+            activate domain
+            domain --> service : normalizedName / DomainError
+            deactivate domain
+        end
+        
+        alt Domain Validation Failed
+            service --> controller : AppError(400)
+        else
+            service -> repo : update(id, mappedData)
+            activate repo
+            alt Duplicate Name
+                repo --> service : MongoError(11000)
+                service --> controller : AppError(409, "Pizza size already in use.")
+            else Success
+                repo --> service : Updated PizzaSize Entity
+                deactivate repo
+                service -> service : toSizeDto(PizzaSize)
+                service --> controller : PizzaSize DTO
+            end
+        end
+    end
+end
+deactivate service
+
+controller --> Manager : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml
