@@ -1,0 +1,48 @@
+@startuml "UC3_Update_Pizza_Component_Type_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "PizzaComponentTypeController" as controller
+participant "PizzaComponentTypeService" as service
+participant "PizzaComponentTypeDomain" as domain
+participant "PizzaComponentTypeRepository\n(MongoDb/Dummy)" as repo
+
+activate Manager
+Manager -> route : PUT /pizza-component-type/{id} { name, assemblyOrder, minQuantity, maxQuantity }
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Id & Payload (Joi)
+route -> controller : update(req, res, next)
+activate controller
+
+controller -> service : updatePizzaComponentType(id, data, repo)
+activate service
+
+service -> domain : normalizeName(name) & normalizeMaxQuantity(maxQuantity)
+activate domain
+domain --> service : normalizedName, normalizedMaxQuantity
+
+service -> domain : validateName, validateAssemblyOrder, validateMinQuantity,\nvalidateMaxQuantity & validateQuantityRange
+domain --> service : valid
+deactivate domain
+
+service -> repo : findById(id)
+activate repo
+repo --> service : PizzaComponentType Entity (active)
+
+service -> repo : update(id, typeData)
+repo --> service : Updated PizzaComponentType Entity
+deactivate repo
+
+service -> service : toPizzaComponentTypeDTO(PizzaComponentType)
+service --> controller : PizzaComponentType DTO
+deactivate service
+
+controller --> Manager : Response (200 OK)
+deactivate controller
+deactivate route
+@enduml

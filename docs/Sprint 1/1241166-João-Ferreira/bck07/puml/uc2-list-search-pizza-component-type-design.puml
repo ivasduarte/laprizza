@@ -1,0 +1,62 @@
+@startuml "UC2_List_Search_Pizza_Component_Types_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "PizzaComponentTypeController" as controller
+participant "PizzaComponentTypeService" as service
+participant "PizzaComponentTypeRepository\n(MongoDb/Dummy)" as repo
+
+activate Manager
+Manager -> route : GET /pizza-component-type?name  or  GET /pizza-component-type/{id}
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Query / Id format (Joi)
+
+alt List / Search
+    route -> controller : list(req, res, next)
+    activate controller
+    controller -> service : listPizzaComponentTypes(name, repo)
+    activate service
+
+    alt Without name
+        service -> repo : listPizzaComponentTypes()
+        activate repo
+        repo --> service : Active PizzaComponentType Entities (sorted by assembly order)
+    else With name
+        service -> repo : searchByName(name)
+        repo --> service : PizzaComponentType Entities (active or inactive, exact name)
+        deactivate repo
+    end
+
+    service -> service : toPizzaComponentTypeDTO(each)
+    service --> controller : PizzaComponentType DTO list
+    deactivate service
+    controller --> Manager : Response (200 OK)
+
+    deactivate controller
+else Consult by id
+    route -> controller : getById(req, res, next)
+    activate controller
+    controller -> service : getPizzaComponentTypeById(id, repo)
+    activate service
+    service -> repo : findById(id)
+    activate repo
+
+    repo --> service : PizzaComponentType Entity
+    deactivate repo
+    service -> service : toPizzaComponentTypeDTO(PizzaComponentType)
+    service --> controller : PizzaComponentType DTO
+
+    deactivate service
+    controller --> Manager : Response (200 OK)
+
+    deactivate controller
+end
+
+deactivate route
+
+@enduml
