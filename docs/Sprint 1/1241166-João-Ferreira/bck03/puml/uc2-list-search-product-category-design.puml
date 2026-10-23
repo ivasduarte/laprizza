@@ -1,0 +1,62 @@
+@startuml "UC2_List_Search_Product_Categories_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "ProductCategoriesController" as controller
+participant "ProductCategoriesService" as service
+participant "ProductCategoriesRepository\n(MongoDb/Dummy)" as repo
+
+activate Manager
+Manager -> route : GET /product-categories?name  or  GET /product-categories/{id}
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Query / Id format (Joi)
+
+alt List / Search
+    route -> controller : list(req, res, next)
+    activate controller
+    controller -> service : listProductCategories(name, repo)
+    activate service
+
+    alt Without name
+        service -> repo : listProductCategories()
+        activate repo
+        repo --> service : Active ProductCategory Entities
+    else With name
+        service -> repo : searchByName(name)
+        repo --> service : ProductCategory Entities (active or inactive, exact name)
+        deactivate repo
+    end
+
+    service -> service : toProductCategoryDTO(each)
+    service --> controller : ProductCategory DTO list
+    deactivate service
+    controller --> Manager : Response (200 OK)
+
+    deactivate controller
+else Consult by id
+    route -> controller : getById(req, res, next)
+    activate controller
+    controller -> service : getProductCategoryById(id, repo)
+    activate service
+    service -> repo : findById(id)
+    activate repo
+
+    repo --> service : ProductCategory Entity
+    deactivate repo
+    service -> service : toProductCategoryDTO(ProductCategory)
+    service --> controller : ProductCategory DTO
+
+    deactivate service
+    controller --> Manager : Response (200 OK)
+
+    deactivate controller
+end
+
+deactivate route
+
+@enduml

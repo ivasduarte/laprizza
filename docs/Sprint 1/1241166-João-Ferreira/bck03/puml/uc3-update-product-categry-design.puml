@@ -1,0 +1,45 @@
+@startuml "UC3_Update_Product_Category_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "ProductCategoriesController" as controller
+participant "ProductCategoriesService" as service
+participant "ProductCategoriesDomain" as domain
+participant "ProductCategoriesRepository\n(MongoDb/Dummy)" as repo
+
+activate Manager
+Manager -> route : PUT /product-categories/{id} { name }
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Id & Payload (Joi)
+route -> controller : update(req, res, next)
+activate controller
+
+controller -> service : updateProductCategory(id, data, repo)
+activate service
+
+service -> domain : normalizeName(data.name) & validateName(name)
+activate domain
+domain --> service : normalizedName
+deactivate domain
+
+service -> repo : findById(id)
+activate repo
+repo --> service : ProductCategory Entity (active)
+
+service -> repo : update(id, categoryData)
+repo --> service : Updated ProductCategory Entity
+deactivate repo
+
+service -> service : toProductCategoryDTO(ProductCategory)
+service --> controller : ProductCategory DTO
+deactivate service
+
+controller --> Manager : Response (200 OK)
+deactivate controller
+deactivate route
+@enduml
