@@ -3,7 +3,12 @@ import * as categoriesRepository from '../../infrastructure/product-categories/p
 import * as allergensRepository from '../../infrastructure/allergen/allergen.repository.js';
 import * as pizzaComponentTypesRepository from '../../infrastructure/pizza-component-type/pizza-component-type.repository.js';
 import * as stockRepository from '../../infrastructure/stock/stock.repository.js';
+import {
+  validateProductName,
+  validateProductDescription,
+} from '../../domain/products/products.domain.js';
 import { AppError } from '../app-error.js';
+import { DomainError } from '../../domain/domain-error.js';
 
 export function toProductDTO(product) {
   return {
@@ -66,6 +71,13 @@ export async function createProduct(
     stockRepository,
   },
 ) {
+  try {
+    data.name = validateProductName(data.name);
+    data.description = validateProductDescription(data.description);
+  } catch (err) {
+    if (err instanceof DomainError) throw new AppError(err.message, 400);
+    throw err;
+  }
   if (data.sellable && (data.price === undefined || data.price === null || data.price < 0)) {
     throw new AppError('Sellable products must have a valid price.', 400);
   }
@@ -101,6 +113,15 @@ export async function updateProduct(
 ) {
   const product = await repos.productsRepository.findById(id);
   if (!product) throw new AppError('Product not found.', 404);
+
+  try {
+    if (updateData.name !== undefined) updateData.name = validateProductName(updateData.name);
+    if (updateData.description !== undefined)
+      updateData.description = validateProductDescription(updateData.description);
+  } catch (err) {
+    if (err instanceof DomainError) throw new AppError(err.message, 400);
+    throw err;
+  }
 
   if (
     updateData.isActive === false &&
