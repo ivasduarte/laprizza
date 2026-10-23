@@ -1,7 +1,7 @@
 # UC2: Register User
 
 ## 1. Domain Assumptions
-* Due to a lack of client clarificaition, the following domain restrictions were implemented in the code:
+* Due to a lack of client clarification, the following domain restrictions were implemented in the code:
     * Passwords must comply with the strict NIST guidelines (8-64 characters, at least one uppercase letter, and one special character);
     * User roles are strictly limited to `MANAGER`, `EMPLOYEE`, or `CUSTOMER`;
     * Only users assigned the `CUSTOMER` role can have an associated `customerId`;
@@ -17,10 +17,10 @@
 * **Scenario C:** Provide valid data with a strong password. Result: Password is hashed via `Argon2`, saved to the database, and mapped to a DTO (omitting the password and exposing `id` instead of `_id`).
 
 ## 4. Postman E2E Tests
-* **Base Endpoint:** `POST /api/v1/uses`
+* **Base Endpoint:** `POST /api/v1/users`
 * **Validated Scenarios:**
     * Request without Bearer Token -> `401 Unauthorized`
-    * Request with EMPLYEE Bearer Token -> `403 Forbidden` (RBAC enforcement)
+    * Request with EMPLOYEE Bearer Token -> `403 Forbidden` (RBAC enforcement)
     * Valid payload by MANAGER -> `201 Created`
     * Missing mandatory fields (e.g., role or password) -> `400 Bad Request`
     * Duplicate email or username -> `409 Conflict`

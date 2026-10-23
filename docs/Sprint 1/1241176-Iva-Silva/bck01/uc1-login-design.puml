@@ -42,7 +42,7 @@ else User found
 end
 deactivate service
 
-controller --> User : Response (200 OK ou 401 Error)
+controller --> User : Response (200 OK or Error)
 deactivate controller
 deactivate route
 @enduml

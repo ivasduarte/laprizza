@@ -1,7 +1,7 @@
 # UC3: Update User
 
 ## 1. Domain Assumptions
-* Due to a lack of client clarificaition, the following domain restrictions were implemented in the code:
+* Due to a lack of client clarification, the following domain restrictions were implemented in the code:
     * **Self-protection Rule:** A user with the `MANAGER` role cannot change their own role or deactivate their own account (`isActive: false`);
     * If a user's role is updated from `CUSTOMER` to another role, their associated `customerId` is automatically nullified to maintain consistency;
     * If a password update is requested, the new password is re-evaluated against NIST rules and securely hashed before persistence.

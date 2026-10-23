@@ -19,6 +19,6 @@
 
 * **Base Endpoint:** `POST /api/v1/auth/login`
 * **Validated Scenarios:**
-    * Complete playload with valid credentials -> `200 OK` (Returns token)
+    * Complete payload with valid credentials -> `200 OK` (Returns token)
     * Missing identifier/password -> `400 Bad Request` (Blocked by Joi validation)
     * Incorrect credentials -> `401 Unauthorized`

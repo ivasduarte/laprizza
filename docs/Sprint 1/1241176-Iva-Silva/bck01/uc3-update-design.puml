@@ -55,7 +55,7 @@ else Valid target
     end
     deactivate service
     
-    controller --> Manager : Response (200 OK ou Error)
+    controller --> Manager : Response (200 OK or Error)
 end
 deactivate controller
 deactivate route

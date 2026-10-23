@@ -1,7 +1,7 @@
 {
   "cSpell.words": ["Prizza"],
   "postman.settings.dotenv-detection-notification-visibility": false,
-  "editor.fontSize": 13,
+  "editor.fontSize": 15,
   "editor.formatOnSave": true,
   "files.autoSave": "afterDelay",
   "editor.defaultFormatter": "esbenp.prettier-vscode"
