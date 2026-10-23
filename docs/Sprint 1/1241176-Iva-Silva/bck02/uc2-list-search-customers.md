@@ -9,11 +9,11 @@
 ## 2. Solution Design
 ![UC2_List_Search_Customers_Design](./UC2_List_Search_Customers_Design.svg)
 
-## 3. Business Test PLanning
-* All unit tests use isolated in-memory Dummy Repositories (`customers.dummy.repository.js`) and a Dummy Postal Code Validator.
-* **Scenario A:** Request the list without a seach parameter. Result: Returns an array of all customer DTOs.
-* **Scenario B:** Provide a search term that matches a specific customer's email or phone number. Result: Returns an array with the matched customer DTOs.
-* **Scenario C:** Provide a search term that matches no customers. Result: Returns an empty array.
+## 3. Business Test Planning
+* **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`), avoiding Mocking libraries entirely.
+* **Application Tests (`customers.service.test.js`):**
+    * `getCustomerById and listCustomers fetch and map correctly`
+    * `listCustomers filters by name, email and phone number`
 
 ## 4. Postman E2E Tests
 * **Base Endpoint:** `GET /api/v1/customers`

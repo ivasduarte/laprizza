@@ -10,11 +10,16 @@
 ## 2. Solution Design
 ![UC1_Register_Customer_Design](./UC1_Register_Customer_Design.svg)
 
-## 3. Business Test PLanning
-* All unit tests use isolated in-memory Dummy Repositories (`customers.dummy.repository.js`) and a Dummy Postal Code Validator.
-* **Scenario A:** Attempt to register a customer with an invalid phone number or unmatched postal code. Result: The domain/service rejects the input, throwing an `AppError` (400 Bad Request) without interacting with the database.
-* **Scenario B:** Provide an email or phone number already in use. Result: The Dummy Repository throws a duplicate key error (11000), which the service translates to an `AppError` (409 Conflict).
-* **Scenario C:** Provide valid data. Result: The phone number is normalized, the address is validated, the customer is saved to the database, and mapped to a DTO (exposing `id` instead of `_id`).
+## 3. Business Test Planning
+* **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`) and a Dummy Postal Code Validator, avoiding Mocking libraries entirely.
+* **Domain Tests (`customers.domain.test.js`):**
+    * `validatePhoneNumber validates strictly Portuguese formats`
+    * `normalizePhoneNumber returns the 9 national digits or null`
+    * `validateAddress relies securely on the injected validator`
+* **Application Tests (`customers.service.test.js`):**
+    * `createCustomer enforces domain validations before saving`
+    * `createCustomer stores the phone normalized and rejects duplicates in any format`
+    * `createCustomer and updateCustomer turn an address mismatch into a 400 AppError`
 
 ## 4. Postman E2E Tests
 * **Base Endpoint:** `POST /api/v1/customers`

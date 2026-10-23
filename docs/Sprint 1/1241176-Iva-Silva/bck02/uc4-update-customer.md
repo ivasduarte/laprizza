@@ -2,8 +2,8 @@
 
 ## 1. Domain Assumptions
 * Due to a lack of client clarification, the following domain restrictions were inquired in the code:
-    * Customers can have their details partially updates (name, email, phone number, address, dietary restrictions);
-    * Customers can be logically deleted (deactivated) by setting `isActivate: false`;
+    * Customers can have their details partially updated (name, email, phone number, address, dietary restrictions);
+    * Customers can be logically deleted (deactivated) by setting `isActive: false`;
     * Updating the phone number triggers validation and normalization. The new phone number must be unique;
     * Updating the address triggers validation against the external Postal Code Validator.
     * Updating the email requires the new email to be unique;
@@ -13,10 +13,15 @@
 ![UC4_Update_Customer_Design](./UC4_Update_Customer_Design.svg)
 
 ## 3. Business Test Planning
-* All unit tests use isolated in-memory Dummy Repositories (`customers.dummy.repository.js`) and a Dummy Postal Code Validator.
-* **Scenario A:** Request an update with an invalid phone number or unmatched address. Result: Domain reject the update, throwing `AppError`(400 Bad Request).
-* **Scenario B:** Request an update using an email or phone number that belongs to another customer. Result: The Dummy Repository throws a duplicate key error (11000), resulting in an `AppError` (409 Conflict).
-* **Scenario C:** Deactivate a customer. Result: The customer's `isActive` property is set to `false`.
+* **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`) and a Dummy Postal Code Validator, avoiding Mocking libraries entirely.
+* **Domain Tests (`customers.domain.test.js`):**
+    * `validatePhoneNumber validates strictly Portuguese formats`
+    * `normalizePhoneNumber returns the 9 national digits or null`
+    * `validateAddress relies securely on the injected validator`
+* **Application Tests (`customers.service.test.js`):**
+    * `updateCustomer applies partial changes and preserves existing data`
+    * `updateCustomer rejects a phone or email used by another customer`
+    * `createCustomer and updateCustomer turn an address mismatch into a 400 AppError`
 
 ## 4. Postman E2E Tests
 * **Base Endpoint:** `PATCH /api/v1/customers/:id`

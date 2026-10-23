@@ -10,9 +10,9 @@
 ![UC3_Get_Customer_Design](./UC3_Get_Customer_Design.svg)
 
 ## 3. Business Test Planning
-* All unit tests use isolated in-memory Dummy Repositories (`customers.dummy.repository.js`).
-* **Scenario A:** Request with a valid existing ID. Result: Returns the corresponding customer DTO.
-* **Scenario B:** Request with an ID that does not exist in the database. Result: Throws an `AppError` (404 Not Found).
+* **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`), avoiding Mocking libraries entirely.
+* **Application Tests (`customers.service.test.js`):**
+    * `getCustomerById and listCustomers fetch and map correctly`
 
 ## 4. Postman E2E Tests
 * **Base Endpoint:** `GET /api/v1/customers/:id`
