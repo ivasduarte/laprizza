@@ -1,0 +1,77 @@
+@startuml "UC4_Update_Product_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi & RBAC)" as route
+participant "ProductsController" as controller
+participant "ProductsService" as service
+participant "ProductsDomain" as domain
+participant "OtherRepositories\n(Categories, Allergens, Types)" as otherRepos
+participant "ProductsRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+Manager -> route : PATCH /products/:id { ...updates }
+activate route
+route -> route : verifyToken() & requireRole([MANAGER])
+route -> route : Validate Object ID & Payload (Joi)
+route -> controller : update(req, res, next)
+activate controller
+
+controller -> service : updateProduct(id, updateData, repos)
+activate service
+
+service -> repo : findById(id)
+activate repo
+repo --> service : Product Entity (or null)
+deactivate repo
+
+alt Product Not Found
+    service --> controller : AppError(404)
+else Product Found
+    opt If name/description updated
+        service -> domain : validate(...)
+        activate domain
+        domain --> service : valid / DomainError
+        deactivate domain
+    end
+
+    alt Deactivation rule violation (isActive: false but has sizeConfigurations)
+        service --> controller : AppError(409)
+    else Sellable rule violation (sellable: true but invalid price)
+        service --> controller : AppError(400)
+    else
+        opt If references updated
+            service -> otherRepos : validateReferences
+            activate otherRepos
+            otherRepos --> service : valid / null
+            deactivate otherRepos
+        end
+        
+        alt Referenced Entity Not Found / Inactive
+            service --> controller : AppError(404)
+        else
+            service -> repo : update(id, mappedData)
+            activate repo
+            
+            alt Duplicate Name
+                repo --> service : MongoError(11000)
+                service --> controller : AppError(409, "Duplicate Name")
+            else Success
+                repo --> service : Updated Product Entity
+                deactivate repo
+                
+                service -> service : toProductDTO(Product)
+                service --> controller : Product DTO
+            end
+        end
+    end
+end
+
+deactivate service
+controller --> Manager : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml

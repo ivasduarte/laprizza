@@ -50,6 +50,7 @@ export default function productsRouterFactory(repos) {
       'string.hex': 'Invalid ID format.',
       'string.length': 'Invalid ID format.',
     }),
+    sellable: Joi.boolean().optional(),
     isActive: Joi.boolean().optional(),
   });
 

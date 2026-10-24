@@ -1162,6 +1162,13 @@ export const openApiSpec = {
             schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
           },
           {
+            name: 'sellable',
+            in: 'query',
+            required: false,
+            description: 'Filter by sellable status',
+            schema: { type: 'boolean' },
+          },
+          {
             name: 'isActive',
             in: 'query',
             required: false,
