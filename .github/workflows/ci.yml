@@ -1,4 +1,4 @@
-name: CI
+name: CI - Backend tests and PR validation
 
 on:
   pull_request:
@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend (Node ${{ matrix.node }})
+  gate-backend:
+    name: Backend - Node.js test suite with coverage (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,8 +41,8 @@ jobs:
           name: coverage
           path: backend/coverage
 
-  pr-title:
-    name: PR title (Conventional Commits)
+  lint-pr-title:
+    name: Pull Request - Validate title (Conventional Commits)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:

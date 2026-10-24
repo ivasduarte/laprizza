@@ -9,6 +9,7 @@ A decision is architecturally significant when its cost of change is high. One A
 | [0003](./decisions/0003-persistence-seed.md) | Persistence and Seed Data Mechanism | Accepted | Level 2 Logical View; <br> Levels 2 and 3 Development Views; <br> Platforms |
 | [0004](./decisions/0004-auth.md) | Authentication and Authorization | Accepted | Level 1 Logical View; <br> Level 2 Logical View; <br> Levels 2 and 3 Development Views |
 | [0005](./decisions/0005-api-contract.md) | Contract-First REST API | Accepted | Level 2 Logical View; <br> Levels 2 and 3 Development Views; <br> Principles and guidelines |
+| [0006](./decisions/0006-ci-pipeline.md) | CI Automation | Accepted | Level 2 and 3 Development Views; <br> Principles and Guidelines |
 
 
 ## Analysis Results

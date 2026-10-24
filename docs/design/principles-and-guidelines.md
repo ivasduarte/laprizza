@@ -21,7 +21,7 @@ The principles constrain how the architecture is designed; the guidelines descri
 |:----|:---------|:-------------|
 | Branching | Simplified Git Flow: <br> `main` holds stable code; <br> Short-lived branches (deleted after merge): `feature/<US-ID>-<description>`, `fix/...` and `docs/...` | README, Branch Strategy |
 | Branch protection | No direct pushes to `main`; <br> At least one approving review; <br> Build and tests must pass; <br> Branch up to date before merging. | README, Branch Protection |
-| Pull requests | One per User Story; <br> Conventional Commits title; <br> Description links the issue and states how it was tested; <br> Reviewed by the designated peer tester. | README, Pull Requests |
+| Pull requests | One per User Story; <br> Conventional Commits title; <br> Description links the issue and states how it was tested; <br> Reviewed by the designated peer tester. | README, Pull Requests, [ADR-0006](./decisions/0006-ci-pipeline.md) |
 | Commits | Conventional Commits; <br> Scope is the US ID or the module. | README, Conventional Commits |
 | Testing | Unit tests use dummies and no mocking libraries; <br> Coverage of at least 90% in domain and controller code; <br> Tests cover business rules and invariants. | README, Definition of Done |
 | Documentation | Architecture and domain models in `/docs`, as PlantUML diagrams | README, Definition of Done |
