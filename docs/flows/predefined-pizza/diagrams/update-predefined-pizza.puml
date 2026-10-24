@@ -1,0 +1,74 @@
+@startuml "UC5: Update Predefined Pizza"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi)" as route
+participant "PredefinedPizzaController" as controller
+participant "PredefinedPizzaService" as service
+participant "PredefinedPizzaRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+
+Manager -> route : PUT /predefined-pizzas/{id} {sizeIds?, componentIds?}
+activate route
+
+route -> route : verifyToken → requireRole(MANAGER) → validateId → Joi(at least one field)
+
+alt Missing or invalid token
+    route --> Manager : 401 Unauthorized
+else Role is not MANAGER
+    route --> Manager : 403 Forbidden
+else Invalid ID format or body (e.g. empty body, empty list)
+    route --> Manager : 400 Bad Request
+else Request accepted
+    route -> controller : update(req, res, next, repo)
+    activate controller
+
+    controller -> service : updatePredefinedPizza(id, data, repo)
+    activate service
+
+    service -> repo : findById(id)
+    activate repo
+    repo --> service : PredefinedPizza (or null)
+    deactivate repo
+
+    alt Not found or inactive
+        service --> controller : AppError("Predefined Pizza not found.", 404)
+    else Found
+        service -> service : sizeIds / componentIds not sent are taken from the stored pizza
+        service -> service : validateSizeIds + validateComponentIds [Domain]
+
+        alt Lists repeated ids
+            service --> controller : AppError("Invalid Predefined Pizza: ...", 400)
+        else Lists valid
+            service -> repo : findSizesByIds + findProductsByIds + listComponentTypes
+            activate repo
+            repo --> service : sizes, components, component types
+            deactivate repo
+
+            service -> service : validatePredefinedPizza(...) [Domain]
+
+            alt Configuration invalid
+                service --> controller : AppError("Invalid Predefined Pizza: ...", 400)
+            else Configuration valid
+                service -> repo : update(id, {sizeIds, defaultConfiguration})
+                activate repo
+                repo --> service : PredefinedPizza entity (updated)
+                deactivate repo
+
+                service -> service : toPredefinedPizzaDto(pizza)
+                service --> controller : PredefinedPizzaDto
+            end
+        end
+    end
+    deactivate service
+
+    controller --> Manager : 200 OK (or error via next(error))
+    deactivate controller
+end
+
+deactivate route
+@enduml

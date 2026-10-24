@@ -1,0 +1,80 @@
+@startuml "UC1: Define Predefined Pizza Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor Manager
+participant "Route (Joi)" as route
+participant "PredefinedPizzaController" as controller
+participant "PredefinedPizzaService" as service
+participant "PredefinedPizzaRepository\n(MongoDB/Dummy)" as repo
+
+activate Manager
+
+Manager -> route : POST /predefined-pizzas {productId, sizeIds, componentIds}
+activate route
+
+route -> route : verifyToken → requireRole(MANAGER) → Joi(productId, sizeIds, componentIds)
+
+alt Missing or invalid token
+    route --> Manager : 401 Unauthorized
+else Role is not MANAGER
+    route --> Manager : 403 Forbidden
+else Invalid payload (missing field, invalid id, empty list)
+    route --> Manager : 400 Bad Request (Validation failed)
+else Request accepted
+    route -> controller : create(req, res, next, repo)
+    activate controller
+
+    controller -> service : createPredefinedPizza(data, repo)
+    activate service
+
+    service -> repo : findProductById(productId)
+    activate repo
+    repo --> service : Product info (or null)
+    deactivate repo
+
+    service -> service : validatePizzaProduct(product) [Domain]
+
+    alt Product not found, inactive, not sellable or a Pizza Component
+        service --> controller : AppError("Invalid Predefined Pizza: ...", 400)
+    else Product valid
+        service -> service : validateSizeIds + validateComponentIds [Domain]
+
+        alt Lists repeated ids
+            service --> controller : AppError("Invalid Predefined Pizza: ...", 400)
+        else Lists valid
+            service -> repo : findSizesByIds + findProductsByIds + listComponentTypes
+            activate repo
+            repo --> service : sizes, components, component types
+            deactivate repo
+
+            service -> service : validatePredefinedPizza(...) [Domain]\nsizes exist and are active; components exist, are active and typed;\nmin/max per Pizza Component Type; Component Size Configuration\nfor every component and size
+
+            alt Configuration invalid
+                service --> controller : AppError("Invalid Predefined Pizza: ...", 400)
+            else Configuration valid
+                service -> service : createPredefinedPizzaData(productId, sizeIds, componentIds) [Domain]
+            service -> repo : create({productId, sizeIds, defaultConfiguration})
+                activate repo
+                repo --> service : PredefinedPizza entity (or Error 11000)
+                deactivate repo
+
+                alt Product already has a Predefined Pizza (unique productId)
+                    service --> controller : AppError("A Predefined Pizza already exists for this product.", 409)
+                else Created
+                    service -> service : toPredefinedPizzaDto(pizza)
+                    service --> controller : PredefinedPizzaDto
+                end
+            end
+        end
+    end
+    deactivate service
+
+    controller --> Manager : 201 Created (or error via next(error))
+    deactivate controller
+end
+
+deactivate route
+@enduml

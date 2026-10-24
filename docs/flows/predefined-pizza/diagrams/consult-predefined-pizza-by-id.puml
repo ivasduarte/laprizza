@@ -1,0 +1,56 @@
+@startuml "UC3: Consult Predefined Pizza by ID"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Manager / Employee" as user
+participant "Route (Joi)" as route
+participant "PredefinedPizzaController" as controller
+participant "PredefinedPizzaService" as service
+participant "PredefinedPizzaRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+
+user -> route : GET /predefined-pizzas/{id}
+activate route
+
+route -> route : verifyToken → requireRole(MANAGER, EMPLOYEE) → validateId (24-char hex)
+
+alt Missing or invalid token
+    route --> user : 401 Unauthorized
+else Role not allowed
+    route --> user : 403 Forbidden
+else Invalid ID format
+    route --> user : 400 Bad Request ("Invalid ID format")
+else Request accepted
+    route -> controller : getById(req, res, next, repo)
+    activate controller
+
+    controller -> service : getPredefinedPizzaById(id, repo)
+    activate service
+
+    service -> repo : findById(id)
+    activate repo
+    repo --> service : PredefinedPizza (or null)
+    deactivate repo
+
+    alt Not found or inactive
+        service --> controller : AppError("Predefined Pizza not found.", 404)
+    else Found
+    service -> repo : findProductById + findSizesByIds + findProductsByIds + listComponentTypes
+    activate repo
+    repo --> service : product, sizes, components, component types
+    deactivate repo
+
+    service -> service : toPredefinedPizzaDetailsDto(...)\ncomponents ordered by assembly order
+    service --> controller : PredefinedPizzaDetailsDto
+    end
+    deactivate service
+
+    controller --> user : 200 OK (or error via next(error))
+    deactivate controller
+end
+
+deactivate route
+@enduml

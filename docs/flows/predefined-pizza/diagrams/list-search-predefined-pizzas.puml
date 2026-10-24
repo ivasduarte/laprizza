@@ -1,0 +1,55 @@
+@startuml "UC2: List and Search Predefined Pizzas"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Manager / Employee" as user
+participant "Route (Joi)" as route
+participant "PredefinedPizzaController" as controller
+participant "PredefinedPizzaService" as service
+participant "PredefinedPizzaRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+
+user -> route : GET /predefined-pizzas?name={name}
+activate route
+
+route -> route : verifyToken → requireRole(MANAGER, EMPLOYEE) → Joi(query: name optional)
+
+alt Missing or invalid token
+    route --> user : 401 Unauthorized
+else Role not allowed
+    route --> user : 403 Forbidden
+else Invalid query (name empty or repeated)
+    route --> user : 400 Bad Request (Validation failed)
+else Request accepted
+    route -> controller : list(req, res, next, repo)
+    activate controller
+
+    controller -> service : listPredefinedPizzas(filters, repo)
+    activate service
+
+    alt name filter present
+        service -> repo : search(name)
+        activate repo
+        repo -> repo : products whose name contains the text,\nthen their active Predefined Pizzas
+        repo --> service : PredefinedPizza[]
+        deactivate repo
+    else no filter
+        service -> repo : list()
+        activate repo
+        repo --> service : PredefinedPizza[] (active, by creation order)
+        deactivate repo
+    end
+
+    service -> service : keep active pizzas + toPredefinedPizzaDto
+    service --> controller : PredefinedPizzaDto[] (empty if no match)
+    deactivate service
+
+    controller --> user : 200 OK (or error via next(error))
+    deactivate controller
+end
+
+deactivate route
+@enduml
