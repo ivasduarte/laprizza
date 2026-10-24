@@ -1,0 +1,79 @@
+@startuml "global-use-case-view"
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam nodesep 15
+skinparam ranksep 60
+
+' --- Color-coding ---
+!define C_AUTH #E3F2FD
+!define C_CUST #F3E5F5
+!define C_CATALOG #E8F5E9
+!define C_CONFIG #FFF3E0
+!define C_STOCK #FFFDE7
+
+' --- ACTORS ---
+actor "LaPrizza Manager" as Manager
+actor "System User" as SystemUser
+actor "Employee" as Employee
+actor "Customer" as Customer
+
+' --- USE CASES ---
+package "LaPrizza Information System" {
+
+    package "BCK01: Auth & Users" C_AUTH {
+        usecase "Authenticate (Login)" as UC_Auth
+        usecase "Manage Users" as UC_Users
+    }
+
+    package "BCK02: Customers" C_CUST {
+        usecase "Manage Customers" as UC_Cust
+    }
+
+    package "BCK03-05, 11: Catalogue & Products" C_CATALOG {
+        usecase "Manage Categories" as UC_Cat
+        usecase "Manage Allergens" as UC_Allergens
+        usecase "Manage Products" as UC_Prod
+        usecase "Consult Catalogue" as UC_Catalog
+    }
+
+    package "BCK06-08, 10: Pizza Configuration" C_CONFIG {
+        usecase "Manage Pizza Sizes" as UC_Sizes
+        usecase "Manage Component Types" as UC_Types
+        usecase "Manage Component Configs" as UC_Configs
+        usecase "Manage Predefined Pizzas" as UC_Predef
+    }
+
+    package "BCK09: Stock" C_STOCK {
+        usecase "Manage & Adjust Stock" as UC_Stock
+    }
+}
+
+' --- MANAGER CONNECTIONS (FULL ACCESS) ---
+Manager --> UC_Auth
+Manager --> UC_Users
+Manager --> UC_Cust
+Manager --> UC_Cat
+Manager --> UC_Allergens
+Manager --> UC_Prod
+Manager --> UC_Sizes
+Manager --> UC_Types
+Manager --> UC_Configs
+Manager --> UC_Predef
+Manager --> UC_Stock
+Manager --> UC_Catalog
+
+' --- CONNECTIONS ---
+UC_Auth <-- SystemUser
+
+UC_Allergens <.. Employee : << read-only >>
+UC_Prod <.. Employee : << read-only >>
+UC_Configs <.. Employee : << read-only >>
+UC_Predef <.. Employee : << read-only >>
+
+UC_Stock <-- Employee
+UC_Catalog <-- Employee
+
+UC_Catalog <-- Customer
+
+@enduml

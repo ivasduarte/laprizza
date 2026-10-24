@@ -1,10 +1,29 @@
 # UC1: Authenticate User (Login)
 
+## Use Case View
+**Primary Actor:** System User <br>
+**Description:** Allows registered users to authenticate into the system to access protected operations.
+
+**Preconditions:**
+* The user must have a registered and active account in the system.
+
+**Main Success Scenario:**
+1. The User provides their identifier (email or username) and password.
+2. The System verifies the credentials against the records.
+3. The System validates that the account is active.
+4. The System generates and returns an authentication token (JWT).
+
+**Alternative Flows:**
+* *User not found or inactive:* The System performs a dummy hash validation (timing attack mitigation) and throws a 401 Unauthorized error.
+* *Invalid password:* The System throws a 401 Unauthorized error.
+
+**Postconditions:**
+* The User receives a valid JWT token with a 35-minute expiration time, enabling access to protected endpoints based on their role.
+
 ## 1. Domain Assumptions
-* Due to a lack of client clarification, the following domain restrictions were inquired in the code:
-    * Authentication uses `Argon2` for password hashing verification;
-    * Upon successful authentication, a JSON Web Token (JWT) is generated with a 35-minute expiration time;
-    * A timing attack mitigation mechanism is implemented: if a user is not found or is inactive, the system performs a dummy `Argon2` hash calculation to maintain consistent response times.
+* Authentication uses `Argon2` for password hashing verification;
+* Upon successful authentication, a JSON Web Token (JWT) is generated with a 35-minute expiration time;
+* A timing attack mitigation mechanism is implemented: if a user is not found or is inactive, the system performs a dummy `Argon2` hash calculation to maintain consistent response times.
 
 ## 2. Solution Design
 ![login](./diagrams/login.svg)

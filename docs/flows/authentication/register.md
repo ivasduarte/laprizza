@@ -1,11 +1,38 @@
 # UC2: Register User
 
+## Use Case View
+**Primary Actor:** LaPrizza Manager <br>
+**Description:** Allows a manager to register new users and assign appropriate roles.
+
+**Preconditions:**
+* The Manager must be authenticated and authorized.
+
+**Main Success Scenario:**
+1. The Manager provides the new user data (username, email, password, role, and customerId if applicable).
+2. The System validates the password strength (NIST rules) and payload constraints.
+3. The System ensures the email or username is not already registered.
+4. The System encrypts the password.
+5. The System persists the new user and returns the created record (omitting the password).
+
+**Alternative Flows:**
+* *Weak password provided:* The System throws a 400 Bad Request error.
+* *Duplicate email or username:* The System throws a 409 Conflict error.
+* *customerId provided for a non-CUSTOMER role:* The System throws a 400 Bad Request error.
+
+**Postconditions:**
+* A new active user is successfully registered in the system with an encrypted password.
+
 ## 1. Domain Assumptions
-* Due to a lack of client clarification, the following domain restrictions were implemented in the code:
-    * Passwords must comply with the strict NIST guidelines (8-64 characters, at least one uppercase letter, and one special character);
-    * User roles are strictly limited to `MANAGER`, `EMPLOYEE`, or `CUSTOMER`;
-    * Only users assigned the `CUSTOMER` role can have an associated `customerId`;
-    * Usernames and emails must be unique across the system.
+* Passwords must comply with the strict NIST guidelines (8-64 characters, at least one uppercase letter, and one special character);
+* User roles are strictly limited to `MANAGER`, `EMPLOYEE`, or `CUSTOMER`;
+* Only users assigned the `CUSTOMER` role can have an associated `customerId`;
+* Usernames and emails must be unique across the system.
+* The creation of internal accounts (`MANAGER` and `EMPLOYEE`) is strictly protected and restricted to Managers. 
+* Customers can register autonomously through a dedicated public endpoint. This registration mandates the collection of Name, Phone Number, and Email, automatically generating and linking the corresponding `Customer` entity to the new user account.
+
+***Sprint 1 Constraint (Late Client Feedback):***
+*<br>The business rule stipulating autonomous customer registration through a separate public endpoint was only confirmed by the client close to the Sprint 1 delivery date. For risk management reasons, the implementation of this specific flow (Customer Self-Registration) is being moved to Sprint 2. In the current version, user registration with the `CUSTOMER` role is performed via Manager.*
+
 
 ## 2. Solution Design
 ![register](./diagrams/register.svg).
