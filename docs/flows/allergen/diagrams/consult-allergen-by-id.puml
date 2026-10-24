@@ -1,0 +1,51 @@
+@startuml "UC3: Consult Allergen by ID"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Manager / Employee" as user
+participant "Route (Joi)" as route
+participant "AllergenController" as controller
+participant "AllergenService" as service
+participant "AllergenRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+
+user -> route : GET /allergens/{id}
+activate route
+
+route -> route : verifyToken → requireRole(MANAGER, EMPLOYEE) → validateId (24-char hex)
+
+alt Missing or invalid token
+    route --> user : 401 Unauthorized
+else Role not allowed
+    route --> user : 403 Forbidden
+else Invalid ID format
+    route --> user : 400 Bad Request ("Invalid ID format")
+else Request accepted
+    route -> controller : getById(req, res, next, repo)
+    activate controller
+
+    controller -> service : getAllergenById(id, repo)
+    activate service
+
+    service -> repo : findById(id)
+    activate repo
+    repo --> service : Allergen (or null)
+    deactivate repo
+
+    alt Not found or inactive
+        service --> controller : AppError("Allergen not found.", 404)
+    else Found
+        service -> service : toAllergenDto(allergen)
+        service --> controller : AllergenDto {id, name, isActive}
+    end
+    deactivate service
+
+    controller --> user : 200 OK (or error via next(error))
+    deactivate controller
+end
+
+deactivate route
+@enduml
