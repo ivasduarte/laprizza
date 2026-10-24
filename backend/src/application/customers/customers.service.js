@@ -52,11 +52,15 @@ async function assertValidAddress(address, postalCodeValidator) {
 }
 
 /**
+ * Registers a new customer in the system.
+ * Validates the address against external rules, normalizes the phone number,
+ * and handles database duplicate key errors (11000) to ensure uniqueness.
  *
- * @param {*} customerData
- * @param {*} customersRepository
- * @param {*} postalCodeValidator
- * @returns
+ * @param {Object} customerData - The data payload for creating the customer.
+ * @param {Object} [customersRepository=defaultCustomerRepo] - The injected repository for database operations.
+ * @param {{ isValidMatch: (postalCode: string, city: string) => Promise<boolean> }} postalCodeValidator - The injected postal code validator.
+ * @returns {Promise<Object>} A promise that resolves to the newly created customer Data Transfer Object (DTO).
+ * @throws {AppError} Throws a 400 error for invalid address or phone format, or a 409 error for duplicate email/phone number.
  */
 export async function createCustomer(
   customerData,
@@ -104,11 +108,16 @@ export async function getCustomerById(id, customersRepository = defaultCustomerR
 }
 
 /**
+ * Updates an existing customer's information.
+ * Conditionally validates the address and normalizes the phone number if they are provided in the update payload.
+ * Handles database duplicate key errors (11000) to ensure email and phone number uniqueness.
  *
- * @param {*} id
- * @param {*} updateData
- * @param {*} customersRepository
- * @returns
+ * @param {string} id - The unique identifier of the customer to update.
+ * @param {Object} updateData - The fields to update for the customer.
+ * @param {Object} [customersRepository=defaultCustomerRepo] - The injected repository for database operations.
+ * @param {{ isValidMatch: (postalCode: string, city: string) => Promise<boolean> }} postalCodeValidator - The injected postal code validator.
+ * @returns {Promise<Object>} A promise that resolves to the updated customer Data Transfer Object (DTO).
+ * @throws {AppError} Throws a 404 error if the customer is not found, a 400 error for invalid data format, or a 409 error for duplicate email/phone number.
  */
 export async function updateCustomer(
   id,
