@@ -1,0 +1,37 @@
+@startuml "UC1_List_Search_Stock_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Manager / Employee" as user
+participant "Route (Joi & RBAC)" as route
+participant "StockController" as controller
+participant "StockService" as service
+participant "StockRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+user -> route : GET /stock?search={term}
+activate route
+route -> route : verifyToken() & requireRole([MANAGER, EMPLOYEE])
+route -> route : Validate Query (Joi)
+route -> controller : list(req, res, next)
+activate controller
+
+controller -> service : listStock(query, repos)
+activate service
+
+service -> repo : listStock(query)
+activate repo
+repo --> service : Array<Stock Entity>
+deactivate repo
+
+service -> service : Filter items without a valid productId
+service -> service : map(toStockDTO)
+service --> controller : Array<Stock DTO>
+
+deactivate service
+controller --> user : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml

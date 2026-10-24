@@ -43,7 +43,7 @@ export async function adjustStock(
   },
 ) {
   const product = await repos.productsRepository.findById(productId);
-  if (!product) throw new AppError('Product not found.', 400);
+  if (!product) throw new AppError('Product not found.', 404);
   if (!product.stockControlled) throw new AppError('Product is not stock controlled.', 400);
 
   let validAmount;

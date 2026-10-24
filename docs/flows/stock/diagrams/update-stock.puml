@@ -1,0 +1,80 @@
+@startuml "UC3_Adjust_Stock_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Manager / Employee" as user
+participant "Route (Joi & RBAC)" as route
+participant "StockController" as controller
+participant "StockService" as service
+participant "StockDomain" as domain
+participant "ProductsRepository\n(MongoDB/Dummy)" as prodRepo
+participant "StockRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+user -> route : PATCH /stock/:productId { amount, operation }
+activate route
+route -> route : verifyToken() & requireRole([MANAGER, EMPLOYEE])
+route -> route : Validate Object ID & Payload (Joi)
+route -> controller : adjustStock(req, res, next)
+activate controller
+
+controller -> service : adjustStock(productId, amount, operation, repos)
+activate service
+
+service -> prodRepo : findById(productId)
+activate prodRepo
+prodRepo --> service : Product Entity (or null)
+deactivate prodRepo
+
+alt Product Not Found
+    service --> controller : AppError(404)
+else Product Not Stock-Controlled
+    service --> controller : AppError(400)
+else Valid Product
+    service -> domain : validateStockChange(amount)
+    activate domain
+    domain --> service : validAmount / DomainError
+    deactivate domain
+    
+    alt Domain Validation Failed
+        service --> controller : AppError(400)
+    else
+        service -> repo : findByProductId(productId)
+        activate repo
+        repo --> service : Stock Entity (or null)
+        deactivate repo
+
+        opt Stock Entity is null
+            service -> repo : create({ productId, quantity: 0 })
+            activate repo
+            repo --> service : New Stock Entity
+            deactivate repo
+        end
+        
+        alt operation === 'increase'
+            service -> service : newQuantity = quantity + amount
+        else operation === 'decrease'
+            service -> service : newQuantity = quantity - amount
+        end
+
+        alt newQuantity < 0
+            service --> controller : AppError(400, "Cannot result in negative quantity")
+        else Success
+            service -> repo : updateQuantity(productId, newQuantity)
+            activate repo
+            repo --> service : Updated Stock Entity
+            deactivate repo
+            
+            service -> service : toStockDTO(Stock)
+            service --> controller : Stock DTO
+        end
+    end
+end
+
+deactivate service
+controller --> user : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml
