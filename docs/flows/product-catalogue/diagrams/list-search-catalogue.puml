@@ -1,0 +1,37 @@
+@startuml "UC1_List_Search_Catalogue_Design"
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor "Customer / Manager / Employee" as user
+participant "Route (Joi & RBAC)" as route
+participant "CatalogueController" as controller
+participant "CatalogueService" as service
+participant "ProductsRepository\n(MongoDB/Dummy)" as repo
+
+activate user
+user -> route : GET /catalogue?search={term}&categoryId={id}
+activate route
+route -> route : verifyToken() & requireRole([CUSTOMER, MANAGER, EMPLOYEE])
+route -> route : Validate Query (Joi)
+route -> controller : list(req, res, next)
+activate controller
+
+controller -> service : listCatalogue(query, repos)
+activate service
+
+service -> service : Enforce { isActive: true, sellable: true }
+service -> repo : listProducts(filter)
+activate repo
+repo --> service : Array<Product Entity>
+deactivate repo
+
+service -> service : map(toCatalogueDTO)
+service --> controller : Array<CatalogueItem DTO>
+
+deactivate service
+controller --> user : Response (200 OK or Error)
+deactivate controller
+deactivate route
+@enduml
