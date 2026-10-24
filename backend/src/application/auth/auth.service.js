@@ -31,7 +31,7 @@ export async function login({ identifier, password }, usersRepository = defaultU
   if (!isValid) throw new AppError('Invalid Credentials.', 401);
 
   return jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: '35m',
+    expiresIn: '1h',
     algorithm: 'HS256',
   });
 }

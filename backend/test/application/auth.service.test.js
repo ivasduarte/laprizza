@@ -191,6 +191,6 @@ test('successful login returns a valid JWT token', async () => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   assert.equal(decoded.userId, user.id);
   assert.equal(decoded.role, 'MANAGER');
-  // Asserts the token validity lifespan is exactly 35 minutes (2100 seconds)
-  assert.equal(decoded.exp - decoded.iat, 2100);
+  // Asserts the token validity lifespan is exactly 60 minutes (3600 seconds)
+  assert.equal(decoded.exp - decoded.iat, 3600);
 });
