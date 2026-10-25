@@ -1,5 +1,33 @@
 # UC1: List and Search Catalogue
 
+## Use Case View
+
+**Primary Actor:** Customer / Manager / Employee <br>
+**Description:** Allows an authenticated user to list the products currently offered for sale, optionally filtering them by a search term and/or category.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `CUSTOMER`, `MANAGER` or `EMPLOYEE` role.
+
+**Main Success Scenario:**
+
+1. The User requests the catalogue, optionally providing query filters (`search`, `categoryId`).
+2. The System validates the query parameters.
+3. The System forces the filters `isActive: true` and `sellable: true`.
+4. The System queries the database for the matching products, applying a case-insensitive partial match for the search term across names and descriptions.
+5. The System maps the found products to Catalogue DTOs, including category, allergens and available sizes.
+6. The System returns the list of catalogue items with a 200 OK status.
+
+**Alternative Flows:**
+
+- _No matching products found:_ The System returns an empty list `[]` with a 200 OK status.
+- _Invalid `categoryId` format or search term too long:_ The System throws a 400 Bad Request error.
+- _Request by unauthorized user (No token):_ The System throws a 401 Unauthorized error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - The product catalogue exposes products to be viewed by customers and staff.

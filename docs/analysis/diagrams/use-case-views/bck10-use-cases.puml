@@ -1,0 +1,26 @@
+@startuml "bck10-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+actor "LaPrizza Employee" as employee
+
+package "BCK10: Predefined Pizza Management" {
+    usecase "UC1: Define Predefined Pizza" as uc1
+    usecase "UC2: List Predefined Pizzas" as uc2
+    usecase "UC3: Consult Predefined Pizza by Id" as uc3
+    usecase "UC4: Consult Predefined Pizza by Name" as uc4
+    usecase "UC5: Update Predefined Pizza" as uc5
+    usecase "UC6: Deactivate Predefined Pizza" as uc6
+}
+
+manager --> uc1
+manager --> uc2
+manager --> uc3
+manager --> uc4
+manager --> uc5
+manager --> uc6
+uc2 <.. employee : << read-only >>
+uc3 <.. employee : << read-only >>
+uc4 <.. employee : << read-only >>
+@enduml

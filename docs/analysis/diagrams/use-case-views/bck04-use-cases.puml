@@ -1,0 +1,24 @@
+@startuml "bck04-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+actor "LaPrizza Employee" as employee
+
+package "BCK04: Allergen Management" {
+    usecase "UC1: Create Allergen" as uc1
+    usecase "UC2: List Allergens" as uc2
+    usecase "UC3: Consult Allergen by Id" as uc3
+    usecase "UC4: Consult Allergen by Name" as uc4
+    usecase "UC5: Deactivate Allergen" as uc5
+}
+
+manager --> uc1
+manager --> uc2
+manager --> uc3
+manager --> uc4
+manager --> uc5
+uc2 <.. employee : << read-only >>
+uc3 <.. employee : << read-only >>
+uc4 <.. employee : << read-only >>
+@enduml

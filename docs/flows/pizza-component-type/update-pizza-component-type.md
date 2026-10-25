@@ -1,5 +1,35 @@
 # UC3 - Update Pizza Component Type
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to update the details of an existing pizza component type, replacing its name, assembly order, and quantity limits.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The pizza component type must exist and be active.
+
+**Main Success Scenario:**
+
+1. The Manager provides the ID of the component type and a payload with the new values.
+2. The System validates the ID format and ensures the payload complies with domain rules (valid name format, valid integers, max >= min).
+3. The System verifies that the component type exists.
+4. The System verifies that the updated name and assembly order do not conflict with other active types.
+5. The System applies the changes to the database.
+6. The System returns the updated component type DTO with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Invalid payload or ID format:_ The System throws a 400 Bad Request error.
+- _Pizza component type not found or already removed:_ The System throws a 404 Not Found error (leaves it unchanged).
+- _Duplicate name or assembly order:_ The System throws a 409 Conflict error.
+- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+
+**Postconditions:**
+
+- The pizza component type details are updated in the database.
+
 ## 1. Domain Assumptions
 
 - The update may replace the name, the assembly order and the quantity limits;

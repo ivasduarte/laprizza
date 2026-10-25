@@ -1,5 +1,37 @@
 # UC1 - Create Component Size Configuration
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to create a new Component Size Configuration, associating a pizza component product with a pizza size, and defining its price and stock units consumed.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The product must be active and designated as a Pizza Component.
+- The pizza size must exist and be active.
+
+**Main Success Scenario:**
+
+1. The Manager provides a payload with the pizza size ID, price, and stock units consumed.
+2. The System validates that the price is a number greater than or equal to 0.
+3. The System validates the stock units consumed based on the product's stock control settings.
+4. The System verifies the product is an active pizza component and the pizza size is active.
+5. The System ensures no configuration already exists for this pizza size on the given product.
+6. The System saves the new configuration.
+7. The System returns the new configuration details with a 201 Created status.
+
+**Alternative Flows:**
+
+- _Missing/invalid fields, invalid IDs, or invalid stock units:_ The System returns a 400 Bad Request error.
+- _Request by unauthorized user (`EMPLOYEE` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
+- _Product or pizza size not found/inactive:_ The System returns a 404 Not Found error.
+- _Pizza size already configured for the product:_ The System returns a 409 Conflict error.
+
+**Postconditions:**
+
+- The Component Size Configuration is saved and linked to the product.
+
 ## 1. Domain Assumptions
 
 - Only products designated as Pizza Components can have Component Size Configurations;

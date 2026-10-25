@@ -1,5 +1,34 @@
 # UC2: Get Stock by Product ID
 
+## Use Case View
+
+**Primary Actor:** Manager / Employee <br>
+**Description:** Allows an authenticated manager or employee to query the stock level of an individual stock-controlled product.
+
+**Preconditions:**
+
+- The user must be authenticated with the `MANAGER` or `EMPLOYEE` role.
+- The requested product must exist and be stock-controlled.
+
+**Main Success Scenario:**
+
+1. The user provides a product ID.
+2. The System validates the MongoDB ObjectId format.
+3. The System verifies the product exists and is designated as stock-controlled.
+4. The System retrieves the stock record.
+5. If no stock record exists yet, the System auto-initializes a new record with `quantity: 0`.
+6. The System returns the stock details via a DTO with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Invalid Product ID format or not stock-controlled:_ The System returns a 400 Bad Request error.
+- _Non-existent Product ID:_ The System returns a 404 Not Found error.
+- _Unauthorized user (`CUSTOMER` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
+
+**Postconditions:**
+
+- If the stock record was missing, it is created with a zero quantity.
+
 ## 1. Domain Assumptions
 
 - Stock is queried individually by its associated `productId`.

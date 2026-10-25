@@ -1,5 +1,34 @@
 # UC1 - Create Pizza Component Type
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to create a new pizza component type, defining its name, assembly order, and allowed quantity limits (minimum and maximum) within a pizza configuration.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+
+**Main Success Scenario:**
+
+1. The Manager provides a valid payload containing the name, assembly order, minQuantity, and maxQuantity.
+2. The System validates that the name is not blank and has a valid format.
+3. The System verifies that the assembly order is an integer >= 1.
+4. The System ensures the minQuantity is >= 0 and the maxQuantity is either unbounded (null) or >= minQuantity.
+5. The System verifies that both the name and the assembly order are unique among active types.
+6. The System creates and saves the new pizza component type.
+7. The System returns the newly created component type details with a 201 Created status.
+
+**Alternative Flows:**
+
+- _Missing mandatory fields, invalid format, or max < min:_ The System throws a 400 Bad Request error.
+- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+- _Duplicate name or assembly order:_ The System throws a 409 Conflict error.
+
+**Postconditions:**
+
+- The new pizza component type is saved in the database and is active.
+
 ## 1. Domain Assumptions
 
 - A Pizza Component Type defines the role that a product plays in a pizza configuration;

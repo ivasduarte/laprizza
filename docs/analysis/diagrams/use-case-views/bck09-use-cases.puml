@@ -1,0 +1,20 @@
+@startuml "bck09-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+actor "LaPrizza Employee" as employee
+
+package "BCK09: Stock Management" {
+    usecase "UC1: List Product Stock" as uc1
+    usecase "UC2: Get Product Stock" as uc2
+    usecase "UC3: Adjust Product Stock" as uc3
+}
+
+manager --> uc1
+manager --> uc2
+manager --> uc3
+uc1 <-- employee
+uc2 <-- employee
+uc3 <-- employee
+@enduml

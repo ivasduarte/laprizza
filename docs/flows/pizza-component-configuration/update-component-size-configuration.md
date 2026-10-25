@@ -1,5 +1,36 @@
 # UC3 - Update Component Size Configuration
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to update the price and the number of stock units consumed for an existing Component Size Configuration.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The product must be an active Pizza Component.
+- The configuration for the specific pizza size must already exist.
+
+**Main Success Scenario:**
+
+1. The Manager provides the product ID, pizza size ID, and a payload with the new price and stock units consumed.
+2. The System validates the input data and ID formats.
+3. The System verifies the product exists, is active, and is a valid pizza component.
+4. The System verifies that the specified pizza size is currently configured.
+5. The System applies the updates to the configuration.
+6. The System returns the updated Component Size Configuration DTO with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Invalid IDs, missing/invalid price or stock units:_ The System returns a 400 Bad Request error.
+- _Unauthorized user:_ The System returns a 401 Unauthorized or 403 Forbidden error.
+- _Product not found, inactive, or not a component:_ The System returns a 404 Not Found error.
+- _Pizza size not configured:_ The System returns a 404 Not Found error.
+
+**Postconditions:**
+
+- The configuration's price and stock units are updated in the database.
+
 ## 1. Domain Assumptions
 
 - The update replaces the price and the number of stock units consumed of an existing configuration;

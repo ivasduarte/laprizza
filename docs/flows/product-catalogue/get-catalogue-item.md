@@ -1,5 +1,32 @@
 # UC2: Get Catalogue Item by ID
 
+## Use Case View
+
+**Primary Actor:** Customer / Manager / Employee <br>
+**Description:** Allows an authenticated user to consult the details of a product offered for sale using its unique ID.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `CUSTOMER`, `MANAGER` or `EMPLOYEE` role.
+
+**Main Success Scenario:**
+
+1. The User provides the ID of the product.
+2. The System validates the MongoDB ObjectId format of the ID.
+3. The System searches the database for a product matching the ID.
+4. The System verifies that the product is active and sellable.
+5. The System maps the product to a Catalogue DTO, including category, allergens and available sizes, and returns it with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Invalid ID format:_ The System throws a 400 Bad Request error.
+- _Product not found, inactive or not sellable:_ The System throws a 404 Not Found error (the product is considered not found in the catalogue).
+- _Request by unauthorized user (No token):_ The System throws a 401 Unauthorized error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - Catalogue items can be queried individually by their unique product ID.

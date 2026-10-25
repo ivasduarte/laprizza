@@ -1,5 +1,35 @@
 # UC2 - List / Search Pizza Component Type
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to list all active pizza component types sorted by assembly order, search for a specific type by its exact name, or retrieve details using its ID.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+
+**Main Success Scenario:**
+
+1. The Manager requests the list of component types, optionally providing an exact name query or an ID in the URL.
+2. The System validates the query parameters and ID format.
+3. The System queries the database:
+   - If no name is provided, returns all active types sorted by assembly order.
+   - If an exact name is provided, returns the matching type (even if inactive/removed, flagged accordingly).
+   - If an ID is provided, returns the specific type details.
+4. The System returns the requested data as DTOs with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Partial or blank name search:_ The System returns an empty list `[]` with a 200 OK status.
+- _Unknown ID:_ The System throws a 404 Not Found error.
+- _Invalid ID format:_ The System throws a 400 Bad Request error.
+- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - Listing without filter returns active types, sorted by assembly order;

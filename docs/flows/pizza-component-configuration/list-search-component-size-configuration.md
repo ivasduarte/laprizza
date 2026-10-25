@@ -1,5 +1,32 @@
 # UC2 - List / Search Component Size Configuration
 
+## Use Case View
+
+**Primary Actor:** Manager / Employee <br>
+**Description:** Allows a manager or employee to list all size configurations for a specific pizza component, or consult a specific configuration by its pizza size ID.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+
+**Main Success Scenario:**
+
+1. The user requests the configurations for a specific product ID, optionally providing a pizza size ID.
+2. The System validates the provided IDs.
+3. The System retrieves the product and finds its configurations (even if the product is inactive).
+4. The System maps the data to DTOs and returns the list or the specific configuration with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Product has no configurations:_ The System returns an empty list `[]` (200 OK).
+- _Invalid product or pizza size ID format:_ The System returns a 400 Bad Request error.
+- _Unauthorized request:_ The System returns a 401 Unauthorized error.
+- _Unknown product or unconfigured pizza size:_ The System returns a 404 Not Found error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - The size-dependent configurations of a Pizza Component are consulted through the product that owns them;

@@ -1,5 +1,35 @@
 # UC4 - Remove Product Category
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to update the name of an existing, active product category.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `Manager` role.
+- The target category must exist and be active.
+
+**Main Success Scenario:**
+
+1. The Manager provides the category ID and a valid payload with the new name.
+2. The System validates the ID and payload.
+3. The System verifies that the category exists and is not removed/inactive.
+4. The System verifies that the new name follows the rules and is not already in use by another category (allows changing the case of its own name).
+5. The System updates the name and persists the changes.
+6. The System returns a 200 OK response with the updated data.
+
+**Alternative Flows:**
+
+- _Invalid ID or blank name:_ The System throws a 400 Bad Request error.
+- _Category not found:_ The System throws a 404 Not Found error.
+- _Category is already inactive/removed:_ The System throws a 409 Conflict error.
+- _Duplicate category name:_ The System throws a 409 Conflict error.
+
+**Postconditions:**
+
+- The product category is updated with the new name.
+
 ## 1. Domain Assumptions
 
 - The removal is logical: the category becomes inactive;

@@ -1,5 +1,35 @@
 # UC4 - Remove Pizza Component Type
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to logically remove (deactivate) a pizza component type. This frees up its name and assembly order for future use, provided no active product references it.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The pizza component type must exist.
+
+**Main Success Scenario:**
+
+1. The Manager provides the ID of the component type to be removed.
+2. The System validates the ID format and confirms the type exists.
+3. The System verifies that no active product is currently referencing this component type.
+4. The System logically deactivates the type (`isActive: false`).
+5. The System returns a 204 No Content status indicating successful removal.
+
+**Alternative Flows:**
+
+- _Component type referenced by an active product:_ The System throws a 409 Conflict error, preventing the removal.
+- _Unknown type or already removed:_ The System throws a 404 Not Found error.
+- _Invalid ID format:_ The System throws a 400 Bad Request error.
+- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+
+**Postconditions:**
+
+- The component type is flagged as inactive in the database.
+- The name and assembly order of the removed type become available.
+
 ## 1. Domain Assumptions
 
 - The removal is logical: the type becomes inactive;

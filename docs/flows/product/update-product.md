@@ -1,5 +1,39 @@
 # UC4: Update Product
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to partially update a product's details or logically deactivate it.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The product must exist.
+
+**Main Success Scenario:**
+
+1. The Manager provides the ID of the product and a payload containing the fields to update.
+2. The System validates the ID format and ensures the payload contains at least one field.
+3. The System finds the targeted product in the database.
+4. If name or description are updated, the System enforces domain validation.
+5. If references (categories, allergens, types) are updated, the System verifies they exist and are active.
+6. The System verifies that if the product is set to sellable, a valid price is defined.
+7. The System successfully applies partial changes (or deactivation) to the product.
+8. The System returns the updated product DTO with a 200 OK status.
+
+**Alternative Flows:**
+
+- _Invalid ID or empty payload:_ The System throws a 400 Bad Request error.
+- _Sellable rule violation (sellable updated to true but price is invalid):_ The System throws a 400 Bad Request error.
+- _Product or referenced entity not found / inactive:_ The System throws a 404 Not Found error.
+- _Deactivation rule violation (attempting to set `isActive: false` with active size configurations):_ The System throws a 409 Conflict error.
+- _Duplicate product name:_ The System throws a 409 Conflict error.
+- _Request by Employee or missing token:_ The System throws a 403 Forbidden or 401 Unauthorized error.
+
+**Postconditions:**
+
+- The product details are updated or the product is deactivated in the database.
+
 ## 1. Domain Assumptions
 
 - Products can have their details partially updated (name, description, price, sellable, stockControlled, references, etc.).

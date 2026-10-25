@@ -1,5 +1,35 @@
 # UC3 - Update Product Category
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to logically remove (deactivate) a product category.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `Manager` role.
+- The category must exist and currently be active.
+- The category must not be referenced by any active product.
+
+**Main Success Scenario:**
+
+1. The Manager provides the ID of the category to remove.
+2. The System validates the provided ID.
+3. The System verifies the category exists and is currently active.
+4. The System verifies that no active product references this category.
+5. The System logically removes the category (sets it to inactive).
+6. The System returns a 204 No Content response.
+
+**Alternative Flows:**
+
+- _Invalid ID provided:_ The System throws a 400 Bad Request error.
+- _Category does not exist or is already inactive:_ The System throws a 404 Not Found error.
+- _Category is referenced by an active product:_ The System throws a 409 Conflict error.
+
+**Postconditions:**
+
+- The category becomes logically inactive.
+
 ## 1. Domain Assumptions
 
 - Only the name of a category can be changed;

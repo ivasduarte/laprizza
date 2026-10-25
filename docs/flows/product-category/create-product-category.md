@@ -1,5 +1,30 @@
 # UC1 - Create Product Category
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to create a new product category in the system.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `Manager` role.
+
+**Main Success Scenario:**
+
+1. The Manager provides a valid payload containing the new category name.
+2. The System normalizes the name (removing leading, trailing, and repeated spaces) and validates it.
+3. The System verifies that the name is unique (or reuses the name of a previously removed category).
+4. The System saves the category and returns the corresponding DTO with a 201 Created status.
+
+**Alternative Flows:**
+
+- _Missing, blank or invalid name provided:_ The System throws a 400 Bad Request error.
+- _Duplicate active category name:_ The System throws a 409 Conflict error.
+
+**Postconditions:**
+
+- The new product category is saved in the database.
+
 ## 1. Domain Assumptions
 
 - Product Categories must have a unique name and identifier;

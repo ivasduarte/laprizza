@@ -1,5 +1,31 @@
 # UC2: List and Search Products
 
+## Use Case View
+
+**Primary Actor:** Manager / Employee <br>
+**Description:** Allows an authenticated user to list all products or search and filter products based on a search term, category, sellable status, and active status.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+
+**Main Success Scenario:**
+
+1. The User requests the list of products, optionally providing query filters (search term, categoryId, sellable, isActive).
+2. The System validates the query parameters.
+3. The System queries the database for matching products, applying a case-insensitive partial match for the search term across names and descriptions.
+4. The System maps the found entities to DTOs.
+5. The System returns the list of products with a 200 OK status.
+
+**Alternative Flows:**
+
+- _No matching products found:_ The System returns an empty list `[]` with a 200 OK status.
+- _Request by unauthorized user:_ The System throws a 401 Unauthorized error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - The system allows listing all products or filtering them based on multiple criteria: a search term, `categoryId`, `isActive`, and `sellable` status.

@@ -1,5 +1,31 @@
 # UC1: List and Search Stock
 
+## Use Case View
+
+**Primary Actor:** Manager / Employee <br>
+**Description:** Allows a manager or employee to list the stock of all stock-controlled products, with an optional case-insensitive partial match search on the product's name.
+
+**Preconditions:**
+
+- The user must be authenticated with the `MANAGER` or `EMPLOYEE` role.
+
+**Main Success Scenario:**
+
+1. The user requests the stock list, optionally providing a search term.
+2. The System validates the request query.
+3. The System retrieves all stock records, applying the search filter if provided.
+4. The System filters out any stock records that have an orphaned or null product reference.
+5. The System maps the valid entities to DTOs and returns them with a 200 OK status.
+
+**Alternative Flows:**
+
+- _No matching products found:_ The System returns an empty list `[]` with a 200 OK status.
+- _Unauthorized user (`CUSTOMER` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - The system allows listing the stock of all stock-controlled products, optionally filtered by a search term.

@@ -1,5 +1,32 @@
 # UC2 - List / Search Product Categories
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to list active product categories, search for a category by its exact name, or consult a category by its identifier.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+
+**Main Success Scenario:**
+
+1. The Manager requests the product categories (optionally providing a name query or specific ID).
+2. If no filter is applied, the System returns all active categories.
+3. If an exact name is searched, the System finds the category (ignoring case and accents), even if inactive, and returns it.
+4. If a specific ID is provided, the System retrieves the associated category (active or inactive).
+5. The System returns a 200 OK response with the requested data.
+
+**Alternative Flows:**
+
+- _Partial or blank name search:_ The System returns an empty list (`[]`) with a 200 OK status.
+- _Unknown ID requested:_ The System throws a 404 Not Found error.
+- _Invalid ID requested:_ The System throws a 400 Bad Request error.
+
+**Postconditions:**
+
+- None (Read-only operation).
+
 ## 1. Domain Assumptions
 
 - Listing without filtering returns only active categories;

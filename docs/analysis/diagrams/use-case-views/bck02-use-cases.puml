@@ -1,0 +1,18 @@
+@startuml "bck02-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+
+package "BCK02: Customer Management" {
+    usecase "UC1: Register Customer" as uc1
+    usecase "UC2: List Customers" as uc2
+    usecase "UC3: Get Customer" as uc3
+    usecase "UC4: Update Customer" as uc4
+}
+
+manager --> uc1
+manager --> uc2
+manager --> uc3
+manager --> uc4
+@enduml

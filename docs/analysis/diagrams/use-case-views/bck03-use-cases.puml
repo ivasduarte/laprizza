@@ -1,0 +1,18 @@
+@startuml "bck03-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+
+package "BCK03: Product Category Management" {
+    usecase "UC1: Create Product Category" as uc1
+    usecase "UC2: List Product Categories" as uc2
+    usecase "UC3: Update Product Category" as uc3
+    usecase "UC4: Remove Product Category" as uc4
+}
+
+manager --> uc1
+manager --> uc2
+manager --> uc3
+manager --> uc4
+@enduml

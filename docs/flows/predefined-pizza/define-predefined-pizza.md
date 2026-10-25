@@ -1,5 +1,40 @@
 # UC1: Define Predefined Pizza
 
+## Use Case View
+
+**Primary Actor:** Manager <br>
+**Description:** Allows a manager to define a Predefined Pizza by associating a sellable product with the Pizza Sizes in which it is available and with a default configuration of Pizza Components.
+
+**Preconditions:**
+
+- The user must be authenticated and have the `MANAGER` role.
+- The product that represents the pizza, the Pizza Sizes and the Pizza Components to be used must already be registered in the system.
+
+**Main Success Scenario:**
+
+1. The Manager provides the `productId`, the list of `sizeIds` and the list of `componentIds` (default configuration).
+2. The System validates that all fields are present, that the ids have a valid format and that both lists are not empty.
+3. The System verifies that the product exists, is active, is sellable and is not a Pizza Component.
+4. The System verifies that neither list contains repeated ids.
+5. The System verifies that every Pizza Size exists and is active.
+6. The System verifies that every component exists, is active and is designated as a Pizza Component.
+7. The System verifies that the number of components of each Pizza Component Type respects its minimum and maximum, including the types with a minimum greater than zero.
+8. The System verifies that every component has a Component Size Configuration for every selected Pizza Size.
+9. The System verifies that the product does not already have a Predefined Pizza and saves the new one as active.
+10. The System returns the new Predefined Pizza with a 201 Created status.
+
+**Alternative Flows:**
+
+- _Missing fields, invalid ids or empty lists:_ The System throws a 400 Bad Request error.
+- _Invalid product, repeated ids, unknown or inactive size/component, component without type, Pizza Component Type limits not respected or missing Component Size Configuration:_ The System throws a 400 Bad Request error and nothing is stored.
+- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
+- _A Predefined Pizza already exists for the product:_ The System throws a 409 Conflict error.
+
+**Postconditions:**
+
+- The new Predefined Pizza is saved in the database as active.
+- The Predefined Pizza keeps its product, its available Pizza Sizes and its default configuration.
+
 ## 1. Domain Assumptions
 
 Due to a lack of client clarification, the following domain restrictions were assumed in the code:

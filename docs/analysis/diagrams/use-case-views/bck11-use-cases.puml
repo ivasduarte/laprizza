@@ -1,0 +1,20 @@
+@startuml "bck11-use-case-view"
+skinparam monochrome true
+left to right direction
+
+actor "LaPrizza Manager" as manager
+actor "LaPrizza Employee" as employee
+actor "Customer" as customer
+
+package "BCK11: Product Catalogue and Product Information" {
+    usecase "UC1: List Product Catalogue" as uc1
+    usecase "UC2: Get Catalogue Item" as uc2
+}
+
+manager --> uc1
+manager --> uc2
+employee --> uc1
+employee --> uc2
+uc1 <-- customer
+uc2 <-- customer
+@enduml
