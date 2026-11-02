@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ApiError,
   createHttpClient,
-} from '../../src/shared/api/http-client.js';
+} from '../../../src/shared/api/http-client.js';
 
 const BASE = 'http://localhost:3000/api/v1';
 

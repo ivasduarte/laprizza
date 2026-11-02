@@ -16,8 +16,11 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "i18next": "^26.7.1",
+    "i18next-browser-languagedetector": "^8.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.1.11",
     "react-router-dom": "^7.1.0"
   },
   "devDependencies": {

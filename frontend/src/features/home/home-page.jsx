@@ -1,11 +1,12 @@
+import { useTranslation } from 'react-i18next';
+
 export default function HomePage() {
+  const { t } = useTranslation();
+
   return (
     <section>
-      <h1>Welcome to LaPrizza</h1>
-      <p>
-        Use the navigation to access the restaurant services. Each section is a
-        separate feature of this single-page application.
-      </p>
+      <h1>{t('home.welcome')}</h1>
+      <p>{t('home.description')}</p>
     </section>
   );
 }
