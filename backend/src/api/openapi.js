@@ -1482,6 +1482,38 @@ export const openApiSpec = {
         },
       },
     },
+    '/ai-data/snapshot': {
+      get: {
+        summary: 'Obter snapshot de dados para o motor de IA (MANAGER only)',
+        description:
+          'Devolve o estado atual do catálogo (produtos, stock, pizzas predefinidas e tamanhos) unificado para alimentar o motor Prolog de escalonamento.',
+        tags: ['AI Scheduling'], // Isto cria uma secção dedicada no Swagger UI
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    products: { type: 'array', items: { $ref: '#/components/schemas/Product' } },
+                    stock: { type: 'array', items: { $ref: '#/components/schemas/Stock' } },
+                    sizes: { type: 'array', items: { $ref: '#/components/schemas/PizzaSize' } },
+                    predefinedPizzas: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/PredefinedPizza' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {

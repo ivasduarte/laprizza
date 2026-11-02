@@ -1,4 +1,4 @@
-name: CI - Backend tests and PR validation
+name: CI - Tests and PR validation
 
 on:
   pull_request:
@@ -39,7 +39,7 @@ jobs:
           name: coverage
           path: backend/coverage
 
-    gate-frontend:
+  gate-frontend:
     name: Frontend - Lint, tests and build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:

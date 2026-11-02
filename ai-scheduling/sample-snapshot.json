@@ -1,0 +1,387 @@
+{
+  "meta": {
+    "snapshotId": "39f659e4dbf709b3",
+    "retrievedAt": "2026-11-02T09:00:00.000Z",
+    "source": "sample-file",
+    "simulated": true
+  },
+  "products": [
+    {
+      "id": "agg-dough-crust",
+      "name": "Crust Dough",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-ham",
+      "name": "Ham",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-mozzarella",
+      "name": "Mozzarella",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-mushroom",
+      "name": "Mushrooms",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-tomato",
+      "name": "Tomato Sauce",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "p-margherita",
+      "name": "Margherita",
+      "sellable": true,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "p-prosciutto",
+      "name": "Prosciutto e Funghi",
+      "sellable": true,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "r-flour",
+      "name": "Flour",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "r-water",
+      "name": "Water",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "r-yeast",
+      "name": "Yeast",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": false
+    }
+  ],
+  "sizes": [
+    {
+      "id": "size-l",
+      "name": "Large"
+    },
+    {
+      "id": "size-m",
+      "name": "Medium"
+    },
+    {
+      "id": "size-s",
+      "name": "Small"
+    }
+  ],
+  "bom": [
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "agg-dough-crust",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "c-mozzarella",
+      "quantity": 160
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "c-tomato",
+      "quantity": 80
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "agg-dough-crust",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "c-mozzarella",
+      "quantity": 120
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "c-tomato",
+      "quantity": 60
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "agg-dough-crust",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "c-mozzarella",
+      "quantity": 80
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "c-tomato",
+      "quantity": 40
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "agg-dough-crust",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-ham",
+      "quantity": 60
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-mozzarella",
+      "quantity": 160
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-mushroom",
+      "quantity": 55
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-tomato",
+      "quantity": 80
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "agg-dough-crust",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-ham",
+      "quantity": 45
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-mozzarella",
+      "quantity": 120
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-mushroom",
+      "quantity": 40
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-tomato",
+      "quantity": 60
+    }
+  ],
+  "aggregates": [
+    {
+      "id": "agg-dough-crust",
+      "classification": "production",
+      "items": [
+        {
+          "componentId": "r-flour",
+          "quantity": 150
+        },
+        {
+          "componentId": "r-water",
+          "quantity": 90
+        },
+        {
+          "componentId": "r-yeast",
+          "quantity": 3
+        }
+      ]
+    }
+  ],
+  "stock": [
+    {
+      "productId": "agg-dough-crust",
+      "quantity": 50
+    },
+    {
+      "productId": "c-ham",
+      "quantity": 500
+    },
+    {
+      "productId": "c-mozzarella",
+      "quantity": 3000
+    },
+    {
+      "productId": "c-mushroom",
+      "quantity": 100
+    },
+    {
+      "productId": "c-tomato",
+      "quantity": 2000
+    },
+    {
+      "productId": "r-flour",
+      "quantity": 5000
+    },
+    {
+      "productId": "r-water",
+      "quantity": 20000
+    },
+    {
+      "productId": "r-yeast",
+      "quantity": 100
+    }
+  ],
+  "issues": [],
+  "orders": [
+    {
+      "id": "order-sim-1",
+      "simulated": true,
+      "items": [
+        {
+          "pizzaId": "p-margherita",
+          "sizeId": "size-m",
+          "quantity": 30
+        },
+        {
+          "pizzaId": "p-prosciutto",
+          "sizeId": "size-l",
+          "quantity": 20
+        }
+      ]
+    },
+    {
+      "id": "order-sim-2",
+      "simulated": true,
+      "items": [
+        {
+          "pizzaId": "p-margherita",
+          "sizeId": "size-s",
+          "quantity": 10
+        }
+      ]
+    }
+  ],
+  "forecast": {
+    "id": "fc-week-1",
+    "name": "Week 1 (demo)",
+    "version": 1,
+    "startDate": "2026-11-02",
+    "endDate": "2026-11-04",
+    "entries": [
+      {
+        "date": "2026-11-02",
+        "productId": "p-margherita",
+        "sizeId": "size-m",
+        "quantity": 40
+      },
+      {
+        "date": "2026-11-03",
+        "productId": "p-margherita",
+        "sizeId": "size-m",
+        "quantity": 55
+      },
+      {
+        "date": "2026-11-03",
+        "productId": "p-prosciutto",
+        "sizeId": "size-l",
+        "quantity": 20
+      },
+      {
+        "date": "2026-11-04",
+        "productId": "p-margherita",
+        "sizeId": "size-s",
+        "quantity": 15
+      }
+    ]
+  },
+  "supplierScenario": {
+    "id": "sc-demo",
+    "version": 1,
+    "simulated": true,
+    "suppliers": [
+      {
+        "id": "sup-a",
+        "name": "Supplier A"
+      },
+      {
+        "id": "sup-b"
+      }
+    ],
+    "products": [
+      {
+        "productId": "c-mozzarella",
+        "offers": [
+          {
+            "supplierId": "sup-a",
+            "priceEur": 12.5,
+            "stockUnits": 100,
+            "leadTimeDays": 2
+          },
+          {
+            "supplierId": "sup-b",
+            "priceEur": 11.9,
+            "stockUnits": 100,
+            "leadTimeDays": 4,
+            "supplyLimit": 500
+          }
+        ]
+      },
+      {
+        "productId": "c-ham",
+        "offers": [
+          {
+            "supplierId": "sup-a",
+            "priceEur": 9,
+            "stockUnits": 50,
+            "leadTimeDays": 1
+          }
+        ]
+      },
+      {
+        "productId": "r-flour",
+        "offers": [
+          {
+            "supplierId": "sup-b",
+            "priceEur": 8,
+            "stockUnits": 1000,
+            "leadTimeDays": 3
+          }
+        ]
+      },
+      {
+        "productId": "c-tomato",
+        "offers": []
+      }
+    ]
+  }
+}

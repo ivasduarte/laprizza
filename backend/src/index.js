@@ -23,6 +23,7 @@ import productCategoriesRouterFactory from './api/product-categories/product-cat
 import stockRouterFactory from './api/stock/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration/component-size-configuration.routes.js';
 import productCatalogueRouterFactory from './api/product-catalogue/product-catalogue.route.js';
+import aiDataRouterFactory from './api/ai-data/ai-data.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -162,6 +163,10 @@ export function createApp(config = loadConfig(), repos = {}) {
     productCatalogueRouterFactory(
       isTesting ? { productsRepository: repos.productsRepository } : undefined,
     ),
+  );
+  api.use(
+    '/ai-data',
+    aiDataRouterFactory(isTesting ? { aiDataRepository: repos.aiDataRepository } : undefined),
   );
   app.use(API_PREFIX, api);
 

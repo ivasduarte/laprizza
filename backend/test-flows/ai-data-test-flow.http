@@ -1,0 +1,70 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerIdentifier = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+
+### 1 - Login como Manager (200 + token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{managerIdentifier}}",
+  "password": "{{managerPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.token isString
+
+### 2 - Snapshot sem token (401)
+GET {{baseUrl}}/ai-data/snapshot
+
+?? status == 401
+
+### 3 - Snapshot como Manager (200)
+# @name snapshot
+GET {{baseUrl}}/ai-data/snapshot
+Authorization: Bearer {{login.token}}
+
+?? status == 200
+?? js response.parsedBody.meta.snapshotId isString
+?? js response.parsedBody.meta.source == backend
+?? js response.parsedBody.meta.simulated == false
+?? js Array.isArray(response.parsedBody.products) == true
+?? js Array.isArray(response.parsedBody.sizes) == true
+?? js Array.isArray(response.parsedBody.bom) == true
+?? js Array.isArray(response.parsedBody.stock) == true
+?? js Array.isArray(response.parsedBody.issues) == true
+# agregados ainda não existem no modelo de domínio
+?? js response.parsedBody.aggregates.length == 0
+
+### 4 - Unidades de stock e consumo são inteiros não negativos (200)
+GET {{baseUrl}}/ai-data/snapshot
+Authorization: Bearer {{login.token}}
+
+?? status == 200
+?? js response.parsedBody.bom.every((b) => Number.isInteger(b.quantity) && b.quantity >= 0) == true
+?? js response.parsedBody.stock.every((s) => Number.isInteger(s.quantity) && s.quantity >= 0) == true
+
+### 5 - Só entram produtos com stock controlado no stock (200)
+GET {{baseUrl}}/ai-data/snapshot
+Authorization: Bearer {{login.token}}
+
+?? status == 200
+?? js response.parsedBody.stock.every((s) => response.parsedBody.products.some((p) => p.id === s.productId && p.stockControlled)) == true
+
+### 6 - Sem dados pessoais de clientes (200)
+GET {{baseUrl}}/ai-data/snapshot
+Authorization: Bearer {{login.token}}
+
+?? status == 200
+?? js JSON.stringify(response.parsedBody).includes('email') == false
+?? js JSON.stringify(response.parsedBody).includes('phone') == false
+?? js JSON.stringify(response.parsedBody).includes('address') == false
+?? js JSON.stringify(response.parsedBody).includes('dietary') == false
+
+### 7 - Dois pedidos seguidos dão o mesmo snapshotId se os dados não mudarem (200)
+GET {{baseUrl}}/ai-data/snapshot
+Authorization: Bearer {{login.token}}
+
+?? status == 200
+?? js response.parsedBody.meta.snapshotId == {{snapshot.meta.snapshotId}}
