@@ -1,27 +1,21 @@
-import { useEffect, useState } from 'react';
-import { checkBackendHealth } from './health.js';
+import { lazy } from 'react';
+import { Route, Routes } from 'react-router-dom';
+import { features } from './features/registry.js';
+import Layout from './shared/ui/layout.jsx';
+
+const routes = features.map((feature) => ({
+  ...feature,
+  Page: lazy(feature.load),
+}));
 
 export default function App() {
-  const [statusText, setStatusText] = useState('Checking...');
-
-  useEffect(() => {
-    let isMounted = true;
-
-    checkBackendHealth().then((isOk) => {
-      if (isMounted) {
-        setStatusText(isOk ? 'Backend: OK' : 'Backend: unreachable');
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   return (
-    <main>
-      <h1>Application Shell</h1>
-      <p>{statusText}</p>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        {routes.map((route) => (
+          <Route key={route.id} path={route.path} element={<route.Page />} />
+        ))}
+      </Route>
+    </Routes>
   );
 }

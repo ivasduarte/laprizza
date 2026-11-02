@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:8080/api/v1';
+const DEFAULT_API_BASE_URL = 'http://localhost:3000/api/v1';
 
 /**
  * Resolves the configured backend base URL from environment variables
