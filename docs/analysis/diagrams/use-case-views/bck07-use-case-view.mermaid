@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+
+    subgraph BCK07 [BCK07: Pizza Component Type Management]
+        direction TB
+        UC1([UC1: Create Pizza Component Type])
+        UC2([UC2: List Pizza Component Types])
+        UC3([UC3: Update Pizza Component Type])
+        UC4([UC4: Remove Pizza Component Type])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4

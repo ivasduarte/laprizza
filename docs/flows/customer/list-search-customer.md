@@ -1,50 +1,59 @@
-# UC2: List and Search Customers
+# UC2 - List and Search Customers
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /customers?search={term}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Not detailed (generic error response) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to retrieve a list of all customers or search for specific customers by name, email, or phone number.
+## Description
 
-**Preconditions:**
+A Manager lists the customers, optionally filtered by a search term.
 
-- The Manager must be authenticated and authorized.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Customers - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as CustomersController<br/>[Component: Controller]
+        participant service as CustomersService<br/>[Component: Service]
+        participant repo as CustomersRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager requests the list of customers, optionally providing a search query.
-2. The System queries the database for customers matching the search term (if provided).
-3. The System maps the retrieved customer entities to DTOs.
-4. The System returns the list of matching customers.
+    activate manager
+    manager->>route: GET /customers?search={term}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Query (Joi)
+    route->>controller: list(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: listCustomers(query, repo)
+    activate service
 
-- _No matching customers found:_ The System returns an empty array `[]` with a 200 OK status.
+    service->>repo: listCustomers(query)
+    activate repo
+    repo-->>service: Customer Entity[]
+    deactivate repo
 
-**Postconditions:**
+    service->>service: map(toCustomerDto)
+    service-->>controller: Customer DTO[]
+    deactivate service
 
-- None (Read-only operation).
+    controller-->>manager: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 1. Domain Assumptions
-
-- The NIF (Tax Identification Number) is an optional piece of information, primarily collected for future invoicing purposes.
-
-## 2. Solution Design
-
-![list-search-customer](./diagrams/list-search-customer.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`customers.service.test.js`):**
-  - `getCustomerById and listCustomers fetch and map correctly`
-  - `listCustomers filters by name, email and phone number`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/customers`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Valid request without search query -> `200 OK` (Returns all customers)
-  - Valid request with matching search query -> `200 OK` (Returns matched customers)
-  - Valid request with non-matching search query -> `200 OK` (Returns `[]`)
+See the [README](./README.md) for the notation key and the element catalogue.

@@ -1,0 +1,24 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+
+    subgraph BCK10 [BCK10: Predefined Pizza Management]
+        direction TB
+        UC1([UC1: Define Predefined Pizza])
+        UC2([UC2: List Predefined Pizzas])
+        UC3([UC3: Consult Predefined Pizza by Id])
+        UC4([UC4: Consult Predefined Pizza by Name])
+        UC5([UC5: Update Predefined Pizza])
+        UC6([UC6: Deactivate Predefined Pizza])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    Manager --> UC6
+
+    Employee -.->|<< read-only >>| UC2
+    Employee -.->|<< read-only >>| UC3
+    Employee -.->|<< read-only >>| UC4

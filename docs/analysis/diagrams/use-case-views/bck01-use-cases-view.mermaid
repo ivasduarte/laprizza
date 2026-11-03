@@ -1,0 +1,21 @@
+flowchart LR
+    SystemUser([System User])
+    Manager([LaPrizza Manager])
+
+    %% Inheritance (Sintaxe corrigida para flowchart)
+    Manager -.->|inherits| SystemUser
+
+    subgraph BCK01 [BCK01: User and Authentication Management]
+        direction TB
+        UC1([UC1: Authenticate User / Login])
+        UC2([UC2: Register User])
+        UC3([UC3: List Users])
+        UC4([UC4: Get User])
+        UC5([UC5: Update User])
+    end
+
+    SystemUser --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5

@@ -1,0 +1,22 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+
+    subgraph BCK04 [BCK04: Allergen Management]
+        direction TB
+        UC1([UC1: Create Allergen])
+        UC2([UC2: List Allergens])
+        UC3([UC3: Consult Allergen by Id])
+        UC4([UC4: Consult Allergen by Name])
+        UC5([UC5: Deactivate Allergen])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    
+    Employee -.->|<< read-only >>| UC2
+    Employee -.->|<< read-only >>| UC3
+    Employee -.->|<< read-only >>| UC4

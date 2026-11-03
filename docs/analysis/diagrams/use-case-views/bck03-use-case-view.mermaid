@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+
+    subgraph BCK03 [BCK03: Product Category Management]
+        direction TB
+        UC1([UC1: Create Product Category])
+        UC2([UC2: List Product Categories])
+        UC3([UC3: Update Product Category])
+        UC4([UC4: Remove Product Category])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4

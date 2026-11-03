@@ -1,58 +1,63 @@
-# UC2: Get Catalogue Item by ID
+# UC2 - Get Catalogue Item
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /catalogue/:id` |
+| Allowed roles | CUSTOMER, MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 404 (product not found, inactive or not sellable) |
 
-**Primary Actor:** Customer / Manager / Employee <br>
-**Description:** Allows an authenticated user to consult the details of a product offered for sale using its unique ID.
+## Description
 
-**Preconditions:**
+A Customer, Manager or Employee consults a single catalogue item. Only active and sellable products are visible in the catalogue.
 
-- The user must be authenticated and have the `CUSTOMER`, `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - Get Catalogue Item - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Customer / Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as CatalogueController<br/>[Component: Controller]
+        participant service as CatalogueService<br/>[Component: Service]
+        participant repo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the ID of the product.
-2. The System validates the MongoDB ObjectId format of the ID.
-3. The System searches the database for a product matching the ID.
-4. The System verifies that the product is active and sellable.
-5. The System maps the product to a Catalogue DTO, including category, allergens and available sizes, and returns it with a 200 OK status.
+    activate user
+    user->>route: GET /catalogue/:id
+    activate route
+    route->>route: verifyToken() & requireRole([CUSTOMER, MANAGER, EMPLOYEE])
+    route->>route: Validate Object ID (Joi)
+    route->>controller: getById(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: getCatalogueItemById(id, repos)
+    activate service
 
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Product not found, inactive or not sellable:_ The System throws a 404 Not Found error (the product is considered not found in the catalogue).
-- _Request by unauthorized user (No token):_ The System throws a 401 Unauthorized error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: Product Entity (or null)
+    deactivate repo
 
-**Postconditions:**
+    alt Product not found, inactive or not sellable
+      service-->>controller: AppError(404, "Product not found in the catalogue.")
+    else Valid Catalogue Item
+      service->>service: toCatalogueDTO(Product)
+      service-->>controller: CatalogueItem DTO
+    end
 
-- None (Read-only operation).
+    deactivate service
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
 
-## 1. Domain Assumptions
-
-- Catalogue items can be queried individually by their unique product ID.
-- **Crucial Rule:** The product must exist, be active (`isActive: true`), and be designated as sellable (`sellable: true`). If any of these conditions fail, the product is considered "not found in the catalogue".
-- The ID must conform to the MongoDB ObjectId format.
-- Users with `CUSTOMER`, `MANAGER`, and `EMPLOYEE` roles can view catalogue item details.
-
-## 2. Solution Design
-
-![get-catalogue-item](./diagrams/get-catalogue-item.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`product-catalogue.service.test.js`):**
-  - `getCatalogueItemById returns the correct Catalogue DTO for a valid, active, and sellable product`
-  - `getCatalogueItemById throws 404 AppError if the product does not exist`
-  - `getCatalogueItemById throws 404 AppError if the product is inactive`
-  - `getCatalogueItemById throws 404 AppError if the product is not sellable`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/catalogue/:id`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with invalid ID format -> `400 Bad Request` (Joi CastError prevention)
-  - Request for a non-existent Product ID -> `404 Not Found`
-  - Request for an inactive or non-sellable Product ID -> `404 Not Found`
-  - Request for a valid, active, sellable Product ID by allowed roles -> `200 OK` (Returns Catalogue DTO)
+See the [README](./README.md) for the notation key and the element catalogue.

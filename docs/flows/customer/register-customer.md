@@ -1,63 +1,89 @@
-# UC1: Register Customer
+# UC1 - Register Customer
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /customers` |
+| Allowed roles | MANAGER |
+| Success response | 201 Created |
+| Error handling | 400 (invalid address or phone number), 409 (email or phone number already in use) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to register a new customer in the system, capturing personal details, contact info, and dietary restrictions.
+## Description
 
-**Preconditions:**
+A Manager registers a customer. The domain validates the address using the external postal code validator and normalizes the phone number before the customer is persisted. A duplicated email or phone number results in a conflict error.
 
-- The Manager must be authenticated and authorized.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC1 - Register Customer - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as CustomersController<br/>[Component: Controller]
+        participant service as CustomersService<br/>[Component: Service]
+        participant domain as CustomersDomain<br/>[Component: Domain]
+        participant repo as CustomersRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
+    box rgba(160,160,160,0.20) External System
+        participant validator as PostalCodeValidator<br/>[External System]
+    end
 
-1. The Manager provides the new customer's details (name, email, phone, address, dietary restrictions).
-2. The System validates the provided data (e.g., postal code matches city, Portuguese phone format).
-3. The System normalizes the phone number.
-4. The System verifies that the email and phone number are not already in use.
-5. The System creates and persists the new customer record.
-6. The System returns the newly created customer details.
+    activate manager
+    manager->>route: POST /customers { name, email, phoneNumber, address, dietaryRestrictions }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Payload (Joi)
+    route->>controller: create(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: createCustomer(data, repo, validator)
+    activate service
 
-- _Invalid data provided:_ The System throws a 400 Bad Request error (e.g., invalid phone format, postal code mismatch).
-- _Duplicate email or phone:_ The System throws a 409 Conflict error.
+    service->>domain: validateAddress(address, validator)
+    activate domain
+    domain->>validator: isValidMatch(postalCode, city)
+    activate validator
+    validator-->>domain: boolean
+    deactivate validator
+    domain-->>service: void / DomainError
+    deactivate domain
 
-**Postconditions:**
+    alt Invalid Address
+      service-->>controller: AppError(400)
+    else Valid Address
+      service->>domain: normalizePhoneNumber(phoneNumber)
+      activate domain
+      domain-->>service: normalizedNumber / null
+      deactivate domain
 
-- The new customer is saved in the database.
+      alt Invalid Phone
+        service-->>controller: AppError(400)
+      else Valid Phone
+        service->>repo: create({ ...data, phoneNumber })
+        activate repo
+        alt Duplicate Email/Phone
+          repo-->>service: MongoError(11000)
+          service-->>controller: AppError(409, "Email/Phone in use.")
+        else Success
+          repo-->>service: Customer Entity
+          deactivate repo
+          service->>service: toCustomerDto(Customer)
+          service-->>controller: Customer DTO
+        end
+      end
+    end
+    deactivate service
 
-## 1. Domain Assumptions
+    controller-->>manager: Response (201 Created or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-- The NIF (Tax Identification Number) is an optional piece of information, primarily collected for future invoicing purposes.
-
-**_Sprint 1 Constraint (Late Client Feedback):_**
-
-The business rule stipulating autonomous customer registration through a separate public endpoint was only confirmed by the client close to the Sprint 1 delivery date. For risk management reasons, the implementation of this specific flow (Customer Self-Registration) is being moved to Sprint 2. In the current version, user registration with the `CUSTOMER` role is performed via Manager.
-
-## 2. Solution Design
-
-![register-customer](./diagrams/register-customer.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`) and a Dummy Postal Code Validator, avoiding Mocking libraries entirely.
-- **Domain Tests (`customers.domain.test.js`):**
-  - `validatePhoneNumber validates strictly Portuguese formats`
-  - `normalizePhoneNumber returns the 9 national digits or null`
-  - `validateAddress relies securely on the injected validator`
-- **Application Tests (`customers.service.test.js`):**
-  - `createCustomer enforces domain validations before saving`
-  - `createCustomer stores the phone normalized and rejects duplicates in any format`
-  - `createCustomer and updateCustomer turn an address mismatch into a 400 AppError`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `POST /api/v1/customers`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Valid payload by `MANAGER` -> `201 Created`
-  - Missing mandatory fields or duplicate allergens in array -> `400 Bad Request` (Joi validation)
-  - Postal code and city mismatch -> `400 Bad Request`
-  - Duplicate email or phone number -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

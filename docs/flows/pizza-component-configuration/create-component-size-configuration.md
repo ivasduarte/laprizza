@@ -1,99 +1,82 @@
 # UC1 - Create Component Size Configuration
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /products/{productId}/size-configurations` |
+| Allowed roles | MANAGER |
+| Success response | 201 Created |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to create a new Component Size Configuration, associating a pizza component product with a pizza size, and defining its price and stock units consumed.
+## Description
 
-**Preconditions:**
+A Manager adds a size configuration (price and stock units consumed) to a product that is a pizza component. The service validates the input, checks that the product and the pizza size exist and are active, makes sure the size is not configured yet and persists the configuration in the product.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The product must be active and designated as a Pizza Component.
-- The pizza size must exist and be active.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC1 - Create Component Size Configuration - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ComponentSizeConfigurationController<br/>[Component: Controller]
+        participant service as ComponentSizeConfigurationService<br/>[Component: Service]
+        participant domain as ComponentSizeConfigurationDomain<br/>[Component: Domain]
+        participant productsRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant sizeRepo as PizzaSizeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides a payload with the pizza size ID, price, and stock units consumed.
-2. The System validates that the price is a number greater than or equal to 0.
-3. The System validates the stock units consumed based on the product's stock control settings.
-4. The System verifies the product is an active pizza component and the pizza size is active.
-5. The System ensures no configuration already exists for this pizza size on the given product.
-6. The System saves the new configuration.
-7. The System returns the new configuration details with a 201 Created status.
+    activate manager
+    manager->>route: POST /products/{productId}/size-configurations<br/>{ pizzaSizeId, price, stockUnitsConsumed }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Ids & Payload (Joi)
+    route->>controller: create(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: createComponentSizeConfiguration(productId, data, repositories)
+    activate service
 
-- _Missing/invalid fields, invalid IDs, or invalid stock units:_ The System returns a 400 Bad Request error.
-- _Request by unauthorized user (`EMPLOYEE` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
-- _Product or pizza size not found/inactive:_ The System returns a 404 Not Found error.
-- _Pizza size already configured for the product:_ The System returns a 409 Conflict error.
+    service->>domain: normalizeStockUnitsConsumed(stockUnitsConsumed)<br/>& validatePizzaSizeId(pizzaSizeId) & validatePrice(price)
+    activate domain
+    domain-->>service: valid
 
-**Postconditions:**
+    service->>productsRepo: findById(productId)
+    activate productsRepo
+    productsRepo-->>service: Product Entity (active)
+    deactivate productsRepo
 
-- The Component Size Configuration is saved and linked to the product.
+    service->>domain: validateProductIsPizzaComponent(product)
+    domain-->>service: valid
 
-## 1. Domain Assumptions
+    service->>sizeRepo: findById(pizzaSizeId)
+    activate sizeRepo
+    sizeRepo-->>service: PizzaSize Entity (active)
+    deactivate sizeRepo
 
-- Only products designated as Pizza Components can have Component Size Configurations;
-- A Component Size Configuration associates a Pizza Component with a Pizza Size and defines the price applicable to the component when used in a pizza of that size;
-- For a given Pizza Component and Pizza Size, at most one configuration may exist;
-- The price must be a number greater than or equal to 0;
-- A stock controlled component must define the number of abstract stock units consumed;
-- The product must be active and the pizza size must exist and be active;
-- A product or a pizza size that has configurations cannot be deactivated;
-- Only users with the `MANAGER` role are authorized to create a Component Size Configuration.
+    service->>domain: validateStockUnitsConsumed(product.stockControlled, stockUnitsConsumed)<br/>& findSizeConfiguration(product, pizzaSizeId)
+    domain-->>service: valid, size not configured yet
+    deactivate domain
 
-## 2. Solution Design
+    service->>productsRepo: addSizeConfiguration(productId, configuration)
+    activate productsRepo
+    productsRepo-->>service: Updated Product Entity
+    deactivate productsRepo
 
-![Create Component Size Configuration Design](./diagrams/create-component-size-configuration-design.svg)
+    service->>service: toComponentSizeConfigurationDTO(productId, configuration)
+    service-->>controller: ComponentSizeConfiguration DTO
+    deactivate service
 
-## 3. Business Test Planning
+    controller-->>manager: Response (201 Created)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`products.dummy.repository.js` and `pizza-size.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Domain Tests (`component-size-configuration.domain.test.js`):**
-  - `isPizzaComponent is true when the product has a pizza component type`
-  - `isPizzaComponent is true when the pizza component type is a populated document`
-  - `isPizzaComponent is false when the product has no pizza component type`
-  - `isPizzaComponent is false when there is no product`
-  - `validateProductIsPizzaComponent rejects products that are not pizza components`
-  - `validateProductIsPizzaComponent accepts pizza components`
-  - `normalizeStockUnitsConsumed turns an omitted value into null (not defined)`
-  - `normalizeStockUnitsConsumed keeps null and any other value unchanged`
-  - `validatePizzaSizeId rejects missing, blank and non-string values`
-  - `validatePizzaSizeId accepts non-blank strings`
-  - `validatePrice rejects negatives, non-finite values and non-numbers`
-  - `validatePrice accepts zero, integers and decimals`
-  - `validateStockUnitsConsumed requires stock controlled products to define it`
-  - `validateStockUnitsConsumed rejects stock units that are not integers greater than or equal to 1`
-  - `validateStockUnitsConsumed accepts integers greater than or equal to 1 for stock controlled products`
-  - `validateStockUnitsConsumed does not allow products without stock control to define it`
-  - `validateStockUnitsConsumed accepts null for products without stock control`
-  - `the domain rules throw DomainError`
-- **Application Tests (`component-size-configuration.service.tests.js`):**
-  - `toComponentSizeConfigurationDTO exposes the product and the pizza size as strings`
-  - `toComponentSizeConfigurationDTO turns missing stock units into null`
-  - `createComponentSizeConfiguration saves the configuration of a stock controlled component`
-  - `createComponentSizeConfiguration saves a component without stock control without stock units`
-  - `createComponentSizeConfiguration accepts a price of zero`
-  - `createComponentSizeConfiguration allows several sizes for the same component and the same size for several components`
-  - `createComponentSizeConfiguration rejects invalid data without saving`
-  - `createComponentSizeConfiguration requires stock units for stock controlled components`
-  - `createComponentSizeConfiguration does not accept stock units for components without stock control`
-  - `createComponentSizeConfiguration rejects products that are not pizza components`
-  - `createComponentSizeConfiguration throws 404 if the product does not exist or is inactive`
-  - `createComponentSizeConfiguration throws 404 if the pizza size does not exist or is inactive`
-  - `createComponentSizeConfiguration returns 409 Conflict if the size is already configured`
-  - `createComponentSizeConfiguration returns 409 Conflict if another request configured the size in the meantime`
-  - `createComponentSizeConfiguration validates the data before looking for the product`
-  - `createComponentSizeConfiguration checks the product is a pizza component before looking for the pizza size`
-
-## 4.E2E Tests
-
-- **Base Endpoint:** `POST /api/v1/products/{productId}/size-configurations`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Valid payload by `MANAGER` -> `201 Created`
-  - Invalid ids, missing or invalid fields, product that is not a pizza component, or stock units that do not respect the product's stock control -> `400 Bad Request`
-  - Unknown product or pizza size -> `404 Not Found`
-  - Pizza size already configured for the product -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

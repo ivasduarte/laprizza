@@ -1,79 +1,103 @@
-# UC1: Define Predefined Pizza
+# UC1 - Define Predefined Pizza
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /predefined-pizzas` |
+| Allowed roles | MANAGER |
+| Success response | 201 Created |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid payload or configuration), 409 (predefined pizza already exists for the product) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to define a Predefined Pizza by associating a sellable product with the Pizza Sizes in which it is available and with a default configuration of Pizza Components.
+## Description
 
-**Preconditions:**
+A Manager defines a predefined pizza for a sellable pizza product, choosing the available sizes and the default components. The service validates the product, the lists of ids and the whole configuration (sizes, components, limits per component type and component size configurations) before persisting it. Only one predefined pizza is allowed per product.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The product that represents the pizza, the Pizza Sizes and the Pizza Components to be used must already be registered in the system.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC1 - Define Predefined Pizza - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PredefinedPizzaController<br/>[Component: Controller]
+        participant service as PredefinedPizzaService<br/>[Component: Service]
+        participant repo as PredefinedPizzaRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the `productId`, the list of `sizeIds` and the list of `componentIds` (default configuration).
-2. The System validates that all fields are present, that the ids have a valid format and that both lists are not empty.
-3. The System verifies that the product exists, is active, is sellable and is not a Pizza Component.
-4. The System verifies that neither list contains repeated ids.
-5. The System verifies that every Pizza Size exists and is active.
-6. The System verifies that every component exists, is active and is designated as a Pizza Component.
-7. The System verifies that the number of components of each Pizza Component Type respects its minimum and maximum, including the types with a minimum greater than zero.
-8. The System verifies that every component has a Component Size Configuration for every selected Pizza Size.
-9. The System verifies that the product does not already have a Predefined Pizza and saves the new one as active.
-10. The System returns the new Predefined Pizza with a 201 Created status.
+    activate manager
 
-**Alternative Flows:**
+    manager->>route: POST /predefined-pizzas {productId, sizeIds, componentIds}
+    activate route
 
-- _Missing fields, invalid ids or empty lists:_ The System throws a 400 Bad Request error.
-- _Invalid product, repeated ids, unknown or inactive size/component, component without type, Pizza Component Type limits not respected or missing Component Size Configuration:_ The System throws a 400 Bad Request error and nothing is stored.
-- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
-- _A Predefined Pizza already exists for the product:_ The System throws a 409 Conflict error.
+    route->>route: verifyToken → requireRole(MANAGER) → Joi(productId, sizeIds, componentIds)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>manager: 401 Unauthorized
+    else Role is not MANAGER
+      route-->>manager: 403 Forbidden
+    else Invalid payload (missing field, invalid id, empty list)
+      route-->>manager: 400 Bad Request (Validation failed)
+    else Request accepted
+      route->>controller: create(req, res, next, repo)
+      activate controller
 
-- The new Predefined Pizza is saved in the database as active.
-- The Predefined Pizza keeps its product, its available Pizza Sizes and its default configuration.
+      controller->>service: createPredefinedPizza(data, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findProductById(productId)
+      activate repo
+      repo-->>service: Product info (or null)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      service->>service: validatePizzaProduct(product) [Domain]
 
-- A Predefined Pizza has no name of its own: it is represented by a sellable product, and there is at most one Predefined Pizza per product (unique index on `productId`);
-- The product must be active, sellable and must not be a Pizza Component;
-- The default configuration is a single list of Pizza Component ids, shared by all the sizes in which the pizza is available; no quantity is stored per component;
-- The minimum and maximum of each Pizza Component Type count distinct components, and every type with a minimum greater than zero must be present;
-- A size can only be used if it is active and every component of the default configuration has a Component Size Configuration for it;
-- Unknown product, size or component ids are reported as invalid pizza data (400 Bad Request), not as 404;
-- Only users with the `MANAGER` role can define Predefined Pizzas.
+      alt Product not found, inactive, not sellable or a Pizza Component
+        service-->>controller: AppError("Invalid Predefined Pizza: ...", 400)
+      else Product valid
+        service->>service: validateSizeIds + validateComponentIds [Domain]
 
-## 2. Solution Design
+        alt Lists repeated ids
+          service-->>controller: AppError("Invalid Predefined Pizza: ...", 400)
+        else Lists valid
+          service->>repo: findSizesByIds + findProductsByIds + listComponentTypes
+          activate repo
+          repo-->>service: sizes, components, component types
+          deactivate repo
 
-![UC1_Define_Predefined_Pizza](diagrams/define-predefined-pizza.svg)
+          service->>service: validatePredefinedPizza(...) [Domain]<br/>sizes exist and are active, components exist, are active and typed,<br/>min/max per Pizza Component Type, Component Size Configuration<br/>for every component and size
 
-## 3. Business Test Planning
+          alt Configuration invalid
+            service-->>controller: AppError("Invalid Predefined Pizza: ...", 400)
+          else Configuration valid
+            service->>service: createPredefinedPizzaData(productId, sizeIds, componentIds) [Domain]
+            service->>repo: create({productId, sizeIds, defaultConfiguration})
+            activate repo
+            repo-->>service: PredefinedPizza entity (or Error 11000)
+            deactivate repo
 
-- All unit tests use isolated in-memory Dummy Repositories (`predefined-pizzas.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Provide an active sellable product, active sizes and components that respect every rule (e.g. dough, sauce and cheese for Small and Large). Result: The Predefined Pizza is stored as active and returned with its `productId`, `sizeIds` and default configuration `componentIds`.
-- **Scenario B:** Provide a product that does not exist, is inactive, is not sellable or is a Pizza Component. Result: Throws `AppError` (400 Bad Request).
-- **Scenario C:** Provide an empty size list or a repeated component. Result: Throws `AppError` (400 Bad Request) and nothing is stored.
-- **Scenario D:** Provide a configuration that breaks a rule: unknown, inactive or non-component product, no dough (below `minQuantity`), two doughs or two cheeses (above `maxQuantity`), unknown or inactive size, or a size without a Component Size Configuration for one of the components. Result: Throws `AppError` (400 Bad Request) and nothing is stored.
-- **Scenario E:** Provide a minimal configuration (only dough) and several components of a type without maximum (toppings). Result: The Predefined Pizza is stored.
-- **Scenario F:** Define a second Predefined Pizza for the same product. Result: Throws `AppError` (409 Conflict).
-- **Scenario G:** Request the creation with the `EMPLOYEE` role. Result: The request is rejected (403 Forbidden) before reaching the service.
+            alt Product already has a Predefined Pizza (unique productId)
+              service-->>controller: AppError("A Predefined Pizza already exists for this product.", 409)
+            else Created
+              service->>service: toPredefinedPizzaDto(pizza)
+              service-->>controller: PredefinedPizzaDto
+            end
+          end
+        end
+      end
+      deactivate service
 
-## 4. Postman E2E Tests
+      controller-->>manager: 201 Created (or error via next(error))
+      deactivate controller
+    end
 
-- **Base Endpoint:** `POST /api/v1/predefined-pizzas`
-- **Validated Scenarios:**
-  - Valid product, sizes and components -> `201 Created` (Returns the Predefined Pizza)
-  - Second Predefined Pizza for the same product -> `409 Conflict`
-  - Missing `productId`, invalid id or empty size list -> `400 Bad Request` (Blocked by Joi validation)
-  - Repeated component -> `400 Bad Request`
-  - Inactive component -> `400 Bad Request`
-  - No dough (below `minQuantity`) -> `400 Bad Request`
-  - Two cheeses (above `maxQuantity`) -> `400 Bad Request`
-  - Size without Component Size Configuration -> `400 Bad Request`
-  - Product that is a Pizza Component representing the pizza -> `400 Bad Request`
-  - Missing token -> `401 Unauthorized`
-  - `EMPLOYEE` role -> `403 Forbidden`
+    deactivate route
+    deactivate manager
+```
+
+See the [README](./README.md) for the notation key and the element catalogue.

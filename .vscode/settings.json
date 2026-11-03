@@ -4,5 +4,6 @@
   "editor.fontSize": 15,
   "editor.formatOnSave": true,
   "files.autoSave": "afterDelay",
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "adrManager.adrDirectory": "docs/adr"
 }

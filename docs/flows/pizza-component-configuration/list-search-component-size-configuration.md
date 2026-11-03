@@ -1,68 +1,81 @@
-# UC2 - List / Search Component Size Configuration
+# UC2 - List and Search Component Size Configurations
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /products/{productId}/size-configurations, GET /products/{productId}/size-configurations/{sizeId}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows a manager or employee to list all size configurations for a specific pizza component, or consult a specific configuration by its pizza size ID.
+## Description
 
-**Preconditions:**
+A Manager or Employee lists all the size configurations of a product component, or consults the configuration of one specific pizza size.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Component Size Configurations - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ComponentSizeConfigurationController<br/>[Component: Controller]
+        participant service as ComponentSizeConfigurationService<br/>[Component: Service]
+        participant domain as ComponentSizeConfigurationDomain<br/>[Component: Domain]
+        participant productsRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The user requests the configurations for a specific product ID, optionally providing a pizza size ID.
-2. The System validates the provided IDs.
-3. The System retrieves the product and finds its configurations (even if the product is inactive).
-4. The System maps the data to DTOs and returns the list or the specific configuration with a 200 OK status.
+    activate user
+    user->>route: GET /products/{productId}/size-configurations<br/>or GET /products/{productId}/size-configurations/{sizeId}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
+    route->>route: Validate Ids (Joi)
 
-**Alternative Flows:**
+    alt List
+      route->>controller: list(req, res, next)
+      activate controller
+      controller->>service: listComponentSizeConfigurations(productId, repositories)
+      activate service
+      service->>productsRepo: findById(productId)
+      activate productsRepo
+      productsRepo-->>service: Product Entity
+      deactivate productsRepo
 
-- _Product has no configurations:_ The System returns an empty list `[]` (200 OK).
-- _Invalid product or pizza size ID format:_ The System returns a 400 Bad Request error.
-- _Unauthorized request:_ The System returns a 401 Unauthorized error.
-- _Unknown product or unconfigured pizza size:_ The System returns a 404 Not Found error.
+      service->>service: toComponentSizeConfigurationDTO(each configuration)
+      service-->>controller: ComponentSizeConfiguration DTO list
+      deactivate service
+      controller-->>user: Response (200 OK)
+      deactivate controller
+    else Consult by pizza size
+      route->>controller: getBySize(req, res, next)
+      activate controller
+      controller->>service: getComponentSizeConfiguration(productId, pizzaSizeId, repositories)
+      activate service
+      service->>productsRepo: findById(productId)
+      activate productsRepo
+      productsRepo-->>service: Product Entity
+      deactivate productsRepo
 
-**Postconditions:**
+      service->>domain: findSizeConfiguration(product, pizzaSizeId)
+      activate domain
+      domain-->>service: ComponentSizeConfiguration
+      deactivate domain
 
-- None (Read-only operation).
+      service->>service: toComponentSizeConfigurationDTO(productId, configuration)
+      service-->>controller: ComponentSizeConfiguration DTO
+      deactivate service
+      controller-->>user: Response (200 OK)
+      deactivate controller
+    end
 
-## 1. Domain Assumptions
+    deactivate route
+    deactivate user
+```
 
-- The size-dependent configurations of a Pizza Component are consulted through the product that owns them;
-- A product without configurations returns an empty list;
-- A configuration is consulted by the product and the pizza size that identify it;
-- The configurations of an inactive product can still be consulted;
-- Users with `MANAGER` and `EMPLOYEE` role are authorized to list and search Component Size Configurations.
-
-## 2. Solution Design
-
-![List/Search Component Size Configuration Design](./diagrams/list-search-component-size-configuration-design.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Domain Tests (`component-size-configuration.domain.tests.js`):**
-  - `findSizeConfiguration returns the configuration of the given pizza size`
-  - `findSizeConfiguration compares ids as strings (ObjectId-like values)`
-  - `findSizeConfiguration returns null when there is no configuration for the pizza size`
-  - `findSizeConfiguration returns null when the product has no configurations`
-- **Application Tests (`component-size-configuration.service.tests.js`):**
-  - `listComponentSizeConfigurations returns the configurations of the product`
-  - `listComponentSizeConfigurations returns an empty list for a product without configurations`
-  - `listComponentSizeConfigurations also works for an inactive product`
-  - `listComponentSizeConfigurations throws 404 if the product does not exist`
-  - `getComponentSizeConfiguration returns the configuration of the pizza size`
-  - `getComponentSizeConfiguration also works for an inactive product`
-  - `getComponentSizeConfiguration throws 404 if the product or the configuration does not exist`
-
-## 4.E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/products/{productId}/size-configurations`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - List by `MANAGER` or `EMPLOYEE` -> `200 OK`
-  - Product without configuration -> `200 OK` with `[]`
-  - Get by pizza size (`GET /api/v1/products/{productId}/size-configurations/{sizeId}`) -> `200 OK`
-  - Unknown product or unconfigured pizza size -> `404 Not Found`
-  - Invalid product or pizza size id -> `400 Bad Request`
+See the [README](./README.md) for the notation key and the element catalogue.

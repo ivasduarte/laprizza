@@ -1,64 +1,98 @@
-# UC4: Update Customer
+# UC4 - Update Customer
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PATCH /customers/:id` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | 404 (customer not found), 400 (invalid address or phone number), 409 (email or phone number already in use) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to update an existing customer's details or logically deactivate their profile.
+## Description
 
-**Preconditions:**
+A Manager partially updates a customer. The address and the phone number are validated again only when they are provided. A duplicated email or phone number results in a conflict error.
 
-- The Manager must be authenticated and authorized.
-- The target customer must exist.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Update Customer - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as CustomersController<br/>[Component: Controller]
+        participant service as CustomersService<br/>[Component: Service]
+        participant domain as CustomersDomain<br/>[Component: Domain]
+        participant repo as CustomersRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
+    box rgba(160,160,160,0.20) External System
+        participant validator as PostalCodeValidator<br/>[External System]
+    end
 
-1. The Manager provides the customer ID and the fields to be updated.
-2. The System validates the object ID format and the payload.
-3. The System verifies the customer exists.
-4. The System validates the provided data (e.g., verifying postal code match if an address is provided, or normalizing a new phone number).
-5. The System checks if the updated email or phone number is already in use by another customer.
-6. The System persists the partial changes, preserving existing data for un-updated fields.
-7. The System returns the updated customer record.
+    activate manager
+    manager->>route: PATCH /customers/:id { ...updates }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Object ID & Payload (Joi)
+    route->>controller: update(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: updateCustomer(id, data, repo, validator)
+    activate service
 
-- _Invalid data or ID format provided:_ The System throws a 400 Bad Request error.
-- _Customer not found:_ The System throws a 404 Not Found error.
-- _Duplicate email or phone:_ The System throws a 409 Conflict error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: Customer Entity (or null)
+    deactivate repo
 
-**Postconditions:**
+    alt Customer Not Found
+      service-->>controller: AppError(404)
+    else Customer Found
+      opt If address is provided
+        service->>domain: validateAddress(address, validator)
+        activate domain
+        domain->>validator: isValidMatch(postalCode, city)
+        activate validator
+        validator-->>domain: boolean
+        deactivate validator
+        domain-->>service: void / DomainError
+        deactivate domain
+      end
 
-- The targeted customer's data is updated in the database.
+      opt If phoneNumber is provided
+        service->>domain: normalizePhoneNumber(phoneNumber)
+        activate domain
+        domain-->>service: normalizedNumber / null
+        deactivate domain
+      end
 
-## 1. Domain Assumptions
+      alt Domain Validation Failed
+        service-->>controller: AppError(400)
+      else Validation Passed
+        service->>repo: update(id, mappedData)
+        activate repo
+        alt Duplicate Email/Phone
+          repo-->>service: MongoError(11000)
+          service-->>controller: AppError(409, "Email/Phone in use.")
+        else Success
+          repo-->>service: Updated Customer Entity
+          deactivate repo
+          service->>service: toCustomerDto(Customer)
+          service-->>controller: Customer DTO
+        end
+      end
+    end
+    deactivate service
 
-- The NIF (Tax Identification Number) is an optional piece of information, primarily collected for future invoicing purposes.
+    controller-->>manager: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![update-customer](./diagrams/update-customer.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`customers.dummy.repository.js`) and a Dummy Postal Code Validator, avoiding Mocking libraries entirely.
-- **Domain Tests (`customers.domain.test.js`):**
-  - `validatePhoneNumber validates strictly Portuguese formats`
-  - `normalizePhoneNumber returns the 9 national digits or null`
-  - `validateAddress relies securely on the injected validator`
-- **Application Tests (`customers.service.test.js`):**
-  - `updateCustomer applies partial changes and preserves existing data`
-  - `updateCustomer rejects a phone or email used by another customer`
-  - `createCustomer and updateCustomer turn an address mismatch into a 400 AppError`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `PATCH /api/v1/customers/:id`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Empty JSON payload -> `400 Bad Request` (Requires at least one field to update)
-  - Invalid ID format -> `400 Bad Request`
-  - Non-existent ID -> `404 Not Found`
-  - Postal code and city mismatch -> `400 Bad Request`
-  - Duplicate email or phone number -> `409 Conflict`
-  - Valid partial update or deactivation -> `200 OK`
+See the [README](./README.md) for the notation key and the element catalogue.

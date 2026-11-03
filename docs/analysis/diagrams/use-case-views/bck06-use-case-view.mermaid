@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+
+    subgraph BCK06 [BCK06: Pizza Size Management]
+        direction TB
+        UC1([UC1: Create Pizza Size])
+        UC2([UC2: List Pizza Sizes])
+        UC3([UC3: Get Pizza Size])
+        UC4([UC4: Update Pizza Size])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4

@@ -1,65 +1,97 @@
-# UC5: Update Predefined Pizza
+# UC5 - Update Predefined Pizza
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PUT /predefined-pizzas/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid id, body or configuration), 404 (predefined pizza not found or inactive) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to replace the Pizza Sizes and/or the default configuration of an active Predefined Pizza.
+## Description
 
-**Preconditions:**
+A Manager updates the sizes and/or the components of a predefined pizza. Fields that are not sent are taken from the stored pizza and the resulting configuration is validated again as a whole.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The Predefined Pizza must exist and be active.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC5 - Update Predefined Pizza - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PredefinedPizzaController<br/>[Component: Controller]
+        participant service as PredefinedPizzaService<br/>[Component: Service]
+        participant repo as PredefinedPizzaRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the Predefined Pizza and a payload with the new `sizeIds` and/or `componentIds`.
-2. The System validates the ID format and that the payload contains at least one field and no empty lists.
-3. The System finds the Predefined Pizza and verifies that it is active.
-4. The System keeps the stored value of the list that was not sent.
-5. The System revalidates the resulting configuration with the same rules as in the definition (repeated ids, active sizes, active components, Pizza Component Type limits and Component Size Configurations).
-6. The System replaces the stored lists with the new ones.
-7. The System returns the updated Predefined Pizza with a 200 OK status.
+    activate manager
 
-**Alternative Flows:**
+    manager->>route: PUT /predefined-pizzas/{id} {sizeIds?, componentIds?}
+    activate route
 
-- _Invalid ID, empty payload or empty lists:_ The System throws a 400 Bad Request error.
-- _Repeated ids or configuration that breaks a rule:_ The System throws a 400 Bad Request error.
-- _Predefined Pizza not found or already deactivated:_ The System throws a 404 Not Found error.
-- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    route->>route: verifyToken → requireRole(MANAGER) → validateId → Joi(at least one field)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>manager: 401 Unauthorized
+    else Role is not MANAGER
+      route-->>manager: 403 Forbidden
+    else Invalid ID format or body (e.g. empty body, empty list)
+      route-->>manager: 400 Bad Request
+    else Request accepted
+      route->>controller: update(req, res, next, repo)
+      activate controller
 
-- The Pizza Sizes and/or the default configuration of the Predefined Pizza are updated in the database.
+      controller->>service: updatePredefinedPizza(id, data, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findById(id)
+      activate repo
+      repo-->>service: PredefinedPizza (or null)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      alt Not found or inactive
+        service-->>controller: AppError("Predefined Pizza not found.", 404)
+      else Found
+        service->>service: sizeIds / componentIds not sent are taken from the stored pizza
+        service->>service: validateSizeIds + validateComponentIds [Domain]
 
-- Only the sizes and the default configuration can be changed; the product that represents the pizza cannot;
-- The lists sent replace the stored ones (they are not merged); the list that is not sent keeps its stored value;
-- Whenever sizes or components are sent, the configuration is revalidated with the same rules as in UC1;
-- At least one of `sizeIds`, `componentIds` or `isActive` must be sent;
-- Only users with the `MANAGER` role can update Predefined Pizzas.
+        alt Lists repeated ids
+          service-->>controller: AppError("Invalid Predefined Pizza: ...", 400)
+        else Lists valid
+          service->>repo: findSizesByIds + findProductsByIds + listComponentTypes
+          activate repo
+          repo-->>service: sizes, components, component types
+          deactivate repo
 
-## 2. Solution Design
+          service->>service: validatePredefinedPizza(...) [Domain]
 
-![UC10_5_Update_Predefined_Pizza](diagrams/update-predefined-pizza.svg)
+          alt Configuration invalid
+            service-->>controller: AppError("Invalid Predefined Pizza: ...", 400)
+          else Configuration valid
+            service->>repo: update(id, {sizeIds, defaultConfiguration})
+            activate repo
+            repo-->>service: PredefinedPizza entity (updated)
+            deactivate repo
 
-## 3. Business Test Planning
+            service->>service: toPredefinedPizzaDto(pizza)
+            service-->>controller: PredefinedPizzaDto
+          end
+        end
+      end
+      deactivate service
 
-- All unit tests use isolated in-memory Dummy Repositories (`predefined-pizzas.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Send a new valid list of components. Result: The default configuration is replaced and the sizes are kept.
-- **Scenario B:** Send a new valid list of sizes. Result: The sizes are replaced and the default configuration is kept.
-- **Scenario C:** Send a list that breaks a rule (e.g. no dough, or an inactive component). Result: Throws `AppError` (400 Bad Request).
-- **Scenario D:** Send an empty body. Result: Throws `AppError` (400 Bad Request).
-- **Scenario E:** Update a Predefined Pizza that does not exist. Result: Throws `AppError` (404 Not Found).
-- **Scenario F:** Request the update with the `EMPLOYEE` role. Result: The request is rejected (403 Forbidden) before reaching the service.
+      controller-->>manager: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-## 4. Postman E2E Tests
+    deactivate route
+    deactivate manager
+```
 
-- **Base Endpoint:** `PUT /api/v1/predefined-pizzas/{id}`
-- **Validated Scenarios:**
-  - New valid `componentIds` -> `200 OK` (Returns the updated Predefined Pizza)
-  - New valid `sizeIds` -> `200 OK`
-  - Invalid configuration (inactive component) -> `400 Bad Request`
-  - Empty body -> `400 Bad Request` (Blocked by Joi validation)
+See the [README](./README.md) for the notation key and the element catalogue.

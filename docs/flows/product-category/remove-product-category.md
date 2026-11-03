@@ -1,62 +1,69 @@
 # UC4 - Remove Product Category
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `DELETE /product-categories/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 204 No Content |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to update the name of an existing, active product category.
+## Description
 
-**Preconditions:**
+A Manager removes a product category. The service checks that no active product uses the category and then deactivates it (logical removal by setting isActive to false).
 
-- The user must be authenticated and have the `Manager` role.
-- The target category must exist and be active.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Remove Product Category - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductCategoriesController<br/>[Component: Controller]
+        participant service as ProductCategoriesService<br/>[Component: Service]
+        participant repo as ProductCategoriesRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant productsRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the category ID and a valid payload with the new name.
-2. The System validates the ID and payload.
-3. The System verifies that the category exists and is not removed/inactive.
-4. The System verifies that the new name follows the rules and is not already in use by another category (allows changing the case of its own name).
-5. The System updates the name and persists the changes.
-6. The System returns a 200 OK response with the updated data.
+    activate manager
+    manager->>route: DELETE /product-categories/{id}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Id (Joi)
+    route->>controller: remove(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: removeProductCategory(id, repo, productsRepo)
+    activate service
 
-- _Invalid ID or blank name:_ The System throws a 400 Bad Request error.
-- _Category not found:_ The System throws a 404 Not Found error.
-- _Category is already inactive/removed:_ The System throws a 409 Conflict error.
-- _Duplicate category name:_ The System throws a 409 Conflict error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: ProductCategory Entity (active)
+    deactivate repo
 
-**Postconditions:**
+    service->>productsRepo: existsByCategory(id)
+    activate productsRepo
+    productsRepo-->>service: false (no active products)
+    deactivate productsRepo
 
-- The product category is updated with the new name.
+    service->>repo: update(id, { isActive: false })
+    activate repo
+    repo-->>service: Removed ProductCategory Entity
+    deactivate repo
 
-## 1. Domain Assumptions
+    service-->>controller: void
+    deactivate service
 
-- The removal is logical: the category becomes inactive;
-- A category referenced by a product cannot be removed;
-- Only users with the `Manager` role are authorized to remove a product category.
+    controller-->>manager: Response (204 No Content)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![Remove Product Category Design](./diagrams/remove-product-category-design.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All aplication tests use dependency injection via isolated in-memory dummies (`product-categories.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`product-categories.service.test.js`):**
-  - `removeProductCategory disables a product category`
-  - `removeProductCategory throws 404 if category does not exist`
-  - `removeProductCategory throws 404 if the category is already inactive`
-  - `removeProductCategory throws 409 if an active product references the category`
-  - `removeProductCategory ignores inactive products`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `DELETE /api/v1/product-categories/{id}`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Category without products by `MANAGER` -> `204 No Content`
-  - Invalid ID -> `400 Bad Request` (Joi validation)
-  - Unknown category -> `404 Not Found`
-  - Category referenced by a product -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

@@ -1,0 +1,19 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+
+    subgraph BCK05 [BCK05: Product Management]
+        direction TB
+        UC1([UC1: Create Product])
+        UC2([UC2: List Products])
+        UC3([UC3: Get Product])
+        UC4([UC4: Update Product])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Employee -.->|<< read-only >>| UC2
+    Employee -.->|<< read-only >>| UC3

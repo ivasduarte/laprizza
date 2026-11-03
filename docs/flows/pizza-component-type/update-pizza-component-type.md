@@ -1,65 +1,71 @@
 # UC3 - Update Pizza Component Type
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PUT /pizza-component-type/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to update the details of an existing pizza component type, replacing its name, assembly order, and quantity limits.
+## Description
 
-**Preconditions:**
+A Manager updates a pizza component type. The domain normalizes and validates the input before the stored type is updated.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The pizza component type must exist and be active.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Update Pizza Component Type - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaComponentTypeController<br/>[Component: Controller]
+        participant service as PizzaComponentTypeService<br/>[Component: Service]
+        participant domain as PizzaComponentTypeDomain<br/>[Component: Domain]
+        participant repo as PizzaComponentTypeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the component type and a payload with the new values.
-2. The System validates the ID format and ensures the payload complies with domain rules (valid name format, valid integers, max >= min).
-3. The System verifies that the component type exists.
-4. The System verifies that the updated name and assembly order do not conflict with other active types.
-5. The System applies the changes to the database.
-6. The System returns the updated component type DTO with a 200 OK status.
+    activate manager
+    manager->>route: PUT /pizza-component-type/{id}<br/>{ name, assemblyOrder, minQuantity, maxQuantity }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Id & Payload (Joi)
+    route->>controller: update(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: updatePizzaComponentType(id, data, repo)
+    activate service
 
-- _Invalid payload or ID format:_ The System throws a 400 Bad Request error.
-- _Pizza component type not found or already removed:_ The System throws a 404 Not Found error (leaves it unchanged).
-- _Duplicate name or assembly order:_ The System throws a 409 Conflict error.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    service->>domain: normalizeName(name) & normalizeMaxQuantity(maxQuantity)
+    activate domain
+    domain-->>service: normalizedName, normalizedMaxQuantity
 
-**Postconditions:**
+    service->>domain: validateName, validateAssemblyOrder, validateMinQuantity,<br/>validateMaxQuantity & validateQuantityRange
+    domain-->>service: valid
+    deactivate domain
 
-- The pizza component type details are updated in the database.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: PizzaComponentType Entity (active)
 
-## 1. Domain Assumptions
+    service->>repo: update(id, typeData)
+    repo-->>service: Updated PizzaComponentType Entity
+    deactivate repo
 
-- The update may replace the name, the assembly order and the quantity limits;
-- The new values follow the sames rules as in the creation;
-- Only users with the `MANAGER` role are authorized to update a pizza component type.
+    service->>service: toPizzaComponentTypeDTO(PizzaComponentType)
+    service-->>controller: PizzaComponentType DTO
+    deactivate service
 
-## 2. Solution Design
+    controller-->>manager: Response (200 OK)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-![Update Pizza Component Type Design](./diagrams/update-pizza-component-type-design.svg)
-
-## 3. Business Test Planning
-
-- **Issolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`pizza-component-type.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`pizza-component-type.service.test.js`):**
-  - `updatePizzaComponentType changes all the properties`
-  - `updatePizzaComponentType keeps its own assembly order and allows changing only the case of its name`
-  - `updatePizzaComponentType rejects invalid data without changing the type`
-  - `updatePizzaComponentType returns 409 Conflict on duplicate name`
-  - `updatePizzaComponentType returns 409 Conflict on duplicate assembly order`
-  - `updatePizzaComponentType throws 404 if the type does not exist`
-  - `updatePizzaComponentType validates the data before looking for the type`
-  - `updatePizzaComponentType throws 404 for a removed type and leaves it unchanged`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `PUT /api/v1/pizza-component-type/{id}`
-- **Validated Scenarios:**
-  - Request with Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Valid payload by `MANAGER` -> `200 OK`
-  - Invalid id, empty body or maximum lower than minimum -> `400 Bad Request`
-  - Unknown type -> `404 Not Found`
-  - Name or assembly order of another type -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

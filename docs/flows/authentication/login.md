@@ -1,43 +1,71 @@
-# UC1: Authenticate User (Login)
+# UC1 - Login
 
-## Use Case View
-**Primary Actor:** System User <br>
-**Description:** Allows registered users to authenticate into the system to access protected operations.
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /auth/login` |
+| Allowed roles | Public (no authentication) |
+| Success response | 200 OK (JWT token) |
+| Error handling | 401 (invalid credentials) |
 
-**Preconditions:**
-* The user must have a registered and active account in the system.
+## Description
 
-**Main Success Scenario:**
-1. The User provides their identifier (email or username) and password.
-2. The System verifies the credentials against the records.
-3. The System validates that the account is active.
-4. The System generates and returns an authentication token (JWT).
+A user authenticates with an email or username and a password. The service verifies the password with Argon2 and issues a signed JWT. When the user does not exist or is inactive, a dummy Argon2 hash is computed to mitigate timing attacks, and the same generic error is returned for every failure.
 
-**Alternative Flows:**
-* *User not found or inactive:* The System performs a dummy hash validation (timing attack mitigation) and throws a 401 Unauthorized error.
-* *Invalid password:* The System throws a 401 Unauthorized error.
+## Diagram
 
-**Postconditions:**
-* The User receives a valid JWT token with a 35-minute expiration time, enabling access to protected endpoints based on their role.
+```mermaid
+---
+title: "UC1 - Login - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as User<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi)<br/>[Component: Router and middleware]
+        participant controller as AuthController<br/>[Component: Controller]
+        participant service as AuthService<br/>[Component: Service]
+        participant repo as UsersRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-## 1. Domain Assumptions
-* Authentication uses `Argon2` for password hashing verification;
-* Upon successful authentication, a JSON Web Token (JWT) is generated with a 35-minute expiration time;
-* A timing attack mitigation mechanism is implemented: if a user is not found or is inactive, the system performs a dummy `Argon2` hash calculation to maintain consistent response times.
+    activate user
 
-## 2. Solution Design
-![login](./diagrams/login.svg)
+    user->>route: POST /auth/login {identifier, password}
+    activate route
 
-## 3. Business Test Planning
-* All unit tests use isolated in-memory Dummy Repositories (`users.dummy.repository.js`). The Mockito library isn't used in this project.
-* **Scenario A:** Provide valid existing credentials. Result: A valid JWT token populated with the `userId` and `role`.
-* **Scenario B:** Provide incorrect password for an existing user. Result: Throws `AppError` (401 Unauthorized).
-* **Scenario C:** Provide an email that does not exist in the database. Result: System delays execution (dummy hash) and throws `AppError` (401 Unauthorized).
+    route->>route: Validate Payload
+    route->>controller: login(req, res, next)
+    activate controller
 
-## 4. Postman E2E Tests
+    controller->>service: login(credentials, repo)
+    activate service
 
-* **Base Endpoint:** `POST /api/v1/auth/login`
-* **Validated Scenarios:**
-    * Complete payload with valid credentials -> `200 OK` (Returns token)
-    * Missing identifier/password -> `400 Bad Request` (Blocked by Joi validation)
-    * Incorrect credentials -> `401 Unauthorized`
+    service->>repo: findByEmailOrUsername(identifier)
+    activate repo
+    repo-->>service: User Entity (or null)
+    deactivate repo
+
+    alt User not found or inactive
+      service->>service: perform dummy Argon2 hash (timing attack mitigation)
+      service-->>controller: AppError(401, "Invalid Credentials.")
+    else User found
+      service->>service: Argon2 verify(hash, password)
+
+      alt Invalid password
+        service-->>controller: AppError(401, "Invalid Credentials.")
+      else Valid password
+        service->>service: jwt.sign(payload, secret, 35m)
+        service-->>controller: token
+      end
+    end
+    deactivate service
+
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
+
+See the [README](./README.md) for the notation key and the element catalogue.

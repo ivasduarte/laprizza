@@ -1,54 +1,59 @@
-# UC2: List and Search Products
+# UC2 - List and Search Products
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /products?search={term}&categoryId={id}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | Not detailed (generic error response) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to list all products or search and filter products based on a search term, category, sellable status, and active status.
+## Description
 
-**Preconditions:**
+A Manager or Employee lists the products, optionally filtered by a search term, a category and other query parameters.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Products - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductsController<br/>[Component: Controller]
+        participant service as ProductsService<br/>[Component: Service]
+        participant repo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User requests the list of products, optionally providing query filters (search term, categoryId, sellable, isActive).
-2. The System validates the query parameters.
-3. The System queries the database for matching products, applying a case-insensitive partial match for the search term across names and descriptions.
-4. The System maps the found entities to DTOs.
-5. The System returns the list of products with a 200 OK status.
+    activate user
+    user->>route: GET /products?search={term}&categoryId={id}...
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
+    route->>route: Validate Query (Joi)
+    route->>controller: list(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: listProducts(query, repos)
+    activate service
 
-- _No matching products found:_ The System returns an empty list `[]` with a 200 OK status.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized error.
+    service->>repo: listProducts(query)
+    activate repo
+    repo-->>service: Product Entity[]
+    deactivate repo
 
-**Postconditions:**
+    service->>service: map(toProductDTO)
+    service-->>controller: Product DTO[]
 
-- None (Read-only operation).
+    deactivate service
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
 
-## 1. Domain Assumptions
-
-- The system allows listing all products or filtering them based on multiple criteria: a search term, `categoryId`, `isActive`, and `sellable` status.
-- The search term performs a case-insensitive partial match across the product's `name` and `description`.
-- Users with both `MANAGER` and `EMPLOYEE` roles can view and search the product list.
-
-## 2. Solution Design
-
-![list-search-product](./diagrams/list-search-product.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`products.service.test.js`):**
-  - `listProducts returns all products when no query is provided`
-  - `listProducts filters products by search term (name/description), categoryId, sellable, and isActive`
-  - `listProducts maps data to safe DTOs`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/products`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Valid request without filters by `MANAGER` or `EMPLOYEE` -> `200 OK` (Returns all products)
-  - Valid request with matching `search` or `categoryId` filters -> `200 OK` (Returns matched products)
-  - Valid request with non-matching filters -> `200 OK` (Returns `[]`)
+See the [README](./README.md) for the notation key and the element catalogue.

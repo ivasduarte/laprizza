@@ -1,0 +1,37 @@
+C4Deployment
+    title Level 2 Physical View - Sprint 2 Deployment Architecture
+    
+    Deployment_Node(client, "Client Device", "Desktop / Mobile") {
+        Deployment_Node(browser, "Web Browser", "Chrome, Firefox, Safari") {
+            Container(spa, "Web Application", "React, Vite", "Runs the SPA user interface.")
+            Container(viz3d, "3D Visualization", "WebGL, Three.js", "Renders the 3D kitchen layout.")
+        }
+    }
+    
+    Deployment_Node(web_server, "Frontend Hosting", "Linux / CDN") {
+         Container(static, "Static Content Server", "Nginx", "Serves compiled HTML/CSS/JS assets.")
+    }
+    
+    Deployment_Node(app_server, "Application Server", "Linux") {
+        Deployment_Node(node, "Node.js Environment", "Node.js v20+") {
+            Container(backend, "Back-End Application", "Node.js, Express", "Executes REST APIs and application logic.")
+        }
+    }
+    
+    Deployment_Node(ai_server, "AI Server", "Linux") {
+        Deployment_Node(prolog_env, "Prolog Runtime", "SWI-Prolog") {
+            Container(ai, "AI Module", "Prolog", "Executes BOM and Requirements Planning.")
+        }
+    }
+    
+    Deployment_Node(db_server, "Database Server", "Linux") {
+        Deployment_Node(mongoEnv, "MongoDB Instance", "MongoDB") {
+            ContainerDb(db, "Database", "MongoDB", "Stores all persistent operational data.")
+        }
+    }
+
+    Rel(spa, static, "Downloads assets", "HTTPS")
+    Rel(spa, backend, "Makes API calls", "JSON/HTTPS")
+    Rel(viz3d, backend, "Fetches 3D layouts", "JSON/HTTPS")
+    Rel(backend, ai, "Requests planning results", "JSON/HTTPS")
+    Rel(backend, db, "Reads/Writes", "Mongoose/TCP")

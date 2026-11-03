@@ -1,71 +1,96 @@
-# UC1: Create Product
+# UC1 - Create Product
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /products` |
+| Allowed roles | MANAGER |
+| Success response | 201 Created |
+| Error handling | 400 (sellable product without a valid price), 404 (referenced entity not found or inactive), 409 (product name already exists) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to create a new product in the system, optionally defining price, linking references (categories, allergens, component types), and initializing stock control.
+## Description
 
-**Preconditions:**
+A Manager creates a product. The domain validates the name and description, a sellable product needs a valid price, and the referenced categories, types and allergens must exist and be active. The name must be unique and, for stock-controlled products, an initial stock record with quantity 0 is created.
 
-- The user must be authenticated and have the `MANAGER` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC1 - Create Product - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductsController<br/>[Component: Controller]
+        participant service as ProductsService<br/>[Component: Service]
+        participant domain as ProductsDomain<br/>[Component: Domain]
+        participant otherRepos as OtherRepositories<br/>(Categories, Allergens, Types)<br/>[Component: Repository, MongoDB/Dummy]
+        participant repo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant stockRepo as StockRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides a valid payload for the new product.
-2. The System validates that the name and description are not empty.
-3. The System verifies that if the product is sellable, a valid price (>= 0) is defined.
-4. The System verifies that any referenced category, component type, and allergens exist and are active.
-5. The System verifies that the product name is unique.
-6. The System creates and saves the new product.
-7. If `stockControlled` is true, the System automatically creates a stock entry with `quantity: 0`.
-8. The System returns the newly created product details with a 201 Created status.
+    activate manager
+    manager->>route: POST /products<br/>{ name, description, sellable, stockControlled, categoryId... }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Payload (Joi)
+    route->>controller: create(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: createProduct(data, repos)
+    activate service
 
-- _Missing mandatory fields, negative price, or sellable without price:_ The System throws a 400 Bad Request error.
-- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
-- _Referenced category, allergen, or component type not found/inactive:_ The System throws a 404 Not Found error.
-- _Duplicate product name:_ The System throws a 409 Conflict error.
+    service->>domain: validateProductName & validateProductDescription
+    activate domain
+    domain-->>service: valid
+    deactivate domain
 
-**Postconditions:**
+    alt sellable is true but price is negative or missing
+      service-->>controller: AppError(400)
+    else Price valid
+      service->>otherRepos: validateReferences (Categories, Types, Allergens)
+      activate otherRepos
+      otherRepos-->>service: Entities (or null)
+      deactivate otherRepos
 
-- The new product is saved in the database.
-- A stock entry is initialized if stock control is enabled.
+      alt Referenced Entity Not Found / Inactive
+        service-->>controller: AppError(404)
+      else References valid
+        service->>repo: findByName(data.name)
+        activate repo
+        repo-->>service: Product Entity (or null)
+        deactivate repo
 
-## 1. Domain Assumptions
+        alt Duplicate Name
+          service-->>controller: AppError(409, "A product with this name already exists")
+        else Success
+          service->>repo: create(data)
+          activate repo
+          repo-->>service: New Product Entity
+          deactivate repo
 
-- Products must have a unique name.
-- The name and description are mandatory and cannot be empty (enforced by domain validation).
-- If a product is marked as `sellable: true`, it must have a valid `price` defined (greater than or equal to 0).
-- A product can be linked to a Product Category, a Pizza Component Type, and multiple Allergens. All referenced entities must exist and be active.
-- If a product is created with `stockControlled: true`, the system automatically initializes a Stock entry with `quantity: 0` for this product.
-- Only users with the `MANAGER` role are authorized to create a new product.
+          opt If stockControlled is true
+            service->>stockRepo: create({ productId, quantity: 0 })
+            activate stockRepo
+            stockRepo-->>service: Stock Entity
+            deactivate stockRepo
+          end
 
-## 2. Solution Design
+          service->>service: toProductDTO(Product)
+          service-->>controller: Product DTO
+        end
+      end
+    end
 
-![create-product](./diagrams/create-product.svg)
+    deactivate service
+    controller-->>manager: Response (201 Created or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`products.dummy.repository.js`, `product-categories.dummy.repository.js`, `allergen.dummy.repository.js`, `pizza-component-type.dummy.repository.js`, and `stock.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Domain Tests (`products.domain.test.js`):**
-  - `validateProductName rejects non-string or empty values`
-  - `validateProductDescription rejects non-string or empty values`
-- **Application Tests (`products.service.test.js`):**
-  - `createProduct enforces domain validations before saving`
-  - `createProduct verifies if referenced category, component type, and allergens exist and are active`
-  - `createProduct enforces price >= 0 if the product is sellable`
-  - `createProduct automatically creates a stock entry if stockControlled is true`
-  - `createProduct returns 409 Conflict on duplicate product name`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `POST /api/v1/products`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Valid payload by `MANAGER` -> `201 Created`
-  - Missing mandatory fields or negative price -> `400 Bad Request` (Joi validation)
-  - Sellable product without price -> `400 Bad Request` (Business rule)
-  - Referenced category/allergen/component type not found or inactive -> `404 Not Found`
-  - Duplicate product name -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

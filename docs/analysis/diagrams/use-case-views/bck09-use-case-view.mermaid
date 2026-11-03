@@ -1,0 +1,18 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+
+    subgraph BCK09 [BCK09: Stock Management]
+        direction TB
+        UC1([UC1: List Product Stock])
+        UC2([UC2: Get Product Stock])
+        UC3([UC3: Adjust Product Stock])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    
+    Employee --> UC1
+    Employee --> UC2
+    Employee --> UC3

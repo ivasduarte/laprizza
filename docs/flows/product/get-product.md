@@ -1,53 +1,63 @@
-# UC3: Get Product by ID
+# UC3 - Get Product
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /products/:id` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 404 (product not found) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to retrieve the details of a specific product by its unique ID.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults a single product by its id.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Get Product - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductsController<br/>[Component: Controller]
+        participant service as ProductsService<br/>[Component: Service]
+        participant repo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the ID of the target product.
-2. The System validates the MongoDB ObjectId format of the ID.
-3. The System searches the database for a product matching the ID.
-4. The System maps the entity to a DTO and returns it with a 200 OK status.
+    activate user
+    user->>route: GET /products/:id
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
+    route->>route: Validate Object ID (Joi)
+    route->>controller: getById(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: getProductById(id, repos)
+    activate service
 
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Product not found:_ The System throws a 404 Not Found error.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: Product Entity (or null)
+    deactivate repo
 
-**Postconditions:**
+    alt Product Not Found
+      service-->>controller: AppError(404)
+    else Product Found
+      service->>service: toProductDTO(Product)
+      service-->>controller: Product DTO
+    end
 
-- None (Read-only operation).
+    deactivate service
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
 
-## 1. Domain Assumptions
-
-- Products can be queried individually by their unique ID.
-- The ID must conform to the MongoDB ObjectId format.
-- Users with both `MANAGER` and `EMPLOYEE` roles can view product details.
-
-## 2. Solution Design
-
-![get-product](./diagrams/get-product.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`products.service.test.js`):**
-  - `getProductById returns correct product DTO`
-  - `getProductById throws 404 AppError if product does not exist`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/products/:id`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with invalid ID format -> `400 Bad Request` (Joi CastError prevention)
-  - Request with non-existent ID -> `404 Not Found`
-  - Request with valid ID by `MANAGER` or `EMPLOYEE` -> `200 OK` (Returns product DTO)
+See the [README](./README.md) for the notation key and the element catalogue.

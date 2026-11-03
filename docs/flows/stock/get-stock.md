@@ -1,62 +1,78 @@
-# UC2: Get Stock by Product ID
+# UC2 - Get Stock
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /stock/:productId` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 404 (product not found), 400 (product not stock-controlled) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated manager or employee to query the stock level of an individual stock-controlled product.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults the stock of a stock-controlled product. If the product has no stock record yet, one is created with quantity 0 before the stock is returned.
 
-- The user must be authenticated with the `MANAGER` or `EMPLOYEE` role.
-- The requested product must exist and be stock-controlled.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - Get Stock - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as StockController<br/>[Component: Controller]
+        participant service as StockService<br/>[Component: Service]
+        participant prodRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant repo as StockRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The user provides a product ID.
-2. The System validates the MongoDB ObjectId format.
-3. The System verifies the product exists and is designated as stock-controlled.
-4. The System retrieves the stock record.
-5. If no stock record exists yet, the System auto-initializes a new record with `quantity: 0`.
-6. The System returns the stock details via a DTO with a 200 OK status.
+    activate user
+    user->>route: GET /stock/:productId
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
+    route->>route: Validate Object ID (Joi)
+    route->>controller: getByProductId(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: getStockByProductId(productId, repos)
+    activate service
 
-- _Invalid Product ID format or not stock-controlled:_ The System returns a 400 Bad Request error.
-- _Non-existent Product ID:_ The System returns a 404 Not Found error.
-- _Unauthorized user (`CUSTOMER` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
+    service->>prodRepo: findById(productId)
+    activate prodRepo
+    prodRepo-->>service: Product Entity (or null)
+    deactivate prodRepo
 
-**Postconditions:**
+    alt Product Not Found
+      service-->>controller: AppError(404)
+    else Product Not Stock-Controlled
+      service-->>controller: AppError(400)
+    else Valid Product
+      service->>repo: findByProductId(productId)
+      activate repo
+      repo-->>service: Stock Entity (or null)
+      deactivate repo
 
-- If the stock record was missing, it is created with a zero quantity.
+      opt Stock Entity is null
+        service->>repo: create({ productId, quantity: 0 })
+        activate repo
+        repo-->>service: New Stock Entity
+        deactivate repo
+      end
 
-## 1. Domain Assumptions
+      service->>service: toStockDTO(Stock)
+      service-->>controller: Stock DTO
+    end
 
-- Stock is queried individually by its associated `productId`.
-- The Product must exist and must be designated as `stockControlled: true`.
-- **Auto-initialization:** If the product is stock-controlled but a stock record does not yet exist in the database, a new record with `quantity: 0` is automatically created and returned.
-- The ID must conform to the MongoDB ObjectId format.
-- Users with both `MANAGER` and `EMPLOYEE` roles can view stock details.
+    deactivate service
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
 
-## 2. Solution Design
-
-![get-stock](./diagrams/get-stock.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`stock.dummy.repository.js` and `products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`stock.service.test.js`):**
-  - `getStockByProductId returns the stock record for a valid stock-controlled product`
-  - `getStockByProductId throws 404 AppError if the product does not exist`
-  - `getStockByProductId throws 400 AppError if the product is not stock-controlled`
-  - `getStockByProductId auto-creates a stock record with 0 quantity if it does not exist yet`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/stock/:productId`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `CUSTOMER` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Request with invalid Product ID format -> `400 Bad Request` (Joi CastError prevention)
-  - Request for a product that is not stock-controlled -> `400 Bad Request`
-  - Request for a non-existent Product ID -> `404 Not Found`
-  - Request for a valid stock-controlled Product ID -> `200 OK` (Returns stock DTO)
+See the [README](./README.md) for the notation key and the element catalogue.

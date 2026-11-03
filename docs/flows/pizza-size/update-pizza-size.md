@@ -1,71 +1,96 @@
-# UC4: Update and Deactivate Pizza Size
+# UC4 - Update Pizza Size
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PATCH /pizza-size/:id` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | 404 (pizza size not found), 409 (size in use or name already in use), 400 (invalid name) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to partially update a pizza size's details (like its name) or logically deactivate it, provided it is not in use.
+## Description
 
-**Preconditions:**
+A Manager partially updates a pizza size. Deactivating a size is rejected while product size configurations still use it, a new name is validated by the domain and a duplicated name results in a conflict error.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The pizza size must exist.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Update Pizza Size - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaSizeController<br/>[Component: Controller]
+        participant service as PizzaSizeService<br/>[Component: Service]
+        participant domain as PizzaSizeDomain<br/>[Component: Domain]
+        participant prodRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant repo as PizzaSizeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the pizza size and a payload containing the fields to update.
-2. The System validates the ID format and ensures the payload contains at least one field.
-3. The System finds the targeted pizza size in the database.
-4. If `isActive` is being set to `false`, the System verifies that the size is not used by any product's component size configuration.
-5. If the name is updated, the System enforces domain validation and ensures the new name is unique.
-6. The System successfully applies partial changes or deactivates the pizza size.
-7. The System returns the updated pizza size DTO with a 200 OK status.
+    activate manager
+    manager->>route: PATCH /pizza-size/:id { ...updates }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Object ID & Payload (Joi)
+    route->>controller: update(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: updateSize(id, data, repo, prodRepo)
+    activate service
 
-- _Invalid ID or empty payload:_ The System throws a 400 Bad Request error.
-- _Pizza size not found:_ The System throws a 404 Not Found error.
-- _Deactivation rule violation (attempting to set `isActive: false` while in use by products):_ The System throws a 409 Conflict error.
-- _Duplicate pizza size name:_ The System throws a 409 Conflict error.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: PizzaSize Entity (or null)
+    deactivate repo
 
-**Postconditions:**
+    alt Pizza Size Not Found
+      service-->>controller: AppError(404)
+    else Pizza Size Found
+      opt If isActive is being set to false
+        service->>prodRepo: existsWithSizeConfigurationForPizzaSize(id)
+        activate prodRepo
+        prodRepo-->>service: boolean
+        deactivate prodRepo
+      end
 
-- The pizza size details are updated or it is deactivated in the database.
+      alt Is in use (deactivation attempted)
+        service-->>controller: AppError(409, "Pizza size has size configurations...")
+      else Validation Passed
+        opt If name is being updated
+          service->>domain: validatePizzaSize(data.name)
+          activate domain
+          domain-->>service: normalizedName / DomainError
+          deactivate domain
+        end
 
-## 1. Domain Assumptions
+        alt Domain Validation Failed
+          service-->>controller: AppError(400)
+        else Update allowed
+          service->>repo: update(id, mappedData)
+          activate repo
+          alt Duplicate Name
+            repo-->>service: MongoError(11000)
+            service-->>controller: AppError(409, "Pizza size already in use.")
+          else Success
+            repo-->>service: Updated PizzaSize Entity
+            deactivate repo
+            service->>service: toSizeDto(PizzaSize)
+            service-->>controller: PizzaSize DTO
+          end
+        end
+      end
+    end
+    deactivate service
 
-- Pizza sizes can be partially updated (e.g., renaming);
-- Pizza sizes can be logically deleted (deactivated) by setting `isActive: false`;
-- **Crucial Rule:** A pizza size cannot be deactivated if it is currently in use by any product's component size configuration. This prevents compromising existing business information;
-- Updating the name requires the new name to be unique and domain-validated;
-- Only users with the `MANAGER` role can update pizza sizes.
+    controller-->>manager: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![update pizza size](./diagrams/update-pizza-size.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`pizza-size.dummy.repository.js` and `products.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Domain Tests (`pizza-size.domain.test.js`):**
-  - `validatePizzaSize rejects invalid data types and formats`
-  - `validatePizzaSize accepts valid strings`
-- **Application Tests (`pizza-size.service.test.js`):**
-  - `updateSize modifies partial data safely`
-  - `updateSize refuses to deactivate a size used by a size configuration`
-  - `updateSize deactivates a size when only other sizes are used by configurations`
-  - `updateSize still allows renaming a size used by a size configuration`
-  - `updateSize throws 404 for unknown IDs and 409 for duplicate names`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `PATCH /api/v1/pizza-size/:id`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Empty JSON payload -> `400 Bad Request` (Requires at least one field to update)
-  - Invalid ID format -> `400 Bad Request`
-  - Non-existent ID -> `404 Not Found`
-  - Duplicate name -> `409 Conflict`
-  - Deactivation when in use by size configurations -> `409 Conflict`
-  - Valid partial update or deactivation -> `200 OK`
+See the [README](./README.md) for the notation key and the element catalogue.

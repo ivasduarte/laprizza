@@ -1,59 +1,83 @@
-# UC6: Deactivate Predefined Pizza
+# UC6 - Deactivate Predefined Pizza
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PUT /predefined-pizzas/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid id, body or isActive not false), 404 (predefined pizza not found or already inactive) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to logically deactivate an active Predefined Pizza.
+## Description
 
-**Preconditions:**
+A Manager deactivates a predefined pizza. Only deactivation is supported (isActive must be false) and the pizza must exist and still be active.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The Predefined Pizza must exist and be active.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC6 - Deactivate Predefined Pizza - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PredefinedPizzaController<br/>[Component: Controller]
+        participant service as PredefinedPizzaService<br/>[Component: Service]
+        participant repo as PredefinedPizzaRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the Predefined Pizza and a payload `{ "isActive": false }`.
-2. The System validates the ID format and that the payload only accepts `isActive` as `false`.
-3. The System finds the Predefined Pizza and verifies that it is active.
-4. The System sets the Predefined Pizza as inactive, without changing the product or the components.
-5. The System returns the Predefined Pizza with `isActive: false` and a 200 OK status.
+    activate manager
 
-**Alternative Flows:**
+    manager->>route: PUT /predefined-pizzas/{id} {isActive: false}
+    activate route
 
-- _Invalid ID, `isActive: true` or any other value:_ The System throws a 400 Bad Request error.
-- _Predefined Pizza not found or already deactivated:_ The System throws a 404 Not Found error.
-- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    route->>route: verifyToken → requireRole(MANAGER) → validateId → Joi(isActive must be false)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>manager: 401 Unauthorized
+    else Role is not MANAGER
+      route-->>manager: 403 Forbidden
+    else Invalid ID format or body (e.g. {isActive: true})
+      route-->>manager: 400 Bad Request
+    else Request accepted
+      route->>controller: update(req, res, next, repo)
+      activate controller
 
-- The Predefined Pizza is logically deactivated in the database and can no longer be listed or consulted.
+      controller->>service: updatePredefinedPizza(id, data, repo)
+      activate service
 
-## 1. Domain Assumptions
+      alt isActive is not false (defensive re-check)
+        service-->>controller: AppError("Only deactivation is supported: isActive must be false.", 400)
+      else isActive is false
+        service->>repo: findById(id)
+        activate repo
+        repo-->>service: PredefinedPizza (or null)
+        deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+        alt Not found or already inactive
+          service-->>controller: AppError("Predefined Pizza not found.", 404)
+        else Found
+          service->>repo: update(id, {isActive: false})
+          activate repo
+          repo-->>service: PredefinedPizza entity (inactive)
+          deactivate repo
 
-- Predefined Pizzas are never deleted, only deactivated; a deactivated one cannot be reactivated;
-- Only `{ "isActive": false }` is accepted as a deactivation; any other value of `isActive` is rejected;
-- Deactivating does not change the product or the components, and the deactivation is not blocked by any reference check;
-- Only users with the `MANAGER` role can deactivate Predefined Pizzas.
+          service->>service: toPredefinedPizzaDto(pizza)
+          service-->>controller: PredefinedPizzaDto {isActive: false}
+        end
+      end
+      deactivate service
 
-## 2. Solution Design
+      controller-->>manager: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-![UC6_Deactivate_Predefined_Pizza](diagrams/deactivate-predefined-pizza.svg)
+    deactivate route
+    deactivate manager
+```
 
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`predefined-pizzas.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Deactivate an active Predefined Pizza. Result: The Predefined Pizza is returned with `isActive: false` and is no longer returned by the list or by the consultations.
-- **Scenario B:** Send `isActive: true`. Result: Throws `AppError` (400 Bad Request, only deactivation is supported).
-- **Scenario C:** Deactivate a Predefined Pizza that does not exist. Result: Throws `AppError` (404 Not Found).
-- **Scenario D:** Request the deactivation with the `EMPLOYEE` role. Result: The request is rejected (403 Forbidden) before reaching the service.
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `PUT /api/v1/predefined-pizzas/{id}`
-- **Validated Scenarios:**
-  - `{ "isActive": false }` -> `200 OK` (Returns the Predefined Pizza with `isActive: false`)
-  - `{ "isActive": true }` -> `400 Bad Request` (Blocked by Joi validation)
-  - Get by id and get by name after the deactivation -> `404 Not Found`
-  - `EMPLOYEE` role -> `403 Forbidden`
+See the [README](./README.md) for the notation key and the element catalogue.

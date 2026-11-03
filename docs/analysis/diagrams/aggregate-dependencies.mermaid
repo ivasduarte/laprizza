@@ -1,0 +1,43 @@
+flowchart TD
+    subgraph users [Users]
+        User
+        Role
+    end
+    subgraph customers [Customers]
+        Customer
+        Address
+        DietaryRestriction
+    end
+    subgraph prod [Product]
+        Product
+        ProductCategory
+        Allergen
+    end
+    subgraph stock [Stock]
+        StockInformation
+    end
+    subgraph pizza [Pizza]
+        PizzaSize
+        PizzaComponentType
+        PredefinedPizza
+        PizzaConfiguration
+        ComponentSizeConfiguration
+    end
+    subgraph order [Order]
+        Order
+        OrderItem
+    end
+    subgraph kitchen [Kitchen]
+        PreparationActivity
+        KitchenResource
+    end
+
+    customers -->|via DietaryRestriction| prod
+    prod -->|may maintain| stock
+    prod -->|may be a component of| pizza
+    pizza -->|represented by| prod
+    order -->|placed by| customers
+    order -->|catalogue product or configuration| prod
+    order -->|may preserve a configuration| pizza
+    order -->|may require resources| kitchen
+    customers -.-> users

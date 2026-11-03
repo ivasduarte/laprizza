@@ -1,0 +1,59 @@
+---
+title: High-Level Component & Connector (C&C) View
+---
+flowchart LR
+    %% Provided Interfaces (Ports / Lollipops)
+    IAuth((Auth API))
+    IUser((Users API))
+    ICust((Customers API))
+    ICat((Categories API))
+    IProd((Products API))
+    IPizza((Pizza API))
+    IStock((Stock API))
+    ICatalog((Catalogue API))
+    IPlan((Planning API))
+    
+    %% Backend Providers
+    subgraph Backend [Back-End Application]
+        direction TB
+        AuthMod[Auth Module]
+        UsersMod[Users & Customers Module]
+        ProdMod[Products Module]
+        PizzaMod[Pizza Module]
+        StockMod[Stock Module]
+    end
+    
+    %% AI Provider
+    subgraph AIEnv [AI Environment]
+        AIMod[AI Prolog Module]
+    end
+    
+    %% Interface Provision (Lollipop notation: ---o )
+    AuthMod ---o IAuth
+    UsersMod ---o IUser
+    UsersMod ---o ICust
+    ProdMod ---o ICat
+    ProdMod ---o IProd
+    ProdMod ---o ICatalog
+    PizzaMod ---o IPizza
+    StockMod ---o IStock
+    AIMod ---o IPlan
+    
+    %% Consumers
+    WebApp[Web Application]
+    Viz3D[3D Visualization Module]
+    
+    %% Required Interfaces (Socket notation: -.-> )
+    WebApp -.->|requires| IAuth
+    WebApp -.->|requires| IUser
+    WebApp -.->|requires| ICust
+    WebApp -.->|requires| ICat
+    WebApp -.->|requires| IProd
+    WebApp -.->|requires| IPizza
+    WebApp -.->|requires| IStock
+    WebApp -.->|requires| ICatalog
+    
+    Viz3D -.->|requires| IPizza
+    
+    %% Backend consuming AI
+    Backend -.->|requires| IPlan

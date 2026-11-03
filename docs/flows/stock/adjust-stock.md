@@ -1,75 +1,103 @@
-# UC3: Adjust Stock
+# UC3 - Adjust Stock
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PATCH /stock/:productId` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 404 (product not found), 400 (product not stock-controlled, invalid amount or negative resulting quantity) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated manager or employee to increase or decrease the stock quantity of a stock-controlled product by a strictly positive integer amount.
+## Description
 
-**Preconditions:**
+A Manager or Employee increases or decreases the stock of a stock-controlled product. The stock record is created on first use and an operation that would leave a negative quantity is rejected.
 
-- The user must be authenticated with the `MANAGER` or `EMPLOYEE` role.
-- The specified product must exist and have `stockControlled: true`.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Adjust Stock - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as StockController<br/>[Component: Controller]
+        participant service as StockService<br/>[Component: Service]
+        participant domain as StockDomain<br/>[Component: Domain]
+        participant prodRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant repo as StockRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The user provides a product ID, an adjustment operation (`increase` or `decrease`), and an amount.
-2. The System validates that the amount is a strictly positive integer (> 0).
-3. The System verifies the product exists and is stock-controlled.
-4. The System fetches the current stock record, auto-creating one with `quantity: 0` if it is missing.
-5. The System calculates the new quantity, ensuring a `decrease` operation does not result in a negative stock value.
-6. The System updates the stock record and returns a 200 OK status.
+    activate user
+    user->>route: PATCH /stock/:productId { amount, operation }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
+    route->>route: Validate Object ID & Payload (Joi)
+    route->>controller: adjustStock(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: adjustStock(productId, amount, operation, repos)
+    activate service
 
-- _Missing/invalid fields, non-positive amount, or invalid operation:_ The System returns a 400 Bad Request error.
-- _Decrease resulting in negative stock:_ The System returns a 400 Bad Request error.
-- _Product is not stock-controlled:_ The System returns a 400 Bad Request error.
-- _Non-existent product ID:_ The System returns a 404 Not Found error.
-- _Unauthorized user (`CUSTOMER` or no token):_ The System returns a 401 Unauthorized or 403 Forbidden error.
+    service->>prodRepo: findById(productId)
+    activate prodRepo
+    prodRepo-->>service: Product Entity (or null)
+    deactivate prodRepo
 
-**Postconditions:**
+    alt Product Not Found
+      service-->>controller: AppError(404)
+    else Product Not Stock-Controlled
+      service-->>controller: AppError(400)
+    else Valid Product
+      service->>domain: validateStockChange(amount)
+      activate domain
+      domain-->>service: validAmount / DomainError
+      deactivate domain
 
-- The product's stock quantity is updated in the database.
+      alt Domain Validation Failed
+        service-->>controller: AppError(400)
+      else Amount valid
+        service->>repo: findByProductId(productId)
+        activate repo
+        repo-->>service: Stock Entity (or null)
+        deactivate repo
 
-## 1. Domain Assumptions
+        opt Stock Entity is null
+          service->>repo: create({ productId, quantity: 0 })
+          activate repo
+          repo-->>service: New Stock Entity
+          deactivate repo
+        end
 
-- The stock of a product can be adjusted using an `increase` or `decrease` operation.
-- The `amount` provided must be a strictly positive integer (> 0).
-- A `decrease` operation cannot result in a negative stock quantity.
-- The Product must exist and must be designated as `stockControlled: true`.
-- **Auto-initialization:** Similar to querying, if the stock record does not exist yet, it is created with `quantity: 0` before applying the adjustment operation.
-- Users with both `MANAGER` and `EMPLOYEE` roles are authorized to adjust stock.
+        alt operation is increase
+          service->>service: newQuantity = quantity + amount
+        else operation is decrease
+          service->>service: newQuantity = quantity - amount
+        end
 
-## 2. Solution Design
+        alt newQuantity is below 0
+          service-->>controller: AppError(400, "Cannot result in negative quantity")
+        else Success
+          service->>repo: updateQuantity(productId, newQuantity)
+          activate repo
+          repo-->>service: Updated Stock Entity
+          deactivate repo
 
-![adjust-stock](./diagrams/adjust-stock.svg)
+          service->>service: toStockDTO(Stock)
+          service-->>controller: Stock DTO
+        end
+      end
+    end
+    deactivate service
 
-## 3. Business Test Planning
+    controller-->>user: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate user
+```
 
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies, avoiding Mocking libraries entirely.
-- **Domain Tests (`stock.domain.test.js`):**
-  - `validateStockChange rejects negative amounts, zero, decimals, and non-numbers`
-  - `validateStockChange accepts strictly positive integers`
-  - `validateStockQuantity rejects negative integers and accepts non-negative integers`
-- **Application Tests (`stock.service.test.js`):**
-  - `adjustStock successfully increases stock quantity`
-  - `adjustStock successfully decreases stock quantity`
-  - `adjustStock throws 400 AppError if a decrease results in a negative quantity`
-  - `adjustStock throws 400 AppError if the product is not stock-controlled`
-  - `adjustStock throws 404 AppError if the product does not exist`
-  - `adjustStock auto-creates a stock record before applying the adjustment if missing`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `PATCH /api/v1/stock/:productId`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `CUSTOMER` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Empty payload or missing `amount`/`operation` -> `400 Bad Request` (Joi validation)
-  - Invalid `operation` string (e.g., 'add') -> `400 Bad Request`
-  - Negative or zero `amount` -> `400 Bad Request`
-  - Invalid Product ID format -> `400 Bad Request`
-  - Adjustment resulting in negative stock -> `400 Bad Request`
-  - Product not stock-controlled -> `400 Bad Request`
-  - Non-existent Product ID -> `404 Not Found`
-  - Valid `increase` or `decrease` operation -> `200 OK`
+See the [README](./README.md) for the notation key and the element catalogue.

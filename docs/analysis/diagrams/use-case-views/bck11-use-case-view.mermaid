@@ -1,0 +1,19 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+    Customer([Customer])
+
+    subgraph BCK11 [BCK11: Product Catalogue and Product Information]
+        direction TB
+        UC1([UC1: List Product Catalogue])
+        UC2([UC2: Get Catalogue Item])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    
+    Employee --> UC1
+    Employee --> UC2
+    
+    Customer --> UC1
+    Customer --> UC2

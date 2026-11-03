@@ -1,53 +1,74 @@
-# UC3: Consult Allergen by ID
+# UC3 - Consult Allergen by ID
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /allergens/{id}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid id format), 404 (allergen not found or inactive) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to retrieve the details of a specific active allergen by its unique ID.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults a single active allergen by its id. The route rejects invalid tokens, roles and id formats before the service looks the allergen up.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Consult Allergen by ID - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as AllergenController<br/>[Component: Controller]
+        participant service as AllergenService<br/>[Component: Service]
+        participant repo as AllergenRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the ID of the target allergen.
-2. The System validates the 24-character hexadecimal format of the ID.
-3. The System searches for an active allergen matching the ID.
-4. The System returns the allergen details with a 200 OK status.
+    activate user
 
-**Alternative Flows:**
+    user->>route: GET /allergens/{id}
+    activate route
 
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Allergen not found or deactivated:_ The System throws a 404 Not Found error.
+    route->>route: verifyToken → requireRole(MANAGER, EMPLOYEE) → validateId (24-char hex)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>user: 401 Unauthorized
+    else Role not allowed
+      route-->>user: 403 Forbidden
+    else Invalid ID format
+      route-->>user: 400 Bad Request ("Invalid ID format")
+    else Request accepted
+      route->>controller: getById(req, res, next, repo)
+      activate controller
 
-- None (Read-only operation).
+      controller->>service: getAllergenById(id, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findById(id)
+      activate repo
+      repo-->>service: Allergen (or null)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      alt Not found or inactive
+        service-->>controller: AppError("Allergen not found.", 404)
+      else Found
+        service->>service: toAllergenDto(allergen)
+        service-->>controller: AllergenDto {id, name, isActive}
+      end
+      deactivate service
 
-- The allergen identifier is a 24-character hexadecimal string (MongoDB ObjectId);
-- A deactivated allergen is treated as if it did not exist (404 Not Found).
+      controller-->>user: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-## 2. Solution Design
+    deactivate route
+    deactivate user
+```
 
-![UC3_Consult_Allergen_by_ID](diagrams/consult-allergen-by-id.svg)
-
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`allergens.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Provide the id of an existing active allergen. Result: The allergen is returned as `{ id, name, isActive }`.
-- **Scenario B:** Provide the id of an allergen that was deactivated. Result: Throws `AppError` (404 Not Found).
-- **Scenario C:** Provide an id that does not exist. Result: Throws `AppError` (404 Not Found).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/allergens/{id}`
-- **Validated Scenarios:**
-  - Existing id -> `200 OK` (Returns the allergen)
-  - Id with an invalid format -> `400 Bad Request` (Blocked by id validation)
-  - Unknown id -> `404 Not Found`
-  - Id of a deactivated allergen -> `404 Not Found`
+See the [README](./README.md) for the notation key and the element catalogue.

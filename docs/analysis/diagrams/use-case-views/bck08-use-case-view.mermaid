@@ -1,0 +1,18 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+
+    subgraph BCK08 [BCK08: Pizza Component Configuration]
+        direction TB
+        UC1([UC1: Create Pizza Component Configuration])
+        UC2([UC2: List Pizza Component Configurations])
+        UC3([UC3: Update Pizza Component Configuration])
+        UC4([UC4: Remove Pizza Component Configuration])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Employee -.->|<< read-only >>| UC2

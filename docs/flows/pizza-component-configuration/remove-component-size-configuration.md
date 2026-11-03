@@ -1,60 +1,70 @@
 # UC4 - Remove Component Size Configuration
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `DELETE /products/{productId}/size-configurations/{sizeId}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to remove a Component Size Configuration, freeing the pizza size to be configured again for the product.
+## Description
 
-**Preconditions:**
+A Manager removes the configuration of a given pizza size from a product component. The removed configuration is returned.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The product and the configuration must exist.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Remove Component Size Configuration - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ComponentSizeConfigurationController<br/>[Component: Controller]
+        participant service as ComponentSizeConfigurationService<br/>[Component: Service]
+        participant domain as ComponentSizeConfigurationDomain<br/>[Component: Domain]
+        participant productsRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the product ID and pizza size ID to be removed.
-2. The System validates the ID formats.
-3. The System finds the product and retrieves the specific size configuration (works even if the product is inactive).
-4. The System removes the size configuration from the product.
-5. The System returns the removed configuration details with a 200 OK status.
+    activate manager
+    manager->>route: DELETE /products/{productId}/size-configurations/{sizeId}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Ids (Joi)
+    route->>controller: remove(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: removeComponentSizeConfiguration(productId, sizeId, repositories)
+    activate service
 
-- _Invalid IDs:_ The System returns a 400 Bad Request error.
-- _Unauthorized user:_ The System returns a 401 Unauthorized or 403 Forbidden error.
-- _Product or configuration not found (or disappeared):_ The System returns a 404 Not Found error.
+    service->>productsRepo: findById(productId)
+    activate productsRepo
+    productsRepo-->>service: Product Entity
+    deactivate productsRepo
 
-**Postconditions:**
+    service->>domain: findSizeConfiguration(product, sizeId)
+    activate domain
+    domain-->>service: ComponentSizeConfiguration
+    deactivate domain
 
-- The configuration is removed from the database, and the pizza size can be used again for a new configuration on this product.
+    service->>productsRepo: removeSizeConfiguration(productId, sizeId)
+    activate productsRepo
+    productsRepo-->>service: Updated Product Entity
+    deactivate productsRepo
 
-## 1. Domain Assumptions
+    service->>service: toComponentSizeConfigurationDTO(productId, configuration)
+    service-->>controller: Removed ComponentSizeConfiguration DTO
+    deactivate service
 
-- After the removal, the pizza size is free to be configured again for the product;
-- A product that has Component Size Configurations cannot be deactivated, and neither can a pizza size that is used in the configurations of any product;
-- Only users with the `MANAGER` role are authorized to remove a Component Size Configuration.
+    controller-->>manager: Response (200 OK)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![Remove Component Size Configuration Design](./diagrams/remove-component-size-configuration-design.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`products.dummy.repository.js` and `pizza-size.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`component-size-configuration.service.tests.js`):**
-  - `removeComponentSizeConfiguration removes the configuration and returns it`
-  - `removeComponentSizeConfiguration also works for an inactive product`
-  - `removeComponentSizeConfiguration throws 404 if the product or the configuration does not exist`
-  - `removeComponentSizeConfiguration throws 404 if the configuration was already removed`
-  - `removeComponentSizeConfiguration throws 404 if the configuration disappeared in the meantime`
-  - `removing a configuration frees the pizza size to be configured again`
-
-## 4.E2E Tests
-
-- **Base Endpoint:** `DELETE /api/v1/products/{productId}/size-configurations/{sizeId}`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Valid payload by `MANAGER` -> `200 OK`
-  - Invalid ids -> `400 Bad Request`
-  - Unknown product or unconfigured pizza size -> `404 Not Found`
+See the [README](./README.md) for the notation key and the element catalogue.

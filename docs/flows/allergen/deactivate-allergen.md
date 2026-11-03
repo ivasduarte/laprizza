@@ -1,64 +1,93 @@
-# UC5: Deactivate Allergen
+# UC5 - Deactivate Allergen
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PUT /allergens/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid id, body or isActive not false), 404 (allergen not found or already inactive), 409 (allergen still referenced) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to logically deactivate an existing allergen, provided it is not referenced by any products or customers.
+## Description
 
-**Preconditions:**
+A Manager deactivates an allergen. Only deactivation is supported (isActive must be false) and an allergen that is still referenced by products or by customer dietary restrictions cannot be deactivated.
 
-- The user must be authenticated and have the `MANAGER` role.
-- The targeted allergen must exist, be active, and not be referenced by products or customer dietary restrictions.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC5 - Deactivate Allergen - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as AllergenController<br/>[Component: Controller]
+        participant service as AllergenService<br/>[Component: Service]
+        participant repo as AllergenRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the allergen and a payload specifying `{ "isActive": false }`.
-2. The System validates the ID format and ensures the payload strictly matches the deactivation command.
-3. The System verifies the allergen exists and is currently active.
-4. The System checks if the allergen is referenced by any product or customer.
-5. The System updates the allergen's status to inactive.
-6. The System returns the updated allergen details with a 200 OK status.
+    activate manager
 
-**Alternative Flows:**
+    manager->>route: PUT /allergens/{id} {isActive: false}
+    activate route
 
-- _Invalid ID, invalid payload, or attempting renaming/reactivation:_ The System throws a 400 Bad Request error.
-- _Allergen not found or already inactive:_ The System throws a 404 Not Found error.
-- _Allergen is referenced by products or customers:_ The System throws a 409 Conflict error.
+    route->>route: verifyToken → requireRole(MANAGER) → validateId → Joi(isActive must be false)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>manager: 401 Unauthorized
+    else Role is not MANAGER
+      route-->>manager: 403 Forbidden
+    else Invalid ID format or body (e.g. {name} or {isActive: true})
+      route-->>manager: 400 Bad Request
+    else Request accepted
+      route->>controller: update(req, res, next, repo)
+      activate controller
 
-- The targeted allergen is logically deactivated in the database.
+      controller->>service: updateAllergen(id, data, repo)
+      activate service
 
-## 1. Domain Assumptions
+      alt isActive is not false (defensive re-check)
+        service-->>controller: AppError("Only deactivation is supported: isActive must be false.", 400)
+      else isActive is false
+        service->>repo: findById(id)
+        activate repo
+        repo-->>service: Allergen (or null)
+        deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+        alt Not found or already inactive
+          service-->>controller: AppError("Allergen not found.", 404)
+        else Found
+          service->>repo: isReferenced(id)
+          activate repo
+          repo->>repo: exists in Products.allergenIds or<br/>Customers.dietaryRestrictions.allergenIds
+          repo-->>service: true / false
+          deactivate repo
 
-- Allergens are never deleted, only deactivated, so existing business information remains consistent;
-- Only `{ "isActive": false }` is accepted: an allergen cannot be renamed or reactivated;
-- An allergen referenced by a product (`allergenIds`) or by a customer's dietary restrictions (`dietaryRestrictions.allergenIds`) cannot be deactivated;
-- The name of a deactivated allergen stays reserved, so it cannot be used by a new allergen.
+          alt Referenced by products or customers
+            service-->>controller: AppError("Allergen is referenced ... cannot be deactivated.", 409)
+          else Not referenced
+            service->>repo: update(id, {isActive: false})
+            activate repo
+            repo-->>service: Allergen entity (inactive)
+            deactivate repo
 
-## 2. Solution Design
+            service->>service: toAllergenDto(allergen)
+            service-->>controller: AllergenDto {id, name, isActive: false}
+          end
+        end
+      end
+      deactivate service
 
-![UC5_Deactivate_Allergen](diagrams/deactivate-allergen.svg)
+      controller-->>manager: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-## 3. Business Test Planning
+    deactivate route
+    deactivate manager
+```
 
-- All unit tests use isolated in-memory Dummy Repositories (`allergens.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Deactivate an allergen that is not referenced. Result: The allergen is returned with `isActive: false` and is no longer returned by the queries.
-- **Scenario B:** Deactivate an allergen referenced by a product or by a customer. Result: Throws `AppError` (409 Conflict).
-- **Scenario C:** Send a body other than `{ "isActive": false }` (e.g. a new name). Result: Throws `AppError` (400 Bad Request, only deactivation is supported).
-- **Scenario D:** Deactivate an allergen that does not exist or is already inactive. Result: Throws `AppError` (404 Not Found).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `PUT /api/v1/allergens/{id}`
-- **Validated Scenarios:**
-  - `{ "isActive": false }` for an allergen without references -> `200 OK` (Returns the allergen with `isActive: false`; a `name` sent in the body is ignored)
-  - Empty body, only `name`, `isActive: true` or invalid `isActive` -> `400 Bad Request` (Blocked by Joi validation)
-  - Id with an invalid format -> `400 Bad Request`
-  - Unknown id -> `404 Not Found`
-  - Deactivating the same allergen again -> `404 Not Found`
-  - Get by id, get by name and list after deactivation -> `404 Not Found` (list: `200 OK` without the allergen)
-  - Create an allergen with the name of a deactivated one -> `409 Conflict`
-  - Missing token -> `401 Unauthorized`
+See the [README](./README.md) for the notation key and the element catalogue.

@@ -1,0 +1,151 @@
+classDiagram
+    namespace Users {
+        class User {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +String username
+            +String email
+            +String passwordHash
+            +boolean active
+        }
+        class Role {
+            <<ValueObject>>
+            +String name
+        }
+    }
+    namespace Customers {
+        class Customer {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +String phoneNumber
+            +String email
+            +boolean marketingConsent
+        }
+        class Address {
+            <<ValueObject>>
+            +String street
+            +String city
+            +String postalCode
+        }
+        class DietaryRestriction {
+            <<ValueObject>>
+            +String description
+        }
+    }
+    namespace Products {
+        class Product {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +double price
+            +String description
+            +boolean active
+            +boolean sellable
+            +boolean stockControlled
+            +isPizzaComponent() boolean
+        }
+        class ProductCategory {
+            <<AggregateRoot>>
+            +long id
+            +String name
+        }
+        class Allergen {
+            <<AggregateRoot>>
+            +long id
+            +String name
+        }
+    }
+    namespace Stock {
+        class StockInformation {
+            <<Entity>>
+            +int quantity
+            +increase() int
+            +decrease() int
+        }
+    }
+    namespace Pizza {
+        class PizzaSize {
+            <<AggregateRoot>>
+            +long id
+            +String name
+        }
+        class PizzaComponentType {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +int assemblyOrder
+            +int minQuantity
+            +int maxQuantity
+        }
+        class ComponentSizeConfiguration {
+            <<ValueObject>>
+            +double price
+            +int stockUnitsConsumed
+        }
+        class PizzaConfiguration {
+            <<ValueObject>>
+            +validate()
+        }
+        class PredefinedPizza {
+            <<AggregateRoot>>
+            +validate()
+        }
+    }
+    namespace Orders {
+        class Order {
+            <<AggregateRoot>>
+            +long id
+            +String state
+            +date createdAt
+        }
+        class OrderItem {
+            <<Entity>>
+            +int quantity
+            +double unitPrice
+            +String state
+        }
+    }
+    namespace Kitchen {
+        class KitchenResource {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +String type
+            +int capacity
+            +boolean available
+        }
+        class PreparationActivity {
+            <<Entity>>
+            +String name
+            +int expectedDurationMinutes
+            +String resourceType
+            +String state
+        }
+    }
+
+    User "1..*" *-- "*" Role : has
+    Customer "0..1" -- "0..1" User : can be
+    Customer "1" *-- "0..*" Address
+    Customer "1" *-- "0..*" DietaryRestriction : records
+    DietaryRestriction "*" -- "0..*" Allergen : may relate to
+    Product "*" -- "1" ProductCategory : classified by
+    Product "*" -- "0..*" Allergen : may contain
+    Product "*" -- "0..1" PizzaComponentType : component role
+    Product "1" -- "0..1" StockInformation : may maintain
+    ComponentSizeConfiguration "*" -- "1" Product : component
+    ComponentSizeConfiguration "*" -- "1" PizzaSize : for
+    PizzaConfiguration "*" -- "1" PizzaSize : has
+    PizzaConfiguration "*" -- "1..*" Product : composed of
+    PredefinedPizza "1" -- "1" Product : represented by
+    PredefinedPizza "1" *-- "*" PizzaConfiguration : defaultConfiguration
+    PredefinedPizza "1" -- "1..*" PizzaSize : avalaible in
+    PizzaConfiguration "*" .. "0..1" PredefinedPizza : originatedFrom
+    Customer "0..1" -- "0..*" Order : places
+    Order "1" *-- "1..*" OrderItem : contains
+    OrderItem "*" -- "0..1" Product : catalogue product
+    OrderItem "1" *-- "0..1" PizzaConfiguration : preserved configuration
+    OrderItem "1" -- "0..*" PreparationActivity : may require
+    PreparationActivity "*" -- "*" PreparationActivity : dependsOn
+    PreparationActivity "*" -- "*" KitchenResource : uses

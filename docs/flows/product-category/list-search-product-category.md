@@ -1,63 +1,83 @@
-# UC2 - List / Search Product Categories
+# UC2 - List and Search Product Categories
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /product-categories?name, GET /product-categories/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to list active product categories, search for a category by its exact name, or consult a category by its identifier.
+## Description
 
-**Preconditions:**
+A Manager lists the active product categories, searches them by exact name (active or inactive), or consults a single category by id.
 
-- The user must be authenticated and have the `MANAGER` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Product Categories - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductCategoriesController<br/>[Component: Controller]
+        participant service as ProductCategoriesService<br/>[Component: Service]
+        participant repo as ProductCategoriesRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager requests the product categories (optionally providing a name query or specific ID).
-2. If no filter is applied, the System returns all active categories.
-3. If an exact name is searched, the System finds the category (ignoring case and accents), even if inactive, and returns it.
-4. If a specific ID is provided, the System retrieves the associated category (active or inactive).
-5. The System returns a 200 OK response with the requested data.
+    activate manager
+    manager->>route: GET /product-categories?name<br/>or GET /product-categories/{id}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Query / Id format (Joi)
 
-**Alternative Flows:**
+    alt List / Search
+      route->>controller: list(req, res, next)
+      activate controller
+      controller->>service: listProductCategories(name, repo)
+      activate service
 
-- _Partial or blank name search:_ The System returns an empty list (`[]`) with a 200 OK status.
-- _Unknown ID requested:_ The System throws a 404 Not Found error.
-- _Invalid ID requested:_ The System throws a 400 Bad Request error.
+      alt Without name
+        service->>repo: listProductCategories()
+        activate repo
+        repo-->>service: Active ProductCategory Entities
+        deactivate repo
+      else With name
+        service->>repo: searchByName(name)
+        activate repo
+        repo-->>service: ProductCategory Entities (active or inactive, exact name)
+        deactivate repo
+      end
 
-**Postconditions:**
+      service->>service: toProductCategoryDTO(each)
+      service-->>controller: ProductCategory DTO list
+      deactivate service
+      controller-->>manager: Response (200 OK)
+      deactivate controller
+    else Consult by id
+      route->>controller: getById(req, res, next)
+      activate controller
+      controller->>service: getProductCategoryById(id, repo)
+      activate service
+      service->>repo: findById(id)
+      activate repo
+      repo-->>service: ProductCategory Entity
+      deactivate repo
 
-- None (Read-only operation).
+      service->>service: toProductCategoryDTO(ProductCategory)
+      service-->>controller: ProductCategory DTO
+      deactivate service
+      controller-->>manager: Response (200 OK)
+      deactivate controller
+    end
 
-## 1. Domain Assumptions
+    deactivate route
+    deactivate manager
+```
 
-- Listing without filtering returns only active categories;
-- A category can be searched by name, and the search can also return removed (inactive) categories.
-- A partial or blank name returns an empty list;
-- A category can be consulted by its identifier even if it is inactive;
-- Only users with the `MANAGER` role are authorized to list and search product categories.
-
-## 2. Solution Design
-
-![List/Search Product Categories Design](./diagrams/list-search-product-category-design.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All aplication tests use dependency injection via isolated in-memory dummies (`product-categories.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`product-categories.service.test.js`):**
-  - `listProductCategories without a name returns the active categories`
-  - `listProductCategories finds the exact name ignoring case and accents`
-  - `listProductCategories returns an empty list for partial or blank names`
-  - `getProductCategoryById returns the category or throws 404`
-  - `an inactive category is not listed but can still be found and consulted`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/product-categories`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - List by `MANAGER` -> `200 OK` (only active categories)
-  - Search by exact name -> `200 OK`
-  - Search by partial or unknown name -> `200 OK` with `[]`
-  - Get by id -> `200 OK`
-  - Get with unknown id -> `404 Not Found`
-  - Get with invalid id -> `400 Bad Request`
+See the [README](./README.md) for the notation key and the element catalogue.

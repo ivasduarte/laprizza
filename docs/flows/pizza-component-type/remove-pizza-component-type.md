@@ -1,68 +1,69 @@
 # UC4 - Remove Pizza Component Type
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `DELETE /pizza-component-type/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 204 No Content |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to logically remove (deactivate) a pizza component type. This frees up its name and assembly order for future use, provided no active product references it.
+## Description
 
-**Preconditions:**
+A Manager removes a pizza component type. The service checks that no active product uses the type and then deactivates it (logical removal by setting isActive to false).
 
-- The user must be authenticated and have the `MANAGER` role.
-- The pizza component type must exist.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Remove Pizza Component Type - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaComponentTypeController<br/>[Component: Controller]
+        participant service as PizzaComponentTypeService<br/>[Component: Service]
+        participant repo as PizzaComponentTypeRepository<br/>[Component: Repository, MongoDB/Dummy]
+        participant productsRepo as ProductsRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the component type to be removed.
-2. The System validates the ID format and confirms the type exists.
-3. The System verifies that no active product is currently referencing this component type.
-4. The System logically deactivates the type (`isActive: false`).
-5. The System returns a 204 No Content status indicating successful removal.
+    activate manager
+    manager->>route: DELETE /pizza-component-type/{id}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Id (Joi)
+    route->>controller: remove(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: removePizzaComponentType(id, repo, productsRepo)
+    activate service
 
-- _Component type referenced by an active product:_ The System throws a 409 Conflict error, preventing the removal.
-- _Unknown type or already removed:_ The System throws a 404 Not Found error.
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: PizzaComponentType Entity (active)
+    deactivate repo
 
-**Postconditions:**
+    service->>productsRepo: existsByPizzaComponentType(id)
+    activate productsRepo
+    productsRepo-->>service: false (no active products)
+    deactivate productsRepo
 
-- The component type is flagged as inactive in the database.
-- The name and assembly order of the removed type become available.
+    service->>repo: update(id, { isActive: false })
+    activate repo
+    repo-->>service: Removed PizzaComponentType Entity
+    deactivate repo
 
-## 1. Domain Assumptions
+    service-->>controller: void
+    deactivate service
 
-- The removal is logical: the type becomes inactive;
-- A removed type is not listed, but it can still be consulted by its identifier and found by its name;
-- A type referenced by an active product cannot be removed, so that products are never left with a type that does not exist;
-- The name and the assembly order of a removed type become available to be used again;
-- Only users with the `MANAGER` role are authorized to remove a pizza component type.
+    controller-->>manager: Response (204 No Content)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![Remove Pizza Component Type Design](./diagrams/remove-pizza-component-type-design.svg)
-
-## 3. Business Test Planning
-
-- **Issolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`pizza-component-type.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`pizza-component-type.service.test.js`):**
-  - `removePizzaComponentType deactivates the type without deleting it`
-  - `removePizzaComponentType throws 404 if the type does not exist`
-  - `removePizzaComponentType throws 404 if the type was already removed`
-  - `removing a type frees its name and assembly order to be used again`
-  - `removePizzaComponentType throws 409 Conflict if a product references the type`
-  - `removePizzaComponentType ignores inactive products`
-  - `removePizzaComponentType only checks the products of the type being removed`
-  - `removePizzaComponentType removes the type once no product references it`
-  - `removePizzaComponentType checks that the type exists before looking at the products`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `DELETE /api/v1/pizza-component-type/{id}`
-- **Validated Scenarios:**
-  - Request with Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Type without products by `MANAGER` -> `204 No Content`
-  - Invalid id -> `400 Bad Request`
-  - Unknown type -> `404 Not Found`
-  - Type referenced by a product -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

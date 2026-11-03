@@ -1,52 +1,59 @@
-# UC2: List and Search Pizza Sizes
+# UC2 - List and Search Pizza Sizes
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /pizza-size?search={term}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Not detailed (generic error response) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows an authenticated manager to list all pizza sizes or filter them based on a search term.
+## Description
 
-**Preconditions:**
+A Manager lists the pizza sizes, optionally filtered by a search term.
 
-- The user must be authenticated and have the `MANAGER` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Pizza Sizes - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaSizeController<br/>[Component: Controller]
+        participant service as PizzaSizeService<br/>[Component: Service]
+        participant repo as PizzaSizeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager requests the list of pizza sizes, optionally providing a search query.
-2. The System validates the query parameters.
-3. The System queries the database, applying a case-insensitive partial match on the pizza size name if a search term is provided.
-4. The System maps the found entities to DTOs.
-5. The System returns the list of pizza sizes with a 200 OK status.
+    activate manager
+    manager->>route: GET /pizza-size?search={term}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Query (Joi)
+    route->>controller: list(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: listSizes(query, repo)
+    activate service
 
-- _No matching sizes found:_ The System returns an empty list `[]` with a 200 OK status.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    service->>repo: listPizzaSizes(query)
+    activate repo
+    repo-->>service: PizzaSize Entity[]
+    deactivate repo
 
-**Postconditions:**
+    service->>service: map(toSizeDto)
+    service-->>controller: PizzaSize DTO[]
+    deactivate service
 
-- None (Read-only operation).
+    controller-->>manager: Response (200 OK or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 1. Domain Assumptions
-
-- The system allows listing all pizza sizes or filtering them based on a search term;
-- The search term performs a case-insensitive partial match on the pizza size name;
-- Only users with the `MANAGER` role can view the pizza sizes list via this specific endpoint in this sprint.
-
-## 2. Solution Design
-
-![list and search pizza size](./diagrams/list-search-pizza-size.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`pizza-size.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`pizza-size.service.test.js`):**
-  - `listSizes returns all sizes or filters by search query`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/pizza-size`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Valid request without search query -> `200 OK` (Returns matched pizza sizes)
-  - Valid request with non-matching search query -> `200 OK` (Returns `[]`)
+See the [README](./README.md) for the notation key and the element catalogue.

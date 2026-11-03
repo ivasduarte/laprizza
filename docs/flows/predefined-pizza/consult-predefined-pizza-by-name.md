@@ -1,56 +1,80 @@
-# UC4: Consult Predefined Pizza by Name
+# UC4 - Consult Predefined Pizza by Name
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /predefined-pizzas/name/{name}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid name), 404 (predefined pizza not found or inactive) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to consult the details of an active Predefined Pizza using the exact name of the product that represents it.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults the details of an active predefined pizza through the exact name of its product. The repository finds the product first and then its active predefined pizza.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Consult Predefined Pizza by Name - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PredefinedPizzaController<br/>[Component: Controller]
+        participant service as PredefinedPizzaService<br/>[Component: Service]
+        participant repo as PredefinedPizzaRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the name of the product.
-2. The System validates that the name is not empty.
-3. The System searches the product whose name matches exactly (ignoring letter case) and retrieves its active Predefined Pizza.
-4. The System retrieves its product, Pizza Sizes, components and Pizza Component Types.
-5. The System builds the details, with the components ordered by assembly order, and returns them with a 200 OK status.
+    activate user
 
-**Alternative Flows:**
+    user->>route: GET /predefined-pizzas/name/{name}
+    activate route
 
-- _Invalid or empty name:_ The System throws a 400 Bad Request error.
-- _Unknown name, or product without an active Predefined Pizza:_ The System throws a 404 Not Found error.
-- _Request by unauthorized user (No token or role not allowed):_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    route->>route: verifyToken → requireRole(MANAGER, EMPLOYEE) → Joi(params: name required)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>user: 401 Unauthorized
+    else Role not allowed
+      route-->>user: 403 Forbidden
+    else Invalid name parameter
+      route-->>user: 400 Bad Request (Validation failed)
+    else Request accepted
+      route->>controller: getByName(req, res, next, repo)
+      activate controller
 
-- None (Read-only operation).
+      controller->>service: getPredefinedPizzaByName(name, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findByName(name)
+      activate repo
+      repo->>repo: product with exactly that name,<br/>then its active Predefined Pizza
+      repo-->>service: PredefinedPizza (or null)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      alt Not found or inactive
+        service-->>controller: AppError("Predefined Pizza not found.", 404)
+      else Found
+        service->>repo: findProductById + findSizesByIds + findProductsByIds + listComponentTypes
+        activate repo
+        repo-->>service: product, sizes, components, component types
+        deactivate repo
 
-- A Predefined Pizza has no name of its own: the lookup uses the name of its product, which must match exactly (a partial name does not match), ignoring letter case;
-- A name that belongs to a product without an active Predefined Pizza, or to no product, is treated as not found (404 Not Found);
-- The details have the same content as in UC3;
-- Both the `MANAGER` and `EMPLOYEE` roles can consult a Predefined Pizza.
+        service->>service: toPredefinedPizzaDetailsDto(...)<br/>components ordered by assembly order
+        service-->>controller: PredefinedPizzaDetailsDto
+      end
+      deactivate service
 
-## 2. Solution Design
+      controller-->>user: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-![UC4_Consult_Predefined_Pizza_by_Name](diagrams/consult-predefined-pizza-by-name.svg)
+    deactivate route
+    deactivate user
+```
 
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`predefined-pizzas.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Provide the exact name of the product of an active Predefined Pizza (any letter case, e.g. `margherita`). Result: The details of that Predefined Pizza are returned.
-- **Scenario B:** Provide a name that does not exist. Result: Throws `AppError` (404 Not Found).
-- **Scenario C:** Provide the name of a product whose Predefined Pizza was deactivated. Result: Throws `AppError` (404 Not Found).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/predefined-pizzas/name/{name}`
-- **Validated Scenarios:**
-  - Exact product name, as Employee -> `200 OK` (Returns the details)
-  - Unknown name -> `404 Not Found`
-  - Name of a deactivated Predefined Pizza -> `404 Not Found`
+See the [README](./README.md) for the notation key and the element catalogue.

@@ -1,57 +1,79 @@
-# UC3: Consult Predefined Pizza by ID
+# UC3 - Consult Predefined Pizza by ID
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /predefined-pizzas/{id}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid id format), 404 (predefined pizza not found or inactive) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to consult the details of an active Predefined Pizza using its unique ID.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults the details of an active predefined pizza by its id. The service loads the product, sizes, components and component types and builds a details DTO with the components ordered by assembly order.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Consult Predefined Pizza by ID - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PredefinedPizzaController<br/>[Component: Controller]
+        participant service as PredefinedPizzaService<br/>[Component: Service]
+        participant repo as PredefinedPizzaRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the ID of the Predefined Pizza.
-2. The System validates that the ID is a 24-character hexadecimal string.
-3. The System searches the database for a Predefined Pizza matching the ID and verifies that it is active.
-4. The System retrieves its product, Pizza Sizes, components and Pizza Component Types.
-5. The System builds the details, with the components ordered by assembly order, and returns them with a 200 OK status.
+    activate user
 
-**Alternative Flows:**
+    user->>route: GET /predefined-pizzas/{id}
+    activate route
 
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Predefined Pizza not found or deactivated:_ The System throws a 404 Not Found error.
-- _Request by unauthorized user (No token or role not allowed):_ The System throws a 401 Unauthorized or 403 Forbidden error.
+    route->>route: verifyToken → requireRole(MANAGER, EMPLOYEE) → validateId (24-char hex)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>user: 401 Unauthorized
+    else Role not allowed
+      route-->>user: 403 Forbidden
+    else Invalid ID format
+      route-->>user: 400 Bad Request ("Invalid ID format")
+    else Request accepted
+      route->>controller: getById(req, res, next, repo)
+      activate controller
 
-- None (Read-only operation).
+      controller->>service: getPredefinedPizzaById(id, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findById(id)
+      activate repo
+      repo-->>service: PredefinedPizza (or null)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      alt Not found or inactive
+        service-->>controller: AppError("Predefined Pizza not found.", 404)
+      else Found
+        service->>repo: findProductById + findSizesByIds + findProductsByIds + listComponentTypes
+        activate repo
+        repo-->>service: product, sizes, components, component types
+        deactivate repo
 
-- The identifier is a 24-character hexadecimal string (MongoDB ObjectId);
-- A deactivated Predefined Pizza is treated as if it did not exist (404 Not Found);
-- The details contain the product (`id`, `name`), the sizes (`id`, `name`, `isActive`) and the components of the default configuration, each with its Pizza Component Type, ordered by assembly order;
-- Both the `MANAGER` and `EMPLOYEE` roles can consult a Predefined Pizza.
+        service->>service: toPredefinedPizzaDetailsDto(...)<br/>components ordered by assembly order
+        service-->>controller: PredefinedPizzaDetailsDto
+      end
+      deactivate service
 
-## 2. Solution Design
+      controller-->>user: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-![UC3_Consult_Predefined_Pizza_by_ID](diagrams/consult-predefined-pizza-by-id.svg)
+    deactivate route
+    deactivate user
+```
 
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`predefined-pizzas.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Provide the id of an active Predefined Pizza. Result: The details are returned, with the product name, the sizes and the components ordered by assembly order (e.g. Base Dough, Base Sauce, Cheese, Topping), each with its Pizza Component Type and limits.
-- **Scenario B:** Provide the id of a Predefined Pizza that was deactivated. Result: Throws `AppError` (404 Not Found).
-- **Scenario C:** Provide an id that does not exist. Result: Throws `AppError` (404 Not Found).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/predefined-pizzas/{id}`
-- **Validated Scenarios:**
-  - Existing id, as Employee -> `200 OK` (Returns the details)
-  - Id with an invalid format -> `400 Bad Request` (Blocked by id validation)
-  - Valid but unknown id -> `404 Not Found`
-  - Id of a deactivated Predefined Pizza -> `404 Not Found`
+See the [README](./README.md) for the notation key and the element catalogue.

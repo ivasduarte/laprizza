@@ -1,69 +1,83 @@
-# UC2 - List / Search Pizza Component Type
+# UC2 - List and Search Pizza Component Types
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /pizza-component-type?name, GET /pizza-component-type/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to list all active pizza component types sorted by assembly order, search for a specific type by its exact name, or retrieve details using its ID.
+## Description
 
-**Preconditions:**
+A Manager lists the active pizza component types (sorted by assembly order), searches them by exact name (active or inactive), or consults a single type by id.
 
-- The user must be authenticated and have the `MANAGER` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Pizza Component Types - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaComponentTypeController<br/>[Component: Controller]
+        participant service as PizzaComponentTypeService<br/>[Component: Service]
+        participant repo as PizzaComponentTypeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager requests the list of component types, optionally providing an exact name query or an ID in the URL.
-2. The System validates the query parameters and ID format.
-3. The System queries the database:
-   - If no name is provided, returns all active types sorted by assembly order.
-   - If an exact name is provided, returns the matching type (even if inactive/removed, flagged accordingly).
-   - If an ID is provided, returns the specific type details.
-4. The System returns the requested data as DTOs with a 200 OK status.
+    activate manager
+    manager->>route: GET /pizza-component-type?name<br/>or GET /pizza-component-type/{id}
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Query / Id format (Joi)
 
-**Alternative Flows:**
+    alt List / Search
+      route->>controller: list(req, res, next)
+      activate controller
+      controller->>service: listPizzaComponentTypes(name, repo)
+      activate service
 
-- _Partial or blank name search:_ The System returns an empty list `[]` with a 200 OK status.
-- _Unknown ID:_ The System throws a 404 Not Found error.
-- _Invalid ID format:_ The System throws a 400 Bad Request error.
-- _Request by unauthorized user:_ The System throws a 401 Unauthorized or 403 Forbidden error.
+      alt Without name
+        service->>repo: listPizzaComponentTypes()
+        activate repo
+        repo-->>service: Active PizzaComponentType Entities (sorted by assembly order)
+        deactivate repo
+      else With name
+        service->>repo: searchByName(name)
+        activate repo
+        repo-->>service: PizzaComponentType Entities (active or inactive, exact name)
+        deactivate repo
+      end
 
-**Postconditions:**
+      service->>service: toPizzaComponentTypeDTO(each)
+      service-->>controller: PizzaComponentType DTO list
+      deactivate service
+      controller-->>manager: Response (200 OK)
+      deactivate controller
+    else Consult by id
+      route->>controller: getById(req, res, next)
+      activate controller
+      controller->>service: getPizzaComponentTypeById(id, repo)
+      activate service
+      service->>repo: findById(id)
+      activate repo
+      repo-->>service: PizzaComponentType Entity
+      deactivate repo
 
-- None (Read-only operation).
+      service->>service: toPizzaComponentTypeDTO(PizzaComponentType)
+      service-->>controller: PizzaComponentType DTO
+      deactivate service
+      controller-->>manager: Response (200 OK)
+      deactivate controller
+    end
 
-## 1. Domain Assumptions
+    deactivate route
+    deactivate manager
+```
 
-- Listing without filter returns active types, sorted by assembly order;
-- A type can be searched by its exact name;
-- A partial or blank name returns an empty list;
-- A type can be consulted by its identifier;
-- The maximum quantity is an integer greater than or equal to 1, or unbounded, and cannot be lower than the minimum quantity;
-- Only users with the `MANAGER` role are authorized to list or search a pizza component type.
-
-## 2. Solution Design
-
-![List/Search Pizza Component Types Design](./diagrams/list-search-pizza-component-type-design.svg)
-
-## 3. Business Test Planning
-
-- **Issolation Strategy:** All application tests use dependency injection via isolated in-memory dummies (`pizza-component-type.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`pizza-component-type.service.test.js`):**
-  - `listPizzaComponentTypes without a name returns the active types sorted by assembly order`
-  - `listPizzaComponentTypes without a name does not return removed types`
-  - `listPizzaComponentTypes finds the exact name ignoring case and accents`
-  - `listPizzaComponentTypes finds a removed type by name and flags it as inactive`
-  - `listPizzaComponentTypes returns an empty list for partial or blank names`
-  - `getPizzaComponentTypeById returns the type or throws 404`
-  - `getPizzaComponentTypeById also returns a removed type, flagged as inactive`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/pizza-component-type`
-- **Validated Scenarios:**
-  - Request with Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - List by `MANAGER` -> `200 OK`
-  - Search by exact name -> `200 OK`
-  - Search by partial, blank or unkown name -> `200 OK` with `[]`
-  - Get by id -> `200 OK`
-  - Get with unkown id -> `404 Not Found`
-  - Get with invalid id -> `400 Bad Request`
+See the [README](./README.md) for the notation key and the element catalogue.

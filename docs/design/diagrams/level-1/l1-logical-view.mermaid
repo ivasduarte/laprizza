@@ -1,0 +1,14 @@
+C4Context
+    title Level 1 Logical View - System Context
+    
+    Person(customer, "Customer", "Browses catalogue, places orders, and customizes pizzas.")
+    Person(employee, "LaPrizza Employee", "Consults catalogue, adjusts stock, and manages kitchen operations.")
+    Person(manager, "LaPrizza Manager", "Manages users, business rules, catalog, and AI planning configurations.")
+    
+    System(laprizza, "LaPrizza Information System", "Manages the restaurant operations, from online ordering and 3D configuration to stock and food preparation scheduling.")
+    System_Ext(idp, "External Identity Provider", "Authenticates users via OAuth 2.0 / OIDC.")
+    
+    Rel(customer, laprizza, "Uses", "HTTPS")
+    Rel(employee, laprizza, "Uses", "HTTPS")
+    Rel(manager, laprizza, "Manages", "HTTPS")
+    Rel(laprizza, idp, "Authenticates users via", "OIDC/HTTPS")

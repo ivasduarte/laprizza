@@ -1,57 +1,77 @@
-# UC2: List and Search Allergens
+# UC2 - List and Search Allergens
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /allergens?name={name}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid query) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to list all active allergens or search for specific active allergens by a partial name.
+## Description
 
-**Preconditions:**
+A Manager or Employee lists the active allergens (sorted by name), optionally filtered by a partial, case-insensitive name. An empty list is returned when nothing matches.
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC2 - List and Search Allergens - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as AllergenController<br/>[Component: Controller]
+        participant service as AllergenService<br/>[Component: Service]
+        participant repo as AllergenRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User requests the list of allergens, optionally providing a search query (name).
-2. The System queries the database for active allergens. If a name is provided, it filters for allergens containing that text (case-insensitive).
-3. The System maps the found active entities to DTOs.
-4. The System returns the sorted list of allergens with a 200 OK status.
+    activate user
 
-**Alternative Flows:**
+    user->>route: GET /allergens?name={name}
+    activate route
 
-- _No matching allergens found:_ The System returns an empty list `[]` with a 200 OK status.
-- _Invalid query (e.g., empty or repeated name format):_ The System throws a 400 Bad Request error.
+    route->>route: verifyToken → requireRole(MANAGER, EMPLOYEE) → Joi(query: name optional)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>user: 401 Unauthorized
+    else Role not allowed
+      route-->>user: 403 Forbidden
+    else Invalid query (name empty or repeated)
+      route-->>user: 400 Bad Request (Validation failed)
+    else Request accepted
+      route->>controller: list(req, res, next, repo)
+      activate controller
 
-- None (Read-only operation).
+      controller->>service: listAllergens(filters, repo)
+      activate service
 
-## 1. Domain Assumptions
+      alt name filter present
+        service->>repo: search(name)
+        activate repo
+        repo-->>service: Allergen[] (partial, case-insensitive match)
+        deactivate repo
+      else no filter
+        service->>repo: list()
+        activate repo
+        repo-->>service: Allergen[] (sorted by name)
+        deactivate repo
+      end
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      service->>service: keep active allergens + toAllergenDto
+      service-->>controller: AllergenDto[] (empty if no match)
+      deactivate service
 
-- Only active allergens are listed; deactivated allergens are never returned;
-- The list is sorted by name and is not paginated;
-- The search is partial and case-insensitive: the text may appear anywhere in the name, and special characters are treated as plain text.
+      controller-->>user: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-## 2. Solution Design
+    deactivate route
+    deactivate user
+```
 
-![UC2_List_and_Search_Allergens](diagrams/list-search-allergens.svg)
-
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`allergens.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Request the list when active and deactivated allergens exist. Result: Only the active allergens are returned, mapped to `{ id, name, isActive }`.
-- **Scenario B:** Request the list with a `name` filter. Result: Only the active allergens whose name contains the text (ignoring letter case) are returned.
-- **Scenario C:** Request the list with a `name` that matches no allergen. Result: An empty list is returned (200 OK).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/allergens[?name=]`
-- **Validated Scenarios:**
-  - List without filter -> `200 OK` (Returns the active allergens)
-  - Partial search by name -> `200 OK`
-  - Search without results -> `200 OK` (Returns `[]`)
-  - Search with regex characters (`?name=.*`) -> `200 OK` (Returns `[]`, treated as text)
-  - Empty or repeated `name` -> `400 Bad Request` (Blocked by Joi validation)
-  - After deactivating an allergen -> `200 OK` (The deactivated allergen is no longer listed)
-  - Missing or invalid token -> `401 Unauthorized`
+See the [README](./README.md) for the notation key and the element catalogue.

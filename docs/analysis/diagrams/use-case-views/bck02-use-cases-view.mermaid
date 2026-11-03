@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+
+    subgraph BCK02 [BCK02: Customer Management]
+        direction TB
+        UC1([UC1: Register Customer])
+        UC2([UC2: List Customers])
+        UC3([UC3: Get Customer])
+        UC4([UC4: Update Customer])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4

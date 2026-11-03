@@ -1,58 +1,76 @@
-# UC1: Create Pizza Size
+# UC1 - Create Pizza Size
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `POST /pizza-size` |
+| Allowed roles | MANAGER |
+| Success response | 201 Created |
+| Error handling | 400 (invalid name), 409 (name already in use) |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to create a new pizza size in the system, ensuring its name is unique and descriptive.
+## Description
 
-**Preconditions:**
+A Manager creates a pizza size. The domain validates and normalizes the name and the repository rejects duplicated names, which the service translates into a conflict error.
 
-- The user must be authenticated and have the `MANAGER` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC1 - Create Pizza Size - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as PizzaSizeController<br/>[Component: Controller]
+        participant service as PizzaSizeService<br/>[Component: Service]
+        participant domain as PizzaSizeDomain<br/>[Component: Domain]
+        participant repo as PizzaSizeRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides a valid payload with the pizza size name.
-2. The System validates that the name is not empty and has a valid format.
-3. The System verifies that the pizza size name is unique.
-4. The System creates and saves the new pizza size.
-5. The System returns the newly created pizza size details with a 201 Created status.
+    activate manager
+    manager->>route: POST /pizza-size { name }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Payload (Joi)
+    route->>controller: create(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: createSize(data, repo)
+    activate service
 
-- _Missing mandatory fields or invalid format:_ The System throws a 400 Bad Request error.
-- _Request by unauthorized user (No token or Employee):_ The System throws a 401 Unauthorized or 403 Forbidden error.
-- _Duplicate pizza size name:_ The System throws a 409 Conflict error.
+    service->>domain: validatePizzaSize(data.name)
+    activate domain
 
-**Postconditions:**
+    alt Invalid Name
+      domain-->>service: DomainError
+      service-->>controller: AppError(400)
+    else Valid Name
+      domain-->>service: normalizedName
+      deactivate domain
 
-- The new pizza size is saved in the database.
+      service->>repo: create(sizeData)
+      activate repo
 
-## 1. Domain Assumptions
+      alt Duplicate Name
+        repo-->>service: MongoError(11000)
+        service-->>controller: AppError(409, "Pizza size already in use.")
+      else Success
+        repo-->>service: PizzaSize Entity
+        deactivate repo
+        service->>service: toSizeDto(PizzaSize)
+        service-->>controller: PizzaSize DTO
+      end
+    end
+    deactivate service
 
-- Pizza Sizes must have a unique and descriptive name;
-- The name is mandatory and cannot be empty;
-- Only users with the `MANAGER` role are authorized to create a new pizza size.
+    controller-->>manager: Response (201 Created or Error)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![create pizza size](./diagrams/create-pizza-size.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All application tests use dependency injection via isolated in-memory Dummies (`pizza-size.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Domain Tests (`pizza-size.domain.test.js`):**
-  - `validatePizzaSize rejects invalid data types and formats`
-  - `validatePizzaSize accepts valid strings`
-- **Application Tests (`pizza-size.service.test.js`):**
-  - `createSize creates a new size and returns DTO`
-  - `createSize returns 409 Conflict on duplicate name`
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `POST /api/v1/pizza-size`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC enforcement)
-  - Valid payload by `MANAGER` -> `201 Created`
-  - Missing mandatory fields -> `400 Bad Request` (Joi validation)
-  - Duplicate pizza size name -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.

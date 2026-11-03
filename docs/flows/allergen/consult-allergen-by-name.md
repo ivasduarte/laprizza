@@ -1,54 +1,74 @@
-# UC4: Consult Allergen by Name
+# UC4 - Consult Allergen by Name
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `GET /allergens/name/{name}` |
+| Allowed roles | MANAGER, EMPLOYEE |
+| Success response | 200 OK |
+| Error handling | 401 (invalid token), 403 (role not allowed), 400 (invalid name), 404 (allergen not found or inactive) |
 
-**Primary Actor:** Manager / Employee <br>
-**Description:** Allows an authenticated user to retrieve an active allergen using its exact name.
+## Description
 
-**Preconditions:**
+A Manager or Employee consults a single active allergen by its exact name (case-insensitive).
 
-- The user must be authenticated and have the `MANAGER` or `EMPLOYEE` role.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC4 - Consult Allergen by Name - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor user as Manager / Employee<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as AllergenController<br/>[Component: Controller]
+        participant service as AllergenService<br/>[Component: Service]
+        participant repo as AllergenRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The User provides the exact name of the target allergen.
-2. The System validates the request payload.
-3. The System searches the database for an active allergen with that exact name (case-insensitive).
-4. The System returns the allergen details with a 200 OK status.
+    activate user
 
-**Alternative Flows:**
+    user->>route: GET /allergens/name/{name}
+    activate route
 
-- _Invalid or missing name parameter:_ The System throws a 400 Bad Request error.
-- _Partial name provided / Allergen not found or deactivated:_ The System throws a 404 Not Found error.
+    route->>route: verifyToken → requireRole(MANAGER, EMPLOYEE) → Joi(params: name required)
 
-**Postconditions:**
+    alt Missing or invalid token
+      route-->>user: 401 Unauthorized
+    else Role not allowed
+      route-->>user: 403 Forbidden
+    else Invalid name parameter
+      route-->>user: 400 Bad Request (Validation failed)
+    else Request accepted
+      route->>controller: getByName(req, res, next, repo)
+      activate controller
 
-- None (Read-only operation).
+      controller->>service: getAllergenByName(name, repo)
+      activate service
 
-## 1. Domain Assumptions
+      service->>repo: findByName(name)
+      activate repo
+      repo-->>service: Allergen (or null) (exact match, case-insensitive)
+      deactivate repo
 
-Due to a lack of client clarification, the following domain restrictions were assumed in the code:
+      alt Not found or inactive
+        service-->>controller: AppError("Allergen not found.", 404)
+      else Found
+        service->>service: toAllergenDto(allergen)
+        service-->>controller: AllergenDto {id, name, isActive}
+      end
+      deactivate service
 
-- The lookup by name is exact: a partial name does not match;
-- Special characters in the name are treated as plain text;
-- A deactivated allergen is treated as if it did not exist (404 Not Found).
+      controller-->>user: 200 OK (or error via next(error))
+      deactivate controller
+    end
 
-## 2. Solution Design
+    deactivate route
+    deactivate user
+```
 
-![UC4_Consult_Allergen_by_Name](diagrams/consult-allergen-by-name.svg)
-
-## 3. Business Test Planning
-
-- All unit tests use isolated in-memory Dummy Repositories (`allergens.dummy.repository.js`). The Mockito library isn't used in this project.
-- **Scenario A:** Provide the exact name of an existing active allergen. Result: The allergen is returned as `{ id, name, isActive }`.
-- **Scenario B:** Provide only part of an allergen name. Result: Throws `AppError` (404 Not Found).
-- **Scenario C:** Provide the name of an allergen that was deactivated or does not exist. Result: Throws `AppError` (404 Not Found).
-
-## 4. Postman E2E Tests
-
-- **Base Endpoint:** `GET /api/v1/allergens/name/{name}`
-- **Validated Scenarios:**
-  - Exact name -> `200 OK` (Returns the allergen)
-  - Unknown name -> `404 Not Found`
-  - Partial name -> `404 Not Found`
-  - Name of a deactivated allergen -> `404 Not Found`
+See the [README](./README.md) for the notation key and the element catalogue.

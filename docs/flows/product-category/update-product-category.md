@@ -1,64 +1,68 @@
 # UC3 - Update Product Category
 
-## Use Case View
+| Attribute | Value |
+|---|---|
+| C4 view | Dynamic diagram, Level 3 (Component) |
+| SAD view | Process View, Level 3 |
+| Container | Back-end API |
+| Endpoint | `PUT /product-categories/{id}` |
+| Allowed roles | MANAGER |
+| Success response | 200 OK |
+| Error handling | Happy path only |
 
-**Primary Actor:** Manager <br>
-**Description:** Allows a manager to logically remove (deactivate) a product category.
+## Description
 
-**Preconditions:**
+A Manager updates the name of a product category. The domain normalizes and validates the name before the stored category is updated.
 
-- The user must be authenticated and have the `Manager` role.
-- The category must exist and currently be active.
-- The category must not be referenced by any active product.
+## Diagram
 
-**Main Success Scenario:**
+```mermaid
+---
+title: "UC3 - Update Product Category - C4 Dynamic, Level 3 (Component)"
+---
+sequenceDiagram
+    autonumber
+    actor manager as Manager<br/>[Person]
+    box rgba(120,150,200,0.15) Back-end API [Container: Node.js, Express]
+        participant route as Route (Joi & RBAC)<br/>[Component: Router and middleware]
+        participant controller as ProductCategoriesController<br/>[Component: Controller]
+        participant service as ProductCategoriesService<br/>[Component: Service]
+        participant domain as ProductCategoriesDomain<br/>[Component: Domain]
+        participant repo as ProductCategoriesRepository<br/>[Component: Repository, MongoDB/Dummy]
+    end
 
-1. The Manager provides the ID of the category to remove.
-2. The System validates the provided ID.
-3. The System verifies the category exists and is currently active.
-4. The System verifies that no active product references this category.
-5. The System logically removes the category (sets it to inactive).
-6. The System returns a 204 No Content response.
+    activate manager
+    manager->>route: PUT /product-categories/{id} { name }
+    activate route
+    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: Validate Id & Payload (Joi)
+    route->>controller: update(req, res, next)
+    activate controller
 
-**Alternative Flows:**
+    controller->>service: updateProductCategory(id, data, repo)
+    activate service
 
-- _Invalid ID provided:_ The System throws a 400 Bad Request error.
-- _Category does not exist or is already inactive:_ The System throws a 404 Not Found error.
-- _Category is referenced by an active product:_ The System throws a 409 Conflict error.
+    service->>domain: normalizeName(data.name) & validateName(name)
+    activate domain
+    domain-->>service: normalizedName
+    deactivate domain
 
-**Postconditions:**
+    service->>repo: findById(id)
+    activate repo
+    repo-->>service: ProductCategory Entity (active)
 
-- The category becomes logically inactive.
+    service->>repo: update(id, categoryData)
+    repo-->>service: Updated ProductCategory Entity
+    deactivate repo
 
-## 1. Domain Assumptions
+    service->>service: toProductCategoryDTO(ProductCategory)
+    service-->>controller: ProductCategory DTO
+    deactivate service
 
-- Only the name of a category can be changed;
-- The new name follows the same rules as in the creation and cannot be used by another category;
-- A removed category cannot be updated;
-- Only users with the `Manager` role are authorized to update a product category.
+    controller-->>manager: Response (200 OK)
+    deactivate controller
+    deactivate route
+    deactivate manager
+```
 
-## 2. Solution Design
-
-![Update Product Category Design](./diagrams/update-product-category-design.svg)
-
-## 3. Business Test Planning
-
-- **Isolation Strategy:** All aplication tests use dependency injection via isolated in-memory dummies (`product-categories.dummy.repository.js`), avoiding Mocking libraries entirely.
-- **Application Tests (`product-categories.service.test.js`):**
-  - `updateProductCategory changes the name`
-  - `updateProductCategory allows changing only the case of its own name`
-  - `updateProductCategory rejects blank names`
-  - `updateProductCategory returns 409 Conflict on duplicate name`
-  - `updateProductCategory throws 404 if the category does not exist`
-  - `updateProductCategory throws 409 if the category is inactive`
-
-## 4. E2E Tests
-
-- **Base Endpoint:** `PUT /api/v1/product-categories/{id}`
-- **Validated Scenarios:**
-  - Request without Bearer Token -> `401 Unauthorized`
-  - Request with `EMPLOYEE` Bearer Token -> `403 Forbidden` (RBAC Enforcement)
-  - Valid payload by `MANAGER` -> `200 OK`
-  - Invalid id or blank name -> `400 Bad Request`
-  - Unknown category -> `404 Not Found`
-  - Duplicate category name -> `409 Conflict`
+See the [README](./README.md) for the notation key and the element catalogue.
