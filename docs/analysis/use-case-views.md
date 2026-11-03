@@ -2,20 +2,32 @@
 
 This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
-- [Actors](#actors)
-- [Use Cases Diagram](#use-cases-diagram)
-- [User Stories](#user-stories)
-  - [BCK01: User and Authentication Management](#bck01-user-and-authentication-management)
-  - [BCK02: Customer Management](#bck02-customer-management)
-  - [BCK03: Product Category Management](#bck03-product-category-management)
-  - [BCK04: Allergen Management](#bck04-allergen-management)
-  - [BCK05: Product Management](#bck05-product-management)
-  - [BCK06: Pizza Size Management](#bck06-pizza-size-management)
-  - [BCK07: Pizza Component Type Management](#bck07-pizza-component-type-management)
-  - [BCK08: Pizza Component Configuration](#bck08-pizza-component-configuration)
-  - [BCK09: Stock Information Management](#bck09-stock-information-management)
-  - [BCK10: Predefined Pizza Management](#bck10-predefined-pizza-management)
-  - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
+- [Use Case Views](#use-case-views)
+  - [Actors](#actors)
+  - [Use Cases Diagram](#use-cases-diagram)
+  - [User Stories](#user-stories)
+    - [BCK01: User and Authentication Management](#bck01-user-and-authentication-management)
+      - [Flow Mapping](#flow-mapping)
+    - [BCK02: Customer Management](#bck02-customer-management)
+      - [Flow Mapping](#flow-mapping-1)
+    - [BCK03: Product Category Management](#bck03-product-category-management)
+      - [Flow Mapping](#flow-mapping-2)
+    - [BCK04: Allergen Management](#bck04-allergen-management)
+      - [Flow Mapping](#flow-mapping-3)
+    - [BCK05: Product Management](#bck05-product-management)
+      - [Flow Mapping](#flow-mapping-4)
+    - [BCK06: Pizza Size Management](#bck06-pizza-size-management)
+      - [Flow Mapping](#flow-mapping-5)
+    - [BCK07: Pizza Component Type Management](#bck07-pizza-component-type-management)
+      - [Flow Mapping](#flow-mapping-6)
+    - [BCK08: Pizza Component Configuration](#bck08-pizza-component-configuration)
+      - [Flow Mapping](#flow-mapping-7)
+    - [BCK09: Stock Information Management](#bck09-stock-information-management)
+      - [Flow Mapping](#flow-mapping-8)
+    - [BCK10: Predefined Pizza Management](#bck10-predefined-pizza-management)
+      - [Flow Mapping](#flow-mapping-9)
+    - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
+      - [Flow Mapping](#flow-mapping-10)
 
 ## Actors
 
@@ -34,21 +46,21 @@ This document shows who uses the LaPrizza information system and which business 
 
 ### BCK01: User and Authentication Management
 
-![BCK01 Use Case View](./diagrams/use-case-views/bck01-use-case-view.svg)
+![BCK01 Use Case View](./diagrams/use-case-views/bck01-use-cases-view.svg)
 
 #### Flow Mapping
 
 | User Story | Use Case               | Primary Actor    | Flow Document (SAD)                                  |
 | :--------- | :--------------------- | :--------------- | :--------------------------------------------------- |
 | **BCK01**  | UC1: Authenticate User | System User      | [Login](../flows/authentication/login.md)            |
-| **BCK01**  | UC2: Register User     | LaPrizza Manager | [Register User](../flows/authentication/register.md) |
-| **BCK01**  | UC3: List Users        | LaPrizza Manager | [List Users](../flows/user/list.md)                  |
-| **BCK01**  | UC4: Get User          | LaPrizza Manager | [Get User](../flows/user/get.md)                     |
-| **BCK01**  | UC5: Update User       | LaPrizza Manager | [Update User](../flows/user/update.md)               |
+| **BCK01**  | UC2: Register User     | LaPrizza Manager | [Register User](../flows/authentication/register-user.md) |
+| **BCK01**  | UC3: List Users        | LaPrizza Manager | [List Users](../flows/user/list-users.md)                  |
+| **BCK01**  | UC4: Get User          | LaPrizza Manager | [Get User](../flows/user/get-user.md)                     |
+| **BCK01**  | UC5: Update User       | LaPrizza Manager | [Update User](../flows/user/update-user.md)               |
 
 ### BCK02: Customer Management
 
-![BCK02 Use Case View](./diagrams/use-case-views/bck02-use-case-view.svg)
+![BCK02 Use Case View](./diagrams/use-case-views/bck02-use-cases-view.svg)
 
 #### Flow Mapping
 
@@ -56,8 +68,7 @@ This document shows who uses the LaPrizza information system and which business 
 | :--------- | :--------------------- | :--------------- | :---------------------------------------------------------- |
 | **BCK02**  | UC1: Register Customer | LaPrizza Manager | [Register Customer](../flows/customer/register-customer.md) |
 | **BCK02**  | UC2: List Customers    | LaPrizza Manager | [List Customers](../flows/customer/list-search-customer.md) |
-| **BCK02**  | UC3: Get Customer      | LaPrizza Manager | [Get Customer](../flows/customer/get-customer.md)           |
-| **BCK02**  | UC4: Update Customer   | LaPrizza Manager | [Update Customer](../flows/customer/update-customer.md)     |
+| **BCK02**  | UC3: Update Customer   | LaPrizza Manager | [Update Customer](../flows/customer/update-customer.md)     |
 
 ### BCK03: Product Category Management
 

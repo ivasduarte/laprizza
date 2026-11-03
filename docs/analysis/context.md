@@ -29,7 +29,7 @@ Each actor has different functionalities in the system:
 - `Employees` handle operational tasks like checking the catalogue, managing stock, and kitchen orders;
 - `Managers` maintain the core business information (users, roles, customers, products, categories, allergens, pizza configurations, and AI planning triggers).
 
-![Level 1: Logical View](../design/diagrams/level-1/l1-logical-view.svg)
+![Level 1: Logical View](../design/views.md#level-1-logical-view)
 
 ## Element Catalog
 
