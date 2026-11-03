@@ -13,14 +13,14 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerEmail}}",
+  "email": "{{managerEmail}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
 
 ### Extração do token
-@adminToken = {{loginAdmin.token}}
+@adminToken = {{loginAdmin.accessToken}}
 
 ### 1.2 Criar um Funcionário (Employee) para testar RBAC
 # @name createEmployee
@@ -45,14 +45,14 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{createdEmpEmail}}",
+  "email": "{{createdEmpEmail}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
 
 ### Extração do token do funcionário
-@empToken = {{loginEmployee.token}}
+@empToken = {{loginEmployee.accessToken}}
 
 ### ==========================================
 ### 2: SEGURANÇA E ACESSOS (RBAC)

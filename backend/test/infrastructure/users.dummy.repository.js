@@ -1,50 +1,38 @@
 /**
  * Factory function that creates an in-memory dummy users repository for testing.
- * Implements the same interface as the real infrastructure repository.
- * Simulates database operations, constraints (like duplicate key errors), and ObjectId generation.
+ * Implements the same interface as the real infrastructure repository (users.repository.js),
+ * including the AA01 operations (failed logins, lockout, password hash and tokenVersion).
  *
- * @returns {Object} The dummy repository instance containing mocked database operations.
+ * @returns {Object} The dummy repository instance.
  */
 export function createDummyUsersRepository() {
   const users = [];
   let idCounter = 1;
 
+  /** Finds a user by its simulated hex ID. */
+  const byId = (id) => users.find((u) => String(u._id) === String(id));
+  /** Finds a user by email (already normalized by the caller). */
+  const byEmail = (email) => users.find((u) => u.email === email);
+
   return {
-    /**
-     * Retrieves all users from the in-memory array.
-     *
-     * @returns {Promise<Object[]>} A promise resolving to an array of user documents.
-     */
+    /** @returns {Promise<Object[]>} Every user. */
     listUsers: async () => users,
 
-    /**
-     * Finds a user by their simulated MongoDB hex ID.
-     *
-     * @param {string} id - The 24-character hex string ID.
-     * @returns {Promise<Object|undefined>} A promise resolving to the user document, or undefined if not found.
-     */
-    findById: async (id) => {
-      return users.find((u) => String(u._id) === String(id));
-    },
+    /** @returns {Promise<Object|undefined>} The user with that ID. */
+    findById: async (id) => byId(id),
+
+    /** In memory the hash is always present; kept for interface parity. */
+    findByIdWithPasswordHash: async (id) => byId(id),
+
+    /** @returns {Promise<Object|undefined>} The user with that email. */
+    findByEmail: async (email) => byEmail(email),
+
+    /** In memory the hash is always present; kept for interface parity. */
+    findByEmailWithPasswordHash: async (email) => byEmail(email),
 
     /**
-     * Finds a user by their email or username.
-     *
-     * @param {string} identifier - The email or username.
-     * @returns {Promise<Object|undefined>} A promise resolving to the user document, or undefined if not found.
-     */
-    findByEmailOrUsername: async (identifier) => {
-      return users.find((u) => u.email === identifier || u.username === identifier);
-    },
-
-    /**
-     * Simulates saving a new user to the database.
-     * Generates a 24-character hex ID. Throws a simulated MongoDB duplicate key error (11000)
-     * if the email or username already exists.
-     *
-     * @param {Object} userData - The data for the new user.
-     * @returns {Promise<Object>} A promise resolving to the newly created user document.
-     * @throws {Error} Throws if a user with the same email or username already exists.
+     * Simulates saving a new user. Throws a duplicate key error (11000)
+     * when the email or username already exists.
      */
     create: async (userData) => {
       const exists = users.find(
@@ -52,41 +40,69 @@ export function createDummyUsersRepository() {
           (userData.email && u.email === userData.email) ||
           (userData.username && u.username === userData.username),
       );
-
       if (exists) {
         const error = new Error('Duplicate key');
         error.code = 11000;
         throw error;
       }
 
-      // Generates a 24-character hex string with letters (e.g., 'abcdef000000000000000001')
+      // 24-character hex string (e.g. 'abcdef000000000000000001')
       const hexId = 'abcdef' + (idCounter++).toString(16).padStart(18, '0');
-      const newUser = { _id: hexId, ...userData };
-
+      const newUser = {
+        _id: hexId,
+        status: 'inactive',
+        failedLoginCount: 0,
+        lockedUntil: null,
+        tokenVersion: 0,
+        ...userData,
+      };
       users.push(newUser);
       return newUser;
     },
 
-    /**
-     * Simulates updating an existing user in the database.
-     *
-     * @param {string} id - The simulated MongoDB hex ID of the user to update.
-     * @param {Object} data - The fields to update.
-     * @returns {Promise<Object|null>} A promise resolving to the updated user document, or null if not found.
-     */
+    /** Simulates findByIdAndUpdate with plain fields ($set). */
     update: async (id, data) => {
       const index = users.findIndex((u) => String(u._id) === String(id));
       if (index === -1) return null;
-
       users[index] = { ...users[index], ...data };
       return users[index];
     },
 
-    /**
-     * Internal helper method used strictly for test assertions to access the raw in-memory array.
-     *
-     * @returns {Object[]} The raw array of user documents.
-     */
+    /** Simulates the atomic $inc of failedLoginCount. */
+    registerFailedLogin: async (id) => {
+      const user = byId(id);
+      if (!user) return null;
+      user.failedLoginCount = (user.failedLoginCount ?? 0) + 1;
+      return user;
+    },
+
+    /** Simulates $max on lockedUntil (keeps the longest wait). */
+    extendLockout: async (id, lockedUntil) => {
+      const user = byId(id);
+      if (user && (!user.lockedUntil || lockedUntil > user.lockedUntil)) user.lockedUntil = lockedUntil;
+    },
+
+    clearLoginFailures: async (id) => {
+      const user = byId(id);
+      if (user) Object.assign(user, { failedLoginCount: 0, lockedUntil: null });
+    },
+
+    setPasswordHash: async (id, passwordHash, { revokeTokens = false } = {}) => {
+      const user = byId(id);
+      if (!user) return null;
+      Object.assign(user, { passwordHash, failedLoginCount: 0, lockedUntil: null });
+      if (revokeTokens) user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+      return user;
+    },
+
+    incrementTokenVersion: async (id) => {
+      const user = byId(id);
+      if (!user) return null;
+      user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+      return user;
+    },
+
+    /** Test helper: raw access to the in-memory array. */
     _getUsers: () => users,
   };
 }

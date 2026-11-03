@@ -13,10 +13,12 @@ export class AppError extends Error {
    * @param {number} status - The HTTP status code associated with the error (e.g., 400, 401, 403, 404).
    * @param {any} [details=null] - Optional additional error details (e.g., an array of Joi validation messages).
    */
-  constructor(message, status, details = null) {
+  constructor(message, status, details = null, code = null) {
     super(message);
     this.status = status;
     this.details = details;
+    this.code = code;
     this.expose = true;
+    this.retryAfterSeconds = undefined;
   }
 }

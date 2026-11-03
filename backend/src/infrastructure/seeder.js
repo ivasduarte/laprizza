@@ -1,9 +1,9 @@
-import * as argon2 from 'argon2';
 import Users from './users/users.model.js';
 
 import * as pizzaComponentTypesRepository from './pizza-component-type/pizza-component-type.repository.js';
 
-import { Roles, validatePasswordStrength } from '../domain/users/users.domain.js';
+import { passwordHasher } from './security/password-hasher.js';
+import { Roles, AccountStatus, validatePasswordStrength } from '../domain/users/users.domain.js';
 import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-type/pizza-component-types.domain.js';
 
 /** MongoDB error code for violation of a unique index. */
@@ -29,12 +29,12 @@ export async function seedInitialManager() {
 
     validatePasswordStrength(pw);
 
-    const hashedPassword = await argon2.hash(pw);
     await Users.create({
       username: 'admin',
       email: 'admin@laprizza.pt',
-      password: hashedPassword,
+      passwordHash: await passwordHasher.hash(pw),
       role: Roles.MANAGER,
+      status: AccountStatus.ACTIVE,
     });
     console.log('Initial Manager account created successfully.');
   } else {
@@ -53,7 +53,9 @@ export async function seedInitialPizzaComponentTypes() {
       console.log(`Pizza component type "${type.name}" created.`);
     } catch (err) {
       if (err.code !== DUPLICATE_KEY_ERROR_CODE) throw err;
-      console.warn(`Pizza component type "${type.name}" skipped: its assembly order is already in use.`);
+      console.warn(
+        `Pizza component type "${type.name}" skipped: its assembly order is already in use.`,
+      );
     }
   }
 }

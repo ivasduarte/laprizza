@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
@@ -14,6 +15,7 @@ async function setupTestServer() {
   const sizeRepo = createDummyPizzaSizeRepository();
   const productsRepo = createDummyProductsRepository();
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: usersRepo,
     sizeRepository: sizeRepo,
     productsRepository: productsRepo,
@@ -37,9 +39,9 @@ async function loginAs(port, email) {
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: email, password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: email, password: 'StrongPassword123!' }),
   });
-  return (await res.json()).token;
+  return (await res.json()).accessToken;
 }
 
 test('API POST /pizza-size enforces Joi, RBAC and Conflicts', async (t) => {

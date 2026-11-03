@@ -1,0 +1,515 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@userPassword = StrongPassword123!
+@newUserPassword = NewStrongPassword123!
+@dynamicEmail = aa01_{{$timestamp}}@laprizza.pt
+@lockEmail = aa01_lock_{{$timestamp}}@laprizza.pt
+@ghostEmail = ghost_{{$timestamp}}@laprizza.pt
+# 43 base64url characters: valid format, but does not exist
+@fakeResetToken = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+### ==========================================
+### 1: LOGIN LOCAL (Manager)
+### ==========================================
+
+### 1.1 Login do Admin (200 OK + cookie de refresh)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.tokenType == Bearer
+?? js response.parsedBody.expiresIn == 3600
+?? js response.parsedBody.user.role == MANAGER
+?? header cache-control == no-store
+
+### Extração do token do Admin
+@adminToken = {{loginAdmin.accessToken}}
+
+### 1.2 Email normalizado (maiúsculas e espaços) (200 OK)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "  ADMIN@LaPrizza.pt ",
+  "password": "{{managerPassword}}"
+}
+
+?? status == 200
+
+### 1.3 Login sem password (400 Bad Request)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == VALIDATION_FAILED
+
+### 1.4 Login com email inválido (400 Bad Request)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin",
+  "password": "{{managerPassword}}"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == VALIDATION_FAILED
+
+### 1.5 Rota protegida com o token do Admin (200 OK)
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+?? status == 200
+
+
+### ==========================================
+### 2: RENOVAÇÃO DA SESSÃO (cookie httpOnly)
+### ==========================================
+
+# Nota: o refresh com sucesso (200 + cookie rodado) não é testado aqui porque o httpyac não
+# reenvia cookies "Secure" por http://localhost (os browsers reenviam). Esse cenário está coberto
+# pelos testes automáticos (test/application/auth.service.test.js e test/api/auth.controller.test.js).
+
+### 2.1 Refresh com Origin não autorizada (403 Forbidden - CSRF)
+POST {{baseUrl}}/auth/refresh
+Origin: https://evil.example
+
+?? status == 403
+?? js response.parsedBody.error.code == ORIGIN_NOT_ALLOWED
+
+
+### ==========================================
+### 3: TOKENS INVÁLIDOS (401) vs SEM PERMISSÃO (403)
+### ==========================================
+
+### 3.1 Sem token (401 Unauthorized)
+GET {{baseUrl}}/users
+
+?? status == 401
+?? js response.parsedBody.error.code == TOKEN_MISSING
+
+### 3.2 Token adulterado (401 Unauthorized)
+GET {{baseUrl}}/users
+Authorization: Bearer abc.def.ghi
+
+?? status == 401
+?? js response.parsedBody.error.code == TOKEN_INVALID
+
+### 3.3 Criar utilizador de teste EMPLOYEE (201 Created)
+# @name createUser
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "{{dynamicEmail}}",
+  "password": "{{userPassword}}",
+  "role": "EMPLOYEE"
+}
+
+?? status == 201
+?? js response.parsedBody.status == active
+
+### Extração do estado (Email fixo e ID)
+@userId = {{createUser.id}}
+@userEmail = {{createUser.email}}
+
+### 3.4 Login do Employee - sessão A (200 OK)
+# @name loginUserA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{userPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.user.role == EMPLOYEE
+
+@userTokenA = {{loginUserA.accessToken}}
+
+### 3.5 Login do Employee - sessão B (200 OK)
+# @name loginUserB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{userPassword}}"
+}
+
+?? status == 200
+
+@userTokenB = {{loginUserB.accessToken}}
+
+### 3.6 Employee numa rota de Manager (403 Forbidden - sessão válida, sem permissão)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userTokenA}}
+
+?? status == 403
+?? js response.parsedBody.error.code == FORBIDDEN
+
+
+### ==========================================
+### 4: NÃO ENUMERAÇÃO DE CONTAS
+### ==========================================
+
+### 4.1 Password errada numa conta existente (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "WrongPassword999!"
+}
+
+?? status == 401
+?? js response.parsedBody.error.code == INVALID_CREDENTIALS
+?? js response.parsedBody.error.message == Invalid credentials.
+
+### 4.2 Conta inexistente (401 Unauthorized - corpo igual ao 4.1)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{ghostEmail}}",
+  "password": "WrongPassword999!"
+}
+
+?? status == 401
+?? js response.parsedBody.error.code == INVALID_CREDENTIALS
+?? js response.parsedBody.error.message == Invalid credentials.
+
+
+### ==========================================
+### 5: ALTERAÇÃO DE PASSWORD (sessão A)
+### ==========================================
+
+### 5.1 Password atual errada (400 Bad Request)
+POST {{baseUrl}}/auth/password/change
+Authorization: Bearer {{userTokenA}}
+Content-Type: application/json
+
+{
+  "currentPassword": "WrongPassword999!",
+  "newPassword": "{{newUserPassword}}"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == CURRENT_PASSWORD_INCORRECT
+
+### 5.2 Password nova não cumpre a política (400 Bad Request)
+POST {{baseUrl}}/auth/password/change
+Authorization: Bearer {{userTokenA}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{userPassword}}",
+  "newPassword": "fraca"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == PASSWORD_POLICY_VIOLATION
+
+### 5.3 Alteração válida (204 No Content)
+POST {{baseUrl}}/auth/password/change
+Authorization: Bearer {{userTokenA}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{userPassword}}",
+  "newPassword": "{{newUserPassword}}"
+}
+
+?? status == 204
+
+### 5.4 A sessão A continua válida (403 = autenticado, sem permissão)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userTokenA}}
+
+?? status == 403
+
+### 5.5 A sessão B foi revogada (401 Unauthorized)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userTokenB}}
+
+?? status == 401
+?? js response.parsedBody.error.code == SESSION_REVOKED
+
+### 5.6 Login com a password antiga (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{userPassword}}"
+}
+
+?? status == 401
+?? js response.parsedBody.error.code == INVALID_CREDENTIALS
+
+
+### ==========================================
+### 6: LOGOUT E LOGOUT-ALL
+### ==========================================
+
+### 6.1 Logout da sessão A (204 No Content)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{userTokenA}}
+
+?? status == 204
+
+### 6.2 O token da sessão A deixa de servir (401 Unauthorized)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userTokenA}}
+
+?? status == 401
+?? js response.parsedBody.error.code == SESSION_REVOKED
+
+### 6.3 Login com a password nova - sessão C (200 OK; também repõe o contador de falhas)
+# @name loginUserC
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{newUserPassword}}"
+}
+
+?? status == 200
+
+@userTokenC = {{loginUserC.accessToken}}
+
+### 6.4 Login - sessão D (200 OK)
+# @name loginUserD
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{newUserPassword}}"
+}
+
+?? status == 200
+
+@userTokenD = {{loginUserD.accessToken}}
+
+### 6.5 Logout-all a partir da sessão C (204 No Content)
+POST {{baseUrl}}/auth/logout-all
+Authorization: Bearer {{userTokenC}}
+
+?? status == 204
+
+### 6.6 A sessão D também terminou (401 Unauthorized)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userTokenD}}
+
+?? status == 401
+?? js response.parsedBody.error.code == SESSION_REVOKED
+
+
+### ==========================================
+### 7: CONTA DESATIVADA
+### ==========================================
+
+### 7.1 Admin desativa o Employee (200 OK)
+PATCH {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+?? status == 200
+?? js response.parsedBody.status == disabled
+
+### 7.2 Password correta numa conta desativada (403 Forbidden)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{newUserPassword}}"
+}
+
+?? status == 403
+?? js response.parsedBody.error.code == ACCOUNT_DISABLED
+
+### 7.3 Password errada numa conta desativada (401 - o estado só é revelado com a password certa)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "WrongPassword999!"
+}
+
+?? status == 401
+?? js response.parsedBody.error.code == INVALID_CREDENTIALS
+
+
+### ==========================================
+### 8: RECUPERAÇÃO DE PASSWORD
+### ==========================================
+
+### 8.1 Pedido para conta existente (202 Accepted - email no Mailpit, http://localhost:8025)
+POST {{baseUrl}}/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}"
+}
+
+?? status == 202
+?? js response.parsedBody.code == PASSWORD_RESET_REQUESTED
+
+### 8.2 Pedido para conta inexistente (202 Accepted - resposta igual ao 8.1)
+POST {{baseUrl}}/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "{{ghostEmail}}"
+}
+
+?? status == 202
+?? js response.parsedBody.code == PASSWORD_RESET_REQUESTED
+
+### 8.3 Token com formato inválido (400 Bad Request)
+POST {{baseUrl}}/auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "curto",
+  "newPassword": "{{newUserPassword}}"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == VALIDATION_FAILED
+
+### 8.4 Token inexistente (400 Bad Request)
+POST {{baseUrl}}/auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "{{fakeResetToken}}",
+  "newPassword": "{{newUserPassword}}"
+}
+
+?? status == 400
+?? js response.parsedBody.error.code == RESET_TOKEN_INVALID
+
+# 8.5 (MANUAL) Reset com o token real: copiar do email no Mailpit o valor depois de "#token="
+# e enviar POST {{baseUrl}}/auth/password/reset com { "token": "<valor>", "newPassword": "{{managerPassword}}" }
+# -> 204. Enviar o mesmo pedido outra vez -> 400 RESET_TOKEN_INVALID (uso único).
+# Nota: o reset termina todas as sessões do Admin.
+
+
+### ==========================================
+### 9: ESPERA PROGRESSIVA (falhas consecutivas)
+### ==========================================
+
+### 9.1 Criar utilizador para o teste de bloqueio (201 Created)
+# @name createLockUser
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "{{lockEmail}}",
+  "password": "{{userPassword}}",
+  "role": "EMPLOYEE"
+}
+
+?? status == 201
+
+@lockUserEmail = {{createLockUser.email}}
+
+### 9.2 1.ª falha (401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{lockUserEmail}}", "password": "WrongPassword999!" }
+
+?? status == 401
+
+### 9.3 2.ª falha (401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{lockUserEmail}}", "password": "WrongPassword999!" }
+
+?? status == 401
+
+### 9.4 3.ª falha (401 - a partir daqui começa a espera de 1 minuto)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{lockUserEmail}}", "password": "WrongPassword999!" }
+
+?? status == 401
+
+### 9.5 Até a password correta é recusada durante a espera (429 Too Many Requests)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{lockUserEmail}}", "password": "{{userPassword}}" }
+
+?? status == 429
+?? js response.parsedBody.error.code == TOO_MANY_ATTEMPTS
+?? header retry-after exists
+
+### 9.6 Conta inexistente: 3 falhas (401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{ghostEmail}}", "password": "WrongPassword999!" }
+
+?? status == 401
+
+### 9.7 Conta inexistente: a espera também se aplica (429 - não revela que a conta não existe)
+# 4.2 already counted 1 failure for ghostEmail; with 9.6 that makes 2. This is the 3rd:
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{ghostEmail}}", "password": "WrongPassword999!" }
+
+?? status == 401
+
+### 9.8 Próxima tentativa na conta inexistente (429 Too Many Requests)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "email": "{{ghostEmail}}", "password": "WrongPassword999!" }
+
+?? status == 429
+?? js response.parsedBody.error.code == TOO_MANY_ATTEMPTS
+
+
+### ==========================================
+### 10: LOGOUT DO ADMIN E REFRESH APÓS LOGOUT
+### ==========================================
+
+### 10.1 Logout do Admin (204 No Content - limpa o cookie)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{adminToken}}
+
+?? status == 204
+
+### 10.2 Refresh após logout (401 Unauthorized)
+POST {{baseUrl}}/auth/refresh
+
+?? status == 401
+?? js response.parsedBody.error.code == REFRESH_INVALID

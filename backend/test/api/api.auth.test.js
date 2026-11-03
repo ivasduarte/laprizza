@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '..//infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
@@ -17,6 +18,7 @@ process.env.JWT_SECRET = 'test_secret_key';
 async function setupTestServer() {
   const dummyRepo = createDummyUsersRepository();
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: dummyRepo,
   }).listen(0);
 
@@ -51,24 +53,24 @@ test('API POST /auth/login (400, 401, 200)', async (t) => {
   let res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt' }),
   });
   assert.equal(res.status, 400);
 
   res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'Wrong!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'Wrong!' }),
   });
   assert.equal(res.status, 401);
 
   res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
   assert.equal(res.status, 200);
-  assert.ok((await res.json()).token);
+  assert.ok((await res.json()).accessToken);
 });
 
 /**
@@ -86,16 +88,16 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   const r1 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const adminToken = (await r1.json()).token;
+  const adminToken = (await r1.json()).accessToken;
 
   const r2 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const empToken = (await r2.json()).token;
+  const empToken = (await r2.json()).accessToken;
 
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/v1/users`)).status, 401);
 
@@ -198,16 +200,16 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   const r1 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const adminToken = (await r1.json()).token;
+  const adminToken = (await r1.json()).accessToken;
 
   const r2 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const empToken = (await r2.json()).token;
+  const empToken = (await r2.json()).accessToken;
 
   const createRes = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
     method: 'POST',
@@ -294,13 +296,14 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   assert.equal(patchBody.role, 'EMPLOYEE');
   assert.equal(patchBody.password, undefined);
 
-  // 401 Unauthorized - Login blocked for disabled account
+  // 403 Forbidden - Login blocked for disabled account (AA01: correct password + disabled account -> ACCOUNT_DISABLED)
   const loginRes = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'alvo@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'alvo@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  assert.equal(loginRes.status, 401);
+  assert.equal(loginRes.status, 403);
+  assert.equal((await loginRes.json()).error.code, 'ACCOUNT_DISABLED');
 
   // 400 Bad Request - Empty PATCH (Joi validation)
   assert.equal(
@@ -314,8 +317,9 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
     400,
   );
 
-  const decodedAdmin = jwt.verify(adminToken, process.env.JWT_SECRET);
-  const adminId = decodedAdmin.userId;
+  // The access token carries the user id in the standard 'sub' claim (AA01).
+  const decodedAdmin = jwt.decode(adminToken);
+  const adminId = decodedAdmin.sub;
 
   // 403 Forbidden - Manager attempts to disable themselves
   assert.equal(

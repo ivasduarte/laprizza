@@ -1,0 +1,13 @@
+# Local infrastructure services. MongoDB stays on Atlas (MONGODB_URI).
+services:
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: laprizza-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP (SMTP_HOST=localhost, SMTP_PORT=1025)
+      - '8025:8025' # Web UI: http://localhost:8025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1

@@ -1,9 +1,14 @@
 export class ApiError extends Error {
-  constructor(message, { status = 0, details = null } = {}) {
+  constructor(
+    message,
+    { status = 0, details = null, code = null, retryAfterSeconds = null } = {}
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.details = details;
+    this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -39,14 +44,32 @@ function extractMessage(data, status) {
     : `Request failed with status ${status}`;
 }
 
+function extractRetryAfter(response) {
+  const seconds = Number(response.headers?.get?.('retry-after'));
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
 export function createHttpClient({
   baseUrl,
   getToken = () => null,
   fetchFn = (...args) => globalThis.fetch(...args),
+  refreshAccessToken = null,
+  onSessionExpired = null,
 }) {
-  async function request(path, { method = 'GET', query, body, signal } = {}) {
+  async function request(
+    path,
+    {
+      method = 'GET',
+      query,
+      body,
+      signal,
+      auth = true,
+      credentials,
+      isRetry = false,
+    } = {}
+  ) {
     const headers = { Accept: 'application/json' };
-    const token = getToken();
+    const token = auth ? getToken() : null;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -64,6 +87,7 @@ export function createHttpClient({
             ? JSON.stringify(body)
             : undefined,
         signal,
+        ...(credentials ? { credentials } : {}),
       });
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -76,11 +100,31 @@ export function createHttpClient({
 
     const data = await readBody(response);
     if (!response.ok) {
-      const message = extractMessage(data, response.status);
-      throw new ApiError(message, {
+      const error = new ApiError(extractMessage(data, response.status), {
         status: response.status,
-        details: data?.errors ?? data?.details ?? null,
+        details: data?.errors ?? data?.details ?? data?.error?.details ?? null,
+        code: data?.error?.code ?? null,
+        retryAfterSeconds: extractRetryAfter(response),
       });
+
+      if (response.status === 401 && token) {
+        if (error.code === 'TOKEN_EXPIRED' && refreshAccessToken && !isRetry) {
+          const refreshed = await refreshAccessToken().catch(() => false);
+          if (refreshed) {
+            return request(path, {
+              method,
+              query,
+              body,
+              signal,
+              auth,
+              credentials,
+              isRetry: true,
+            });
+          }
+        }
+        onSessionExpired?.();
+      }
+      throw error;
     }
     return data;
   }

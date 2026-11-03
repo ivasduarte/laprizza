@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
@@ -15,6 +16,7 @@ async function setupTestServer() {
   const stockRepo = createDummyStockRepository();
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: usersRepo,
     productsRepository: productsRepo,
     stockRepository: stockRepo,
@@ -55,9 +57,9 @@ async function loginAs(port, email) {
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: email, password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: email, password: 'StrongPassword123!' }),
   });
-  return (await res.json()).token;
+  return (await res.json()).accessToken;
 }
 
 function request(port, method, path, { token, body } = {}) {

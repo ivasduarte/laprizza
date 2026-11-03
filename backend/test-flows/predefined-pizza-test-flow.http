@@ -20,14 +20,14 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerEmail}}",
+  "email": "{{managerEmail}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
 
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.token}}
+@adminToken = {{loginAdmin.accessToken}}
 
 ### 1.2 POST Criar Employee (201 Created)
 # O email é aleatório para o flow poder correr mais do que uma vez.
@@ -53,14 +53,14 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{employeeEmail}}",
+  "email": "{{employeeEmail}}",
   "password": "{{employeePassword}}"
 }
 
 ?? status == 200
 
 ### Extração do Token do Employee
-@employeeToken = {{loginEmployee.token}}
+@employeeToken = {{loginEmployee.accessToken}}
 
 # Os pedidos 1.4 a 1.29 criam todos os dados de que a pizza precisa, com nomes únicos por execução.
 # Os tipos de componente (Base Dough, Base Sauce, Cheese e Topping) vêm do seeder e são só consultados.

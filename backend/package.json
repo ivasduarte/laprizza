@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.js",
+    "dev:flows": "node --watch --env-file=.env --env-file=test-flows/.env.flows src/index.js",
     "start": "node src/index.js",
     "test": "node --test",
     "test:flows": "httpyac send --all -o short \"test-flows/**/*.http\"",
@@ -18,16 +19,22 @@
     "test:coverage": "node --test --experimental-test-coverage",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "migrate:up": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js up",
+    "migrate:down": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js down",
+    "migrate:status": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js status"
   },
   "dependencies": {
     "argon2": "^0.45.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.2",
     "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.0",
     "morgan": "^1.12.1",
+    "nodemailer": "^10.3.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
@@ -36,6 +43,7 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.13.0",
     "httpyac": "^6.16.7",
+    "migrate-mongo": "^14.0.7",
     "prettier": "^3.9.9"
   },
   "directories": {

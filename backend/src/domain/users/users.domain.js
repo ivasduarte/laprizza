@@ -29,3 +29,35 @@ export function validatePasswordStrength(password) {
   if (!regex.test(password))
     throw new Error('Invalid Password: The password does not meet the requirements.');
 }
+
+/**
+ * States of a user account.
+ * - INACTIVE: create but not activated yet
+ * - ACTIVE: may authenticate
+ * - DISABLED: blocked by a Manager
+ */
+export const AccountStatus = Object.freeze({
+  INACTIVE: 'inactive',
+  ACTIVE: 'active',
+  DISABLED: 'disabled',
+});
+
+/**
+ * Maps the 'isActive' flag to an account status.
+ * 
+ * @param {boolean} isActive 
+ * @returns {string}
+ */
+export function statusFromIsActive(isActive) {
+  return isActive ? AccountStatus.ACTIVE : AccountStatus.DISABLED;
+}
+
+/**
+ * Normalizes the login identifier.
+ * 
+ * @param {string} email 
+ * @returns {string} The normalized email, or '' for a non-string input.
+ */
+export function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}

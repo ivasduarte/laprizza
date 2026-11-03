@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
 import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
@@ -26,9 +27,9 @@ function request(port, method, path, { token, body } = {}) {
 
 async function login(port, identifier) {
   const res = await request(port, 'POST', '/auth/login', {
-    body: { identifier, password: 'StrongPassword123!' },
+    body: { email: identifier, password: 'StrongPassword123!' },
   });
-  return (await res.json()).token;
+  return (await res.json()).accessToken;
 }
 
 async function setupTestServer() {
@@ -37,6 +38,7 @@ async function setupTestServer() {
   const productsRepo = createDummyProductsRepository();
  
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: usersRepo,
     productCategoriesRepository: categoriesRepo,
     productsRepository: productsRepo,

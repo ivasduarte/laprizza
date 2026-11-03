@@ -1,45 +1,71 @@
-import jwt from 'jsonwebtoken';
-import { AppError } from '../../application/app-error.js';
+import { AuthErrorCode, authError } from '../../application/auth/auth-errors.js';
+
+/** Request path without the query string (for logs). */
+const pathOf = (req) => `${req.baseUrl ?? ''}${req.path ?? ''}`;
 
 /**
- * Express middleware to verify the JSON Web Token (JWT) provided in the Authorization header.
- * Expects the header format: "Bearer <token>".
- * If valid, decodes the token and attaches the payload to the request object (`req.user`).
- * If missing, invalid, or expired, triggers a 401 Unauthorized AppError.
+ * Creates the authentication middleware: validates the Bearer token AND the server-side state
+ * on every request (user active, tokenVersion, sid session not revoked/expired). Populates req.user.
  *
- * @param {import('express').Request} req - The Express request object.
- * @param {import('express').Response} res - The Express response object.
- * @param {import('express').NextFunction} next - The Express next middleware function.
- * @returns {void}
+ * @param {{authService: object, securityLogger: object}} deps
+ * @returns {import('express').RequestHandler}
  */
-export function verifyToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new AppError('No token provided or invalid format.', 401));
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    next();
-  } catch {
-    return next(new AppError('Invalid or expired token.', 401));
-  }
+export function createAuthenticate({ authService, securityLogger }) {
+  return async function authenticate(req, _res, next) {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      securityLogger.log('ACCESS_DENIED', {
+        ip: req.ip,
+        method: req.method,
+        path: pathOf(req),
+        reason: AuthErrorCode.TOKEN_MISSING,
+      });
+      return next(authError(AuthErrorCode.TOKEN_MISSING, 401));
+    }
+    try {
+      req.user = await authService.authenticateAccessToken(header.slice('Bearer '.length).trim());
+      next();
+    } catch (err) {
+      if (err.status === 401) {
+        securityLogger.log('ACCESS_DENIED', {
+          ip: req.ip,
+          method: req.method,
+          path: pathOf(req),
+          reason: err.code,
+        });
+      }
+      next(err);
+    }
+  };
 }
 
 /**
- * Express middleware factory to enforce role-based access control.
- * Checks if the authenticated user's role is included in the provided allowed roles array.
- * This middleware must be used after `verifyToken`, as it relies on `req.user` being populated.
+ * Compatibility with the existing routers: delegates to the middleware configured in createApp
+ * (app.locals.authenticate).
+ */
+export function verifyToken(req, res, next) {
+  const authenticate = req.app?.locals?.authenticate;
+  if (!authenticate) return next(new Error('Authentication middleware is not configured.'));
+  return authenticate(req, res, next);
+}
+
+/**
+ * RBAC with the role loaded from the database (req.user.role), never the one sent by the client.
  *
- * @param {string[]} allowedRoles - An array of roles permitted to access the route (e.g., ['MANAGER', 'EMPLOYEE']).
- * @returns {import('express').RequestHandler} The Express middleware function that enforces the role check.
+ * @param {string[]} allowedRoles
+ * @returns {import('express').RequestHandler}
  */
 export function requireRole(allowedRoles) {
-  return (req, res, next) => {
+  return (req, _res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return next(new AppError('Forbidden', 403));
+      req.app?.locals?.securityLogger?.log('ACCESS_DENIED', {
+        userId: req.user?.userId,
+        ip: req.ip,
+        method: req.method,
+        path: pathOf(req),
+        reason: 'INSUFFICIENT_ROLE',
+      });
+      return next(authError(AuthErrorCode.FORBIDDEN, 403));
     }
     next();
   };

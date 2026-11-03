@@ -14,14 +14,14 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerEmail}}",
+  "email": "{{managerEmail}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
 
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.token}}
+@adminToken = {{loginAdmin.accessToken}}
 
 
 ### 1.2 Criar Categoria de Referência

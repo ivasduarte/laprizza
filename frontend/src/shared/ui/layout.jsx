@@ -2,9 +2,12 @@ import { Suspense } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { features } from '../../features/registry.js';
 import { useTranslation } from 'react-i18next';
+import AuthButton from './auth-button.jsx';
 import BackendStatus from './backend-status.jsx';
 import LanguageSwitcher from './language-switcher.jsx';
 import Logo from './logo.jsx';
+
+const navFeatures = features.filter((feature) => feature.showInNav !== false);
 
 export default function Layout() {
   const { t } = useTranslation();
@@ -20,7 +23,7 @@ export default function Layout() {
         </Link>
         <nav className="layout-nav" aria-label={t('layout.primaryNav')}>
           <ul className="nav-list">
-            {features.map((feature) => (
+            {navFeatures.map((feature) => (
               <li key={feature.id}>
                 <NavLink to={feature.path} end={feature.path === '/'}>
                   {t(feature.labelKey)}
@@ -29,6 +32,7 @@ export default function Layout() {
             ))}
           </ul>
         </nav>
+        <AuthButton />
         <LanguageSwitcher />
       </header>
       <main id="main-content" className="layout-main" tabIndex={-1}>

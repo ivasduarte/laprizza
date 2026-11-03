@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import {
   createDummyPredefinedPizzaRepository,
   SEED_IDS as I,
@@ -16,6 +17,7 @@ async function setupTestServer() {
   const pizzaRepo = createDummyPredefinedPizzaRepository();
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: usersRepo,
     predefinedPizzaRepository: pizzaRepo,
   }).listen(0);
@@ -33,9 +35,9 @@ async function loginAs(port, email) {
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: email, password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: email, password: 'StrongPassword123!' }),
   });
-  const { token } = await res.json();
+  const { accessToken: token } = await res.json();
 
   return async (method, path, body) => {
     const res = await fetch(`http://127.0.0.1:${port}/api/v1${path}`, {

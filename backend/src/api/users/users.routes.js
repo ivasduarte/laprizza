@@ -19,7 +19,9 @@ export default function usersRouterFactory(usersRepository) {
 
   const createUserSchema = Joi.object({
     username: Joi.string().alphanum().min(3).max(30).trim().optional(),
-    email: Joi.string().email().trim().optional(),
+    email: Joi.string().trim().lowercase().email().max(254).required().messages({
+      'any.required': 'Mandatory field',
+    }),
     password: Joi.string().required().messages({
       'any.required': 'Mandatory field.',
     }),

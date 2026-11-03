@@ -227,6 +227,28 @@ button:disabled {
   border-color: var(--color-error);
 }
 
+/* Authentication pages */
+
+.auth-page {
+  max-width: 28rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.auth-form input {
+  width: 100%;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* Small screens: everything stays available, only the arrangement changes */
 
 @media (max-width: 40rem) {

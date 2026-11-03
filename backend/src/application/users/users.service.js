@@ -1,22 +1,24 @@
-import * as argon2 from 'argon2';
 import * as defaultUsersRepository from '../../infrastructure/users/users.repository.js';
-import { validatePasswordStrength, Roles } from '../../domain/users/users.domain.js';
+import { passwordHasher } from '../../infrastructure/security/password-hasher.js';
+import { Roles, AccountStatus, statusFromIsActive } from '../../domain/users/users.domain.js';
+import { assertPasswordPolicy } from '../auth/password-policy.js';
 import { AppError } from '../app-error.js';
 
 /**
- * Converts a raw database user document into a safe Data Transfer Object (DTO).
- * Strips away sensitive information like passwords and internal database fields.
+ * Converts a user document into a safe DTO (no password hash or internal fields).
  *
  * @param {Object} user - The raw database document representing a user.
  * @returns {Object} The filtered user DTO safe for client consumption.
  */
 export function toUserDto(user) {
+  const status = user.status ?? AccountStatus.ACTIVE;
   return {
     id: user._id || user.id,
     username: user.username,
     email: user.email,
     role: user.role,
-    isActive: user.isActive ?? true,
+    status,
+    isActive: status === AccountStatus.ACTIVE,
     customerId: user.customerId || null,
   };
 }
@@ -48,7 +50,9 @@ export async function getUserById(id, usersRepository = defaultUsersRepository) 
 }
 
 /**
- * Updates an existing user's information (role, active status, or password).
+ * Updates an existing user's information (role, status, or password).
+ * Changing the password or disabling the account increments tokenVersion,
+ * which immediately invalidates the user's sessions.
  * Enforces business rules: clears `customerId` if the new role is not CUSTOMER,
  * and validates/hashes new passwords before persistence.
  *
@@ -66,22 +70,27 @@ export async function updateUser(id, updateData, usersRepository = defaultUsersR
   if (!user) throw new AppError('User not found.', 404);
 
   const dataToSave = {};
+  let revokeSessions = false;
 
   if (updateData.role) {
     dataToSave.role = updateData.role;
     if (updateData.role !== Roles.CUSTOMER) dataToSave.customerId = null;
   }
 
-  if (updateData.isActive !== undefined) dataToSave.isActive = updateData.isActive;
+  if (updateData.isActive !== undefined) {
+    dataToSave.status = statusFromIsActive(updateData.isActive);
+    revokeSessions ||= dataToSave.status !== AccountStatus.ACTIVE;
+  }
 
   if (updateData.password) {
-    try {
-      validatePasswordStrength(updateData.password);
-    } catch (err) {
-      throw new AppError(err.message, 400);
-    }
-    dataToSave.password = await argon2.hash(updateData.password);
+    assertPasswordPolicy(updateData.password);
+    dataToSave.passwordHash = await passwordHasher.hash(updateData.password);
+    dataToSave.failedLoginCount = 0;
+    dataToSave.lockedUntil = null;
+    revokeSessions = true;
   }
+
+  if (revokeSessions) dataToSave.tokenVersion = (user.tokenVersion ?? 0) + 1;
 
   const updatedUser = await usersRepository.update(id, dataToSave);
   return toUserDto(updatedUser);

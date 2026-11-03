@@ -8,12 +8,12 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerIdentifier}}",
+  "email": "{{managerIdentifier}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
-?? js response.parsedBody.token isString
+?? js response.parsedBody.accessToken isString
 
 ### 2 - Snapshot sem token (401)
 GET {{baseUrl}}/ai-data/snapshot
@@ -23,7 +23,7 @@ GET {{baseUrl}}/ai-data/snapshot
 ### 3 - Snapshot como Manager (200)
 # @name snapshot
 GET {{baseUrl}}/ai-data/snapshot
-Authorization: Bearer {{login.token}}
+Authorization: Bearer {{login.accessToken}}
 
 ?? status == 200
 ?? js response.parsedBody.meta.snapshotId isString
@@ -39,7 +39,7 @@ Authorization: Bearer {{login.token}}
 
 ### 4 - Unidades de stock e consumo são inteiros não negativos (200)
 GET {{baseUrl}}/ai-data/snapshot
-Authorization: Bearer {{login.token}}
+Authorization: Bearer {{login.accessToken}}
 
 ?? status == 200
 ?? js response.parsedBody.bom.every((b) => Number.isInteger(b.quantity) && b.quantity >= 0) == true
@@ -47,14 +47,14 @@ Authorization: Bearer {{login.token}}
 
 ### 5 - Só entram produtos com stock controlado no stock (200)
 GET {{baseUrl}}/ai-data/snapshot
-Authorization: Bearer {{login.token}}
+Authorization: Bearer {{login.accessToken}}
 
 ?? status == 200
 ?? js response.parsedBody.stock.every((s) => response.parsedBody.products.some((p) => p.id === s.productId && p.stockControlled)) == true
 
 ### 6 - Sem dados pessoais de clientes (200)
 GET {{baseUrl}}/ai-data/snapshot
-Authorization: Bearer {{login.token}}
+Authorization: Bearer {{login.accessToken}}
 
 ?? status == 200
 ?? js JSON.stringify(response.parsedBody).includes('email') == false
@@ -64,7 +64,7 @@ Authorization: Bearer {{login.token}}
 
 ### 7 - Dois pedidos seguidos dão o mesmo snapshotId se os dados não mudarem (200)
 GET {{baseUrl}}/ai-data/snapshot
-Authorization: Bearer {{login.token}}
+Authorization: Bearer {{login.accessToken}}
 
 ?? status == 200
 ?? js response.parsedBody.meta.snapshotId == {{snapshot.meta.snapshotId}}

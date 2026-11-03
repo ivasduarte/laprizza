@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
+import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 import { createDummyCustomersRepository } from '../infrastructure/customers.dummy.repository.js';
 import { registerUser } from '../../src/application/auth/auth.service.js';
 
@@ -16,6 +17,7 @@ async function setupTestServer({ postalCodeValidator } = {}) {
   const customersRepo = createDummyCustomersRepository();
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
+    ...createDummyAuthInfrastructure(),
     usersRepository: usersRepo,
     customersRepository: customersRepo,
     postalCodeValidator,
@@ -44,9 +46,9 @@ async function loginAsManager(port) {
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const { token } = await res.json();
+  const { accessToken: token } = await res.json();
 
   return (method, path, body) =>
     fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
@@ -81,9 +83,9 @@ test('API /customers strictly enforces MANAGER role access', async (t) => {
   const rEmp = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const empToken = (await rEmp.json()).token;
+  const empToken = (await rEmp.json()).accessToken;
 
   // EMPLOYEE trying to list customers (Blocked)
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
@@ -106,9 +108,9 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const adminToken = (await rAdmin.json()).token;
+  const adminToken = (await rAdmin.json()).accessToken;
 
   const validPayload = {
     name: 'Integração',
@@ -181,9 +183,9 @@ test('API /customers returns 400 when postal code and city do not match', async 
   const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
-  const adminToken = (await rAdmin.json()).token;
+  const adminToken = (await rAdmin.json()).accessToken;
 
   const res = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
     method: 'POST',

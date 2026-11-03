@@ -16,8 +16,17 @@ export function errorHandler(err, _req, res, _next) {
     Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
   if (status >= 500) console.error(err);
 
-  const code = STATUS_CODES[status]?.toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'ERROR';
+  if (err.type === 'entity.parse.failed') {
+    return res
+      .status(400)
+      .json({ error: { status: 400, code: 'MALFORMED_JSON', message: 'Malformed JSON body.' } });
+  }
+
+  const derivedCode = STATUS_CODES[status]?.toUpperCase().replace(/[^A-Z0-9]+/g, '_') || 'ERROR';
+  const code = status < 500 && typeof err.code === 'string' ? err.code : derivedCode;
   const message = status < 500 && err.expose ? err.message : STATUS_CODES[status];
+
+  if (Number.isInteger(err.retryAfterSeconds)) res.set('Retry-After', String(err.retryAfterSeconds));
 
   const response = { error: { status, code, message } };
   if (err.details) response.error.details = err.details;

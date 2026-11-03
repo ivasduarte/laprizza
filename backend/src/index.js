@@ -4,7 +4,10 @@ import { errorHandler } from './api/middleware/error-handler.js';
 import { seedInitialManager, seedInitialPizzaComponentTypes } from './infrastructure/seeder.js';
 import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.validator.js';
 import { openApiSpec } from './api/openapi.js';
+import { createAuthModule } from './api/auth/auth.module.js';
+import { passwordHasher } from './infrastructure/security/password-hasher.js';
 
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
@@ -27,6 +30,22 @@ import aiDataRouterFactory from './api/ai-data/ai-data.routes.js';
 
 const API_PREFIX = '/api/v1';
 
+const toInt = (value, fallback) => {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+const toList = (value) =>
+  String(value)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+function parseTrustProxy(value) {
+  if (value === undefined || value === '' || value === 'false') return false;
+  if (value === 'true') return true;
+  return /^\d+$/.test(value) ? Number(value) : value;
+}
+
 /**
  * Reads the runtime configuration from environment variables.
  * See .env.example for the supported variables.
@@ -38,14 +57,53 @@ const API_PREFIX = '/api/v1';
 export function loadConfig(env = process.env) {
   if (!env.JWT_SECRET) throw new Error('Fatal: JWT_SECRET is missing from environment variables.');
 
+  const nodeEnv = env.NODE_ENV ?? 'development';
+  const sameSite = (env.REFRESH_COOKIE_SAMESITE ?? 'strict').toLowerCase();
+  const secureCookie = (env.REFRESH_COOKIE_SECURE ?? 'true') !== 'false';
+  if (sameSite === 'none' && !secureCookie) {
+    throw new Error('Fatal: REFRESH_COOKIE_SAMESITE=none requires REFRESH_COOKIE_SECURE=true.');
+  }
+  const appBaseUrl = (env.APP_BASE_URL ?? 'http://localhost:4200').replace(/\/+$/, '');
+
   return {
-    nodeEnv: env.NODE_ENV ?? 'development',
+    nodeEnv,
     port: Number(env.PORT ?? 3000),
-    corsOrigins: (env.CORS_ORIGIN ?? 'http://localhost:5173')
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean),
+    corsOrigins: toList(env.CORS_ORIGIN ?? 'http://localhost:4200'),
     mongoUri: env.MONGODB_URI,
+    jwtSecret: env.JWT_SECRET,
+    trustProxy: parseTrustProxy(env.TRUST_PROXY),
+    rateLimit: {
+      enabled: (env.RATE_LIMIT_ENABLED ?? String(nodeEnv !== 'test')) === 'true',
+      authWindowMs: toInt(env.AUTH_RATE_LIMIT_WINDOW_MINUTES, 15) * 60_000,
+      authMax: toInt(env.AUTH_RATE_LIMIT_MAX, 10),
+      forgotWindowMs: toInt(env.FORGOT_RATE_LIMIT_WINDOW_MINUTES, 60) * 60_000,
+      forgotMax: toInt(env.FORGOT_RATE_LIMIT_MAX, 3),
+    },
+    cookie: {
+      name: env.REFRESH_COOKIE_NAME ?? 'lp_rt',
+      secure: secureCookie,
+      sameSite,
+      path: `${API_PREFIX}/auth`,
+    },
+    auth: {
+      accessTokenTtlSeconds: toInt(env.ACCESS_TOKEN_TTL_MINUTES, 60) * 60,
+      refreshTokenTtlMs: toInt(env.REFRESH_TOKEN_TTL_DAYS, 7) * 86_400_000,
+      lockoutThreshold: toInt(env.LOGIN_LOCKOUT_THRESHOLD, 3),
+      lockoutStepsMs: toList(env.LOGIN_LOCKOUT_STEPS_SECONDS ?? '60,300,1800').map(
+        (s) => toInt(s, 60) * 1000,
+      ),
+      unknownAccountThrottleRetentionMs: toInt(env.LOGIN_THROTTLE_RETENTION_HOURS, 24) * 3_600_000,
+      passwordResetTtlMs: toInt(env.PASSWORD_RESET_TTL_MINUTES, 30) * 60_000,
+      passwordResetUrl: `${appBaseUrl}/reset-password`,
+    },
+    mail: {
+      host: env.SMTP_HOST ?? 'localhost',
+      port: toInt(env.SMTP_PORT, 1025),
+      secure: env.SMTP_SECURE === 'true',
+      user: env.SMTP_USER || undefined,
+      pass: env.SMTP_PASSWORD || undefined,
+      from: env.MAIL_FROM ?? 'LaPrizza <no-reply@laprizza.local>',
+    },
   };
 }
 
@@ -79,21 +137,28 @@ function notFoundHandler(req, _res, next) {
  * @returns {import('express').Application} The configured Express application instance.
  */
 export function createApp(config = loadConfig(), repos = {}) {
-  const app = express();
+    const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', config.trustProxy);
 
   if (config.nodeEnv !== 'test') {
     app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
   }
-  app.use(cors({ origin: config.corsOrigins }));
+  app.use(cors({ origin: config.corsOrigins, credentials: true, exposedHeaders: ['Retry-After'] }));
   app.use(express.json());
+  app.use(cookieParser());
+
+  const auth = createAuthModule(config, repos);
+  app.locals.authenticate = auth.authenticate; // used by verifyToken in every router
+  app.locals.securityLogger = auth.securityLogger;
 
   const api = express.Router();
+
   api.get('/health', (_req, res) => {
     res.json({ status: 'ok', version: pkg.version, timestamp: new Date().toISOString() });
   });
 
-  api.use('/auth', authRouterFactory(repos.usersRepository));
+  api.use('/auth', authRouterFactory(auth));
   api.use('/users', usersRouterFactory(repos.usersRepository));
   api.use(
     '/products/:productId/size-configurations',
@@ -180,6 +245,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const config = loadConfig();
     await connectDB(config.mongoUri);
+    await passwordHasher.warmUp();
     await seedInitialManager();
     await seedInitialPizzaComponentTypes();
 

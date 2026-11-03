@@ -13,13 +13,13 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerEmail}}",
+  "email": "{{managerEmail}}",
   "password": "{{managerPassword}}"
 }
 ?? status == 200
 
 ### Extração do Token do Manager
-@adminToken = {{loginAdmin.token}}
+@adminToken = {{loginAdmin.accessToken}}
 
 ### 1.2 Criar um Cliente (Customer) para testar RBAC
 # @name createCustomerAuth
@@ -42,12 +42,12 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{createdCustomerEmail}}",
+  "email": "{{createdCustomerEmail}}",
   "password": "{{managerPassword}}"
 }
 ?? status == 200
 
-@customerToken = {{loginCustomer.token}}
+@customerToken = {{loginCustomer.accessToken}}
 
 ### 1.4 Criar Categoria de Referência
 # @name createCategory

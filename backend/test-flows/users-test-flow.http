@@ -13,32 +13,32 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{managerEmail}}",
+  "email": "{{managerEmail}}",
   "password": "{{managerPassword}}"
 }
 
 ?? status == 200
 
 ### Extração de variáveis base
-@token = {{login.token}}
+@token = {{login.accessToken}}
 
-### 1.2 Login com Username (200 OK)
+### 1.2 Login com Username (400 Bad Request - AA01: o identificador de login é só o email)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "admin",
+  "email": "admin",
   "password": "{{managerPassword}}"
 }
 
-?? status == 200
+?? status == 400
 
 ### 1.3 Login sem password (400 Bad Request)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "admin"
+  "email": "{{managerEmail}}"
 }
 
 ?? status == 400
@@ -48,7 +48,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "admin",
+  "email": "{{managerEmail}}",
   "password": "WrongPassword999!"
 }
 
@@ -83,7 +83,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 { 
-  "identifier": "{{createdEmail}}", 
+  "email": "{{createdEmail}}", 
   "password": "StrongPassword123!" 
 }
 
@@ -105,7 +105,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 { 
-  "identifier": "{{createdEmail}}", 
+  "email": "{{createdEmail}}", 
   "password": "NewStrongPassword123!" 
 }
 
@@ -116,7 +116,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 { 
-  "identifier": "{{createdEmail}}", 
+  "email": "{{createdEmail}}", 
   "password": "StrongPassword123!" 
 }
 
@@ -209,13 +209,14 @@ Content-Type: application/json
 
 ?? status == 200
 
-### 7. Login de Conta Desativada com a nova password (401 Unauthorized)
+### 7. Login de Conta Desativada com a nova password (403 Forbidden - AA01: ACCOUNT_DISABLED)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{createdEmail}}",
+  "email": "{{createdEmail}}",
   "password": "NewStrongPassword123!"
 }
 
-?? status == 401
+?? status == 403
+?? js response.parsedBody.error.code == ACCOUNT_DISABLED
