@@ -1,6 +1,6 @@
 # Implement Structured Logging and Monitoring
 
-* Status: proposed
+* Status: accepted
 * Deciders: Development Team
 * Date: 2026-11-02
 

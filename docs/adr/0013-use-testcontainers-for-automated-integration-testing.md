@@ -1,6 +1,6 @@
 # Use Testcontainers for Automated Integration Testing
 
-* Status: proposed
+* Status: accepted
 * Deciders: Development Team
 * Date: 2026-11-02
 

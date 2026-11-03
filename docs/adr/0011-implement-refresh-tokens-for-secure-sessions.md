@@ -1,6 +1,6 @@
 # Implement Refresh Tokens for Secure Sessions
 
-* Status: proposed
+* Status: accepted
 * Deciders: Development Team
 * Date: 2026-11-02
 
