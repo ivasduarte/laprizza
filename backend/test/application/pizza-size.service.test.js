@@ -120,7 +120,7 @@ test('updateSize still allows renaming a size used by a size configuration', asy
 
 test('updateSize throws 404 for unknown IDs and 409 for duplicate names', async () => {
   const repo = createDummyPizzaSizeRepository();
-  const s1 = await createSize({ name: 'S1' }, repo);
+  await createSize({ name: 'S1' }, repo);
   const s2 = await createSize({ name: 'S2' }, repo);
 
   await assert.rejects(

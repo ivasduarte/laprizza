@@ -6,6 +6,8 @@ import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.
 import { openApiSpec } from './api/openapi.js';
 import { createAuthModule } from './api/auth/auth.module.js';
 import { passwordHasher } from './infrastructure/security/password-hasher.js';
+import { createMongooseHealthProbe } from './infrastructure/system/database-health.probe.js';
+import { loadVersionInfo } from './infrastructure/system/version-file.reader.js';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -27,6 +29,7 @@ import stockRouterFactory from './api/stock/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration/component-size-configuration.routes.js';
 import productCatalogueRouterFactory from './api/product-catalogue/product-catalogue.route.js';
 import aiDataRouterFactory from './api/ai-data/ai-data.routes.js';
+import systemRouterFactory from './api/system/system.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -154,9 +157,13 @@ export function createApp(config = loadConfig(), repos = {}) {
 
   const api = express.Router();
 
-  api.get('/health', (_req, res) => {
-    res.json({ status: 'ok', version: pkg.version, timestamp: new Date().toISOString() });
-  });
+  api.use(
+    systemRouterFactory({
+      databaseHealthProbe: repos.databaseHealthProbe ?? createMongooseHealthProbe(),
+      appVersion: pkg.version,
+      versionInfo: repos.versionInfo ?? loadVersionInfo(),
+    }),
+  );
 
   api.use('/auth', authRouterFactory(auth));
   api.use('/users', usersRouterFactory(repos.usersRepository));

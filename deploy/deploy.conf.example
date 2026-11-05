@@ -1,0 +1,25 @@
+# Configuração do deploy automático do back end (SYS01)
+# Copiar para /opt/laprizza/deploy.conf (dono: deploy, chmod 640).
+# Este ficheiro NÃO tem segredos: os segredos estão em /opt/laprizza/.env.
+
+# Branch publicado no staging. A forma ${VAR:-valor} permite sobrepor na linha de comandos:
+#   DEPLOY_BRANCH=feat/xyz /opt/laprizza/bin/laprizza-deploy.sh deploy
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+
+# Pasta do back end dentro do repositório
+APP_SUBDIR=backend
+
+# Quantas versões manter em /opt/laprizza/releases (inclui a atual e a anterior)
+KEEP_RELEASES=5
+
+# Validação
+RUN_LINT=true
+
+# Verificação depois de reiniciar
+HEALTH_URL=http://localhost:3000/api/v1/health
+VERSION_URL=http://localhost:3000/api/v1/version
+HEALTH_TIMEOUT_SECONDS=60
+
+# Base de dados: se não responder, o deploy aborta sem tocar na versão em execução
+MONGO_HOST=10.9.22.16
+MONGO_PORT=27017

@@ -1,5 +1,5 @@
 export const dummyPostalCodeValidator = {
-  isValidMatch: async (postalCode, city) => {
+  isValidMatch: async (_postalCode, _city) => {
     return true;
   },
 };

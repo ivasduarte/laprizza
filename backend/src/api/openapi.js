@@ -46,6 +46,36 @@ export const openApiSpec = {
               },
             },
           },
+          503: {
+            description: 'The database is not reachable',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'unavailable' },
+                    version: { type: 'string', example: pkg.version },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/version': {
+      get: {
+        summary: 'Deployed version',
+        description:
+          'Commit of the running release, read from VERSION.json at startup. sha and shortSha are "unknown" when the file does not exist.',
+        responses: {
+          200: {
+            description: 'The deployed version',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/VersionInfo' } },
+            },
+          },
         },
       },
     },
@@ -1687,6 +1717,17 @@ export const openApiSpec = {
           sizes: { type: 'array', items: { $ref: '#/components/schemas/PizzaSize' } },
           components: { type: 'array', items: { $ref: '#/components/schemas/PizzaComponentType' } },
           isActive: { type: 'boolean' },
+        },
+      },
+      VersionInfo: {
+        type: 'object',
+        required: ['sha', 'shortSha'],
+        properties: {
+          sha: { type: 'string', example: 'd455e69a1b2c3d4e5f60718293a4b5c6d7e8f901' },
+          shortSha: { type: 'string', example: 'd455e69' },
+          branch: { type: 'string', example: 'main' },
+          commitDate: { type: 'string', format: 'date-time' },
+          deployedAt: { type: 'string', format: 'date-time' },
         },
       },
     },

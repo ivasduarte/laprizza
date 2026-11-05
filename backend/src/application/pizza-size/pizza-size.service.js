@@ -20,7 +20,7 @@ export async function createSize(sizeData, sizeRepository = defaultSizeRepo) {
     return toSizeDto(newSize);
   } catch (err) {
     if (err instanceof DomainError) throw new AppError(err.message, 400);
-    if (err.code === 11000) throw toConflictError(err);
+    if (err.code === 11000) throw toConflictError();
     throw err;
   }
 }
@@ -60,11 +60,11 @@ export async function updateSize(
     return toSizeDto(updatedSize);
   } catch (err) {
     if (err instanceof DomainError) throw new AppError(err.message, 400);
-    if (err.code === 11000) throw toConflictError(err);
+    if (err.code === 11000) throw toConflictError();
     throw err;
   }
 }
 
-function toConflictError(err) {
+function toConflictError() {
   return new AppError('Pizza size already in use.', 409);
 }

@@ -37,6 +37,48 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The database is not reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "unavailable"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "0.1.0"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "summary": "Deployed version",
+        "description": "Commit of the running release, read from VERSION.json at startup. sha and shortSha are \"unknown\" when the file does not exist.",
+        "responses": {
+          "200": {
+            "description": "The deployed version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionInfo"
+                }
+              }
+            }
           }
         }
       }
@@ -50,10 +92,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "identifier",
-                  "password"
-                ],
+                "required": ["identifier", "password"],
                 "properties": {
                   "identifier": {
                     "type": "string"
@@ -105,10 +144,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "password",
-                  "role"
-                ],
+                "required": ["password", "role"],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -123,11 +159,7 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "MANAGER",
-                      "EMPLOYEE",
-                      "CUSTOMER"
-                    ]
+                    "enum": ["MANAGER", "EMPLOYEE", "CUSTOMER"]
                   },
                   "customerId": {
                     "type": "string"
@@ -254,12 +286,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "email",
-                  "phoneNumber",
-                  "address"
-                ],
+                "required": ["name", "email", "phoneNumber", "address"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -618,9 +645,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
+                "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -940,9 +965,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
+                "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1103,9 +1126,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
+                "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1333,9 +1354,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name"
-                ],
+                "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1570,15 +1589,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "isActive"
-                ],
+                "required": ["isActive"],
                 "properties": {
                   "isActive": {
                     "type": "boolean",
-                    "enum": [
-                      false
-                    ]
+                    "enum": [false]
                   }
                 }
               }
@@ -1729,11 +1744,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "productId",
-                  "sizeIds",
-                  "componentIds"
-                ],
+                "required": ["productId", "sizeIds", "componentIds"],
                 "properties": {
                   "productId": {
                     "type": "string",
@@ -2003,9 +2014,7 @@
                   },
                   "isActive": {
                     "type": "boolean",
-                    "enum": [
-                      false
-                    ]
+                    "enum": [false]
                   }
                 }
               }
@@ -2145,11 +2154,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "assemblyOrder",
-                  "minQuantity"
-                ],
+                "required": ["name", "assemblyOrder", "minQuantity"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -2328,11 +2333,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "assemblyOrder",
-                  "minQuantity"
-                ],
+                "required": ["name", "assemblyOrder", "minQuantity"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -2598,10 +2599,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "pizzaSizeId",
-                  "price"
-                ],
+                "required": ["pizzaSizeId", "price"],
                 "properties": {
                   "pizzaSizeId": {
                     "type": "string",
@@ -2802,9 +2800,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "price"
-                ],
+                "required": ["price"],
                 "properties": {
                   "price": {
                     "type": "number",
@@ -3054,13 +3050,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "description",
-                  "sellable",
-                  "stockControlled",
-                  "categoryId"
-                ],
+                "required": ["name", "description", "sellable", "stockControlled", "categoryId"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -3666,10 +3656,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "amount",
-                  "operation"
-                ],
+                "required": ["amount", "operation"],
                 "properties": {
                   "amount": {
                     "type": "integer",
@@ -3678,10 +3665,7 @@
                   },
                   "operation": {
                     "type": "string",
-                    "enum": [
-                      "increase",
-                      "decrease"
-                    ],
+                    "enum": ["increase", "decrease"],
                     "description": "Type of adjustment. Cannot decrease below 0."
                   }
                 }
@@ -3747,9 +3731,7 @@
       "get": {
         "summary": "Obter snapshot de dados para o motor de IA (MANAGER only)",
         "description": "Devolve o estado atual do catálogo (produtos, stock, pizzas predefinidas e tamanhos) unificado para alimentar o motor Prolog de escalonamento.",
-        "tags": [
-          "AI Scheduling"
-        ],
+        "tags": ["AI Scheduling"],
         "security": [
           {
             "BearerAuth": []
@@ -3855,13 +3837,7 @@
       },
       "Address": {
         "type": "object",
-        "required": [
-          "street",
-          "houseNumber",
-          "postalCode",
-          "city",
-          "district"
-        ],
+        "required": ["street", "houseNumber", "postalCode", "city", "district"],
         "properties": {
           "street": {
             "type": "string"
@@ -4205,6 +4181,35 @@
           },
           "isActive": {
             "type": "boolean"
+          }
+        }
+      },
+      "VersionInfo": {
+        "type": "object",
+        "required": [
+          "sha",
+          "shortSha"
+        ],
+        "properties": {
+          "sha": {
+            "type": "string",
+            "example": "d455e69a1b2c3d4e5f60718293a4b5c6d7e8f901"
+          },
+          "shortSha": {
+            "type": "string",
+            "example": "d455e69"
+          },
+          "branch": {
+            "type": "string",
+            "example": "main"
+          },
+          "commitDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deployedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

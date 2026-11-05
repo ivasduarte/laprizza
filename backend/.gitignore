@@ -17,3 +17,6 @@ test-flows-output.txt
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Release metadata written by the deploy script
+VERSION.json

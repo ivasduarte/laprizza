@@ -1,0 +1,12 @@
+[Unit]
+Description=LaPrizza – deploy automático do back end (SYS01)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+Environment=HOME=/home/deploy
+ExecStart=/opt/laprizza/bin/laprizza-deploy.sh deploy
+TimeoutStartSec=20min
