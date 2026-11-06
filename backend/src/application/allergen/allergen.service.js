@@ -1,6 +1,7 @@
 import * as defaultAllergenRepository from '../../infrastructure/allergen/allergen.repository.js';
 import { validateAllergenName } from '../../domain/allergen/allergen.domain.js';
 import { AppError } from '../app-error.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toAllergenDto(allergen) {
   return {
@@ -52,6 +53,7 @@ export async function createAllergen(allergenData, allergenRepository = defaultA
 
   try {
     const newAllergen = await allergenRepository.create({ name, isActive: true });
+    await invalidate('catalogue');
     return toAllergenDto(newAllergen);
   } catch (err) {
     if (err.code === 11000) throw new AppError('Allergen name already in use.', 409);
@@ -81,5 +83,6 @@ export async function updateAllergen(
   }
 
   const deactivated = await allergenRepository.update(id, { isActive: false });
+  await invalidate('catalogue');
   return toAllergenDto(deactivated);
 }

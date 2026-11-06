@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { cached } from '../../infrastructure/cache/cache.js';
 
 const cmp =
   (...keys) =>
@@ -96,11 +97,13 @@ export function buildSnapshot({ products, sizes, pizzas, stock }, now = new Date
 }
 
 export async function getSnapshot(aiDataRepository, clock = () => new Date()) {
-  const [products, sizes, pizzas, stock] = await Promise.all([
-    aiDataRepository.listProducts(),
-    aiDataRepository.listSizes(),
-    aiDataRepository.listPredefinedPizzas(),
-    aiDataRepository.listStock(),
-  ]);
-  return buildSnapshot({ products, sizes, pizzas, stock }, clock());
+  return cached('ai-data', ['snapshot'], 60, async () => {
+    const [products, sizes, pizzas, stock] = await Promise.all([
+      aiDataRepository.listProducts(),
+      aiDataRepository.listSizes(),
+      aiDataRepository.listPredefinedPizzas(),
+      aiDataRepository.listStock(),
+    ]);
+    return buildSnapshot({ products, sizes, pizzas, stock }, clock());
+  });
 }

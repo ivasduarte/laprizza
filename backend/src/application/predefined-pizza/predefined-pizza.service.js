@@ -8,6 +8,8 @@ import {
 } from '../../domain/predefined-pizza/predefined-pizza.domain.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { AppError } from '../app-error.js';
+import { cached } from '../../infrastructure/cache/cache.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toPredefinedPizzaDto(pizza) {
   return {
@@ -78,11 +80,13 @@ async function validateReferences(rawSizeIds, rawComponentIds, pizzaRepository) 
 }
 
 export async function listPredefinedPizzas(filters = {}, pizzaRepository = defaultPizzaRepository) {
-  const pizzas = filters.name
-    ? await pizzaRepository.search(filters.name)
-    : await pizzaRepository.list();
+  return cached('predefined-pizza', ['list', filters], 60, async () => {
+    const pizzas = filters.name
+      ? await pizzaRepository.search(filters.name)
+      : await pizzaRepository.list();
 
-  return pizzas.filter((p) => p.isActive !== false).map(toPredefinedPizzaDto);
+    return pizzas.filter((p) => p.isActive !== false).map(toPredefinedPizzaDto);
+  });
 }
 
 async function buildDetails(pizza, pizzaRepository) {
@@ -96,25 +100,28 @@ async function buildDetails(pizza, pizzaRepository) {
 
   return toPredefinedPizzaDetailsDto(pizza, { product, sizes, components, componentTypes });
 }
-
 export async function getPredefinedPizzaById(id, pizzaRepository = defaultPizzaRepository) {
-  const pizza = await pizzaRepository.findById(id);
+  return cached('predefined-pizza', ['id', String(id)], 60, async () => {
+    const pizza = await pizzaRepository.findById(id);
 
-  if (!pizza || pizza.isActive === false) {
-    throw new AppError('Predefined Pizza not found.', 404);
-  }
+    if (!pizza || pizza.isActive === false) {
+      throw new AppError('Predefined Pizza not found.', 404);
+    }
 
-  return buildDetails(pizza, pizzaRepository);
+    return buildDetails(pizza, pizzaRepository);
+  });
 }
 
 export async function getPredefinedPizzaByName(name, pizzaRepository = defaultPizzaRepository) {
-  const pizza = await pizzaRepository.findByName(name);
+  return cached('predefined-pizza', ['name', String(name)], 60, async () => {
+    const pizza = await pizzaRepository.findByName(name);
 
-  if (!pizza || pizza.isActive === false) {
-    throw new AppError('Predefined Pizza not found.', 404);
-  }
+    if (!pizza || pizza.isActive === false) {
+      throw new AppError('Predefined Pizza not found.', 404);
+    }
 
-  return buildDetails(pizza, pizzaRepository);
+    return buildDetails(pizza, pizzaRepository);
+  });
 }
 
 export async function createPredefinedPizza(pizzaData, pizzaRepository = defaultPizzaRepository) {
@@ -131,6 +138,7 @@ export async function createPredefinedPizza(pizzaData, pizzaRepository = default
     const created = await pizzaRepository.create(
       createPredefinedPizzaData(pizzaData.productId, sizeIds, componentIds),
     );
+    await invalidate('predefined-pizza', 'ai-data');
     return toPredefinedPizzaDto(created);
   } catch (err) {
     if (err.code === 11000)
@@ -175,5 +183,6 @@ export async function updatePredefinedPizza(
   }
 
   const updated = await pizzaRepository.update(id, changes);
+  await invalidate('predefined-pizza', 'ai-data');
   return toPredefinedPizzaDto(updated);
 }

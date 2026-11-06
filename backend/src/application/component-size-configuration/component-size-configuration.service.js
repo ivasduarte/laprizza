@@ -10,6 +10,7 @@ import {
 } from '../../domain/component-size-configuration/component-size-configuration.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toComponentSizeConfigurationDTO(productId, config) {
   return {
@@ -94,6 +95,7 @@ export async function createComponentSizeConfiguration(productId, data, reposito
 
   if (!updatedProduct) throw duplicateError;
 
+  await invalidate('catalogue', 'ai-data');
   return toComponentSizeConfigurationDTO(productId, getConfiguration(updatedProduct, pizzaSizeId));
 }
 
@@ -131,6 +133,7 @@ export async function updateComponentSizeConfiguration(
   });
   if (!updatedProduct) throw new AppError('Component Size Configuration not found', 404);
 
+  await invalidate('catalogue', 'ai-data');
   return toComponentSizeConfigurationDTO(productId, getConfiguration(updatedProduct, pizzaSizeId));
 }
 
@@ -143,5 +146,6 @@ export async function removeComponentSizeConfiguration(productId, pizzaSizeId, r
   const updatedProduct = await productsRepository.removeSizeConfiguration(productId, pizzaSizeId);
   if (!updatedProduct) throw new AppError('Component Size Configuration not found', 404);
 
+  await invalidate('catalogue', 'ai-data');
   return toComponentSizeConfigurationDTO(productId, config);
 }

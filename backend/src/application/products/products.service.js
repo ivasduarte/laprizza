@@ -9,6 +9,7 @@ import {
 } from '../../domain/products/products.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toProductDTO(product) {
   return {
@@ -98,6 +99,7 @@ export async function createProduct(
     });
   }
 
+  await invalidate('catalogue', 'predefined-pizza', 'ai-data');
   return toProductDTO(product);
 }
 

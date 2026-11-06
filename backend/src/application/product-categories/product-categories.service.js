@@ -6,6 +6,7 @@ import {
 } from '../../domain/product-categories/product-categories.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 /** MongoDB error code for violation of a unique index. */
 const DUPLICATE_KEY_ERROR_CODE = 11000;
@@ -98,6 +99,7 @@ export async function createProductCategory(
 
   try {
     const category = await productCategoriesRepository.create(validData);
+    await invalidate('catalogue');
     return toProductCategoryDTO(category);
   } catch (err) {
     return handleDuplicateName(err);
@@ -155,6 +157,7 @@ export async function updateProductCategory(
 
   if (!updatedCategory) throw new AppError('Product category not found.', 404);
 
+  await invalidate('catalogue');
   return toProductCategoryDTO(updatedCategory);
 }
 
@@ -182,4 +185,5 @@ export async function removeProductCategory(
   await productCategoriesRepository.update(id, {
     isActive: false,
   });
+  await invalidate('catalogue');
 }

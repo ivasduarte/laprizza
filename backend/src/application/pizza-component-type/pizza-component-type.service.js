@@ -11,6 +11,7 @@ import {
 } from '../../domain/pizza-component-type/pizza-component-types.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 /** MongoDB error code for violation of a unique index. */
 const DUPLICATE_KEY_ERROR_CODE = 11000;
@@ -76,6 +77,7 @@ export async function createPizzaComponentType(
 
   try {
     const type = await pizzaComponentTypeRepository.create(validData);
+    await invalidate('predefined-pizza');
     return toPizzaComponentTypeDTO(type);
   } catch (err) {
     return handleDuplicate(err);
@@ -112,6 +114,7 @@ export async function updatePizzaComponentType(
 
   if (!updatedType) throw new AppError('Pizza Component Type not found.', 404);
 
+  await invalidate('predefined-pizza');
   return toPizzaComponentTypeDTO(updatedType);
 }
 
@@ -131,4 +134,5 @@ export async function removePizzaComponentType(
   await pizzaComponentTypeRepository.update(id, {
     isActive: false,
   });
+  await invalidate('predefined-pizza');
 }

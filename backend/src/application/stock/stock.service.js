@@ -4,6 +4,7 @@ import { validateStockChange } from '../../domain/stock/stock.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { toProductDTO } from '../products/products.service.js';
+import { invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toStockDTO(stock) {
   return {
@@ -57,6 +58,8 @@ export async function adjustStock(
   let stock = await repos.stockRepository.findByProductId(productId);
   if (!stock) {
     stock = await repos.stockRepository.create({ productId, quantity: 0 });
+    await invalidate('ai-data');
+    stock.productId = product;
   }
 
   let newQuantity;
@@ -69,6 +72,7 @@ export async function adjustStock(
   } else throw new AppError('Invalid operation. Use increase or decrease.', 400);
 
   const updatedStock = await repos.stockRepository.updateQuantity(productId, newQuantity);
+  await invalidate('ai-data');
   updatedStock.productId = product;
   return toStockDTO(updatedStock);
 }
