@@ -1,8 +1,6 @@
 import Users from './users/users.model.js';
 
 import KitchenConfiguration from './kitchen-configuration/kitchen-configuration.model.js';
-import fs from 'node:fs';
-import path from 'node:path';
 
 import * as pizzaComponentTypesRepository from './pizza-component-type/pizza-component-type.repository.js';
 

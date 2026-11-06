@@ -136,4 +136,34 @@ test.describe('Kitchen Configuration Page E2E', () => {
     );
     await expect(page.locator('textarea#config-content')).toBeVisible(); // O formulário continua aberto para o utilizador corrigir
   });
+  
+  test('Manager Flow: Rejects an invalid JSON file import', async ({
+    page,
+  }) => {
+    // 1. Simular o login de um Manager
+    await page.route('**/api/v1/auth/login', async (route) => {
+      await route.fulfill({ json: mockManagerSession });
+    });
+    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+      await route.fulfill({ json: mockConfigs });
+    });
+
+    await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
+
+    // 2. Abrir o formulário de uma nova configuração
+    await page.getByRole('button', { name: 'Create New' }).click();
+
+    // 3. Criar um ficheiro JSON inválido em memória e simular o upload
+    const invalidJsonContent = Buffer.from('isto nao é um json valido');
+    await page.setInputFiles('input[type="file"]', {
+      name: 'invalid-config.json',
+      mimeType: 'application/json',
+      buffer: invalidJsonContent,
+    });
+
+    // 4. Verificar se o frontend apanha o erro de parsing do FileReader
+    await expect(page.locator('p[role="alert"]')).toContainText(
+      'The selected file is not a valid JSON.'
+    );
+  });
 });

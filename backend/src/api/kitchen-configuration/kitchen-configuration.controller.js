@@ -20,7 +20,7 @@ export const create = async (req, res, next, kitchenRepo) => {
 
 export const validate = async (req, res, next) => {
   try {
-    const result = kitchenConfigService.validateConfigurationContent(req.body);
+    const result = kitchenConfigService.validateConfigurationContent(req.body.content);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -29,8 +29,8 @@ export const validate = async (req, res, next) => {
 
 export const getActive = async (req, res, next, kitchenRepo) => {
   try {
-    const activeConfig = await kitchenConfigService.getActiveConfiguration(kitchenRepo);
-    res.status(200).json(activeConfig);
+    const config = await kitchenConfigService.getActiveConfiguration(kitchenRepo);
+    res.status(200).json(config);
   } catch (err) {
     next(err);
   }
@@ -47,12 +47,12 @@ export const getById = async (req, res, next, kitchenRepo) => {
 
 export const update = async (req, res, next, kitchenRepo) => {
   try {
-    const updatedConfig = await kitchenConfigService.updateConfiguration(
+    const config = await kitchenConfigService.updateConfiguration(
       req.params.id,
       req.body,
       kitchenRepo,
     );
-    res.status(200).json(updatedConfig);
+    res.status(200).json(config);
   } catch (err) {
     next(err);
   }
@@ -69,11 +69,8 @@ export const remove = async (req, res, next, kitchenRepo) => {
 
 export const activate = async (req, res, next, kitchenRepo) => {
   try {
-    const activatedConfig = await kitchenConfigService.activateConfiguration(
-      req.params.id,
-      kitchenRepo,
-    );
-    res.status(200).json(activatedConfig);
+    const config = await kitchenConfigService.activateConfiguration(req.params.id, kitchenRepo);
+    res.status(200).json(config);
   } catch (err) {
     next(err);
   }

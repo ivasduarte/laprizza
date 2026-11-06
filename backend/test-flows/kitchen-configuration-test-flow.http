@@ -131,6 +131,33 @@ Content-Type: application/json
 ?? js response.parsedBody.error.message.includes('dimensions')
 
 
+### 3.3 Dry-run de validação com conteúdo válido (200 OK)
+POST {{baseUrl}}/kitchen-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 10, "length": 15, "height": 3 },
+    "elements": []
+  }
+}
+?? status == 200
+?? body valid == true
+
+### 3.4 Dry-run de validação com conteúdo inválido (400 Bad Request)
+POST {{baseUrl}}/kitchen-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": -5, "length": 15, "height": 3 },
+    "elements": []
+  }
+}
+?? status == 400
+
 ### ==========================================
 ### 4: CRIAÇÃO DE CONFIGURAÇÕES VÁLIDAS
 ### ==========================================

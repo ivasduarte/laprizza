@@ -1,11 +1,11 @@
-import Joi from 'joi';
 import { Router } from 'express';
+import Joi from 'joi';
 import * as controller from './kitchen-configuration.controller.js';
-import { AppError } from '../../application/app-error.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 import { Roles } from '../../domain/users/users.domain.js';
+import { AppError } from '../../application/app-error.js';
 
-export default function kitchenConfigurationRouterFactory(kitchenRepository) {
+export default function kitchenConfigurationRouterFactory(kitchenRepo) {
   const router = Router();
   const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
   const writeRoles = [Roles.MANAGER];
@@ -21,62 +21,55 @@ export default function kitchenConfigurationRouterFactory(kitchenRepository) {
     next();
   };
 
-  const createSchema = Joi.object({
+  const createConfigSchema = Joi.object({
     name: Joi.string().trim().required(),
     content: Joi.object().required(),
   });
 
-  const updateSchema = Joi.object({
+  const updateConfigSchema = Joi.object({
     name: Joi.string().trim().optional(),
     content: Joi.object().optional(),
   }).min(1);
 
-  const validateBody = (schema) => (req, res, next) => {
-    try {
-      const { error, value } = schema.validate(req.body, { stripUnknown: true });
-      if (error) {
-        return next(
-          new AppError(
-            'Validation failed',
-            400,
-            error.details.map((d) => d.message),
-          ),
-        );
-      }
-      req.body = value;
-      next();
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  // Static routes first
   router.get('/', verifyToken, requireRole(readRoles), (req, res, next) =>
-    controller.list(req, res, next, kitchenRepository),
+    controller.list(req, res, next, kitchenRepo),
   );
 
   router.post(
     '/',
     verifyToken,
     requireRole(writeRoles),
-    validateBody(createSchema),
-    (req, res, next) => controller.create(req, res, next, kitchenRepository),
+    async (req, res, next) => {
+      try {
+        const { error, value } = createConfigSchema.validate(req.body, { stripUnknown: true });
+        if (error) {
+          return next(
+            new AppError(
+              'Validation error',
+              400,
+              error.details.map((d) => d.message),
+            ),
+          );
+        }
+        req.body = value;
+        next();
+      } catch (err) {
+        next(err);
+      }
+    },
+    (req, res, next) => controller.create(req, res, next, kitchenRepo),
   );
 
-  router.post(
-    '/validate',
-    verifyToken,
-    requireRole(writeRoles),
-    (req, res, next) => controller.validate(req, res, next), //The body will be validated by the domain service/schema.
+  router.post('/validate', verifyToken, requireRole(writeRoles), (req, res, next) =>
+    controller.validate(req, res, next),
   );
 
   router.get('/active', verifyToken, requireRole(readRoles), (req, res, next) =>
-    controller.getActive(req, res, next, kitchenRepository),
+    controller.getActive(req, res, next, kitchenRepo),
   );
 
-  // Dynamic routes (with :id) after
   router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) =>
-    controller.getById(req, res, next, kitchenRepository),
+    controller.getById(req, res, next, kitchenRepo),
   );
 
   router.patch(
@@ -84,12 +77,29 @@ export default function kitchenConfigurationRouterFactory(kitchenRepository) {
     verifyToken,
     requireRole(writeRoles),
     validateId,
-    validateBody(updateSchema),
-    (req, res, next) => controller.update(req, res, next, kitchenRepository),
+    async (req, res, next) => {
+      try {
+        const { error, value } = updateConfigSchema.validate(req.body, { stripUnknown: true });
+        if (error) {
+          return next(
+            new AppError(
+              'Validation error',
+              400,
+              error.details.map((d) => d.message),
+            ),
+          );
+        }
+        req.body = value;
+        next();
+      } catch (err) {
+        next(err);
+      }
+    },
+    (req, res, next) => controller.update(req, res, next, kitchenRepo),
   );
 
   router.delete('/:id', verifyToken, requireRole(writeRoles), validateId, (req, res, next) =>
-    controller.remove(req, res, next, kitchenRepository),
+    controller.remove(req, res, next, kitchenRepo),
   );
 
   router.patch(
@@ -97,7 +107,7 @@ export default function kitchenConfigurationRouterFactory(kitchenRepository) {
     verifyToken,
     requireRole(writeRoles),
     validateId,
-    (req, res, next) => controller.activate(req, res, next, kitchenRepository),
+    (req, res, next) => controller.activate(req, res, next, kitchenRepo),
   );
 
   return router;
