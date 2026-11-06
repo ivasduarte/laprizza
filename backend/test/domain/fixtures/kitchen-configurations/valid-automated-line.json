@@ -1,0 +1,28 @@
+{
+  "dimensions": {
+    "width": 12.0,
+    "length": 20.0,
+    "height": 4.0
+  },
+  "elements": [
+    {
+      "id": "conveyor-belt-main",
+      "type": "assembly-line",
+      "modelReference": "/assets/models/conveyor-belt.gltf",
+      "position": { "x": 0.0, "y": 0.85, "z": 0.0 },
+      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "scale": { "x": 8.0, "y": 1.0, "z": 1.2 }
+    },
+    {
+      "id": "robotic-arm-sauce",
+      "type": "assembly-line",
+      "modelReference": "/assets/models/robotic-arm.gltf",
+      "position": { "x": -3.0, "y": 1.0, "z": 0.5 },
+      "rotation": { "x": 0.0, "y": 180.0, "z": 0.0 },
+      "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "material": {
+        "color": "#e32636"
+      }
+    }
+  ]
+}

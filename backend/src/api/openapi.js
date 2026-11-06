@@ -1544,6 +1544,97 @@ export const openApiSpec = {
         },
       },
     },
+    '/kitchen-configurations': {
+      get: {
+        summary: 'List kitchen configurations (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/KitchenConfiguration' },
+                },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create kitchen configuration (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'content'],
+                properties: { name: { type: 'string' }, content: { type: 'object' } },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/KitchenConfiguration' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
+    '/kitchen-configurations/active': {
+      get: {
+        summary: 'Get active kitchen configuration (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/KitchenConfiguration' } },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('No active configuration found'),
+        },
+      },
+    },
+    '/kitchen-configurations/{id}/activate': {
+      patch: {
+        summary: 'Activate a kitchen configuration atomically (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/KitchenConfiguration' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Configuration not found'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1719,15 +1810,27 @@ export const openApiSpec = {
           isActive: { type: 'boolean' },
         },
       },
-      VersionInfo: {
+      KitchenConfiguration: {
         type: 'object',
-        required: ['sha', 'shortSha'],
         properties: {
-          sha: { type: 'string', example: 'd455e69a1b2c3d4e5f60718293a4b5c6d7e8f901' },
-          shortSha: { type: 'string', example: 'd455e69' },
-          branch: { type: 'string', example: 'main' },
-          commitDate: { type: 'string', format: 'date-time' },
-          deployedAt: { type: 'string', format: 'date-time' },
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Standard Layout' },
+          isActive: { type: 'boolean' },
+          content: {
+            type: 'object',
+            description: 'JSON object defining kitchen dimensions and elements.',
+          },
+          VersionInfo: {
+            type: 'object',
+            required: ['sha', 'shortSha'],
+            properties: {
+              sha: { type: 'string', example: 'd455e69a1b2c3d4e5f60718293a4b5c6d7e8f901' },
+              shortSha: { type: 'string', example: 'd455e69' },
+              branch: { type: 'string', example: 'main' },
+              commitDate: { type: 'string', format: 'date-time' },
+              deployedAt: { type: 'string', format: 'date-time' },
+            },
+          },
         },
       },
     },

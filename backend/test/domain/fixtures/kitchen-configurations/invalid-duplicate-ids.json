@@ -1,0 +1,21 @@
+{
+  "dimensions": { "width": 10, "length": 10, "height": 3 },
+  "elements": [
+    {
+      "id": "duplicate-id-01",
+      "type": "equipment",
+      "modelReference": "/assets/models/table.gltf",
+      "position": { "x": 1, "y": 0, "z": 0 },
+      "rotation": { "x": 0, "y": 0, "z": 0 },
+      "scale": { "x": 1, "y": 1, "z": 1 }
+    },
+    {
+      "id": "duplicate-id-01",
+      "type": "equipment",
+      "modelReference": "/assets/models/chair.gltf",
+      "position": { "x": 2, "y": 0, "z": 0 },
+      "rotation": { "x": 0, "y": 0, "z": 0 },
+      "scale": { "x": 1, "y": 1, "z": 1 }
+    }
+  ]
+}

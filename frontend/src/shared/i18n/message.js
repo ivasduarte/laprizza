@@ -17,6 +17,7 @@ export const messages = {
       changePassword: 'Change password',
       forgotPassword: 'Forgot password',
       resetPassword: 'Reset password',
+      kitchenConfig: 'Kitchen Configuration',
     },
     home: {
       welcome: 'Welcome to LaPrizza',
@@ -81,7 +82,8 @@ export const messages = {
     },
     ai: {
       title: 'AI planning',
-      intro: 'Manage consumption forecasts, prepare supplier data and run the planning.',
+      intro:
+        'Manage consumption forecasts, prepare supplier data and run the planning.',
       sections: 'Page sections',
       actions: 'Actions',
       view: 'View',
@@ -109,7 +111,8 @@ export const messages = {
         version: 'Version',
         start: 'Start date',
         end: 'End date',
-        omitted: 'Omitted entries mean zero consumption. Add only what is consumed.',
+        omitted:
+          'Omitted entries mean zero consumption. Add only what is consumed.',
         entries: 'Daily entries',
         date: 'Date',
         product: 'Product',
@@ -128,9 +131,11 @@ export const messages = {
         errorText: 'The service is unavailable. Your forecast was not changed.',
         retry: 'Retry',
         selectionTitle: 'Supplier selection criteria',
-        selectionHint: 'Explains why each supplier was chosen, including cost and delivery timing.',
+        selectionHint:
+          'Explains why each supplier was chosen, including cost and delivery timing.',
         simulation: 'Simulation',
-        noStockChange: 'Calculation only. Stored stock was not changed and no purchase order was created.',
+        noStockChange:
+          'Calculation only. Stored stock was not changed and no purchase order was created.',
         forecastVersion: 'Forecast version',
         stockSnapshot: 'Stock snapshot',
         bom: 'Pizza BOM',
@@ -161,7 +166,8 @@ export const messages = {
       s: {
         title: 'Supplier scenario',
         format: 'JSON format',
-        formatHelp: 'Required: supplier id; an existing product id; for each offer, a listed supplier, price in EUR, a positive whole number of stock units covered and lead time in days (zero or more). Supplier names and supply limits are optional. Duplicates are rejected.',
+        formatHelp:
+          'Required: supplier id; an existing product id; for each offer, a listed supplier, price in EUR, a positive whole number of stock units covered and lead time in days (zero or more). Supplier names and supply limits are optional. Duplicates are rejected.',
         downloadExample: 'Download example',
         step1: 'Step 1 · Import',
         json: 'Supplier JSON',
@@ -186,6 +192,42 @@ export const messages = {
         },
       },
     },
+    kitchenConfig: {
+      title: 'Kitchen Configurations',
+      unauthorized: 'Access denied. Only Managers can access this page.',
+      list: 'Configurations List',
+      createNew: 'Create New',
+      importFile: 'Import .json',
+      activeLabel: 'Active',
+      activateBtn: 'Activate',
+      deleteBtn: 'Delete',
+      editBtn: 'Edit',
+      viewBtn: 'View JSON',
+      closeBtn: 'Close',
+      confirmDelete: 'Are you sure you want to delete this configuration?',
+      confirmActivate:
+        'Are you sure you want to set this as the active configuration? The viewer will reload.',
+      activatedSuccess: 'Configuration activated successfully!',
+      viewerReloaded: '3D Viewer reloaded with the active configuration.',
+      noConfigs: 'No configurations found.',
+      form: {
+        name: 'Configuration Name',
+        jsonContent: 'JSON Content',
+        saveBtn: 'Save Configuration',
+        saving: 'Saving...',
+        invalidJsonFile: 'The selected file is not a valid JSON.',
+        parseError: 'Invalid JSON format. Please correct it before saving.',
+      },
+      errors: {
+        invalid:
+          'The configuration data is invalid. Please check the structure and values.',
+        notFound: 'The requested kitchen configuration could not be found.',
+        conflict:
+          'Operation not allowed. The configuration might already exist or is currently active.',
+        default:
+          'An unexpected error occurred while communicating with the server.',
+      },
+    },
   },
   pt: {
     layout: {
@@ -205,6 +247,7 @@ export const messages = {
       changePassword: 'Alterar palavra-passe',
       forgotPassword: 'Recuperar palavra-passe',
       resetPassword: 'Redefinir palavra-passe',
+      kitchenConfig: 'Configuração da Cozinha',
     },
     home: {
       welcome: 'Bem-vindo à LaPrizza',
@@ -272,7 +315,8 @@ export const messages = {
     },
     ai: {
       title: 'Planeamento de IA',
-      intro: 'Gira previsões de consumo, prepare os dados de fornecedores e execute o planeamento.',
+      intro:
+        'Gira previsões de consumo, prepare os dados de fornecedores e execute o planeamento.',
       sections: 'Secções da página',
       actions: 'Ações',
       view: 'Ver',
@@ -300,7 +344,8 @@ export const messages = {
         version: 'Versão',
         start: 'Data de início',
         end: 'Data de fim',
-        omitted: 'As entradas omitidas significam consumo zero. Adicione apenas o que é consumido.',
+        omitted:
+          'As entradas omitidas significam consumo zero. Adicione apenas o que é consumido.',
         entries: 'Entradas diárias',
         date: 'Data',
         product: 'Produto',
@@ -319,9 +364,11 @@ export const messages = {
         errorText: 'O serviço está indisponível. A previsão não foi alterada.',
         retry: 'Tentar novamente',
         selectionTitle: 'Critérios de seleção de fornecedor',
-        selectionHint: 'Explica porque cada fornecedor foi escolhido, incluindo custo e prazo de entrega.',
+        selectionHint:
+          'Explica porque cada fornecedor foi escolhido, incluindo custo e prazo de entrega.',
         simulation: 'Simulação',
-        noStockChange: 'Apenas cálculo. O stock guardado não foi alterado e não foi criada nenhuma encomenda.',
+        noStockChange:
+          'Apenas cálculo. O stock guardado não foi alterado e não foi criada nenhuma encomenda.',
         forecastVersion: 'Versão da previsão',
         stockSnapshot: 'Snapshot de stock',
         bom: 'BOM das pizzas',
@@ -352,7 +399,8 @@ export const messages = {
       s: {
         title: 'Cenário de fornecedores',
         format: 'Formato JSON',
-        formatHelp: 'Obrigatório: id do fornecedor; id de um produto existente; por oferta, um fornecedor listado, preço em EUR, número inteiro positivo de unidades de stock cobertas e prazo em dias (zero ou mais). Nomes de fornecedores e limites de fornecimento são opcionais. Duplicados são rejeitados.',
+        formatHelp:
+          'Obrigatório: id do fornecedor; id de um produto existente; por oferta, um fornecedor listado, preço em EUR, número inteiro positivo de unidades de stock cobertas e prazo em dias (zero ou mais). Nomes de fornecedores e limites de fornecimento são opcionais. Duplicados são rejeitados.',
         downloadExample: 'Descarregar exemplo',
         step1: 'Passo 1 · Importar',
         json: 'JSON de fornecedores',
@@ -375,6 +423,42 @@ export const messages = {
           limit: 'Limite de fornecimento',
           origin: 'Origem',
         },
+      },
+    },
+    kitchenConfig: {
+      title: 'Configurações da Cozinha',
+      unauthorized:
+        'Acesso negado. Apenas os Gerentes (Managers) podem aceder a esta página.',
+      list: 'Lista de Configurações',
+      createNew: 'Criar Nova',
+      importFile: 'Importar .json',
+      activeLabel: 'Ativa',
+      activateBtn: 'Ativar',
+      deleteBtn: 'Apagar',
+      editBtn: 'Editar',
+      viewBtn: 'Ver JSON',
+      closeBtn: 'Fechar',
+      confirmDelete: 'Tem a certeza que deseja apagar esta configuração?',
+      confirmActivate:
+        'Tem a certeza que deseja ativar esta configuração? O visualizador será recarregado.',
+      activatedSuccess: 'Configuração ativada com sucesso!',
+      viewerReloaded: 'Visualizador 3D recarregado com a configuração ativa.',
+      noConfigs: 'Nenhuma configuração encontrada.',
+      form: {
+        name: 'Nome da Configuração',
+        jsonContent: 'Conteúdo JSON',
+        saveBtn: 'Guardar Configuração',
+        saving: 'A guardar...',
+        invalidJsonFile: 'O ficheiro selecionado não é um JSON válido.',
+        parseError: 'Formato JSON inválido. Corrija-o antes de guardar.',
+      },
+      errors: {
+        invalid:
+          'Os dados da configuração são inválidos. Verifique a estrutura e os valores.',
+        notFound: 'A configuração de cozinha solicitada não foi encontrada.',
+        conflict:
+          'Operação não permitida. A configuração poderá já existir ou estar ativa.',
+        default: 'Ocorreu um erro inesperado ao comunicar com o servidor.',
       },
     },
   },

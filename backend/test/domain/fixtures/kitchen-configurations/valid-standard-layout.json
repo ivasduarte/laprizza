@@ -1,0 +1,32 @@
+{
+  "dimensions": {
+    "width": 10.5,
+    "length": 15.0,
+    "height": 3.2
+  },
+  "elements": [
+    {
+      "id": "oven-wood-01",
+      "type": "equipment",
+      "modelReference": "/assets/models/wood-oven.gltf",
+      "position": { "x": 2.0, "y": 0.0, "z": -4.5 },
+      "rotation": { "x": 0.0, "y": 90.0, "z": 0.0 },
+      "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "material": {
+        "roughnessMap": "/assets/textures/bricks-roughness.png",
+        "normalMap": "/assets/textures/bricks-normal.png"
+      }
+    },
+    {
+      "id": "prep-table-01",
+      "type": "equipment",
+      "modelReference": "/assets/models/prep-table.gltf",
+      "position": { "x": -2.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "scale": { "x": 1.5, "y": 1.0, "z": 1.0 },
+      "material": {
+        "color": "#cccccc"
+      }
+    }
+  ]
+}

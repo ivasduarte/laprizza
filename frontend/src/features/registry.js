@@ -45,4 +45,11 @@ export const features = [
     showInNav: false,
     load: () => import('./reset-password/reset-password-page.jsx'),
   },
+  {
+    id: 'kitchen-configuration',
+    path: '/kitchen-configurations',
+    labelKey: 'nav.kitchenConfig',
+    load: () =>
+      import('./kitchen-configuration/kitchen-configuration-page.jsx'),
+  },
 ];

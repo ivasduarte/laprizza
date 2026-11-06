@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test \"test/**/*.test.js\"",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
     "generate:api": "orval",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.65.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.19.0",
     "eslint-plugin-react-hooks": "^5.1.0",

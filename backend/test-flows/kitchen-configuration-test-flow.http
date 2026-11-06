@@ -1,0 +1,220 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicSuffix = {{$timestamp}}
+
+### ==========================================
+### 1: AUTENTICAÇÃO E SETUP DE DEPENDÊNCIAS
+### ==========================================
+
+### 1.1 Login do Admin (Manager)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### 1.2 Criar um Funcionário (Employee) para testar RBAC
+# @name createEmployee
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "emp_{{dynamicSuffix}}@laprizza.pt",
+  "password": "{{managerPassword}}",
+  "role": "EMPLOYEE"
+}
+?? status == 201
+@empEmail = {{createEmployee.email}}
+
+### 1.3 Login do Funcionário (Employee)
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{empEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+@empToken = {{loginEmployee.accessToken}}
+
+### 1.4 Criar um Cliente (Customer) para testar RBAC
+# @name createCustomer
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "cust_{{dynamicSuffix}}@laprizza.pt",
+  "password": "{{managerPassword}}",
+  "role": "CUSTOMER"
+}
+?? status == 201
+@custEmail = {{createCustomer.email}}
+
+### 1.5 Login do Cliente
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{custEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+@custToken = {{loginCustomer.accessToken}}
+
+
+### ==========================================
+### 2: SEGURANÇA E ACESSOS (RBAC)
+### ==========================================
+
+### 2.1 Sem Token (401 Unauthorized)
+GET {{baseUrl}}/kitchen-configurations
+?? status == 401
+
+### 2.2 Token de Customer (403 Forbidden - Acesso negado a clientes)
+GET {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{custToken}}
+?? status == 403
+
+### 2.3 Token de Employee tenta CRIAR (403 Forbidden - Apenas Manager)
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{empToken}}
+Content-Type: application/json
+
+{
+  "name": "Unauthorized Config",
+  "content": { "dimensions": { "width": 10, "length": 10, "height": 3 }, "elements": [] }
+}
+?? status == 403
+
+### 2.4 Token de Employee consegue LER (200 OK)
+GET {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{empToken}}
+?? status == 200
+
+
+### ==========================================
+### 3: VALIDAÇÃO E REJEIÇÃO
+### ==========================================
+
+### 3.1 Falha Joi: Body vazio (400 Bad Request)
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 3.2 Falha Domínio: JSON Inválido / Sem dimensions (400 Bad Request)
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Invalid Config",
+  "content": {
+    "elements": []
+  }
+}
+?? status == 400
+?? js response.parsedBody.error.message.includes('dimensions')
+
+
+### ==========================================
+### 4: CRIAÇÃO DE CONFIGURAÇÕES VÁLIDAS
+### ==========================================
+
+### 4.1 Criar Configuração A - Standard (201 Created)
+# @name createConfigA
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Standard Layout {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 10, "length": 15, "height": 3 },
+    "elements": [
+      {
+        "id": "oven-01",
+        "type": "equipment",
+        "modelReference": "/assets/models/oven.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 201
+@configA_Id = {{createConfigA.id}}
+
+### 4.2 Criar Configuração B - Automated (201 Created)
+# @name createConfigB
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Automated Line {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 12, "length": 20, "height": 4 },
+    "elements": []
+  }
+}
+?? status == 201
+@configB_Id = {{createConfigB.id}}
+
+
+### ==========================================
+### 5: ATIVAÇÃO ATÓMICA E RESTRIÇÕES
+### ==========================================
+
+### 5.1 Ativar Configuração A (200 OK)
+PATCH {{baseUrl}}/kitchen-configurations/{{configA_Id}}/activate
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? body isActive == true
+
+### 5.2 Obter a Configuração Ativa (200 OK - Deve ser a A)
+GET {{baseUrl}}/kitchen-configurations/active
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? body id == {{configA_Id}}
+
+### 5.3 Tentar eliminar a Configuração A, que está ativa (409 Conflict)
+DELETE {{baseUrl}}/kitchen-configurations/{{configA_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 409
+
+### 5.4 Ativar Configuração B (200 OK - A Configuração A será desativada atomicamente)
+PATCH {{baseUrl}}/kitchen-configurations/{{configB_Id}}/activate
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 5.5 Obter a Configuração Ativa (200 OK - Agora deve ser a B)
+GET {{baseUrl}}/kitchen-configurations/active
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? body id == {{configB_Id}}
+
+### 5.6 Eliminar a Configuração A (204 No Content - Agora que está inativa, já pode ser eliminada)
+DELETE {{baseUrl}}/kitchen-configurations/{{configA_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 204
+
+### 5.7 Obter a Configuração A (404 Not Found)
+GET {{baseUrl}}/kitchen-configurations/{{configA_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 404

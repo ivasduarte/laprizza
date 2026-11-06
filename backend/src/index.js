@@ -1,7 +1,11 @@
 import { pathToFileURL } from 'node:url';
 import { connectDB } from './infrastructure/database.js';
 import { errorHandler } from './api/middleware/error-handler.js';
-import { seedInitialManager, seedInitialPizzaComponentTypes } from './infrastructure/seeder.js';
+import {
+  seedInitialManager,
+  seedInitialPizzaComponentTypes,
+  seedInitialKitchenConfigurations,
+} from './infrastructure/seeder.js';
 import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.validator.js';
 import { openApiSpec } from './api/openapi.js';
 import { createAuthModule } from './api/auth/auth.module.js';
@@ -29,6 +33,7 @@ import stockRouterFactory from './api/stock/stock.routes.js';
 import componentSizeConfigurationRouterFactory from './api/component-size-configuration/component-size-configuration.routes.js';
 import productCatalogueRouterFactory from './api/product-catalogue/product-catalogue.route.js';
 import aiDataRouterFactory from './api/ai-data/ai-data.routes.js';
+import kitchenConfigurationRouterFactory from './api/kitchen-configuration/kitchen-configuration.routes.js';
 import systemRouterFactory from './api/system/system.routes.js';
 
 const API_PREFIX = '/api/v1';
@@ -140,7 +145,7 @@ function notFoundHandler(req, _res, next) {
  * @returns {import('express').Application} The configured Express application instance.
  */
 export function createApp(config = loadConfig(), repos = {}) {
-    const app = express();
+  const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
 
@@ -240,6 +245,12 @@ export function createApp(config = loadConfig(), repos = {}) {
     '/ai-data',
     aiDataRouterFactory(isTesting ? { aiDataRepository: repos.aiDataRepository } : undefined),
   );
+  api.use(
+    '/kitchen-configurations',
+    kitchenConfigurationRouterFactory(
+      repos.kitchenConfigurationRepository || repos.kitchenRepository,
+    ),
+  );
   app.use(API_PREFIX, api);
 
   app.use(notFoundHandler);
@@ -255,6 +266,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     await passwordHasher.warmUp();
     await seedInitialManager();
     await seedInitialPizzaComponentTypes();
+    await seedInitialKitchenConfigurations();
 
     createApp(config).listen(config.port, () => {
       console.log(`LaPrizza API listening on http://localhost:${config.port}${API_PREFIX}`);

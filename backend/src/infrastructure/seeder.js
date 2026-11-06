@@ -1,5 +1,9 @@
 import Users from './users/users.model.js';
 
+import KitchenConfiguration from './kitchen-configuration/kitchen-configuration.model.js';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import * as pizzaComponentTypesRepository from './pizza-component-type/pizza-component-type.repository.js';
 
 import { passwordHasher } from './security/password-hasher.js';
@@ -58,4 +62,51 @@ export async function seedInitialPizzaComponentTypes() {
       );
     }
   }
+}
+
+export async function seedInitialKitchenConfigurations() {
+  const count = await KitchenConfiguration.countDocuments();
+  if (count > 0) {
+    console.log('Kitchen configurations already exist. Seeder ignored.');
+    return;
+  }
+
+  console.log('No kitchen configurations found. Seeding default layouts...');
+
+  // Layout 1: Standard
+  const standardContent = {
+    dimensions: { width: 10.5, length: 15.0, height: 3.2 },
+    elements: [
+      {
+        id: 'oven-wood-01',
+        type: 'equipment',
+        modelReference: '/assets/models/wood-oven.gltf',
+        position: { x: 2.0, y: 0.0, z: -4.5 },
+        rotation: { x: 0.0, y: 90.0, z: 0.0 },
+        scale: { x: 1.0, y: 1.0, z: 1.0 },
+      },
+    ],
+  };
+
+  // Layout 2: Automated Line
+  const automatedContent = {
+    dimensions: { width: 12.0, length: 20.0, height: 4.0 },
+    elements: [
+      {
+        id: 'conveyor-belt-main',
+        type: 'assembly-line',
+        modelReference: '/assets/models/conveyor-belt.gltf',
+        position: { x: 0.0, y: 0.85, z: 0.0 },
+        rotation: { x: 0.0, y: 0.0, z: 0.0 },
+        scale: { x: 8.0, y: 1.0, z: 1.2 },
+      },
+    ],
+  };
+
+  await KitchenConfiguration.create([
+    { name: 'Standard Kitchen Layout', content: standardContent, isActive: true },
+    { name: 'Automated Assembly Line', content: automatedContent, isActive: false },
+  ]);
+
+  console.log('Initial Kitchen configurations seeded successfully.');
 }
