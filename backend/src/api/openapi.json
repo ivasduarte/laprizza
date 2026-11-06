@@ -92,7 +92,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["identifier", "password"],
+                "required": [
+                  "identifier",
+                  "password"
+                ],
                 "properties": {
                   "identifier": {
                     "type": "string"
@@ -144,7 +147,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["password", "role"],
+                "required": [
+                  "password",
+                  "role"
+                ],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -159,7 +165,11 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": ["MANAGER", "EMPLOYEE", "CUSTOMER"]
+                    "enum": [
+                      "MANAGER",
+                      "EMPLOYEE",
+                      "CUSTOMER"
+                    ]
                   },
                   "customerId": {
                     "type": "string"
@@ -286,7 +296,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "email", "phoneNumber", "address"],
+                "required": [
+                  "name",
+                  "email",
+                  "phoneNumber",
+                  "address"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -645,7 +660,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -965,7 +982,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1126,7 +1145,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1354,7 +1375,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -1589,11 +1612,15 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["isActive"],
+                "required": [
+                  "isActive"
+                ],
                 "properties": {
                   "isActive": {
                     "type": "boolean",
-                    "enum": [false]
+                    "enum": [
+                      false
+                    ]
                   }
                 }
               }
@@ -1744,7 +1771,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["productId", "sizeIds", "componentIds"],
+                "required": [
+                  "productId",
+                  "sizeIds",
+                  "componentIds"
+                ],
                 "properties": {
                   "productId": {
                     "type": "string",
@@ -2014,7 +2045,9 @@
                   },
                   "isActive": {
                     "type": "boolean",
-                    "enum": [false]
+                    "enum": [
+                      false
+                    ]
                   }
                 }
               }
@@ -2154,7 +2187,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "assemblyOrder", "minQuantity"],
+                "required": [
+                  "name",
+                  "assemblyOrder",
+                  "minQuantity"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -2333,7 +2370,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "assemblyOrder", "minQuantity"],
+                "required": [
+                  "name",
+                  "assemblyOrder",
+                  "minQuantity"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -2599,7 +2640,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["pizzaSizeId", "price"],
+                "required": [
+                  "pizzaSizeId",
+                  "price"
+                ],
                 "properties": {
                   "pizzaSizeId": {
                     "type": "string",
@@ -2800,7 +2844,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["price"],
+                "required": [
+                  "price"
+                ],
                 "properties": {
                   "price": {
                     "type": "number",
@@ -3050,7 +3096,13 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "description", "sellable", "stockControlled", "categoryId"],
+                "required": [
+                  "name",
+                  "description",
+                  "sellable",
+                  "stockControlled",
+                  "categoryId"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -3656,7 +3708,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["amount", "operation"],
+                "required": [
+                  "amount",
+                  "operation"
+                ],
                 "properties": {
                   "amount": {
                     "type": "integer",
@@ -3665,7 +3720,10 @@
                   },
                   "operation": {
                     "type": "string",
-                    "enum": ["increase", "decrease"],
+                    "enum": [
+                      "increase",
+                      "decrease"
+                    ],
                     "description": "Type of adjustment. Cannot decrease below 0."
                   }
                 }
@@ -3731,7 +3789,9 @@
       "get": {
         "summary": "Obter snapshot de dados para o motor de IA (MANAGER only)",
         "description": "Devolve o estado atual do catálogo (produtos, stock, pizzas predefinidas e tamanhos) unificado para alimentar o motor Prolog de escalonamento.",
-        "tags": ["AI Scheduling"],
+        "tags": [
+          "AI Scheduling"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -3796,6 +3856,560 @@
           }
         }
       }
+    },
+    "/kitchen-configurations": {
+      "get": {
+        "summary": "List kitchen configurations (MANAGER and EMPLOYEE)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KitchenConfiguration"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create kitchen configuration (MANAGER only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "content"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kitchen-configurations/active": {
+      "get": {
+        "summary": "Get active kitchen configuration (MANAGER and EMPLOYEE)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenConfiguration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active configuration found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kitchen-configurations/{id}/activate": {
+      "patch": {
+        "summary": "Activate a kitchen configuration atomically (MANAGER only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kitchen-configurations/validate": {
+      "post": {
+        "summary": "Validate kitchen configuration (MANAGER only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kitchen-configurations/{id}": {
+      "get": {
+        "summary": "Get kitchen configuration by ID (MANAGER and EMPLOYEE)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update kitchen configuration (MANAGER only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenConfiguration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete kitchen configuration (MANAGER only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Cannot delete the active kitchen configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3837,7 +4451,13 @@
       },
       "Address": {
         "type": "object",
-        "required": ["street", "houseNumber", "postalCode", "city", "district"],
+        "required": [
+          "street",
+          "houseNumber",
+          "postalCode",
+          "city",
+          "district"
+        ],
         "properties": {
           "street": {
             "type": "string"
@@ -4181,6 +4801,26 @@
           },
           "isActive": {
             "type": "boolean"
+          }
+        }
+      },
+      "KitchenConfiguration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "65231abcd345678901234567"
+          },
+          "name": {
+            "type": "string",
+            "example": "Standard Layout"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "content": {
+            "type": "object",
+            "description": "JSON object defining kitchen dimensions and elements."
           }
         }
       },

@@ -1933,17 +1933,17 @@ export const openApiSpec = {
             type: 'object',
             description: 'JSON object defining kitchen dimensions and elements.',
           },
-          VersionInfo: {
-            type: 'object',
-            required: ['sha', 'shortSha'],
-            properties: {
-              sha: { type: 'string', example: 'd455e69a1b2c3d4e5f60718293a4b5c6d7e8f901' },
-              shortSha: { type: 'string', example: 'd455e69' },
-              branch: { type: 'string', example: 'main' },
-              commitDate: { type: 'string', format: 'date-time' },
-              deployedAt: { type: 'string', format: 'date-time' },
-            },
-          },
+        },
+      },
+      VersionInfo: {
+        type: 'object',
+        required: ['sha', 'shortSha'],
+        properties: {
+          sha: { type: 'string', example: 'd455e69a1b2c3d4e5f60718293a4b5c6d7e8f901' },
+          shortSha: { type: 'string', example: 'd455e69' },
+          branch: { type: 'string', example: 'main' },
+          commitDate: { type: 'string', format: 'date-time' },
+          deployedAt: { type: 'string', format: 'date-time' },
         },
       },
     },

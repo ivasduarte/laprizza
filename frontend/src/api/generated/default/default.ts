@@ -40,7 +40,9 @@ import type {
   GetProductCategoriesParams,
   GetProductsParams,
   GetStockParams,
+  KitchenConfiguration,
   PatchCustomersIdBody,
+  PatchKitchenConfigurationsIdBody,
   PatchPizzaSizeIdBody,
   PatchProductsIdBody,
   PatchStockProductIdBody,
@@ -50,6 +52,9 @@ import type {
   PostAuthLogin200,
   PostAuthLoginBody,
   PostCustomersBody,
+  PostKitchenConfigurationsBody,
+  PostKitchenConfigurationsValidate200,
+  PostKitchenConfigurationsValidateBody,
   PostPizzaComponentTypeBody,
   PostPizzaSizeBody,
   PostPredefinedPizzasBody,
@@ -3907,4 +3912,612 @@ export const usePatchStockProductId = <TError = Error,
         TContext
       > => {
       return useMutation(getPatchStockProductIdMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List kitchen configurations (MANAGER and EMPLOYEE)
+ */
+export const getKitchenConfigurations = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration[]>(
+      {url: `/kitchen-configurations`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetKitchenConfigurationsQueryKey = () => {
+    return [
+    `/kitchen-configurations`
+    ] as const;
+    }
+
+
+export const getGetKitchenConfigurationsQueryOptions = <TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKitchenConfigurationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKitchenConfigurations>>> = ({ signal }) => getKitchenConfigurations(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKitchenConfigurationsQueryResult = NonNullable<Awaited<ReturnType<typeof getKitchenConfigurations>>>
+export type GetKitchenConfigurationsQueryError = Error
+
+
+export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurations>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurations>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List kitchen configurations (MANAGER and EMPLOYEE)
+ */
+
+export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKitchenConfigurationsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create kitchen configuration (MANAGER only)
+ */
+export const postKitchenConfigurations = (
+    postKitchenConfigurationsBody: PostKitchenConfigurationsBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration>(
+      {url: `/kitchen-configurations`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postKitchenConfigurationsBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostKitchenConfigurationsMutationKey = () => ['postKitchenConfigurations'] as const;
+
+export const getPostKitchenConfigurationsMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurations>>, TError,PostKitchenConfigurationsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurations>>, TError,PostKitchenConfigurationsMutationVariables, TContext> => {
+
+const mutationKey = getPostKitchenConfigurationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postKitchenConfigurations>>, PostKitchenConfigurationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postKitchenConfigurations(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostKitchenConfigurationsMutationResult = NonNullable<Awaited<ReturnType<typeof postKitchenConfigurations>>>
+    export type PostKitchenConfigurationsMutationBody = PostKitchenConfigurationsBody
+    export type PostKitchenConfigurationsMutationError = Error
+    export type PostKitchenConfigurationsMutationVariables = {data: PostKitchenConfigurationsBody}
+
+    /**
+ * @summary Create kitchen configuration (MANAGER only)
+ */
+export const usePostKitchenConfigurations = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurations>>, TError,PostKitchenConfigurationsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postKitchenConfigurations>>,
+        TError,
+        PostKitchenConfigurationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostKitchenConfigurationsMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Get active kitchen configuration (MANAGER and EMPLOYEE)
+ */
+export const getKitchenConfigurationsActive = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration>(
+      {url: `/kitchen-configurations/active`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetKitchenConfigurationsActiveQueryKey = () => {
+    return [
+    `/kitchen-configurations/active`
+    ] as const;
+    }
+
+
+export const getGetKitchenConfigurationsActiveQueryOptions = <TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKitchenConfigurationsActiveQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>> = ({ signal }) => getKitchenConfigurationsActive(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKitchenConfigurationsActiveQueryResult = NonNullable<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>>
+export type GetKitchenConfigurationsActiveQueryError = Error
+
+
+export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurationsActive>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurationsActive>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurationsActive>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurationsActive>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get active kitchen configuration (MANAGER and EMPLOYEE)
+ */
+
+export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKitchenConfigurationsActiveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Activate a kitchen configuration atomically (MANAGER only)
+ */
+export const patchKitchenConfigurationsIdActivate = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration>(
+      {url: `/kitchen-configurations/${id}/activate`, method: 'PATCH', signal
+    },
+      options);
+    }
+
+
+
+
+export const getPatchKitchenConfigurationsIdActivateMutationKey = () => ['patchKitchenConfigurationsIdActivate'] as const;
+
+export const getPatchKitchenConfigurationsIdActivateMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>, TError,PatchKitchenConfigurationsIdActivateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>, TError,PatchKitchenConfigurationsIdActivateMutationVariables, TContext> => {
+
+const mutationKey = getPatchKitchenConfigurationsIdActivateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>, PatchKitchenConfigurationsIdActivateMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  patchKitchenConfigurationsIdActivate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchKitchenConfigurationsIdActivateMutationResult = NonNullable<Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>>
+
+    export type PatchKitchenConfigurationsIdActivateMutationError = Error
+    export type PatchKitchenConfigurationsIdActivateMutationVariables = {id: string}
+
+    /**
+ * @summary Activate a kitchen configuration atomically (MANAGER only)
+ */
+export const usePatchKitchenConfigurationsIdActivate = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>, TError,PatchKitchenConfigurationsIdActivateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchKitchenConfigurationsIdActivate>>,
+        TError,
+        PatchKitchenConfigurationsIdActivateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchKitchenConfigurationsIdActivateMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Validate kitchen configuration (MANAGER only)
+ */
+export const postKitchenConfigurationsValidate = (
+    postKitchenConfigurationsValidateBody: PostKitchenConfigurationsValidateBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<PostKitchenConfigurationsValidate200>(
+      {url: `/kitchen-configurations/validate`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postKitchenConfigurationsValidateBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostKitchenConfigurationsValidateMutationKey = () => ['postKitchenConfigurationsValidate'] as const;
+
+export const getPostKitchenConfigurationsValidateMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>, TError,PostKitchenConfigurationsValidateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>, TError,PostKitchenConfigurationsValidateMutationVariables, TContext> => {
+
+const mutationKey = getPostKitchenConfigurationsValidateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>, PostKitchenConfigurationsValidateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postKitchenConfigurationsValidate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostKitchenConfigurationsValidateMutationResult = NonNullable<Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>>
+    export type PostKitchenConfigurationsValidateMutationBody = PostKitchenConfigurationsValidateBody
+    export type PostKitchenConfigurationsValidateMutationError = Error
+    export type PostKitchenConfigurationsValidateMutationVariables = {data: PostKitchenConfigurationsValidateBody}
+
+    /**
+ * @summary Validate kitchen configuration (MANAGER only)
+ */
+export const usePostKitchenConfigurationsValidate = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>, TError,PostKitchenConfigurationsValidateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postKitchenConfigurationsValidate>>,
+        TError,
+        PostKitchenConfigurationsValidateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostKitchenConfigurationsValidateMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Get kitchen configuration by ID (MANAGER and EMPLOYEE)
+ */
+export const getKitchenConfigurationsId = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration>(
+      {url: `/kitchen-configurations/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetKitchenConfigurationsIdQueryKey = (id: string,) => {
+    return [
+    `/kitchen-configurations/${id}`
+    ] as const;
+    }
+
+
+export const getGetKitchenConfigurationsIdQueryOptions = <TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKitchenConfigurationsIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKitchenConfigurationsId>>> = ({ signal }) => getKitchenConfigurationsId(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKitchenConfigurationsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getKitchenConfigurationsId>>>
+export type GetKitchenConfigurationsIdQueryError = Error
+
+
+export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurationsId>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurationsId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKitchenConfigurationsId>>,
+          TError,
+          Awaited<ReturnType<typeof getKitchenConfigurationsId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get kitchen configuration by ID (MANAGER and EMPLOYEE)
+ */
+
+export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKitchenConfigurationsIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Update kitchen configuration (MANAGER only)
+ */
+export const patchKitchenConfigurationsId = (
+    id: string,
+    patchKitchenConfigurationsIdBody: PatchKitchenConfigurationsIdBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<KitchenConfiguration>(
+      {url: `/kitchen-configurations/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchKitchenConfigurationsIdBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPatchKitchenConfigurationsIdMutationKey = () => ['patchKitchenConfigurationsId'] as const;
+
+export const getPatchKitchenConfigurationsIdMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsId>>, TError,PatchKitchenConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsId>>, TError,PatchKitchenConfigurationsIdMutationVariables, TContext> => {
+
+const mutationKey = getPatchKitchenConfigurationsIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchKitchenConfigurationsId>>, PatchKitchenConfigurationsIdMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchKitchenConfigurationsId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchKitchenConfigurationsIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchKitchenConfigurationsId>>>
+    export type PatchKitchenConfigurationsIdMutationBody = PatchKitchenConfigurationsIdBody
+    export type PatchKitchenConfigurationsIdMutationError = Error
+    export type PatchKitchenConfigurationsIdMutationVariables = {id: string;data: PatchKitchenConfigurationsIdBody}
+
+    /**
+ * @summary Update kitchen configuration (MANAGER only)
+ */
+export const usePatchKitchenConfigurationsId = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchKitchenConfigurationsId>>, TError,PatchKitchenConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchKitchenConfigurationsId>>,
+        TError,
+        PatchKitchenConfigurationsIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchKitchenConfigurationsIdMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Delete kitchen configuration (MANAGER only)
+ */
+export const deleteKitchenConfigurationsId = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<void>(
+      {url: `/kitchen-configurations/${id}`, method: 'DELETE', signal
+    },
+      options);
+    }
+
+
+
+
+export const getDeleteKitchenConfigurationsIdMutationKey = () => ['deleteKitchenConfigurationsId'] as const;
+
+export const getDeleteKitchenConfigurationsIdMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>, TError,DeleteKitchenConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>, TError,DeleteKitchenConfigurationsIdMutationVariables, TContext> => {
+
+const mutationKey = getDeleteKitchenConfigurationsIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>, DeleteKitchenConfigurationsIdMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteKitchenConfigurationsId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteKitchenConfigurationsIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>>
+
+    export type DeleteKitchenConfigurationsIdMutationError = Error
+    export type DeleteKitchenConfigurationsIdMutationVariables = {id: string}
+
+    /**
+ * @summary Delete kitchen configuration (MANAGER only)
+ */
+export const useDeleteKitchenConfigurationsId = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>, TError,DeleteKitchenConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteKitchenConfigurationsId>>,
+        TError,
+        DeleteKitchenConfigurationsIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteKitchenConfigurationsIdMutationOptions(options), queryClient);
     }
