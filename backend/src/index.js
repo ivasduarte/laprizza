@@ -59,7 +59,7 @@ function parseTrustProxy(value) {
  * See .env.example for the supported variables.
  *
  * @param {NodeJS.ProcessEnv} [env=process.env] - The environment variables object.
- * @returns {{nodeEnv: string, port: number, corsOrigins: string[], mongoUri: string}} The parsed configuration object.
+ * @returns {{nodeEnv: string, port: number, host: string | undefined, corsOrigins: string[], mongoUri: string}} The parsed configuration object.
  * @throws {Error} If the JWT_SECRET is missing from the environment variables.
  */
 export function loadConfig(env = process.env) {
@@ -76,6 +76,7 @@ export function loadConfig(env = process.env) {
   return {
     nodeEnv,
     port: Number(env.PORT ?? 3000),
+    host: env.HOST || undefined,
     corsOrigins: toList(env.CORS_ORIGIN ?? 'http://localhost:4200'),
     mongoUri: env.MONGODB_URI,
     jwtSecret: env.JWT_SECRET,
@@ -268,8 +269,10 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     await seedInitialPizzaComponentTypes();
     await seedInitialKitchenConfigurations();
 
-    createApp(config).listen(config.port, () => {
-      console.log(`LaPrizza API listening on http://localhost:${config.port}${API_PREFIX}`);
+    createApp(config).listen(config.port, config.host, () => {
+      console.log(
+        `LaPrizza API listening on http://${config.host ?? 'localhost'}:${config.port}${API_PREFIX}`,
+      );
     });
   } catch (err) {
     console.error('Failed to start server: ', err.message);

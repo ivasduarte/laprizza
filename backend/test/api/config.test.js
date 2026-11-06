@@ -28,9 +28,15 @@ test('loadConfig applies the AA01 defaults', () => {
   assert.equal(config.rateLimit.forgotMax, 3);
   assert.equal(config.rateLimit.forgotWindowMs, 60 * 60 * 1000);
 
-  assert.deepEqual(config.cookie, { name: 'lp_rt', secure: true, sameSite: 'strict', path: '/api/v1/auth' });
+  assert.deepEqual(config.cookie, {
+    name: 'lp_rt',
+    secure: true,
+    sameSite: 'strict',
+    path: '/api/v1/auth',
+  });
   assert.deepEqual(config.corsOrigins, ['http://localhost:4200']);
   assert.equal(config.trustProxy, false);
+  assert.equal(config.host, undefined);
   assert.equal(config.mail.port, 1025);
 });
 
@@ -70,7 +76,12 @@ test('loadConfig reads overrides from the environment', () => {
  */
 test('loadConfig rejects SameSite=None without Secure', () => {
   assert.throws(
-    () => loadConfig({ JWT_SECRET: 'x', REFRESH_COOKIE_SAMESITE: 'none', REFRESH_COOKIE_SECURE: 'false' }),
+    () =>
+      loadConfig({
+        JWT_SECRET: 'x',
+        REFRESH_COOKIE_SAMESITE: 'none',
+        REFRESH_COOKIE_SECURE: 'false',
+      }),
     /REFRESH_COOKIE_SECURE/,
   );
 });
@@ -85,4 +96,12 @@ test('loadConfig parses TRUST_PROXY', () => {
   assert.equal(trustProxy('true'), true);
   assert.equal(trustProxy('1'), 1);
   assert.equal(trustProxy('loopback'), 'loopback');
+});
+
+/**
+ * Unit test: HOST is optional; empty means every interface.
+ */
+test('loadConfig reads HOST', () => {
+  assert.equal(loadConfig({ JWT_SECRET: 'x', HOST: '127.0.0.1' }).host, '127.0.0.1');
+  assert.equal(loadConfig({ JWT_SECRET: 'x', HOST: '' }).host, undefined);
 });
