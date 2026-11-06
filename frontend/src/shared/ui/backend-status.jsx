@@ -4,21 +4,24 @@ import { useTranslation } from 'react-i18next';
 
 export default function BackendStatus() {
   const { t } = useTranslation();
-  const [statusText, setStatusText] = useState('Checking...');
+  const [state, setState] = useState('checking');
+
   useEffect(() => {
     let isMounted = true;
     checkBackendHealth().then((isOk) => {
       if (isMounted) {
-        setStatusText(isOk ? 'Backend: OK' : 'Backend: unreachable');
+        setState(isOk ? 'ok' : 'unreachable');
       }
     });
     return () => {
       isMounted = false;
     };
   }, []);
+
   return (
-    <p role="status">
-      {t(`backend.${statusText.includes('OK') ? 'ok' : 'unreachable'}`)}
+    <p role="status" className={`backend-status backend-status-${state}`}>
+      <span className="backend-dot" aria-hidden="true" />
+      {t(`backend.${state}`)}
     </p>
   );
 }

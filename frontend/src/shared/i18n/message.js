@@ -22,10 +22,13 @@ export const messages = {
     home: {
       welcome: 'Welcome to LaPrizza',
       description: 'Restaurant information system.',
+      quickAccess: 'Quick access',
     },
     auth: {
       email: 'Email',
       password: 'Password',
+      showPassword: 'Show',
+      hidePassword: 'Hide',
       currentPassword: 'Current password',
       newPassword: 'New password',
       confirmPassword: 'Confirm new password',
@@ -37,6 +40,7 @@ export const messages = {
       sessionExpired: 'Your session has ended. Please log in again.',
       loginTitle: 'Login',
       loginSubmit: 'Login',
+      loginSubtitle: 'Log in to manage the restaurant',
       forgotLink: 'Forgot your password?',
       forgotTitle: 'Recover password',
       forgotIntro:
@@ -252,10 +256,13 @@ export const messages = {
     home: {
       welcome: 'Bem-vindo à LaPrizza',
       description: 'Sistema de informação do restaurante.',
+      quickAccess: 'Acesso rápido',
     },
     auth: {
       email: 'Email',
       password: 'Palavra-passe',
+      showPassword: 'Mostrar',
+      hidePassword: 'Esconder',
       currentPassword: 'Palavra-passe atual',
       newPassword: 'Nova palavra-passe',
       confirmPassword: 'Confirmar nova palavra-passe',
@@ -266,6 +273,7 @@ export const messages = {
       backToLogin: 'Voltar ao início de sessão',
       sessionExpired: 'A sua sessão terminou. Inicie sessão novamente.',
       loginTitle: 'Iniciar sessão',
+      loginSubtitle: 'Introduza as suas credenciais',
       loginSubmit: 'Entrar',
       forgotLink: 'Esqueceu-se da palavra-passe?',
       forgotTitle: 'Recuperar palavra-passe',

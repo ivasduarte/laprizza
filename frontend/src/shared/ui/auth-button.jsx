@@ -7,21 +7,41 @@ import { useSession } from '../auth/use-session.js';
 export default function AuthButton() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { status } = useSession();
+  const { status, user } = useSession();
 
   useEffect(() => {
     authApi.restoreSession();
   }, []);
 
+  // Same pattern as the change-password page: leave first, end the session in the background.
+  function handleLogout() {
+    navigate('/', { replace: true });
+    authApi.logout().catch(() => {});
+  }
+
   if (status === 'authenticated') {
     return (
-      <button
-        type="button"
-        className="secondary"
-        onClick={() => navigate('/change-password')}
-      >
-        {t('nav.changePassword')}
-      </button>
+      <div className="auth-menu">
+        {user?.email && (
+          <span className="auth-user" title={user.email}>
+            {user.email}
+          </span>
+        )}
+        <button
+          type="button"
+          className="ghost small"
+          onClick={() => navigate('/change-password')}
+        >
+          {t('nav.changePassword')}
+        </button>
+        <button
+          type="button"
+          className="secondary small"
+          onClick={handleLogout}
+        >
+          {t('auth.logout')}
+        </button>
+      </div>
     );
   }
 
@@ -29,7 +49,7 @@ export default function AuthButton() {
     return (
       <button
         type="button"
-        className="secondary"
+        className="small"
         onClick={() => navigate('/login')}
       >
         {t('nav.login')}

@@ -29,7 +29,7 @@ export default function KitchenConfigurationForm({
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      try { 
+      try {
         const parsed = JSON.parse(e.target.result);
         setContent(JSON.stringify(parsed, null, 2));
         setError(null);

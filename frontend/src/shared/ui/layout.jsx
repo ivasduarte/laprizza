@@ -18,22 +18,26 @@ export default function Layout() {
         {t('layout.skipToContent')}
       </a>
       <header className="layout-header">
-        <Link to="/" className="brand-link" aria-label={t('layout.homeLink')}>
-          <Logo />
-        </Link>
-        <nav className="layout-nav" aria-label={t('layout.primaryNav')}>
-          <ul className="nav-list">
-            {navFeatures.map((feature) => (
-              <li key={feature.id}>
-                <NavLink to={feature.path} end={feature.path === '/'}>
-                  {t(feature.labelKey)}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <AuthButton />
-        <LanguageSwitcher />
+        <div className="layout-header-inner">
+          <Link to="/" className="brand-link" aria-label={t('layout.homeLink')}>
+            <Logo />
+          </Link>
+          <nav className="layout-nav" aria-label={t('layout.primaryNav')}>
+            <ul className="nav-list">
+              {navFeatures.map((feature) => (
+                <li key={feature.id}>
+                  <NavLink to={feature.path} end={feature.path === '/'}>
+                    {t(feature.labelKey)}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="layout-actions">
+            <AuthButton />
+            <LanguageSwitcher />
+          </div>
+        </div>
       </header>
       <main id="main-content" className="layout-main" tabIndex={-1}>
         <Suspense fallback={<p role="status">{t('layout.loading')}</p>}>
@@ -41,7 +45,10 @@ export default function Layout() {
         </Suspense>
       </main>
       <footer className="layout-footer">
-        <BackendStatus />
+        <div className="layout-footer-inner">
+          <span className="footer-brand">LaPrizza</span>
+          <BackendStatus />
+        </div>
       </footer>
     </div>
   );
