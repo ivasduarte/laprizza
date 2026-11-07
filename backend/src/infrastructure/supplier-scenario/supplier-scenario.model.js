@@ -45,3 +45,4 @@ const supplierScenarioSchema = new mongoose.Schema(
 );
 
 export const SupplierScenario = mongoose.model('SupplierScenario', supplierScenarioSchema);
+export default SupplierScenario;
