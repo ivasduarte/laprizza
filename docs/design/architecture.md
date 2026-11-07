@@ -38,6 +38,7 @@ This system follows a **modular**, **web-based architecture** to support the ope
 | Level 2 Physical View        | Where do the containers run?                                                                  | Deployment diagram (C4 style)     | [Level 2 Physical View](./views.md#level-2-physical-view)                          |
 | Level 3 Logical View         | Which components make up the Back-End Application and how do they relate to other containers? | Component diagram (C4 style)      | [Level 3 Logical View](./views.md#level-3-logical-view)                            |
 | Level 3 Development View     | How is the code decomposed into modules, and which module may use which?                      | Package diagram                   | [Level 3 Development View](./views.md#level-3-development-view)                    |
+| Level 3 Process View         | How do the components of the containers interact in each use case?                            | Sequence diagram (C4 dynamic)     | [Level 3 Process View](./views.md#level-3-process-view)                            |
 | Component and Connector View | Which interfaces do the components provide and require?                                       | Component and connector diagram   | [Component and Connector View](./views.md#high-level-component-and-connector-view) |
 
 ## Diagram Conventions

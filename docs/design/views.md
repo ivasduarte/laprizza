@@ -29,6 +29,8 @@ These views are:
     - [High-Level Component and Connector View](#high-level-component-and-connector-view)
       - [Element Catalogue](#element-catalogue-6)
       - [Interfaces](#interfaces-3)
+    - [Level 3 Process View](#level-3-process-view)
+      - [Kitchen Configuration Flows](#kitchen-configuration-flows)
   - [Non-Functional View](#non-functional-view)
 
 ## Level 1
@@ -43,11 +45,13 @@ flowchart TB
 
     laprizza["<b>LaPrizza Information System</b><br/>[System]<br/>Manages the restaurant operations, from online ordering<br/>and 3D configuration to stock and food preparation scheduling."]
     idp["<b>External Identity Provider</b><br/>[External System]<br/>Authenticates users via OAuth 2.0 / OIDC."]
+    assets["<b>Asset Host</b><br/>[External System]<br/>Serves the 3D models and textures<br/>referenced by the kitchen configurations."]
 
     customer -->|"Uses<br/>[HTTPS]"| laprizza
     employee -->|"Uses<br/>[HTTPS]"| laprizza
     manager -->|"Manages<br/>[HTTPS]"| laprizza
     laprizza -->|"Authenticates users via<br/>[OIDC/HTTPS]"| idp
+    laprizza -->|"Loads 3D models and textures from<br/>[HTTPS]"| assets
 
     classDef person fill:#08427b,stroke:#073b6f,color:#fff
     classDef system fill:#1168bd,stroke:#0b4884,color:#fff
@@ -55,7 +59,7 @@ flowchart TB
 
     class customer,employee,manager person
     class laprizza system
-    class idp external
+    class idp,assets external
 ```
 
 #### Element Catalogue
@@ -67,6 +71,7 @@ flowchart TB
 | LaPrizza Manager            | Person          | Manages users, business rules, catalogue, and AI planning configurations.                                              |
 | LaPrizza Information System | System          | Manages the restaurant operations, from online ordering and 3D configuration to stock and food preperation scheduling. |
 | External Identity Provider  | External System | Authenticates users via OAuth 2.0 / OIDC.                                                                              |
+| Asset Host                  | External System | Serves the 3D models and textures that a kitchen configuration references by URL/URI (ADR-0021). Its location is not constrained by the ADR.                 |
 
 
 ## Level 2
@@ -85,19 +90,24 @@ flowchart TB
         db[("<b>Database</b><br/>[Container: MongoDB]<br/>Persists business data.")]
     end
 
+    assets["<b>Asset Host</b><br/>[External System]<br/>Serves 3D models and textures."]
+
     user -->|"Interacts with<br/>[HTTPS]"| webApp
     webApp -->|"Embeds<br/>[Browser/DOM]"| viz3d
     webApp -->|"Makes API calls to<br/>[JSON/HTTPS]"| backend
-    viz3d -->|"Fetches 3D layouts<br/>and assets from<br/>[JSON/HTTPS]"| backend
+    viz3d -->|"Fetches 3D layouts from<br/>[JSON/HTTPS]"| backend
+    viz3d -->|"Loads 3D models<br/>and textures from<br/>[HTTPS]"| assets
     backend -->|"Requests planning<br/>algorithms from<br/>[JSON/HTTPS]"| ai
     backend -->|"Reads from and writes to<br/>[Mongoose/TCP]"| db
 
     classDef person fill:#08427b,stroke:#073b6f,color:#fff
     classDef container fill:#438dd5,stroke:#3c7fc0,color:#fff
     classDef component fill:#85bbf0,stroke:#5d9fd8,color:#000
+    classDef external fill:#999999,stroke:#8a8a8a,color:#fff
 
     class user person
     class webApp,viz3d,backend,ai,db container
+    class assets external
     style laprizza fill:none,stroke:#888,stroke-dasharray:5 5
 ```
 
@@ -111,6 +121,7 @@ flowchart TB
 | AI Scheduling Module | Container | Plans and schedules food-preparation activities on the available kitchen resources                                                     | Prolog                    |
 | Back-End Application | Container | Exposes the REST API, enforces business rules and invariants, handles authentication and authorization, and persists the business data | Node.js, Express          |
 | Database             | Container | Persistent store of the business data; accessed only by the Back-End Application                                                       | MongoDB                   |
+| Asset Host           | External System | Serves the 3D models and textures referenced by the kitchen configurations; used only by the 3D Visualization (ADR-0021)             | HTTPS                     |
 
 #### Interfaces
 
@@ -119,7 +130,8 @@ flowchart TB
 | System User to Web Application           | HTTPS               | User Interaction                                        |
 | Web Application to 3D Visualization      | Browser (embedding) | Loads the 3D modules inside the web interface           |
 | Web Application to Back-End Application  | JSON/HTTPS (REST)   | Reads and writes business data through `/api/v1`        |
-| 3D Visualization to Back-End Application | JSON/HTTPS (REST)   | Reads catalogue data (sizes, components, rules, prices) |
+| 3D Visualization to Back-End Application | JSON/HTTPS (REST)   | Reads catalogue data (sizes, components, rules, prices) and the active kitchen configuration |
+| 3D Visualization to Asset Host           | HTTPS               | Loads the models and textures referenced by the kitchen configuration |
 | Back-End Application to AI Scheduling    | JSON/HTTPS          | Requests planning (BOM and requirements) calculations   |
 | Back-End Application to Database         | Mongoose / TCP      | Reads and writes                                        |
 
@@ -207,6 +219,7 @@ flowchart TB
 - The Web Application and the 3D Visualization access the business data only through the REST API of the Back-End Application.
 - The Database is accessed only by the Back-End Application.
 - The AI Scheduling Module is used only by the Back-End Application.
+- The 3D Visualization loads the assets referenced by a kitchen configuration directly from their URL/URIs, without going through the Back-End Application ([ADR-0021](../adr/0021-asset-references-strategy.md)).
 
 ### Level 2 Physical View
 
@@ -283,7 +296,7 @@ flowchart TB
 | Prolog Runtime         | Execution environment | Runtime of the AI Scheduling Module                     | SWI-Prolog                |
 | AI Scheduling Module   | Container             | Executes BOM and Requirements Planning                  | SWI-Prolog                |
 | Database Server        | Deployment node       | Hosts the database                                      | Linux                     |
-| MongoDB Instance       | Execution environment | Runs the database                                       | MongoDB                   |
+| MongoDB Instance       | Execution environment | Runs the database as a replica set (single-node in local environments), required by the transaction that activates a kitchen configuration ([ADR-0023](../adr/0023-atomic-activation-strategy.md)) | MongoDB (replica set)     |
 | Database               | Container             | Stores all persistent operational data                  | MongoDB                   |
 
 #### Interfaces
@@ -307,6 +320,7 @@ This view shows the components of the Back-End Application and how they relate t
 %%{init: {'flowchart': {'nodeSpacing': 20, 'rankSpacing': 35, 'padding': 8}}}%%
 flowchart TB
     webApp["<b>Web Application</b><br/>[Container: React]<br/>Consumes REST APIs."]
+    viz3d["<b>3D Visualization</b><br/>[Container: WebGL, Three.js]<br/>Fetches the active kitchen layout."]
 
     subgraph backend["Back-End Application [Container]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"]
         api["<b>API Router & Middleware</b><br/>[Component: Express Router]<br/>Handles HTTP routing, JWT verification,<br/>Joi validation, and RBAC."]
@@ -317,16 +331,18 @@ flowchart TB
             products["<b>Products Module</b><br/>Manages products, categories,<br/>allergens, and catalogue."]
             pizza["<b>Pizza Config Module</b><br/>Manages pizza sizes, component<br/>types, and predefined pizzas."]
             stock["<b>Stock Module</b><br/>Manages inventory quantities<br/>and adjustments."]
+            kitchen["<b>Kitchen Configuration Module</b><br/>Manages kitchen configurations, their<br/>activation and the active layout."]
         end
 
         domain["<b>Domain Layer</b><br/>[Component: Entities & Value Objects]<br/>Encapsulates pure business rules<br/>and domain validations."]
-        infra["<b>Infrastructure Repositories</b><br/>[Component: Mongoose / Dummy]<br/>Implements persistence mapping<br/>and external service integrations."]
+        infra["<b>Infrastructure Repositories</b><br/>[Component: Mongoose / mocks in tests]<br/>Implements persistence mapping<br/>and external service integrations."]
     end
 
     db[("<b>Database</b><br/>[Container: MongoDB]<br/>Persists data.")]
     ai["<b>AI Module</b><br/>[Container: Prolog]<br/>Provides planning capabilities."]
 
     webApp -->|"Calls<br/>[JSON/HTTPS]"| api
+    viz3d -->|"Fetches the active layout<br/>[JSON/HTTPS]"| api
     api -->|"Routes to"| features
     features -->|"Applies rules from"| domain
     features -->|"Uses"| infra
@@ -337,8 +353,8 @@ flowchart TB
     classDef container fill:#438dd5,stroke:#3c7fc0,color:#fff
     classDef component fill:#85bbf0,stroke:#5d9fd8,color:#000
 
-    class webApp,db,ai container
-    class api,auth,users,products,pizza,stock,domain,infra component
+    class webApp,viz3d,db,ai container
+    class api,auth,users,products,pizza,stock,kitchen,domain,infra component
     style backend fill:none,stroke:#888,stroke-dasharray:5 5
     style features fill:none,stroke:#5d9fd8,stroke-dasharray:3 3
 ```
@@ -353,23 +369,26 @@ flowchart TB
 | Products Module              | Component | Manages products, categories, allergens, and catalogue                    | Service & Controller  |
 | Pizza Config Module          | Component | Manages pizza sizes, component types, and predefined pizzas               | Service & Controller  |
 | Stock Module                 | Component | Manages inventory quantities and adjustments                              | Service & Controller  |
+| Kitchen Configuration Module | Component | Manages kitchen configurations, their activation and the active layout    | Service & Controller  |
 | Domain Layer                 | Component | Encapsulates pure business rules and domain validations                   | Entities & Value Objects |
-| Infrastructure Repositories  | Component | Implements persistence mapping and external service integrations          | Mongoose / Dummy      |
+| Infrastructure Repositories  | Component | Implements persistence mapping and external service integrations          | Mongoose / mocks      |
 | Web Application              | Container | External to this view; consumes the REST APIs                             | React, Vite           |
+| 3D Visualization            | Container | External to this view; fetches the active kitchen layout                  | WebGL, Three.js       |
 | AI Scheduling Module         | Container | External to this view; provides planning capabilities                     | SWI-Prolog            |
 | Database                     | Container | External to this view; persists the business data                         | MongoDB               |
 
-The five feature modules (Auth, Users & Customers, Products, Pizza Config and Stock) are grouped in the diagram because they all relate to the other components in the same way.
+The six feature modules (Auth, Users & Customers, Products, Pizza Config, Stock and Kitchen Configuration) are grouped in the diagram because they all relate to the other components in the same way. The components inside the Kitchen Configuration Module are detailed in the [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md#level-3-components-of-the-back-end-module).
 
 #### Interfaces
 
 | Connector                                                    | Protocol          | Purpose                                                          |
 | :----------------------------------------------------------- | :---------------- | :--------------------------------------------------------------- |
 | Web Application to API Router & Middleware                   | JSON/HTTPS (REST) | Calls the `/api/v1` endpoints                                    |
+| 3D Visualization to API Router & Middleware                  | JSON/HTTPS (REST) | Calls the `/api/v1` endpoints to fetch the active kitchen configuration |
 | API Router & Middleware to each feature module               | In-process        | Routes the validated, authorized request to the module           |
 | Each feature module to Domain Layer                          | In-process        | Applies the business rules and domain validations                |
 | Each feature module to Infrastructure Repositories           | In-process        | Reads and writes persisted data                                  |
-| Infrastructure Repositories to Database                      | TCP               | Reads and writes                                                 |
+| Infrastructure Repositories to Database                      | TCP               | Reads and writes; multi-document transactions for the activation of a kitchen configuration |
 | Infrastructure Repositories to AI Scheduling Module          | HTTPS             | Bridges the planning calls                                       |
 
 
@@ -468,6 +487,7 @@ flowchart LR
     IPizza(("Pizza API"))
     IStock(("Stock API"))
     IPlan(("Planning API"))
+    IKitchen(("Kitchen API"))
 
     subgraph backend["Back-End Application [Container: Node.js, Express]"]
         AuthMod["<b>Auth Module</b><br/>[Component: Service & Controller]<br/>Handles local/external login<br/>and account management."]
@@ -475,6 +495,7 @@ flowchart LR
         ProdMod["<b>Products Module</b><br/>[Component: Service & Controller]<br/>Manages products, categories,<br/>allergens, and catalogue."]
         PizzaMod["<b>Pizza Config Module</b><br/>[Component: Service & Controller]<br/>Manages pizza sizes, component<br/>types, and predefined pizzas."]
         StockMod["<b>Stock Module</b><br/>[Component: Service & Controller]<br/>Manages inventory quantities<br/>and adjustments."]
+        KitchenMod["<b>Kitchen Configuration Module</b><br/>[Component: Service & Controller]<br/>Manages kitchen configurations,<br/>their activation and the active layout."]
     end
 
     ai["<b>AI Scheduling Module</b><br/>[Container: SWI-Prolog]<br/>Provides planning capabilities."]
@@ -487,6 +508,7 @@ flowchart LR
     ICatalogue o--- ProdMod
     IPizza o--- PizzaMod
     IStock o--- StockMod
+    IKitchen o--- KitchenMod
     IPlan o--- ai
 
     webApp -.-> IAuth
@@ -496,8 +518,10 @@ flowchart LR
     webApp -.-> IProd
     webApp -.-> IPizza
     webApp -.-> IStock
+    webApp -.-> IKitchen
     webApp -.-> ICatalogue
     viz3d -.-> IPizza
+    viz3d -.-> IKitchen
     backend -.-> IPlan
 
     classDef person fill:#08427b,stroke:#073b6f,color:#fff
@@ -506,8 +530,8 @@ flowchart LR
     classDef iface fill:#fff,stroke:#5d9fd8,color:#000
 
     class webApp,viz3d,ai container
-    class AuthMod,UsersMod,ProdMod,PizzaMod,StockMod component
-    class IAuth,IUser,ICust,ICat,IProd,ICatalogue,IPizza,IStock,IPlan iface
+    class AuthMod,UsersMod,ProdMod,PizzaMod,StockMod,KitchenMod component
+    class IAuth,IUser,ICust,ICat,IProd,ICatalogue,IPizza,IStock,IPlan,IKitchen iface
     style backend fill:none,stroke:#888,stroke-dasharray:5 5
 ```
 
@@ -520,10 +544,11 @@ flowchart LR
 | Products Module          | Component | Categories API, Products API, Catalogue API       |                                                                  |
 | Pizza Config Module      | Component | Pizza API                                         |                                                                  |
 | Stock Module             | Component | Stock API                                         |                                                                  |
+| Kitchen Configuration Module | Component | Kitchen API                                       |                                                                  |
 | Back-End Application     | Container | The APIs above                                    | Planning API                                                     |
 | AI Scheduling Module     | Container | Planning API                                      |                                                                  |
-| Web Application          | Container |                                                   | Auth, Users, Customers, Categories, Products, Pizza, Stock and Catalogue APIs |
-| 3D Visualization         | Container |                                                   | Pizza API                                                        |
+| Web Application          | Container |                                                   | Auth, Users, Customers, Categories, Products, Pizza, Stock, Catalogue and Kitchen APIs |
+| 3D Visualization         | Container |                                                   | Pizza and Kitchen APIs                                           |
 
 #### Interfaces
 
@@ -536,10 +561,25 @@ flowchart LR
 | Products API   | Products Module          | Web Application              | Management of products and allergens                      |
 | Catalogue API  | Products Module          | Web Application              | Consultation of the catalogue                             |
 | Pizza API      | Pizza Config Module      | Web Application, 3D Visualization | Pizza sizes, component types and predefined pizzas   |
+| Kitchen API    | Kitchen Configuration Module | Web Application, 3D Visualization | Import, activation and consultation of kitchen configurations, and the active kitchen layout |
 | Stock API      | Stock Module             | Web Application              | Inventory quantities and adjustments                      |
 | Planning API   | AI Scheduling Module     | Back-End Application         | BOM and requirements planning                             |
 
 
+
+### Level 3 Process View
+
+This view shows how the components of the containers interact in each use case. It is documented per aggregate as C4 dynamic diagrams in the `docs/flows` folder, where the README of each aggregate holds the notation key and the element catalogue.
+
+#### Kitchen Configuration Flows
+
+| Use Case                                   | Interaction                                                                                                    | Containers involved                              | ADRs                                |
+| :----------------------------------------- | :------------------------------------------------------------------------------------------------------------- | :----------------------------------------------- | :---------------------------------- |
+| [UC1 - Create / Import Kitchen Configuration](../flows/kitchen-configuration/create-import-kitchen-configuration.md) | The file is read in the browser and sent as JSON; the structure and the domain rules are validated; the configuration is stored inactive | Web Application, Back-End Application, Database | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0022](../adr/0022-content-validation-strategy.md), [ADR-0026](../adr/0026-import-approach.md) |
+| [UC2 - Activate Kitchen Configuration](../flows/kitchen-configuration/activate-kitchen-configuration.md) | The active configuration is switched atomically in a transaction; the 3D viewer is remounted with a new React key | Web Application, 3D Visualization, Back-End Application, Database | [ADR-0023](../adr/0023-atomic-activation-strategy.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+| [UC3 - Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md) | The viewer fetches the active layout and loads its assets by URL/URI; 404 when none is active, with no fallback | Web Application, 3D Visualization, Back-End Application, Database, Asset Host | [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+
+The context, container and component views of the feature, for the Back-End Application module and for the Web Application page, are in the [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).
 
 ## Non-Functional View
 
@@ -550,10 +590,17 @@ flowchart LR
 | Recoverability                  | Business data is accidentally deleted or corrupted: it can be restored                                                                                                                                                                                                 | Products deactivated instead of deleted; reproducible schema and seed data ([ADR-0003](./decisions/0003-persistence-seed.md)); database backups (depends on the Atlas plan)                                                                                                                                                                                                                                                                                                                                                                    | Partly Sprint 1; backups and recovery procedure planned (ASIST) |
 | Stability and scalability       | The number of clients or requests grows: the system keeps working; the System Specification gives no numeric targets                                                                                                                                                   | Separate components over a versioned REST API (3.4); configuration in the environment; stateless authentication, since the token carries the identity and roles and no session state is kept ([ADR-0004](./decisions/0004-auth.md)); further measures (replication, load balancing, containers) planned with ASIST                                                                                                                                                                                                                             | Considered; not assessed                                        |
 | Interoperability                | A new client (Web Application, 3D Visualization, AI) is integrated: it uses only the OpenAPI contract                                                                                                                                                                  | Contract-first REST API under `/api/v1` ([ADR-0005](./decisions/0005-api-contract.md)); Level 2 Logical View (3.4)                                                                                                                                                                                                                                                                                                                                                                                                                             | Sprint 1                                                        |
-| Maintainability and testability | A new Pizza Component Type is added, or a team member runs the tests without a database: no source code change; tests pass without external services                                                                                                                   | Layers and repository interfaces in `domain` ([ADR-0002](decisions/0002-layered-ddd.md)); configurable data and seed data ([ADR-0003](./decisions/0003-persistence-seed.md)); dummies; CI                                                                                                                                                                                                                                                                                                                                                      | Sprint 1                                                        |
+| Maintainability and testability | A new Pizza Component Type is added, or a team member runs the tests without a database: no source code change; tests pass without external services                                                                                                                   | Layers and repository interfaces in `domain` ([ADR-0002](decisions/0002-layered-ddd.md)); configurable data and seed data ([ADR-0003](./decisions/0003-persistence-seed.md)); native `node:test` mocks ([ADR-0028](../adr/0028-mock-based-unit-testing.md)); CI                                                                                                                                                                                                                                                                                                                                                      | Sprint 1                                                        |
+| Consistency and availability of the active configuration | Two Managers activate different kitchen configurations at the same time, a Manager tries to delete the active configuration, or no configuration is active: there is never more than one active configuration, the active one cannot be deleted, and a missing active configuration is reported explicitly (404) instead of being hidden | Boolean flag with a partial unique index and a transaction that swaps the active configuration atomically, on a MongoDB replica set ([ADR-0023](../adr/0023-atomic-activation-strategy.md)); deletion of the active configuration is rejected and edits are validated again ([ADR-0024](../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md)); dedicated endpoint with a strict 404 and no fallback layout ([ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)); the viewer is remounted with a React key reset ([ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md)) | Sprint 2 (WEB06) |
+| Validation of imported content | A Manager imports a file that is not valid JSON, does not follow the expected structure or breaks a physical rule (for example duplicated equipment ids): it is rejected with the exact property paths and nothing is stored | File read and parsed in the browser ([ADR-0026](../adr/0026-import-approach.md)); JSON Schema for the structure, with path-based errors, plus domain rules for the business invariants ([ADR-0022](../adr/0022-content-validation-strategy.md)); nested BSON object stored as a free-form document, so the structure is guaranteed by the validation in the domain, not by the persistence layer ([ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md)) | Sprint 2 (WEB06) |
+| Load time of the 3D viewer | The 3D viewer loads the active kitchen layout: it needs one request to the Back-End Application and fetches its assets directly | Self-contained configuration payload with URL/URI asset references, without joins or secondary requests to the Back-End Application ([ADR-0021](../adr/0021-asset-references-strategy.md)); configuration read as a single document ([ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md)) | Sprint 2 (WEB06); not measured |
 
 **Trade-offs and limitations**
 
 - **Session length vs usability:** the 35-minute expiration limits the time a stolen token is useful, but users are logged out frequently. A refresh token strategy is the planned remedy if this affects usability (ADR-0004).
 - **Roles in the token:** keeping the roles in the token avoids a database lookup per request, but a role change or a deactivated user only takes effect when the token expires.
 - **Roles in code:** the roles are fixed in the code, so adding a new role requires a code change.
+- **Replica set requirement:** the atomic activation of a kitchen configuration needs MongoDB multi-document transactions, which require a replica set, so local environments must run a single-node replica set ([ADR-0023](../adr/0023-atomic-activation-strategy.md)).
+- **Duplicated asset URLs:** self-contained URL/URIs keep the viewer fast and the backend simple, but the same URL is repeated in several configurations and a changed URL must be updated by hand ([ADR-0021](../adr/0021-asset-references-strategy.md)).
+- **New 3D properties:** the content is stored as a free-form nested object and validated by the JSON Schema in the domain, so a property required by the viewer needs an update of `kitchen-configuration.schema.json`, not a database migration ([ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md)).
+- **Viewer remount:** the React key reset gives a clean Three.js scene after an activation or an edit of the active configuration, at the cost of a brief loading flicker ([ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md)).

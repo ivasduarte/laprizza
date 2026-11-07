@@ -1,0 +1,26 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph WEB06 [WEB06: Kitchen Configuration and 3D Integration]
+        direction TB
+        UC1([UC1: Create/Import Configuration])
+        UC2([UC2: Activate Configuration])
+        UC3([UC3: Get Active Configuration])
+        UC4([UC4: List and Consult Configurations])
+        UC5([UC5: Edit Configuration])
+        UC6([UC6: Delete Configuration])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    Manager --> UC6
+
+    Employee --> UC3
+    Employee -.->|<< read-only >>| UC4
+
+    Viz3D -->|<< consumes >>| UC3

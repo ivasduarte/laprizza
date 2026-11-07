@@ -24,6 +24,16 @@ A decision is architecturally significant when its cost of change is high. One A
 | [0017](./adr/0017-secrets-management-strategy.md) | Secrets Management Strategy | Accepted | Level 3 Development View; <br> Principles and Guidelines |
 | [0018](./adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted | Level 2 Logical View |
 | [0019](./adr/0019-migrate-architectural-documentation-from-plantuml-to-mermaid.md) | Migration of the Architectural Documentation from PlantUML to Mermaid | Accepted | Architecture (Diagram Conventions); <br> Principles and Guidelines |
+| [0020](../adr/0020-strorage-model-of-kitchen-configurations.md) | Storage Model of Kitchen Configurations | Accepted | Level 3 Logical View; <br> Level 3 Process View; <br> Non-Functional View |
+| [0021](../adr/0021-asset-references-strategy.md) | Asset References Strategy | Accepted | Level 1 Logical View; <br> Level 2 Logical View; <br> Level 2 Development View; <br> Level 3 Process View; <br> Non-Functional View |
+| [0022](../adr/0022-content-validation-strategy.md) | Content Validation Strategy | Accepted | Level 3 Logical View; <br> Level 3 Process View; <br> Non-Functional View |
+| [0023](../adr/0023-atomic-activation-strategy.md) | Atomic Activation Strategy | Accepted | Level 2 Physical View; <br> Level 3 Process View; <br> Non-Functional View |
+| [0024](../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md) | Rules for Editing and Deleting the Active Configuration | Accepted | Level 3 Process View; <br> Non-Functional View |
+| [0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) | Active Configuration Endpoint and No-Fallback Policy | Accepted | Level 3 Process View; <br> Non-Functional View |
+| [0026](../adr/0026-import-approach.md) | Import Approach | Accepted | Level 3 Process View; <br> Non-Functional View |
+| [0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) | Viewer Reload Mechanism in the Frontend | Accepted | Level 3 Process View; <br> Non-Functional View |
+| [0028](../adr/0028-mock-based-unit-testing.md) | Mock-Based Unit Testing | Accepted | Principles and Guidelines |
+| [0029](../adr/0029-frontend-end-to-end-%28e2e%29-testing-framework.md) | Frontend End-to-End (E2E) Testing Framework | Accepted | Principles and Guidelines |
 
 
 ## Analysis Results
@@ -67,3 +77,4 @@ Justification of how the architecture satisfies the drivers.
 | Progressive integration of Web Application, 3D, AI and infrastructure | [Level 1 Logical View](./diagrams/level-1/logical-view.svg) <br> [Level 2 Logical View](views.md#level-2-logical-view) <br> [Level 2 Physical View](views.md#level-2-physical-view) <br> [Level 2 Development View](views.md#level-2-development-view) |
 | GDPR and security | [ADR-0004](./adr/0004-authentication-and-authorization.md) |
 | Sprint 1 limited to the back-end, architecture for the whole system | [Level 1 Logical View](views.md#level-1-logical-view) <br> [Level 2 Logical View](views.md#level-2-logical-view) |
+| Kitchen configuration and 3D integration page (WEB06) | [Level 3 Logical View](views.md#level-3-logical-view) <br> [Level 3 Process View](views.md#level-3-process-view) <br> [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md) <br> [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) <br> [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0022](../adr/0022-content-validation-strategy.md), [ADR-0023](../adr/0023-atomic-activation-strategy.md), [ADR-0024](../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0026](../adr/0026-import-approach.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
