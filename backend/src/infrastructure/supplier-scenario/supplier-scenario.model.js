@@ -24,25 +24,34 @@ const scenarioProductSchema = new mongoose.Schema({
 
 const supplierScenarioSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    version: { type: Number, default: 1 },
-    simulated: { type: Boolean, default: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    version: {
+      type: Number,
+      default: 1,
+    },
+    simulated: {
+      type: Boolean,
+      default: true,
+    },
     suppliers: [supplierSchema],
     products: [scenarioProductSchema],
-    isActive: { type: Boolean, default: true },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
-    toJSON: {
-      transform: (doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
-    },
   },
 );
 
-export const SupplierScenario = mongoose.model('SupplierScenario', supplierScenarioSchema);
-export default SupplierScenario;
+supplierScenarioSchema.index(
+  { name: 1, version: 1 },
+  { unique: true, collation: { locale: 'en', strength: 2 } },
+);
+
+export default mongoose.model('SupplierScenario', supplierScenarioSchema);

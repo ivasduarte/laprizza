@@ -17,25 +17,37 @@ const forecastEntrySchema = new mongoose.Schema({
 
 const forecastSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    version: { type: Number, default: 1 },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    version: {
+      type: Number,
+      default: 1,
+    },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
     entries: [forecastEntrySchema],
-    isActive: { type: Boolean, default: true },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
-    toJSON: {
-      transform: (doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
-    },
   },
 );
 
-export const Forecast = mongoose.model('Forecast', forecastSchema);
-export default Forecast;
+forecastSchema.index(
+  { name: 1, version: 1 },
+  { unique: true, collation: { locale: 'en', strength: 2 } },
+);
+
+export default mongoose.model('Forecast', forecastSchema);

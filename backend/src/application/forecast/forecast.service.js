@@ -17,12 +17,18 @@ export async function listForecasts(filters = {}, forecastRepository = defaultFo
   const forecasts = filters.name
     ? await forecastRepository.search(filters.name)
     : await forecastRepository.list();
-  return forecasts.filter((f) => f.isActive !== false).map(toForecastDto);
+
+  const activeForecasts = forecasts.filter((f) => f.isActive !== false);
+  return activeForecasts.map(toForecastDto);
 }
 
 export async function getForecastById(id, forecastRepository = defaultForecastRepository) {
   const forecast = await forecastRepository.findById(id);
-  if (!forecast || forecast.isActive === false) throw new AppError('Forecast not found.', 404);
+
+  if (!forecast || forecast.isActive === false) {
+    throw new AppError('Forecast not found.', 404);
+  }
+
   return toForecastDto(forecast);
 }
 
@@ -36,11 +42,20 @@ export async function createForecast(forecastData, forecastRepository = defaultF
   }
 }
 
-export async function updateForecast(id, updateData, forecastRepository = defaultForecastRepository) {
-  if (updateData.isActive !== false) throw new AppError('Only deactivation is supported.', 400);
+export async function updateForecast(
+  id,
+  updateData,
+  forecastRepository = defaultForecastRepository,
+) {
+  if (updateData.isActive !== false) {
+    throw new AppError('Only deactivation is supported: isActive must be false.', 400);
+  }
+
   const forecast = await forecastRepository.findById(id);
-  if (!forecast || forecast.isActive === false) throw new AppError('Forecast not found.', 404);
-  
+  if (!forecast || forecast.isActive === false) {
+    throw new AppError('Forecast not found.', 404);
+  }
+
   const deactivated = await forecastRepository.update(id, { isActive: false });
   return toForecastDto(deactivated);
 }
