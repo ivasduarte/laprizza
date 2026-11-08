@@ -1,11 +1,6 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { AppError } from '../../src/application/app-error.js';
-import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
-import { createDummyProductCategoriesRepository } from '../infrastructure/product-categories.dummy.repository.js';
-import { createDummyAllergenRepository } from '../infrastructure/allergens.dummy.repository.js';
-import { createDummyPizzaComponentTypesRepository } from '../infrastructure/pizza-component-type.dummy.repository.js';
-import { createDummyStockRepository } from '../infrastructure/stock.dummy.repository.js';
 import {
   createProduct,
   listProducts,
@@ -13,32 +8,46 @@ import {
   updateProduct,
 } from '../../src/application/products/products.service.js';
 
-async function setupRepos() {
-  const categoriesRepo = createDummyProductCategoriesRepository();
-  const cat = await categoriesRepo.create({ name: 'Bebidas' });
+const CATEGORY_ID = 'abcdef000000000000000001';
+const ALLERGEN_ID = 'a11e12000000000000000001';
+const TYPE_ID = 'abcdef000000000000000002';
+const PRODUCT_ID = 'e0e0e0000000000000000001';
+const STOCK_ID = 'f0f0f0000000000000000001';
 
-  const allergensRepo = createDummyAllergenRepository();
-  const allergen = await allergensRepo.create({ name: 'Glúten' });
+const byId = (doc) => async (id) => (String(id) === String(doc._id) ? doc : null);
 
-  const typeRepo = createDummyPizzaComponentTypesRepository();
-  const type = await typeRepo.create({
-    name: 'Dough',
-    assemblyOrder: 1,
-    minQuantity: 1,
-    maxQuantity: 1,
-  });
-
-  const stockRepo = createDummyStockRepository();
-
+/**
+ * Mocked repositories for the products service. Only the known category, allergen and pizza
+ * component type exist; `product` is what productsRepository.findById returns.
+ */
+function setupRepos(product = null) {
   return {
-    productsRepository: createDummyProductsRepository(),
-    categoriesRepository: categoriesRepo,
-    allergensRepository: allergensRepo,
-    pizzaComponentTypesRepository: typeRepo,
-    stockRepository: stockRepo,
-    validCategory: cat,
-    validAllergen: allergen,
-    validType: type,
+    productsRepository: {
+      findById: mock.fn(async (id) => (product && String(id) === String(product._id) ? product : null)),
+      findByName: mock.fn(async () => null),
+      create: mock.fn(async (data) => ({
+        _id: PRODUCT_ID,
+        isActive: true,
+        pizzaComponentTypeId: null,
+        allergenIds: [],
+        sizeConfigurations: [],
+        ...data,
+      })),
+      update: mock.fn(async (_id, data) => ({ ...product, ...data })),
+      listProducts: mock.fn(async () => []),
+    },
+    categoriesRepository: {
+      findById: mock.fn(byId({ _id: CATEGORY_ID, name: 'Bebidas', isActive: true })),
+    },
+    allergensRepository: {
+      findById: mock.fn(byId({ _id: ALLERGEN_ID, name: 'Glúten', isActive: true })),
+    },
+    pizzaComponentTypesRepository: {
+      findById: mock.fn(byId({ _id: TYPE_ID, name: 'Dough', isActive: true })),
+    },
+    stockRepository: {
+      create: mock.fn(async (data) => ({ _id: STOCK_ID, ...data })),
+    },
   };
 }
 
@@ -50,30 +59,39 @@ const VALID_PRODUCT_DATA = {
   stockControlled: true,
 };
 
+/** Stored product document, as returned by the repository. */
+const storedProduct = (data = {}) => ({
+  _id: PRODUCT_ID,
+  ...VALID_PRODUCT_DATA,
+  categoryId: CATEGORY_ID,
+  pizzaComponentTypeId: null,
+  allergenIds: [],
+  sizeConfigurations: [],
+  isActive: true,
+  ...data,
+});
+
 test('createProduct enforces price rule for sellable products', async () => {
-  const repos = await setupRepos();
+  const repos = setupRepos();
 
   await assert.rejects(
     async () =>
       await createProduct(
-        { ...VALID_PRODUCT_DATA, price: undefined, categoryId: repos.validCategory._id },
+        { ...VALID_PRODUCT_DATA, price: undefined, categoryId: CATEGORY_ID },
         repos,
       ),
     (err) => err instanceof AppError && err.status === 400,
   );
 
   await assert.rejects(
-    async () =>
-      await createProduct(
-        { ...VALID_PRODUCT_DATA, price: -1, categoryId: repos.validCategory._id },
-        repos,
-      ),
+    async () => await createProduct({ ...VALID_PRODUCT_DATA, price: -1, categoryId: CATEGORY_ID }, repos),
     (err) => err.status === 400,
   );
+  assert.equal(repos.productsRepository.create.mock.callCount(), 0);
 });
 
 test('createProduct validates references', async () => {
-  const repos = await setupRepos();
+  const repos = setupRepos();
 
   await assert.rejects(
     async () => await createProduct({ ...VALID_PRODUCT_DATA, categoryId: 'invalid' }, repos),
@@ -83,7 +101,7 @@ test('createProduct validates references', async () => {
   await assert.rejects(
     async () =>
       await createProduct(
-        { ...VALID_PRODUCT_DATA, categoryId: repos.validCategory._id, allergenIds: ['invalid'] },
+        { ...VALID_PRODUCT_DATA, categoryId: CATEGORY_ID, allergenIds: ['invalid'] },
         repos,
       ),
     (err) => err.status === 404 && err.message.includes('Allergen'),
@@ -94,42 +112,43 @@ test('createProduct validates references', async () => {
       await createProduct(
         {
           ...VALID_PRODUCT_DATA,
-          categoryId: repos.validCategory._id,
+          categoryId: CATEGORY_ID,
           pizzaComponentTypeId: 'invalid',
         },
         repos,
       ),
     (err) => err.status === 404 && err.message.includes('Pizza Component Type'),
   );
+  assert.equal(repos.productsRepository.create.mock.callCount(), 0);
 });
 
 test('createProduct rejects duplicate names with 409 Conflict', async () => {
-  const repos = await setupRepos();
-
-  await createProduct(
-    { ...VALID_PRODUCT_DATA, name: 'Pizza Exclusiva', categoryId: repos.validCategory._id },
-    repos,
+  const repos = setupRepos();
+  repos.productsRepository.findByName.mock.mockImplementation(async () =>
+    storedProduct({ name: 'Pizza Exclusiva' }),
   );
 
   await assert.rejects(
     async () =>
       await createProduct(
-        { ...VALID_PRODUCT_DATA, name: 'Pizza Exclusiva', categoryId: repos.validCategory._id },
+        { ...VALID_PRODUCT_DATA, name: 'Pizza Exclusiva', categoryId: CATEGORY_ID },
         repos,
       ),
     (err) => err.status === 409,
   );
+  assert.equal(repos.productsRepository.findByName.mock.calls[0].arguments[0], 'Pizza Exclusiva');
+  assert.equal(repos.productsRepository.create.mock.callCount(), 0);
 });
 
 test('createProduct creates a product successfully and exposes DTO', async () => {
-  const repos = await setupRepos();
+  const repos = setupRepos();
 
   const created = await createProduct(
     {
       ...VALID_PRODUCT_DATA,
-      categoryId: repos.validCategory._id,
-      pizzaComponentTypeId: repos.validType._id,
-      allergenIds: [repos.validAllergen._id],
+      categoryId: CATEGORY_ID,
+      pizzaComponentTypeId: TYPE_ID,
+      allergenIds: [ALLERGEN_ID],
     },
     repos,
   );
@@ -138,25 +157,21 @@ test('createProduct creates a product successfully and exposes DTO', async () =>
   assert.equal(created._id, undefined);
   assert.equal(created.isPizzaComponent, true);
   assert.equal(created.name, 'Coca-Cola');
-  assert.deepEqual(created.allergenIds, [repos.validAllergen._id]);
+  assert.deepEqual(created.allergenIds, [ALLERGEN_ID]);
+  // Stock-controlled products get a stock entry at 0.
+  assert.deepEqual(repos.stockRepository.create.mock.calls[0].arguments[0], {
+    productId: PRODUCT_ID,
+    quantity: 0,
+  });
 });
 
 test('updateProduct updates references and recalculates isPizzaComponent', async () => {
-  const repos = await setupRepos();
-  const product = await createProduct(
-    {
-      ...VALID_PRODUCT_DATA,
-      categoryId: repos.validCategory._id,
-      pizzaComponentTypeId: repos.validType._id,
-      allergenIds: [repos.validAllergen._id],
-    },
-    repos,
+  const repos = setupRepos(
+    storedProduct({ pizzaComponentTypeId: TYPE_ID, allergenIds: [ALLERGEN_ID] }),
   );
 
-  assert.equal(product.isPizzaComponent, true);
-
   const updated = await updateProduct(
-    product.id,
+    PRODUCT_ID,
     { pizzaComponentTypeId: null, allergenIds: [] },
     repos,
   );
@@ -164,35 +179,34 @@ test('updateProduct updates references and recalculates isPizzaComponent', async
   assert.equal(updated.isPizzaComponent, false);
   assert.equal(updated.pizzaComponentTypeId, null);
   assert.deepEqual(updated.allergenIds, []);
+  assert.deepEqual(repos.productsRepository.update.mock.calls[0].arguments, [
+    PRODUCT_ID,
+    { pizzaComponentTypeId: null, allergenIds: [] },
+  ]);
 });
 
 test('updateProduct applies partial changes and checks business rules', async () => {
-  const repos = await setupRepos();
-  const product = await createProduct(
-    { ...VALID_PRODUCT_DATA, categoryId: repos.validCategory._id },
-    repos,
-  );
+  const repos = setupRepos(storedProduct());
 
-  await updateProduct(product.id, { sellable: false }, repos);
+  await updateProduct(PRODUCT_ID, { sellable: false }, repos);
+  assert.deepEqual(repos.productsRepository.update.mock.calls[0].arguments[1], { sellable: false });
+
   await assert.rejects(
-    async () => await updateProduct(product.id, { sellable: true, price: -5 }, repos),
+    async () => await updateProduct(PRODUCT_ID, { sellable: true, price: -5 }, repos),
     (err) => err.status === 400,
   );
+  assert.equal(repos.productsRepository.update.mock.callCount(), 1);
 
-  const updated = await updateProduct(product.id, { isActive: false, name: 'Nova Cola' }, repos);
+  const updated = await updateProduct(PRODUCT_ID, { isActive: false, name: 'Nova Cola' }, repos);
   assert.equal(updated.isActive, false);
   assert.equal(updated.name, 'Nova Cola');
 });
 
 test('getProductById returns the product DTO or throws 404', async () => {
-  const repos = await setupRepos();
-  const created = await createProduct(
-    { ...VALID_PRODUCT_DATA, categoryId: repos.validCategory._id },
-    repos,
-  );
+  const repos = setupRepos(storedProduct());
 
-  const found = await getProductById(created.id, repos);
-  assert.equal(found.id, created.id);
+  const found = await getProductById(PRODUCT_ID, repos);
+  assert.equal(found.id, PRODUCT_ID);
   assert.equal(found.name, 'Coca-Cola');
 
   await assert.rejects(
@@ -202,18 +216,15 @@ test('getProductById returns the product DTO or throws 404', async () => {
 });
 
 test('listProducts returns products and applies filters correctly', async () => {
-  const repos = await setupRepos();
+  const productA = storedProduct({ name: 'Produto A' });
+  const productB = storedProduct({ _id: 'e0e0e0000000000000000002', name: 'Produto B', isActive: false });
+  const repos = setupRepos();
+  const { listProducts: listMock } = repos.productsRepository;
 
-  await createProduct(
-    { ...VALID_PRODUCT_DATA, name: 'Produto A', categoryId: repos.validCategory._id },
-    repos,
-  );
-  const p2 = await createProduct(
-    { ...VALID_PRODUCT_DATA, name: 'Produto B', categoryId: repos.validCategory._id },
-    repos,
-  );
-
-  await updateProduct(p2.id, { isActive: false }, repos);
+  listMock.mock.mockImplementationOnce(async () => [productA, productB], 0);
+  listMock.mock.mockImplementationOnce(async () => [productA], 1);
+  listMock.mock.mockImplementationOnce(async () => [productA], 2);
+  listMock.mock.mockImplementationOnce(async () => [productB], 3);
 
   const all = await listProducts({}, repos);
   assert.equal(all.length, 2);
@@ -229,78 +240,61 @@ test('listProducts returns products and applies filters correctly', async () => 
   const inactiveOnly = await listProducts({ isActive: false }, repos);
   assert.equal(inactiveOnly.length, 1);
   assert.equal(inactiveOnly[0].name, 'Produto B');
+
+  // The filters are delegated to the repository untouched.
+  assert.deepEqual(
+    listMock.mock.calls.map((c) => c.arguments[0]),
+    [{}, { search: 'Produto A' }, { isActive: true }, { isActive: false }],
+  );
 });
 
 // Pizza size the size configurations of the tests refer to (the products service does not validate it)
 const SIZE_ID = 'abcdef000000000000000050';
+const SIZE_CONFIGURATION = { pizzaSizeId: SIZE_ID, price: 1, stockUnitsConsumed: 2 };
 
-async function createPizzaComponent(repos, name = 'Mozzarella') {
-  return createProduct(
-    {
-      ...VALID_PRODUCT_DATA,
-      name,
-      categoryId: repos.validCategory._id,
-      pizzaComponentTypeId: repos.validType._id,
-    },
-    repos,
-  );
-}
-
-async function addSizeConfiguration(repos, productId) {
-  await repos.productsRepository.addSizeConfiguration(productId, {
-    pizzaSizeId: SIZE_ID,
-    price: 1,
-    stockUnitsConsumed: 2,
-  });
-}
+const pizzaComponent = (data = {}) =>
+  storedProduct({ name: 'Mozzarella', pizzaComponentTypeId: TYPE_ID, ...data });
 
 test('updateProduct refuses to deactivate a product with size configurations', async () => {
-  const repos = await setupRepos();
-  const product = await createPizzaComponent(repos);
-  await addSizeConfiguration(repos, product.id);
+  const repos = setupRepos(pizzaComponent({ sizeConfigurations: [SIZE_CONFIGURATION] }));
 
   await assert.rejects(
-    async () => await updateProduct(product.id, { isActive: false }, repos),
+    async () => await updateProduct(PRODUCT_ID, { isActive: false }, repos),
     (err) => err.status === 409 && /size configurations/i.test(err.message),
   );
 
-  // The product is still active and keeps its configuration
-  assert.equal((await getProductById(product.id, repos)).isActive, true);
-  assert.equal((await repos.productsRepository.findById(product.id)).sizeConfigurations.length, 1);
+  // The product is never updated, so it stays active and keeps its configuration
+  assert.equal(repos.productsRepository.update.mock.callCount(), 0);
 });
 
 test('updateProduct deactivates a product once its size configurations are removed', async () => {
-  const repos = await setupRepos();
-  const product = await createPizzaComponent(repos);
-  await addSizeConfiguration(repos, product.id);
-  await repos.productsRepository.removeSizeConfiguration(product.id, SIZE_ID);
+  const repos = setupRepos(pizzaComponent({ sizeConfigurations: [] }));
 
-  const updated = await updateProduct(product.id, { isActive: false }, repos);
+  const updated = await updateProduct(PRODUCT_ID, { isActive: false }, repos);
 
   assert.equal(updated.isActive, false);
 });
 
 test('updateProduct deactivates a pizza component that has no size configurations', async () => {
-  const repos = await setupRepos();
-  const product = await createPizzaComponent(repos);
+  const repos = setupRepos(pizzaComponent({ sizeConfigurations: undefined }));
 
-  const updated = await updateProduct(product.id, { isActive: false }, repos);
+  const updated = await updateProduct(PRODUCT_ID, { isActive: false }, repos);
 
   assert.equal(updated.isActive, false);
+  assert.deepEqual(repos.productsRepository.update.mock.calls[0].arguments[1], { isActive: false });
 });
 
 test('updateProduct still allows other changes to a product with size configurations', async () => {
-  const repos = await setupRepos();
-  const product = await createPizzaComponent(repos);
-  await addSizeConfiguration(repos, product.id);
+  const repos = setupRepos(pizzaComponent({ sizeConfigurations: [SIZE_CONFIGURATION] }));
 
   const updated = await updateProduct(
-    product.id,
+    PRODUCT_ID,
     { name: 'Mozzarella Extra', price: 2, isActive: true },
     repos,
   );
 
   assert.equal(updated.name, 'Mozzarella Extra');
   assert.equal(updated.isActive, true);
-  assert.equal((await repos.productsRepository.findById(product.id)).sizeConfigurations.length, 1);
+  // The configurations are not part of the patch.
+  assert.equal(repos.productsRepository.update.mock.calls[0].arguments[1].sizeConfigurations, undefined);
 });

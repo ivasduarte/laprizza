@@ -1,7 +1,6 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { AppError } from '../../src/application/app-error.js';
-import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
 import {
   listCatalogue,
   getCatalogueItemById,
@@ -45,44 +44,57 @@ test('toCatalogueDTO maps safely when optional fields are missing', () => {
   assert.deepEqual(dto.availableSizes, []);
 });
 
-test('listCatalogue returns only active and sellable products', async () => {
-  const productsRepo = createDummyProductsRepository();
-  await productsRepo.create({ name: 'P1', sellable: true, isActive: true });
-  await productsRepo.create({ name: 'P2', sellable: false, isActive: true });
-  await productsRepo.create({ name: 'P3', sellable: true, isActive: false });
+const P1_ID = 'e0e0e0000000000000000001';
+const P2_ID = 'e0e0e0000000000000000002';
 
-  const list = await listCatalogue({}, { productsRepository: productsRepo });
+test('listCatalogue returns only active and sellable products', async () => {
+  const productsRepository = {
+    listProducts: mock.fn(async () => [{ _id: P1_ID, name: 'P1', sellable: true, isActive: true }]),
+  };
+
+  const list = await listCatalogue({}, { productsRepository });
 
   assert.equal(list.length, 1);
   assert.equal(list[0].name, 'P1');
+  assert.deepEqual(productsRepository.listProducts.mock.calls[0].arguments[0], {
+    isActive: true,
+    sellable: true,
+  });
 });
 
 test('getCatalogueItemById returns DTO for active and sellable product', async () => {
-  const productsRepo = createDummyProductsRepository();
-  const p1 = await productsRepo.create({ name: 'P1', sellable: true, isActive: true });
+  const productsRepository = {
+    findById: mock.fn(async () => ({ _id: P1_ID, name: 'P1', sellable: true, isActive: true })),
+  };
 
-  const item = await getCatalogueItemById(p1._id, { productsRepository: productsRepo });
+  const item = await getCatalogueItemById(P1_ID, { productsRepository });
 
   assert.equal(item.name, 'P1');
+  assert.equal(productsRepository.findById.mock.calls[0].arguments[0], P1_ID);
 });
 
 test('getCatalogueItemById throws 404 for inactive, non-sellable or missing products', async () => {
-  const productsRepo = createDummyProductsRepository();
-  const p1 = await productsRepo.create({ name: 'P1', sellable: false, isActive: true });
-  const p2 = await productsRepo.create({ name: 'P2', sellable: true, isActive: false });
+  const products = [
+    { _id: P1_ID, name: 'P1', sellable: false, isActive: true },
+    { _id: P2_ID, name: 'P2', sellable: true, isActive: false },
+  ];
+  const productsRepository = {
+    findById: mock.fn(async (id) => products.find((p) => p._id === id) ?? null),
+  };
 
   await assert.rejects(
-    async () => await getCatalogueItemById(p1._id, { productsRepository: productsRepo }),
+    async () => await getCatalogueItemById(P1_ID, { productsRepository }),
     (err) => err instanceof AppError && err.status === 404,
   );
 
   await assert.rejects(
-    async () => await getCatalogueItemById(p2._id, { productsRepository: productsRepo }),
+    async () => await getCatalogueItemById(P2_ID, { productsRepository }),
     (err) => err instanceof AppError && err.status === 404,
   );
 
   await assert.rejects(
-    async () => await getCatalogueItemById('invalid_id', { productsRepository: productsRepo }),
+    async () => await getCatalogueItemById('invalid_id', { productsRepository }),
     (err) => err instanceof AppError && err.status === 404,
   );
+  assert.equal(productsRepository.findById.mock.callCount(), 3);
 });

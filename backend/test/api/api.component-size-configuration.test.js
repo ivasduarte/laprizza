@@ -1,13 +1,8 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
-import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
-import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
-import { createDummyProductsRepository } from '../infrastructure/products.dummy.repository.js';
-import { createDummyPizzaSizeRepository } from '../infrastructure/pizza-size.dummy.repository.js';
-import { createSize } from '../../src/application/pizza-size/pizza-size.service.js';
-import { registerUser } from '../../src/application/auth/auth.service.js';
+import { passwordHasher } from '../../src/infrastructure/security/password-hasher.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 
@@ -15,6 +10,13 @@ process.env.JWT_SECRET = 'test_secret_key';
 const NON_EXISTENT_ID = 'abcdef000000000000000999';
 
 const PIZZA_COMPONENT_TYPE_ID = 'abcdef000000000000000001';
+const MOZZARELLA_ID = 'e0e0e0000000000000000001';
+const OREGANO_ID = 'e0e0e0000000000000000002';
+const COLA_ID = 'e0e0e0000000000000000003';
+const INACTIVE_ID = 'e0e0e0000000000000000004';
+const SMALL_ID = 'd0d0d0000000000000000001';
+const LARGE_ID = 'd0d0d0000000000000000002';
+const FAMILY_ID = 'd0d0d0000000000000000003';
 
 // Pizza components: a stock controlled one (Mozzarella) and one without stock control (Oregano)
 const MOZZARELLA = {
@@ -30,10 +32,102 @@ const OREGANO = {
   pizzaComponentTypeId: PIZZA_COMPONENT_TYPE_ID,
 };
 // A product that is not a pizza component
-const COLA = { name: 'Cola', description: 'Drink', stockControlled: false };
+const COLA = { name: 'Cola', description: 'Drink', stockControlled: false, pizzaComponentTypeId: null };
+
+const PASSWORD = 'StrongPassword123!';
+// Same hasher the API uses by default to verify passwords at login.
+const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
+
+const USERS = [
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+].map((user) => ({
+  ...user,
+  status: 'active',
+  passwordHash: PASSWORD_HASH,
+  failedLoginCount: 0,
+  lockedUntil: null,
+  tokenVersion: 0,
+}));
+
+/** Mocked users repository and auth infrastructure: just enough to log in through the API. */
+function createAuthMocks() {
+  const userById = (id) => USERS.find((u) => u._id === String(id)) ?? null;
+  return {
+    usersRepository: {
+      findByEmailWithPasswordHash: mock.fn(async (email) => USERS.find((u) => u.email === email) ?? null),
+      findById: mock.fn(async (id) => userById(id)),
+    },
+    // One always-active session per user (session id = user id).
+    sessionsRepository: {
+      create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
+      findById: mock.fn(async (id) =>
+        userById(id)
+          ? { _id: id, userId: id, tokenVersion: 0, expiresAt: new Date(Date.now() + 3_600_000), revokedAt: null }
+          : null,
+      ),
+    },
+    securityLogger: { log: mock.fn() },
+  };
+}
 
 const configurationsPath = (productId, sizeId) =>
   `/products/${productId}/size-configurations${sizeId === undefined ? '' : `/${sizeId}`}`;
+
+/** Stored product document. */
+const storedProduct = (_id, data, sizeConfigurations = [], extra = {}) => ({
+  _id,
+  isActive: true,
+  ...data,
+  sizeConfigurations,
+  ...extra,
+});
+
+const isForSize = (pizzaSizeId) => (c) => String(c.pizzaSizeId) === String(pizzaSizeId);
+
+/**
+ * Programs the products repository with the stored products: findById returns them and the
+ * atomic write operations return the product with the change applied (as the real ones do).
+ */
+function storeProducts(productsRepo, products) {
+  const byId = (id) => products.find((p) => p._id === String(id)) ?? null;
+  productsRepo.findById.mock.mockImplementation(async (id) => byId(id));
+  productsRepo.addSizeConfiguration.mock.mockImplementation(async (id, configuration) => {
+    const product = byId(id);
+    if (!product || product.sizeConfigurations.some(isForSize(configuration.pizzaSizeId))) return null;
+    return { ...product, sizeConfigurations: [...product.sizeConfigurations, { ...configuration }] };
+  });
+  productsRepo.updateSizeConfiguration.mock.mockImplementation(
+    async (id, pizzaSizeId, { price, stockUnitsConsumed }) => {
+      const product = byId(id);
+      if (!product?.sizeConfigurations.some(isForSize(pizzaSizeId))) return null;
+      return {
+        ...product,
+        sizeConfigurations: product.sizeConfigurations.map((c) =>
+          isForSize(pizzaSizeId)(c) ? { ...c, price, stockUnitsConsumed } : c,
+        ),
+      };
+    },
+  );
+  productsRepo.removeSizeConfiguration.mock.mockImplementation(async (id, pizzaSizeId) => {
+    const product = byId(id);
+    if (!product?.sizeConfigurations.some(isForSize(pizzaSizeId))) return null;
+    return {
+      ...product,
+      sizeConfigurations: product.sizeConfigurations.filter((c) => !isForSize(pizzaSizeId)(c)),
+    };
+  });
+}
+
+/** Programs the size repository with the stored pizza sizes. */
+function storeSizes(sizeRepo, sizes) {
+  sizeRepo.findById.mock.mockImplementation(
+    async (id) => sizes.find((s) => s._id === String(id)) ?? null,
+  );
+}
+
+const SMALL = { _id: SMALL_ID, name: 'Small', isActive: true };
+const LARGE = { _id: LARGE_ID, name: 'Large', isActive: true };
 
 function request(port, method, path, { token, body } = {}) {
   const headers = {};
@@ -55,13 +149,23 @@ async function login(port, identifier) {
 }
 
 async function setupTestServer() {
-  const usersRepo = createDummyUsersRepository();
-  const productsRepo = createDummyProductsRepository();
-  const sizeRepo = createDummyPizzaSizeRepository();
+  const productsRepo = {
+    findById: mock.fn(),
+    addSizeConfiguration: mock.fn(),
+    updateSizeConfiguration: mock.fn(),
+    removeSizeConfiguration: mock.fn(),
+  };
+  const sizeRepo = { findById: mock.fn() };
+
+  // Data the configurations refer to: three products (without configurations) and two pizza sizes
+  const mozzarella = storedProduct(MOZZARELLA_ID, MOZZARELLA);
+  const oregano = storedProduct(OREGANO_ID, OREGANO);
+  const cola = storedProduct(COLA_ID, COLA);
+  storeProducts(productsRepo, [mozzarella, oregano, cola]);
+  storeSizes(sizeRepo, [SMALL, LARGE]);
 
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
-    ...createDummyAuthInfrastructure(),
-    usersRepository: usersRepo,
+    ...createAuthMocks(),
     productsRepository: productsRepo,
     sizeRepository: sizeRepo,
   }).listen(0);
@@ -70,24 +174,8 @@ async function setupTestServer() {
 
   const port = server.address().port;
 
-  await registerUser(
-    { email: 'admin@laprizza.pt', password: 'StrongPassword123!', role: 'MANAGER' },
-    usersRepo,
-  );
-  await registerUser(
-    { email: 'emp@laprizza.pt', password: 'StrongPassword123!', role: 'EMPLOYEE' },
-    usersRepo,
-  );
-
   const managerToken = await login(port, 'admin@laprizza.pt');
   const employeeToken = await login(port, 'emp@laprizza.pt');
-
-  // Data the configurations refer to: three products and two pizza sizes
-  const mozzarella = await productsRepo.create(MOZZARELLA);
-  const oregano = await productsRepo.create(OREGANO);
-  const cola = await productsRepo.create(COLA);
-  const small = await createSize({ name: 'Small' }, sizeRepo);
-  const large = await createSize({ name: 'Large' }, sizeRepo);
 
   return {
     server,
@@ -99,8 +187,8 @@ async function setupTestServer() {
     mozzarella,
     oregano,
     cola,
-    small,
-    large,
+    small: { id: SMALL_ID },
+    large: { id: LARGE_ID },
   };
 }
 
@@ -109,12 +197,19 @@ function closeServer(server) {
   server.closeAllConnections();
 }
 
+/** Asserts that no write operation reached the products repository. */
+function assertNothingWritten(productsRepo) {
+  assert.equal(productsRepo.addSizeConfiguration.mock.callCount(), 0);
+  assert.equal(productsRepo.updateSizeConfiguration.mock.callCount(), 0);
+  assert.equal(productsRepo.removeSizeConfiguration.mock.callCount(), 0);
+}
+
 async function createConfiguration(port, token, productId, body) {
   return request(port, 'POST', configurationsPath(productId), { token, body });
 }
 
 test('API /products/:productId/size-configurations (401 and 403)', async (t) => {
-  const { server, port, employeeToken, mozzarella, small } = await setupTestServer();
+  const { server, port, employeeToken, productsRepo, mozzarella, small } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
@@ -139,10 +234,11 @@ test('API /products/:productId/size-configurations (401 and 403)', async (t) => 
       );
     }
   }
+  assert.equal(productsRepo.findById.mock.callCount(), 0);
 });
 
 test('API /products/:productId/size-configurations (400 for invalid identifiers)', async (t) => {
-  const { server, port, managerToken, mozzarella, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, small } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
@@ -163,10 +259,11 @@ test('API /products/:productId/size-configurations (400 for invalid identifiers)
       `${method} ${path}`,
     );
   }
+  assert.equal(productsRepo.findById.mock.callCount(), 0);
 });
 
 test('API POST /products/:productId/size-configurations (201)', async (t) => {
-  const { server, port, managerToken, mozzarella, oregano, small, large } =
+  const { server, port, managerToken, productsRepo, mozzarella, oregano, small, large } =
     await setupTestServer();
 
   t.after(() => closeServer(server));
@@ -184,6 +281,10 @@ test('API POST /products/:productId/size-configurations (201)', async (t) => {
     price: 2.5,
     stockUnitsConsumed: 3,
   });
+  assert.deepEqual(productsRepo.addSizeConfiguration.mock.calls[0].arguments, [
+    mozzarella._id,
+    { pizzaSizeId: small.id, price: 2.5, stockUnitsConsumed: 3 },
+  ]);
 
   // 201 Created - component without stock control, stock units omitted or null
   const omitted = await createConfiguration(port, managerToken, oregano._id, {
@@ -205,7 +306,7 @@ test('API POST /products/:productId/size-configurations (201)', async (t) => {
 });
 
 test('API POST /products/:productId/size-configurations ignores unknown fields', async (t) => {
-  const { server, port, managerToken, mozzarella, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, small } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
@@ -225,10 +326,14 @@ test('API POST /products/:productId/size-configurations ignores unknown fields',
     price: 2,
     stockUnitsConsumed: 1,
   });
+  assert.deepEqual(productsRepo.addSizeConfiguration.mock.calls[0].arguments, [
+    mozzarella._id,
+    { pizzaSizeId: small.id, price: 2, stockUnitsConsumed: 1 },
+  ]);
 });
 
 test('API POST /products/:productId/size-configurations (400 for an invalid body)', async (t) => {
-  const { server, port, managerToken, mozzarella, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, small } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
@@ -259,14 +364,11 @@ test('API POST /products/:productId/size-configurations (400 for an invalid body
   }
 
   // Nothing was saved
-  const list = await request(port, 'GET', configurationsPath(mozzarella._id), {
-    token: managerToken,
-  });
-  assert.deepEqual(await list.json(), []);
+  assertNothingWritten(productsRepo);
 });
 
 test('API POST /products/:productId/size-configurations (400 for the business rules)', async (t) => {
-  const { server, port, managerToken, mozzarella, oregano, cola, small } =
+  const { server, port, managerToken, productsRepo, mozzarella, oregano, cola, small } =
     await setupTestServer();
 
   t.after(() => closeServer(server));
@@ -312,16 +414,11 @@ test('API POST /products/:productId/size-configurations (400 for the business ru
   );
 
   // Nothing was saved
-  for (const product of [mozzarella, oregano, cola]) {
-    const list = await request(port, 'GET', configurationsPath(product._id), {
-      token: managerToken,
-    });
-    assert.deepEqual(await list.json(), [], product.name);
-  }
+  assertNothingWritten(productsRepo);
 });
 
 test('API POST /products/:productId/size-configurations (404)', async (t) => {
-  const { server, port, managerToken, productsRepo, sizeRepo, mozzarella, small } =
+  const { server, port, managerToken, productsRepo, sizeRepo, mozzarella, oregano, cola, small } =
     await setupTestServer();
 
   t.after(() => closeServer(server));
@@ -343,30 +440,40 @@ test('API POST /products/:productId/size-configurations (404)', async (t) => {
   );
 
   // 404 Not Found - inactive pizza size
-  await sizeRepo.update(small.id, { isActive: false });
+  storeSizes(sizeRepo, [{ ...SMALL, isActive: false }, LARGE, { _id: FAMILY_ID, name: 'Family', isActive: true }]);
   assert.equal((await createConfiguration(port, managerToken, mozzarella._id, body)).status, 404);
 
   // 404 Not Found - inactive product
-  const inactive = await productsRepo.create({ ...MOZZARELLA, name: 'Old', isActive: false });
-  const other = await createSize({ name: 'Family' }, sizeRepo);
+  const inactive = storedProduct(INACTIVE_ID, { ...MOZZARELLA, name: 'Old' }, [], { isActive: false });
+  storeProducts(productsRepo, [mozzarella, oregano, cola, inactive]);
   assert.equal(
     (
       await createConfiguration(port, managerToken, inactive._id, {
         ...body,
-        pizzaSizeId: other.id,
+        pizzaSizeId: FAMILY_ID,
       })
     ).status,
     404,
   );
+
+  assertNothingWritten(productsRepo);
 });
 
 test('API POST /products/:productId/size-configurations (409)', async (t) => {
-  const { server, port, managerToken, mozzarella, oregano, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, oregano, cola, small } =
+    await setupTestServer();
 
   t.after(() => closeServer(server));
 
   const body = { pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 };
   assert.equal((await createConfiguration(port, managerToken, mozzarella._id, body)).status, 201);
+
+  // Step: mozzarella is now configured for the small size.
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: [body] },
+    oregano,
+    cola,
+  ]);
 
   // 409 Conflict - the component is already configured for that pizza size
   assert.equal(
@@ -379,6 +486,7 @@ test('API POST /products/:productId/size-configurations (409)', async (t) => {
     ).status,
     409,
   );
+  assert.equal(productsRepo.addSizeConfiguration.mock.callCount(), 1);
 
   // The existing configuration was kept
   const found = await request(port, 'GET', configurationsPath(mozzarella._id, small.id), {
@@ -403,6 +511,7 @@ test('API GET /products/:productId/size-configurations (200 and 404)', async (t)
     productsRepo,
     mozzarella,
     oregano,
+    cola,
     small,
     large,
   } = await setupTestServer();
@@ -416,20 +525,16 @@ test('API GET /products/:productId/size-configurations (200 and 404)', async (t)
   assert.equal(empty.status, 200);
   assert.deepEqual(await empty.json(), []);
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: large.id,
-    price: 2,
-    stockUnitsConsumed: 2,
-  });
-  await createConfiguration(port, managerToken, oregano._id, {
-    pizzaSizeId: small.id,
-    price: 0.5,
-  });
+  // Step: mozzarella has two configurations and oregano has one.
+  const mozzarellaConfigurations = [
+    { pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 },
+    { pizzaSizeId: large.id, price: 2, stockUnitsConsumed: 2 },
+  ];
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: mozzarellaConfigurations },
+    { ...oregano, sizeConfigurations: [{ pizzaSizeId: small.id, price: 0.5, stockUnitsConsumed: null }] },
+    cola,
+  ]);
 
   // 200 OK - only the configurations of the product, also for employees
   for (const token of [managerToken, employeeToken]) {
@@ -442,7 +547,9 @@ test('API GET /products/:productId/size-configurations (200 and 404)', async (t)
   }
 
   // 200 OK - an inactive product can still be consulted
-  await productsRepo.update(mozzarella._id, { isActive: false });
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: mozzarellaConfigurations, isActive: false },
+  ]);
   const inactive = await request(port, 'GET', configurationsPath(mozzarella._id), {
     token: managerToken,
   });
@@ -458,16 +565,14 @@ test('API GET /products/:productId/size-configurations (200 and 404)', async (t)
 });
 
 test('API GET /products/:productId/size-configurations/:sizeId (200 and 404)', async (t) => {
-  const { server, port, managerToken, employeeToken, mozzarella, small, large } =
+  const { server, port, managerToken, employeeToken, productsRepo, mozzarella, small, large } =
     await setupTestServer();
 
   t.after(() => closeServer(server));
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1.5,
-    stockUnitsConsumed: 2,
-  });
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: [{ pizzaSizeId: small.id, price: 1.5, stockUnitsConsumed: 2 }] },
+  ]);
 
   // 200 OK - also for employees
   for (const token of [managerToken, employeeToken]) {
@@ -513,22 +618,23 @@ test('API GET /products/:productId/size-configurations/:sizeId (200 and 404)', a
 });
 
 test('API PUT /products/:productId/size-configurations/:sizeId (200)', async (t) => {
-  const { server, port, managerToken, mozzarella, oregano, small, large } =
+  const { server, port, managerToken, productsRepo, mozzarella, oregano, small, large } =
     await setupTestServer();
 
   t.after(() => closeServer(server));
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: large.id,
-    price: 2,
-    stockUnitsConsumed: 2,
-  });
-  await createConfiguration(port, managerToken, oregano._id, { pizzaSizeId: small.id, price: 0.5 });
+  const largeConfiguration = { pizzaSizeId: large.id, price: 2, stockUnitsConsumed: 2 };
+  const oreganoConfigured = {
+    ...oregano,
+    sizeConfigurations: [{ pizzaSizeId: small.id, price: 0.5, stockUnitsConsumed: null }],
+  };
+  storeProducts(productsRepo, [
+    {
+      ...mozzarella,
+      sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }, largeConfiguration],
+    },
+    oreganoConfigured,
+  ]);
 
   // 200 OK - price and stock units are replaced
   const updated = await request(port, 'PUT', configurationsPath(mozzarella._id, small.id), {
@@ -543,7 +649,21 @@ test('API PUT /products/:productId/size-configurations/:sizeId (200)', async (t)
     stockUnitsConsumed: 4,
   });
 
-  // The change is persisted and the other configurations are untouched
+  // Only the configuration of the path is changed, with the new price and stock units
+  assert.deepEqual(productsRepo.updateSizeConfiguration.mock.calls[0].arguments, [
+    mozzarella._id,
+    small.id,
+    { price: 1.75, stockUnitsConsumed: 4 },
+  ]);
+
+  // Step: the change is persisted and the other configurations are untouched
+  storeProducts(productsRepo, [
+    {
+      ...mozzarella,
+      sizeConfigurations: [{ pizzaSizeId: small.id, price: 1.75, stockUnitsConsumed: 4 }, largeConfiguration],
+    },
+    oreganoConfigured,
+  ]);
   const list = await request(port, 'GET', configurationsPath(mozzarella._id), {
     token: managerToken,
   });
@@ -562,16 +682,15 @@ test('API PUT /products/:productId/size-configurations/:sizeId (200)', async (t)
 });
 
 test('API PUT /products/:productId/size-configurations/:sizeId (400)', async (t) => {
-  const { server, port, managerToken, mozzarella, oregano, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, oregano, small } =
+    await setupTestServer();
 
   t.after(() => closeServer(server));
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
-  await createConfiguration(port, managerToken, oregano._id, { pizzaSizeId: small.id, price: 0.5 });
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }] },
+    { ...oregano, sizeConfigurations: [{ pizzaSizeId: small.id, price: 0.5, stockUnitsConsumed: null }] },
+  ]);
 
   const invalidBodies = [
     {},
@@ -613,6 +732,7 @@ test('API PUT /products/:productId/size-configurations/:sizeId (400)', async (t)
   );
 
   // Nothing was changed
+  assertNothingWritten(productsRepo);
   const found = await request(port, 'GET', configurationsPath(mozzarella._id, small.id), {
     token: managerToken,
   });
@@ -631,11 +751,11 @@ test('API PUT /products/:productId/size-configurations/:sizeId (404)', async (t)
   t.after(() => closeServer(server));
 
   const body = { price: 2, stockUnitsConsumed: 2 };
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
+  const configured = {
+    ...mozzarella,
+    sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }],
+  };
+  storeProducts(productsRepo, [configured]);
 
   // 404 Not Found - unknown product
   assert.equal(
@@ -660,7 +780,7 @@ test('API PUT /products/:productId/size-configurations/:sizeId (404)', async (t)
   );
 
   // 404 Not Found - inactive product
-  await productsRepo.update(mozzarella._id, { isActive: false });
+  storeProducts(productsRepo, [{ ...configured, isActive: false }]);
   assert.equal(
     (
       await request(port, 'PUT', configurationsPath(mozzarella._id, small.id), {
@@ -670,23 +790,22 @@ test('API PUT /products/:productId/size-configurations/:sizeId (404)', async (t)
     ).status,
     404,
   );
+  assertNothingWritten(productsRepo);
 });
 
 test('API DELETE /products/:productId/size-configurations/:sizeId (200)', async (t) => {
-  const { server, port, managerToken, mozzarella, small, large } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, small, large } =
+    await setupTestServer();
 
   t.after(() => closeServer(server));
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: large.id,
-    price: 2,
-    stockUnitsConsumed: 2,
-  });
+  const largeConfiguration = { pizzaSizeId: large.id, price: 2, stockUnitsConsumed: 2 };
+  storeProducts(productsRepo, [
+    {
+      ...mozzarella,
+      sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }, largeConfiguration],
+    },
+  ]);
 
   // 200 OK - the removed configuration is returned
   const removed = await request(port, 'DELETE', configurationsPath(mozzarella._id, small.id), {
@@ -699,8 +818,13 @@ test('API DELETE /products/:productId/size-configurations/:sizeId (200)', async 
     price: 1,
     stockUnitsConsumed: 1,
   });
+  assert.deepEqual(productsRepo.removeSizeConfiguration.mock.calls[0].arguments, [
+    mozzarella._id,
+    small.id,
+  ]);
 
-  // It is gone, and the other configuration is untouched
+  // Step: it is gone, and the other configuration is untouched
+  storeProducts(productsRepo, [{ ...mozzarella, sizeConfigurations: [largeConfiguration] }]);
   assert.equal(
     (
       await request(port, 'GET', configurationsPath(mozzarella._id, small.id), {
@@ -730,21 +854,23 @@ test('API DELETE /products/:productId/size-configurations/:sizeId (200 for an in
 
   t.after(() => closeServer(server));
 
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
-  await productsRepo.update(mozzarella._id, { isActive: false });
+  storeProducts(productsRepo, [
+    {
+      ...mozzarella,
+      isActive: false,
+      sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }],
+    },
+  ]);
 
   const removed = await request(port, 'DELETE', configurationsPath(mozzarella._id, small.id), {
     token: managerToken,
   });
   assert.equal(removed.status, 200);
+  assert.equal(productsRepo.removeSizeConfiguration.mock.callCount(), 1);
 });
 
 test('API DELETE /products/:productId/size-configurations/:sizeId (404)', async (t) => {
-  const { server, port, managerToken, mozzarella, small } = await setupTestServer();
+  const { server, port, managerToken, productsRepo, mozzarella, small } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
@@ -767,16 +893,19 @@ test('API DELETE /products/:productId/size-configurations/:sizeId (404)', async 
     ).status,
     404,
   );
+  assertNothingWritten(productsRepo);
 
   // 404 Not Found - already removed
-  await createConfiguration(port, managerToken, mozzarella._id, {
-    pizzaSizeId: small.id,
-    price: 1,
-    stockUnitsConsumed: 1,
-  });
+  storeProducts(productsRepo, [
+    { ...mozzarella, sizeConfigurations: [{ pizzaSizeId: small.id, price: 1, stockUnitsConsumed: 1 }] },
+  ]);
   await request(port, 'DELETE', configurationsPath(mozzarella._id, small.id), {
     token: managerToken,
   });
+  assert.equal(productsRepo.removeSizeConfiguration.mock.callCount(), 1);
+
+  // Step: the configuration no longer exists.
+  storeProducts(productsRepo, [{ ...mozzarella, sizeConfigurations: [] }]);
   assert.equal(
     (
       await request(port, 'DELETE', configurationsPath(mozzarella._id, small.id), {
@@ -785,4 +914,5 @@ test('API DELETE /products/:productId/size-configurations/:sizeId (404)', async 
     ).status,
     404,
   );
+  assert.equal(productsRepo.removeSizeConfiguration.mock.callCount(), 1);
 });
