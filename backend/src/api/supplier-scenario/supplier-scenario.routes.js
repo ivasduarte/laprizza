@@ -9,14 +9,17 @@ import { AppError } from '../../application/app-error.js';
 export default function supplierScenarioRouterFactory(scenarioRepository) {
   const router = Router();
 
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+  const readRoles = [Roles.MANAGER];
 
   const supplierSchema = Joi.object({
     id: Joi.string().trim().required().messages({
       'any.required': 'Mandatory field',
       'string.empty': 'Supplier id is mandatory',
     }),
-    name: Joi.string().trim().optional(),
+    name: Joi.string().trim().required().messages({
+      'any.required': 'Mandatory field',
+      'string.empty': 'Supplier name is mandatory',
+    }),
   });
 
   const supplierOfferSchema = Joi.object({

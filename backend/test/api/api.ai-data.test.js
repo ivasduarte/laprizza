@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
 import { passwordHasher } from '../../src/infrastructure/security/password-hasher.js';
+import * as cacheModule from '../../src/infrastructure/cache/cache.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
 
@@ -27,7 +28,9 @@ function createAuthMocks() {
   const userById = (id) => USERS.find((u) => u._id === String(id)) ?? null;
   return {
     usersRepository: {
-      findByEmailWithPasswordHash: mock.fn(async (email) => USERS.find((u) => u.email === email) ?? null),
+      findByEmailWithPasswordHash: mock.fn(
+        async (email) => USERS.find((u) => u.email === email) ?? null,
+      ),
       findById: mock.fn(async (id) => userById(id)),
     },
     // One always-active session per user (session id = user id).
@@ -35,7 +38,13 @@ function createAuthMocks() {
       create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
       findById: mock.fn(async (id) =>
         userById(id)
-          ? { _id: id, userId: id, tokenVersion: 0, expiresAt: new Date(Date.now() + 3_600_000), revokedAt: null }
+          ? {
+              _id: id,
+              userId: id,
+              tokenVersion: 0,
+              expiresAt: new Date(Date.now() + 3_600_000),
+              revokedAt: null,
+            }
           : null,
       ),
     },
@@ -110,10 +119,15 @@ function createAiDataRepository(products = seedProducts()) {
       { productId: dough, quantity: 40 },
       { productId: cheese, quantity: 25 },
     ]),
+    getActiveForecast: mock.fn(async () => null),
+    getActiveSupplierScenario: mock.fn(async () => null),
   };
 }
 
 async function setupTestServer(aiDataRepository = createAiDataRepository()) {
+  // The snapshot is cached for 60 s with a fixed key: start every test from an empty cache.
+  cacheModule.clearCache?.();
+
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     ...createAuthMocks(),
     aiDataRepository,
@@ -169,6 +183,7 @@ test('API /ai-data/snapshot returns the planning data for the knowledge base', a
 
   const adminToken = await loginAs(port, 'admin@laprizza.pt');
   const res = await request(port, 'GET', '/ai-data/snapshot', { token: adminToken });
+  assert.equal(res.status, 200);
   const body = await res.json();
 
   assert.match(body.meta.snapshotId, /^[0-9a-f]{16}$/);
@@ -193,6 +208,10 @@ test('API /ai-data/snapshot returns the planning data for the knowledge base', a
     { productId: SEED_IDS.cheese, quantity: 25 },
   ]);
   assert.deepEqual(body.issues, []);
+
+  // No active forecast or supplier scenario in the mocked repository.
+  assert.equal(body.forecast, null);
+  assert.equal(body.supplierScenario, null);
 });
 
 test('API /ai-data/snapshot does not expose customer data', async (t) => {
@@ -204,6 +223,7 @@ test('API /ai-data/snapshot does not expose customer data', async (t) => {
 
   const adminToken = await loginAs(port, 'admin@laprizza.pt');
   const res = await request(port, 'GET', '/ai-data/snapshot', { token: adminToken });
+  assert.equal(res.status, 200);
   assert.ok(!(await res.text()).includes('leak@x.pt'));
 });
 
@@ -218,9 +238,9 @@ test('API /ai-data/snapshot reports data problems in issues instead of inventing
   });
 
   const adminToken = await loginAs(port, 'admin@laprizza.pt');
-  const body = await (
-    await request(port, 'GET', '/ai-data/snapshot', { token: adminToken })
-  ).json();
+  const res = await request(port, 'GET', '/ai-data/snapshot', { token: adminToken });
+  assert.equal(res.status, 200);
+  const body = await res.json();
 
   assert.ok(!body.bom.some((b) => b.componentId === SEED_IDS.cheese));
   assert.equal(body.issues.filter((i) => i.code === 'MISSING_OR_INVALID_STOCK_UNITS').length, 2);

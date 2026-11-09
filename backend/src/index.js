@@ -254,19 +254,9 @@ export function createApp(config = loadConfig(), repos = {}) {
       repos.kitchenConfigurationRepository || repos.kitchenRepository,
     ),
   );
-    api.use(
-      '/forecasts',
-      forecastRouterFactory(
-        isTesting ? { forecastRepository: repos.forecastRepository } : undefined,
-      ),
-    );
-    
-    api.use(
-      '/supplier-scenarios',
-      supplierScenarioRouterFactory(
-        isTesting ? { scenarioRepository: repos.supplierScenarioRepository } : undefined,
-      ),
-    );
+  api.use('/forecasts', forecastRouterFactory(repos.forecastRepository));
+
+  api.use('/supplier-scenarios', supplierScenarioRouterFactory(repos.supplierScenarioRepository));
   app.use(API_PREFIX, api);
 
   app.use(notFoundHandler);

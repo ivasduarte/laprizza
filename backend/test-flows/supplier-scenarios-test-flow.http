@@ -1,0 +1,641 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicName = Cenario_{{$timestamp}}
+@missingId = 507f1f77bcf86cd799439011
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Manager (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### ==========================================
+### 2: DADOS DE SUPORTE (produto usado nas ofertas)
+### ==========================================
+
+### 2. POST Categoria de suporte (201 Created)
+# @name createCategoryRef
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Categoria Cenario {{$timestamp}}"
+}
+?? status == 201
+
+### Variáveis
+@categoryId = {{createCategoryRef.id}}
+
+### 2.1 POST Produto de suporte (201 Created)
+# @name createProductRef
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto Cenario {{$timestamp}}",
+  "description": "Produto para ofertas de fornecedores",
+  "sellable": false,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+### Variáveis
+@productId = {{createProductRef.id}}
+
+### ==========================================
+### 3: CRIAÇÃO E VALIDAÇÕES (POST)
+### ==========================================
+
+### 3. POST Cenário Novo - com espaços à volta para provar o trim (201 Created)
+# @name createScenario
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   {{dynamicName}}   ",
+  "simulated": true,
+  "suppliers": [
+    { "id": "SUP-1", "name": "Fornecedor A" },
+    { "id": "SUP-2", "name": "Fornecedor B" }
+  ],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        {
+          "supplierId": "SUP-1",
+          "priceEur": 1.5,
+          "stockUnits": 100,
+          "leadTimeDays": 2,
+          "supplyLimit": 50
+        },
+        {
+          "supplierId": "SUP-2",
+          "priceEur": 0,
+          "stockUnits": 1,
+          "leadTimeDays": 0
+        }
+      ]
+    }
+  ]
+}
+?? status == 201
+
+### Variáveis
+@scenarioId = {{createScenario.id}}
+@createdName = {{createScenario.name}}
+
+### 3.1 POST Nome Duplicado (mesma versão) (409 Conflict)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "suppliers": [],
+  "products": []
+}
+?? status == 409
+
+### 3.2 POST Nome Duplicado com outras maiúsculas (409 Conflict)
+# Altera manualmente o nome abaixo para MAIÚSCULAS (ex.: CENARIO_1760000000)
+# para validar que a unicidade ignora maiúsculas/minúsculas.
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "suppliers": [],
+  "products": []
+}
+?? status == 409
+
+### 3.3 POST Mesmo nome com outra versão (201 Created - versões diferentes são permitidas)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "version": 2,
+  "suppliers": [],
+  "products": []
+}
+?? status == 201
+
+### 3.4 POST Sem body - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 3.5 POST name vazio - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "suppliers": [],
+  "products": []
+}
+?? status == 400
+
+### 3.6 POST name só com espaços - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "     ",
+  "suppliers": [],
+  "products": []
+}
+?? status == 400
+
+### 3.7 POST name não-string - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": 123,
+  "suppliers": [],
+  "products": []
+}
+?? status == 400
+
+### 3.8 POST Sem suppliers - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem_Suppliers_{{$timestamp}}",
+  "products": []
+}
+?? status == 400
+
+### 3.9 POST Sem products - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem_Products_{{$timestamp}}",
+  "suppliers": []
+}
+?? status == 400
+
+### 3.10 POST version inválida (0) - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Versao_Invalida_{{$timestamp}}",
+  "version": 0,
+  "suppliers": [],
+  "products": []
+}
+?? status == 400
+
+### 3.11 POST simulated não-booleano - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Simulated_Invalido_{{$timestamp}}",
+  "simulated": "abc",
+  "suppliers": [],
+  "products": []
+}
+?? status == 400
+
+### 3.12 POST Supplier sem id - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Supplier_SemId_{{$timestamp}}",
+  "suppliers": [
+    { "name": "Fornecedor sem id" }
+  ],
+  "products": []
+}
+?? status == 400
+
+### 3.13 POST Supplier sem name (400 Bad Request)
+# No Joi o name do supplier é opcional, mas no modelo Mongoose é obrigatório.
+# Se este pedido devolver 500 (ou 201), o Joi e o modelo estão desalinhados:
+# ou o name passa a obrigatório no Joi, ou deixa de ser obrigatório no modelo.
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Supplier_SemNome_{{$timestamp}}",
+  "suppliers": [
+    { "id": "SUP-9" }
+  ],
+  "products": []
+}
+?? status == 400
+
+### 3.14 POST Produto sem productId - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto_SemId_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    { "offers": [] }
+  ]
+}
+?? status == 400
+
+### 3.15 POST Produto com productId de formato inválido - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto_IdInvalido_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    { "productId": "abc", "offers": [] }
+  ]
+}
+?? status == 400
+
+### 3.16 POST Produto sem offers - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto_SemOffers_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    { "productId": "{{productId}}" }
+  ]
+}
+?? status == 400
+
+### 3.17 POST Oferta sem supplierId - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_SemSupplier_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.18 POST Oferta com priceEur negativo - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_PrecoNegativo_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": -1, "stockUnits": 10, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.19 POST Oferta com stockUnits 0 - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_StockZero_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 0, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.20 POST Oferta com stockUnits decimal - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_StockDecimal_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 1.5, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.21 POST Oferta com leadTimeDays negativo - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_LeadNegativo_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": -1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.22 POST Oferta com supplyLimit negativo - Joi (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_LimiteNegativo_{{$timestamp}}",
+  "suppliers": [],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1, "supplyLimit": -1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3.23 POST Segundo Cenário, com campos extra ignorados (201 Created, isActive = true)
+# @name createSecondScenario
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Cenario_Extra_{{$randomInt 1000 9999}}",
+  "suppliers": [],
+  "products": [],
+  "isActive": false,
+  "role": "MANAGER"
+}
+?? status == 201
+
+### Variáveis
+@secondId = {{createSecondScenario.id}}
+@secondName = {{createSecondScenario.name}}
+
+
+### ==========================================
+### 4: PESQUISA E CONSULTAS (GET)
+### ==========================================
+
+### 4. GET Listar Todos (200 OK)
+GET {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.1 GET Pesquisa parcial por nome (200 OK)
+GET {{baseUrl}}/supplier-scenarios?name=Cenario
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.2 GET Pesquisa sem resultados (200 OK, [])
+GET {{baseUrl}}/supplier-scenarios?name=zzz_inexistente
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.3 GET Pesquisa com caracteres de regex tratados como texto (200 OK, [])
+GET {{baseUrl}}/supplier-scenarios?name=.*
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.4 GET name vazio - Joi (400 Bad Request)
+GET {{baseUrl}}/supplier-scenarios?name=
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.5 GET name enviado duas vezes - Joi (400 Bad Request)
+GET {{baseUrl}}/supplier-scenarios?name=a&name=b
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.6 GET Por ID (200 OK, com fornecedores e ofertas)
+GET {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.7 GET Por ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/supplier-scenarios/abc123
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.8 GET Por ID inexistente (404 Not Found)
+GET {{baseUrl}}/supplier-scenarios/{{missingId}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+
+### ==========================================
+### 5: DESATIVAR (PUT com isActive:false)
+### ==========================================
+# O PUT só aceita { "isActive": false } - não renomeia nem altera ofertas.
+
+### 5. PUT Body vazio - Joi (400 Bad Request)
+PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 5.1 PUT Só com name - Joi (400 Bad Request - não é possível renomear)
+PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro_Nome"
+}
+?? status == 400
+
+### 5.2 PUT isActive:true - Joi (400 Bad Request)
+PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}
+?? status == 400
+
+### 5.3 PUT isActive inválido - Joi (400 Bad Request)
+PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": "abc"
+}
+?? status == 400
+
+### 5.4 PUT ID com formato inválido (400 Bad Request)
+PUT {{baseUrl}}/supplier-scenarios/abc
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 400
+
+### 5.5 PUT ID inexistente (404 Not Found)
+PUT {{baseUrl}}/supplier-scenarios/{{missingId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 404
+
+### 5.6 PUT Desativar cenário (200 OK, isActive = false; o name enviado é ignorado)
+PUT {{baseUrl}}/supplier-scenarios/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Nome_Ignorado",
+  "isActive": false
+}
+?? status == 200
+
+
+### ==========================================
+### 6: CONSISTÊNCIA APÓS DESATIVAR
+### ==========================================
+
+### 6. GET Por ID do desativado (404 Not Found)
+GET {{baseUrl}}/supplier-scenarios/{{secondId}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+### 6.1 GET Listar - o desativado já não aparece (200 OK)
+GET {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 6.2 GET Pesquisa por nome - o desativado já não aparece (200 OK, [])
+GET {{baseUrl}}/supplier-scenarios?name={{secondName}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 6.3 PUT Desativar outra vez (404 Not Found)
+PUT {{baseUrl}}/supplier-scenarios/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 404
+
+### 6.4 POST Mesmo nome do desativado (409 Conflict - o nome continua reservado)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{secondName}}",
+  "suppliers": [],
+  "products": []
+}
+?? status == 409
+
+
+### ==========================================
+### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
+### ==========================================
+
+### 7. GET Sem token (401 Unauthorized)
+GET {{baseUrl}}/supplier-scenarios
+?? status == 401
+
+### 7.1 POST Sem token (401 Unauthorized)
+POST {{baseUrl}}/supplier-scenarios
+Content-Type: application/json
+
+{
+  "name": "Sem_Token",
+  "suppliers": [],
+  "products": []
+}
+?? status == 401
+
+### 7.2 PUT Sem token (401 Unauthorized)
+PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 401
+
+### 7.3 GET Com token inválido (401 Unauthorized)
+GET {{baseUrl}}/supplier-scenarios
+Authorization: Bearer token_invalido
+?? status == 401
