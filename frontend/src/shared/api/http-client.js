@@ -49,6 +49,8 @@ function extractRetryAfter(response) {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }
 
+const hasBody = (body) => body !== undefined && body !== null;
+
 export function createHttpClient({
   baseUrl,
   getToken = () => null,
@@ -56,25 +58,29 @@ export function createHttpClient({
   refreshAccessToken = null,
   onSessionExpired = null,
 }) {
-  async function request(
-    path,
-    {
+  async function request(path, options = {}) {
+    const {
       method = 'GET',
       query,
       body,
       signal,
       auth = true,
       credentials,
+      contentType,
+      responseType = 'json',
+      withStatus = false,
       isRetry = false,
-    } = {}
-  ) {
-    const headers = { Accept: 'application/json' };
+    } = options;
+
+    const headers = {
+      Accept: responseType === 'blob' ? '*/*' : 'application/json',
+    };
     const token = auth ? getToken() : null;
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    if (body !== undefined && body !== null) {
-      headers['Content-Type'] = 'application/json';
+    if (hasBody(body)) {
+      headers['Content-Type'] = contentType ?? 'application/json';
     }
 
     let response;
@@ -82,10 +88,11 @@ export function createHttpClient({
       response = await fetchFn(buildUrl(baseUrl, path, query), {
         method,
         headers,
-        body:
-          body !== undefined && body !== null
-            ? JSON.stringify(body)
-            : undefined,
+        body: hasBody(body)
+          ? contentType
+            ? body
+            : JSON.stringify(body)
+          : undefined,
         signal,
         ...(credentials ? { credentials } : {}),
       });
@@ -98,8 +105,8 @@ export function createHttpClient({
       });
     }
 
-    const data = await readBody(response);
     if (!response.ok) {
+      const data = await readBody(response);
       const error = new ApiError(extractMessage(data, response.status), {
         status: response.status,
         details: data?.errors ?? data?.details ?? data?.error?.details ?? null,
@@ -111,22 +118,19 @@ export function createHttpClient({
         if (error.code === 'TOKEN_EXPIRED' && refreshAccessToken && !isRetry) {
           const refreshed = await refreshAccessToken().catch(() => false);
           if (refreshed) {
-            return request(path, {
-              method,
-              query,
-              body,
-              signal,
-              auth,
-              credentials,
-              isRetry: true,
-            });
+            return request(path, { ...options, isRetry: true });
           }
         }
         onSessionExpired?.();
       }
       throw error;
     }
-    return data;
+
+    const data =
+      responseType === 'blob' && response.status !== 204
+        ? await response.blob()
+        : await readBody(response);
+    return withStatus ? { status: response.status, data } : data;
   }
 
   return {

@@ -1,62 +1,44 @@
-import { fetchRefreshedSession } from '../../shared/api/index.js';
-import { sessionStore } from '../../shared/auth/session-store.js';
+import { api } from '../../shared/api/index.js';
 
-const API_URL = `${import.meta.env?.VITE_API_BASE_URL ?? '/api/v1'}/shared-resources`;
+const resourcePath = (name) => `/shared-resources/${encodeURIComponent(name)}`;
 
-export class ApiError extends Error {
-  constructor(status) {
-    super(`HTTP ${status}`);
-    this.status = status;
+export const sharedResourcesApi = {
+  list(signal) {
+    return api.get('/shared-resources', { signal });
+  },
+  download(name) {
+    return api.get(resourcePath(name), { responseType: 'blob' });
+  },
+  async upload(name, file) {
+    const { status } = await api.put(resourcePath(name), file, {
+      contentType: 'application/octet-stream',
+      withStatus: true,
+    });
+    return status === 201 ? 'created' : 'replaced';
+  },
+  remove(name) {
+    return api.delete(resourcePath(name));
+  },
+};
+
+/**
+ * Maps API errors to user-friendly translation keys.
+ */
+export function getSharedResourcesErrorKey(error) {
+  switch (error?.status) {
+    case 0:
+      return 'sharedResources.err.network';
+    case 400:
+      return 'sharedResources.err.invalid';
+    case 401:
+      return 'sharedResources.err.session';
+    case 403:
+      return 'sharedResources.err.forbidden';
+    case 404:
+      return 'sharedResources.err.notFound';
+    case 413:
+      return 'sharedResources.err.tooLarge';
+    default:
+      return 'sharedResources.err.generic';
   }
-}
-
-function send(path, options) {
-  return fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${sessionStore.getAccessToken()}`,
-      ...options.headers,
-    },
-  });
-}
-
-async function call(path, options = {}) {
-  let response;
-  try {
-    response = await send(path, options);
-    if (
-      response.status === 401 &&
-      (await sessionStore.refresh(fetchRefreshedSession))
-    ) {
-      response = await send(path, options);
-    }
-  } catch {
-    throw new ApiError(0);
-  }
-  if (response.status === 401) sessionStore.end({ expired: true });
-  if (!response.ok) throw new ApiError(response.status);
-  return response;
-}
-
-export async function listResources(signal) {
-  const response = await call('', { signal });
-  return response.json();
-}
-
-export async function downloadResource(name) {
-  const response = await call(`/${encodeURIComponent(name)}`);
-  return response.blob();
-}
-
-export async function uploadResource(name, file) {
-  const response = await call(`/${encodeURIComponent(name)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: file,
-  });
-  return response.status === 201 ? 'created' : 'replaced';
-}
-
-export async function deleteResource(name) {
-  await call(`/${encodeURIComponent(name)}`, { method: 'DELETE' });
 }

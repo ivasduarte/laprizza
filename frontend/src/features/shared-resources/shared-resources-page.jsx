@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../shared/auth/use-session.js';
-import * as api from './shared-resources.api.js';
+import { sharedResourcesApi } from './shared-resources.api.js';
 import {
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -30,7 +30,7 @@ export default function SharedResourcesPage() {
 
   const resources = useQuery({
     queryKey,
-    queryFn: ({ signal }) => api.listResources(signal),
+    queryFn: ({ signal }) => sharedResourcesApi.list(signal),
     enabled: authenticated,
   });
   const files = resources.data ?? [];
@@ -40,7 +40,7 @@ export default function SharedResourcesPage() {
     setMessage({ type: 'error', text: t(getSharedResourcesErrorKey(err)) });
 
   const upload = useMutation({
-    mutationFn: ({ name, file }) => api.uploadResource(name, file),
+    mutationFn: ({ name, file }) => sharedResourcesApi.upload(name, file),
     onSuccess: (result, { name }) => {
       setSelectedFile(null);
       setUploadName('');
@@ -62,7 +62,7 @@ export default function SharedResourcesPage() {
   });
 
   const download = useMutation({
-    mutationFn: (name) => api.downloadResource(name),
+    mutationFn: (name) => sharedResourcesApi.download(name),
     onSuccess: (blob, name) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -75,7 +75,7 @@ export default function SharedResourcesPage() {
   });
 
   const remove = useMutation({
-    mutationFn: (name) => api.deleteResource(name),
+    mutationFn: (name) => sharedResourcesApi.remove(name),
     onSuccess: (_, name) => {
       setMessage({
         type: 'success',
