@@ -37,6 +37,7 @@ import kitchenConfigurationRouterFactory from './api/kitchen-configuration/kitch
 import systemRouterFactory from './api/system/system.routes.js';
 import forecastRouterFactory from './api/forecast/forecast.routes.js';
 import supplierScenarioRouterFactory from './api/supplier-scenario/supplier-scenario.routes.js';
+import sharedResourcesRouterFactory from './api/shared-resources/shared-resources.routes.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -257,6 +258,7 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/forecasts', forecastRouterFactory(repos.forecastRepository));
 
   api.use('/supplier-scenarios', supplierScenarioRouterFactory(repos.supplierScenarioRepository));
+  api.use('/shared-resources', sharedResourcesRouterFactory(repos.sharedResourcesStorage));
   app.use(API_PREFIX, api);
 
   app.use(notFoundHandler);

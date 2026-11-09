@@ -67,6 +67,7 @@ export * from './putPizzaComponentTypeIdBody';
 export * from './putPredefinedPizzasIdBody';
 export * from './putProductCategoriesIdBody';
 export * from './putProductsProductIdSizeConfigurationsSizeIdBody';
+export * from './sharedResource';
 export * from './stock';
 export * from './supplierScenario';
 export * from './supplierScenarioInput';
