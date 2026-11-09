@@ -130,8 +130,12 @@ test('service reads all sources and stamps the retrieval time', async () => {
     listSizes: async () => d.sizes,
     listPredefinedPizzas: async () => d.pizzas,
     listStock: async () => d.stock,
+    getActiveForecast: async () => null,
+    getActiveSupplierScenario: async () => null,
   };
   const snap = await getSnapshot(repo, () => new Date('2026-11-01T10:00:00Z'));
   assert.equal(snap.meta.retrievedAt, '2026-11-01T10:00:00.000Z');
   assert.equal(snap.meta.simulated, false);
+  assert.equal(snap.forecast, null);
+  assert.equal(snap.supplierScenario, null);
 });

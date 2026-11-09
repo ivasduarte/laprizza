@@ -10,6 +10,8 @@ export function createAiDataRepository({
   sizeModel,
   predefinedPizzaModel,
   stockModel,
+  forecastModel,
+  supplierScenarioModel,
 }) {
   return {
     listProducts: () =>
@@ -21,5 +23,8 @@ export function createAiDataRepository({
       predefinedPizzaModel.find(active, 'productId sizeIds defaultConfiguration').lean(),
     listStock: async () =>
       (await stockModel.find({}, 'productId quantity').lean()).map(toStockEntry),
+    getActiveForecast: () => forecastModel.findOne(active).sort({ createdAt: -1 }).lean(),
+    getActiveSupplierScenario: () =>
+      supplierScenarioModel.findOne(active).sort({ createdAt: -1 }).lean(),
   };
 }

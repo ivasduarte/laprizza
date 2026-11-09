@@ -56,7 +56,10 @@ export function buildBom(pizzas, productsById) {
   return { bom, issues };
 }
 
-export function buildSnapshot({ products, sizes, pizzas, stock }, now = new Date()) {
+export function buildSnapshot(
+  { products, sizes, pizzas, stock, forecast, scenario },
+  now = new Date(),
+) {
   const productsById = new Map(products.map((p) => [String(p._id), p]));
   const { bom, issues } = buildBom(pizzas, productsById);
 
@@ -79,7 +82,6 @@ export function buildSnapshot({ products, sizes, pizzas, stock }, now = new Date
     products: products.map(toPlanningProduct).sort(cmp('id')),
     sizes: sizes.map(toPlanningSize).sort(cmp('id')),
     bom: bom.sort(cmp('pizzaId', 'sizeId', 'componentId')),
-    //To be modeled in the future, for now we will not use it
     aggregates: [],
     stock: stockEntries.sort(cmp('productId')),
   };
@@ -89,21 +91,32 @@ export function buildSnapshot({ products, sizes, pizzas, stock }, now = new Date
     .digest('hex')
     .slice(0, 16);
 
+  const mappedForecast = forecast
+    ? { id: String(forecast._id), ...forecast, _id: undefined }
+    : null;
+  const mappedScenario = scenario
+    ? { id: String(scenario._id), ...scenario, _id: undefined }
+    : null;
+
   return {
     meta: { snapshotId, retrievedAt: now.toISOString(), source: 'backend', simulated: false },
     ...content,
+    forecast: mappedForecast,
+    supplierScenario: mappedScenario,
     issues,
   };
 }
 
 export async function getSnapshot(aiDataRepository, clock = () => new Date()) {
   return cached('ai-data', ['snapshot'], 60, async () => {
-    const [products, sizes, pizzas, stock] = await Promise.all([
+    const [products, sizes, pizzas, stock, forecast, scenario] = await Promise.all([
       aiDataRepository.listProducts(),
       aiDataRepository.listSizes(),
       aiDataRepository.listPredefinedPizzas(),
       aiDataRepository.listStock(),
+      aiDataRepository.getActiveForecast(),
+      aiDataRepository.getActiveSupplierScenario(),
     ]);
-    return buildSnapshot({ products, sizes, pizzas, stock }, clock());
+    return buildSnapshot({ products, sizes, pizzas, stock, forecast, scenario }, clock());
   });
 }

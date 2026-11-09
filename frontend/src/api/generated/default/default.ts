@@ -29,6 +29,8 @@ import type {
   ComponentSizeConfiguration,
   Customer,
   Error,
+  Forecast,
+  ForecastInput,
   GetAllergensParams,
   GetCatalogueParams,
   GetCustomersParams,
@@ -72,6 +74,8 @@ import type {
   PutProductCategoriesIdBody,
   PutProductsProductIdSizeConfigurationsSizeIdBody,
   Stock,
+  SupplierScenario,
+  SupplierScenarioInput,
   VersionInfo
 } from '../../model';
 
@@ -4520,4 +4524,322 @@ export const useDeleteKitchenConfigurationsId = <TError = Error,
         TContext
       > => {
       return useMutation(getDeleteKitchenConfigurationsIdMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List daily forecasts (MANAGER and EMPLOYEE)
+ */
+export const getForecasts = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<Forecast[]>(
+      {url: `/forecasts`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetForecastsQueryKey = () => {
+    return [
+    `/forecasts`
+    ] as const;
+    }
+
+
+export const getGetForecastsQueryOptions = <TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetForecastsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getForecasts>>> = ({ signal }) => getForecasts(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetForecastsQueryResult = NonNullable<Awaited<ReturnType<typeof getForecasts>>>
+export type GetForecastsQueryError = Error
+
+
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getForecasts>>,
+          TError,
+          Awaited<ReturnType<typeof getForecasts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getForecasts>>,
+          TError,
+          Awaited<ReturnType<typeof getForecasts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List daily forecasts (MANAGER and EMPLOYEE)
+ */
+
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetForecastsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create daily forecast (MANAGER only)
+ */
+export const postForecasts = (
+    forecastInput: ForecastInput,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<Forecast>(
+      {url: `/forecasts`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: forecastInput, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostForecastsMutationKey = () => ['postForecasts'] as const;
+
+export const getPostForecastsMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext> => {
+
+const mutationKey = getPostForecastsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postForecasts>>, PostForecastsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postForecasts(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostForecastsMutationResult = NonNullable<Awaited<ReturnType<typeof postForecasts>>>
+    export type PostForecastsMutationBody = ForecastInput
+    export type PostForecastsMutationError = Error
+    export type PostForecastsMutationVariables = {data: ForecastInput}
+
+    /**
+ * @summary Create daily forecast (MANAGER only)
+ */
+export const usePostForecasts = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postForecasts>>,
+        TError,
+        PostForecastsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostForecastsMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List supplier scenarios (MANAGER and EMPLOYEE)
+ */
+export const getSupplierScenarios = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SupplierScenario[]>(
+      {url: `/supplier-scenarios`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetSupplierScenariosQueryKey = () => {
+    return [
+    `/supplier-scenarios`
+    ] as const;
+    }
+
+
+export const getGetSupplierScenariosQueryOptions = <TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupplierScenariosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierScenarios>>> = ({ signal }) => getSupplierScenarios(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSupplierScenariosQueryResult = NonNullable<Awaited<ReturnType<typeof getSupplierScenarios>>>
+export type GetSupplierScenariosQueryError = Error
+
+
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierScenarios>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierScenarios>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierScenarios>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierScenarios>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List supplier scenarios (MANAGER and EMPLOYEE)
+ */
+
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSupplierScenariosQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create supplier scenario (MANAGER only)
+ */
+export const postSupplierScenarios = (
+    supplierScenarioInput: SupplierScenarioInput,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SupplierScenario>(
+      {url: `/supplier-scenarios`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: supplierScenarioInput, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostSupplierScenariosMutationKey = () => ['postSupplierScenarios'] as const;
+
+export const getPostSupplierScenariosMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext> => {
+
+const mutationKey = getPostSupplierScenariosMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSupplierScenarios>>, PostSupplierScenariosMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSupplierScenarios(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSupplierScenariosMutationResult = NonNullable<Awaited<ReturnType<typeof postSupplierScenarios>>>
+    export type PostSupplierScenariosMutationBody = SupplierScenarioInput
+    export type PostSupplierScenariosMutationError = Error
+    export type PostSupplierScenariosMutationVariables = {data: SupplierScenarioInput}
+
+    /**
+ * @summary Create supplier scenario (MANAGER only)
+ */
+export const usePostSupplierScenarios = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postSupplierScenarios>>,
+        TError,
+        PostSupplierScenariosMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostSupplierScenariosMutationOptions(options), queryClient);
     }

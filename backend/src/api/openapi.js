@@ -1748,6 +1748,79 @@ export const openApiSpec = {
         },
       },
     },
+    '/forecasts': {
+      get: {
+        summary: 'List daily forecasts (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Forecast' } },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+        },
+      },
+      post: {
+        summary: 'Create daily forecast (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/ForecastInput' } },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Forecast' } } },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+    },
+    '/supplier-scenarios': {
+      get: {
+        summary: 'List supplier scenarios (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/SupplierScenario' } },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+        },
+      },
+      post: {
+        summary: 'Create supplier scenario (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/SupplierScenarioInput' } },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SupplierScenario' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1945,6 +2018,94 @@ export const openApiSpec = {
           commitDate: { type: 'string', format: 'date-time' },
           deployedAt: { type: 'string', format: 'date-time' },
         },
+      },
+      ForecastInput: {
+        type: 'object',
+        required: ['name', 'startDate', 'endDate', 'entries'],
+        properties: {
+          name: { type: 'string' },
+          version: { type: 'integer', default: 1 },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' },
+          entries: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['date', 'productId', 'quantity'],
+              properties: {
+                date: { type: 'string', format: 'date' },
+                productId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                sizeId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$', nullable: true },
+                quantity: { type: 'integer', minimum: 0 },
+              },
+            },
+          },
+        },
+      },
+      Forecast: {
+        allOf: [
+          { $ref: '#/components/schemas/ForecastInput' },
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              isActive: { type: 'boolean' },
+            },
+          },
+        ],
+      },
+      SupplierScenarioInput: {
+        type: 'object',
+        required: ['name', 'suppliers', 'products'],
+        properties: {
+          name: { type: 'string' },
+          version: { type: 'integer', default: 1 },
+          simulated: { type: 'boolean', default: true },
+          suppliers: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id'],
+              properties: { id: { type: 'string' }, name: { type: 'string' } },
+            },
+          },
+          products: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['productId', 'offers'],
+              properties: {
+                productId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                offers: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    required: ['supplierId', 'priceEur', 'stockUnits', 'leadTimeDays'],
+                    properties: {
+                      supplierId: { type: 'string' },
+                      priceEur: { type: 'number', minimum: 0 },
+                      stockUnits: { type: 'integer', minimum: 1 },
+                      leadTimeDays: { type: 'integer', minimum: 0 },
+                      supplyLimit: { type: 'integer', minimum: 0 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      SupplierScenario: {
+        allOf: [
+          { $ref: '#/components/schemas/SupplierScenarioInput' },
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              isActive: { type: 'boolean' },
+            },
+          },
+        ],
       },
     },
   },

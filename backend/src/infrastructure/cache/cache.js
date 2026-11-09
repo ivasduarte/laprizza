@@ -19,6 +19,9 @@ const stable = (_k, v) =>
 const hashParts = (parts) =>
   createHash('sha1').update(JSON.stringify(parts, stable)).digest('hex').slice(0, 16);
 
+// TODO(debug): remover os logs [cache:debug] depois do diagnóstico.
+const DEBUG_NAMESPACE = 'predefined-pizza';
+
 export async function cached(namespace, parts, ttlSeconds, loader) {
   if (!redis) return loader();
 
@@ -27,13 +30,16 @@ export async function cached(namespace, parts, ttlSeconds, loader) {
     const version = (await redis.get(versionKey(namespace))) ?? '0';
     key = `${PREFIX}:${namespace}:v${version}:${hashParts(parts)}`;
     const hit = await redis.get(key);
+    if (namespace === DEBUG_NAMESPACE) {
+      console.log('[cache:debug]', new Date().toISOString(), { parts, version, hit: hit !== null });
+    }
     if (hit !== null) return JSON.parse(hit);
   } catch (err) {
     console.error('[cache] read failed:', err.message);
     return loader();
   }
 
-  const value = await loader(); // se lançar (404, etc.), nada fica em cache
+  const value = await loader();
   if (value !== undefined) {
     redis.set(key, JSON.stringify(value), 'EX', ttlSeconds).catch(() => {});
   }
@@ -43,8 +49,19 @@ export async function cached(namespace, parts, ttlSeconds, loader) {
 export async function invalidate(...namespaces) {
   if (!redis) return;
   try {
-    await Promise.all(namespaces.map((ns) => redis.incr(versionKey(ns))));
+    const versions = await Promise.all(namespaces.map((ns) => redis.incr(versionKey(ns))));
+    if (namespaces.includes(DEBUG_NAMESPACE)) {
+      console.log(
+        '[cache:debug]',
+        new Date().toISOString(),
+        'invalidate',
+        namespaces,
+        '->',
+        versions,
+      );
+    }
   } catch (err) {
     console.error('[cache] invalidate failed:', err.message);
+    throw new Error(`Cache invalidation failed: ${err.message}`, { cause: err });
   }
 }
