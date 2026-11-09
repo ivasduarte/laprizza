@@ -1,30 +1,31 @@
 import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 
-export default function KitchenScene() {
+export default function KitchenScene({ config }) {
+  console.log('Configuração ativa carregada no motor 3D:', config);
+  
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: '600px',
-        borderRadius: '14px',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Canvas initializes the Three.js engine, the camera, and the rendering loop. */}
-      <Canvas camera={{ position: [0, 5, 10], fov: 50 }}>
-        {/* Define the background color of the 3D world (using the LaPrizza CSS text color). */}
-        <color attach="background" args={['#2a1512']} />
+    <Canvas camera={{ position: [10, 8, 10], fov: 50 }}>
+      {/* Base background color */}
+      <color attach="background" args={['#2a1512']} />
 
-        {/* Basic light to help us see 3D shapes in the future. */}
-        <ambientLight intensity={0.5} />
+      {/* 1. Ambient and Focused Lighting */}
+      <ambientLight intensity={0.6} color="#ffffff" />
+      <directionalLight position={[10, 15, 10]} intensity={1} castShadow />
 
-        {/* Temporary test cube to confirm that WebGL is rendering */}
-        <mesh>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshBasicMaterial color="#c8231a" />
-        </mesh>
-      </Canvas>
-    </div>
+      {/* 2. Mouse Controls */}
+      {/* Targeting [0,0,0] ensures that we orbit around the center of the ground */}
+      <OrbitControls target={[0, 0, 0]} makeDefault />
+
+      {/* Temporary visual aids to help you build the kitchen (XYZ axes and grid on the floor) */}
+      <axesHelper args={[5]} />
+      <gridHelper args={[20, 20]} />
+
+      {/* Updated test cube to receive light */}
+      <mesh position={[0, 1, 0]}>
+        <boxGeometry args={[2, 2, 2]} />
+        <meshStandardMaterial color="#c8231a" />
+      </mesh>
+    </Canvas>
   );
 }

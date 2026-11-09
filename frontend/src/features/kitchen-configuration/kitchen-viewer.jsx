@@ -22,28 +22,45 @@ export default function KitchenViewer() {
     loadActive().catch(() => {});
   }, [loadActive]);
 
+  if (loading) return <p role="status">{t('layout.loading')}</p>;
+
+  if (error || !activeConfig) {
+    return (
+      <p className="message message-error" role="alert">
+        {t(
+          'kitchenConfig.viewer.empty',
+          'No active kitchen configuration to display.'
+        )}
+      </p>
+    );
+  }
+
   return (
-    <section
-      className="viewer-mock-container"
-      aria-label={t('kitchenConfig.viewer.label', 'Kitchen viewer')}
+    <div
+      style={{
+        width: '100%',
+        height: '70vh',
+        minHeight: '600px',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
+      <p data-testid="viewer-active-config" style={{ margin: '0 0 1rem 0' }}>
+        {t('kitchenConfig.viewer.showing', 'Showing')}:{' '}
+        <strong>{activeConfig.name}</strong>
+      </p>
 
-      <KitchenScene/>
-
-      {loading && <p role="status">{t('layout.loading')}</p>}
-      {!loading && error && (
-        <p className="message message-error" role="alert">
-          {t(
-            'kitchenConfig.viewer.empty',
-            'No active kitchen configuration to display.'
-          )}
-        </p>
-      )}
-      {!loading && activeConfig && (
-        <p data-testid="viewer-active-config">
-          {t('kitchenConfig.viewer.showing', 'Showing')}: {activeConfig.name}
-        </p>
-      )}
-    </section>
+      {/* The 3D mechanism will expand to fill the rest of the available screen */}
+      <div
+        style={{
+          flex: 1,
+          borderRadius: '14px',
+          overflow: 'hidden',
+          border: '2px solid var(--color-ink)',
+        }}
+      >
+        <KitchenScene config={activeConfig} />
+      </div>
+    </div>
   );
 }
