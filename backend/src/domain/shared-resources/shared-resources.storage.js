@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-const baseDir = () => path.resolve(process.env.SHARED_DIR ?? '/srv/laprizza-shared');
+const baseDir = () => path.resolve(process.env.SHARED_DIR);
 const fullPath = (name) => path.join(baseDir(), name);
 
 export async function list() {
