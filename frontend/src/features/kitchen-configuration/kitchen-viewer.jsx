@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKitchenConfiguration } from './use-kitchen-configuration.js';
+import { KitchenScene } from '../visualization3d/kitchen-scene.jsx';
 
 /**
  * Integration point of the 3D Visualization module (VIS01-VIS07).
@@ -26,9 +27,9 @@ export default function KitchenViewer() {
       className="viewer-mock-container"
       aria-label={t('kitchenConfig.viewer.label', 'Kitchen viewer')}
     >
-      <p>
-        <strong>[3D Viewer Mount Point]</strong>
-      </p>
+
+      <KitchenScene/>
+
       {loading && <p role="status">{t('layout.loading')}</p>}
       {!loading && error && (
         <p className="message message-error" role="alert">
