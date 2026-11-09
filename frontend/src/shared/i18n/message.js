@@ -18,7 +18,7 @@ export const messages = {
       forgotPassword: 'Forgot password',
       resetPassword: 'Reset password',
       kitchenConfig: 'Kitchen Configuration',
-      sharedResources: 'Shared resources',
+      sharedResources: 'Shared Resources',
     },
     home: {
       welcome: 'Welcome to LaPrizza',
