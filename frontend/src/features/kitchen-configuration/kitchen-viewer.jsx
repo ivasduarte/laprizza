@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKitchenConfiguration } from './use-kitchen-configuration.js';
-import { KitchenScene } from '../visualization3d/kitchen-scene.jsx';
+import KitchenScene from '../visualization3d/kitchen-scene.jsx';
 
 /**
  * Integration point of the 3D Visualization module (VIS01-VIS07).
