@@ -158,6 +158,53 @@ Content-Type: application/json
 }
 ?? status == 400
 
+### 3.5 Falha Domínio: modelReference relativo (400 Bad Request, com paths em details)
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Relative Asset {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 10, "length": 15, "height": 3 },
+    "elements": [
+      {
+        "id": "oven-01",
+        "type": "equipment",
+        "modelReference": "models/oven.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 400
+?? js response.parsedBody.error.message.includes('/elements/0/modelReference')
+
+### 3.6 Dry-run com modelReference em URL absoluta (200 OK)
+POST {{baseUrl}}/kitchen-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 10, "length": 15, "height": 3 },
+    "elements": [
+      {
+        "id": "oven-01",
+        "type": "equipment",
+        "modelReference": "https://cdn.laprizza.pt/models/oven.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 200
+?? body valid == true
+
 ### ==========================================
 ### 4: CRIAÇÃO DE CONFIGURAÇÕES VÁLIDAS
 ### ==========================================
@@ -240,6 +287,21 @@ Authorization: Bearer {{adminToken}}
 DELETE {{baseUrl}}/kitchen-configurations/{{configA_Id}}
 Authorization: Bearer {{adminToken}}
 ?? status == 204
+
+### 5.6b Employee consegue ler a configuração ativa (200 OK)
+GET {{baseUrl}}/kitchen-configurations/active
+Authorization: Bearer {{empToken}}
+?? status == 200
+
+### 5.6c Employee não consegue ativar (403 Forbidden)
+PATCH {{baseUrl}}/kitchen-configurations/{{configA_Id}}/activate
+Authorization: Bearer {{empToken}}
+?? status == 403
+
+### 5.6d Ativar uma configuração inexistente (404 Not Found)
+PATCH {{baseUrl}}/kitchen-configurations/000000000000000000000000/activate
+Authorization: Bearer {{adminToken}}
+?? status == 404
 
 ### 5.7 Obter a Configuração A (404 Not Found)
 GET {{baseUrl}}/kitchen-configurations/{{configA_Id}}

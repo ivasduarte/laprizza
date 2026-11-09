@@ -1,16 +1,18 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp, loadConfig } from '../../src/index.js';
-import { createDummyUsersRepository } from '../infrastructure/users.dummy.repository.js';
-import { createDummyAuthInfrastructure } from '../infrastructure/auth.dummy.dependencies.js';
 
 /**
  * Starts the real app with the auth rate limit set to 1 request per window.
  * @param {Record<string, string>} env - Extra environment variables.
  */
 async function startServer(env = {}) {
-  const infra = createDummyAuthInfrastructure();
+  // The login body is invalid ({}), so the requests never reach the repositories.
+  const infra = {
+    usersRepository: { findByEmailWithPasswordHash: mock.fn(async () => null) },
+    securityLogger: { log: mock.fn() },
+  };
   const config = loadConfig({
     NODE_ENV: 'test',
     JWT_SECRET: 'test',
@@ -18,7 +20,7 @@ async function startServer(env = {}) {
     AUTH_RATE_LIMIT_MAX: '1',
     ...env,
   });
-  const app = createApp(config, { ...infra, usersRepository: createDummyUsersRepository() });
+  const app = createApp(config, infra);
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
 
@@ -26,6 +28,7 @@ async function startServer(env = {}) {
   return {
     app,
     logger: infra.securityLogger,
+    usersRepository: infra.usersRepository,
     login: (forwardedFor) =>
       fetch(url, {
         method: 'POST',
@@ -44,7 +47,7 @@ async function startServer(env = {}) {
  * use the client IP from X-Forwarded-For, not the proxy address 127.0.0.1.
  */
 test('TRUST_PROXY=1 rate-limits by the client IP sent by the proxy', async (t) => {
-  const { app, logger, login, close } = await startServer({ TRUST_PROXY: '1' });
+  const { app, logger, usersRepository, login, close } = await startServer({ TRUST_PROXY: '1' });
   t.after(close);
 
   assert.equal(app.get('trust proxy'), 1);
@@ -54,14 +57,16 @@ test('TRUST_PROXY=1 rate-limits by the client IP sent by the proxy', async (t) =
   assert.equal((await login('203.0.113.10')).status, 429);
 
   // The block is recorded against the client IP, not the proxy's.
-  assert.equal(logger.events.at(-1).event, 'RATE_LIMITED');
-  assert.equal(logger.events.at(-1).ip, '203.0.113.10');
+  const [event, details] = logger.log.mock.calls.at(-1).arguments;
+  assert.equal(event, 'RATE_LIMITED');
+  assert.equal(details.ip, '203.0.113.10');
 
   // Client B behind the same proxy has its own counter.
   assert.notEqual((await login('203.0.113.20')).status, 429);
 
   // A client-supplied value is ignored: only the rightmost entry (appended by nginx) counts.
   assert.equal((await login('198.51.100.1, 203.0.113.10')).status, 429);
+  assert.equal(usersRepository.findByEmailWithPasswordHash.mock.callCount(), 0);
 });
 
 /**

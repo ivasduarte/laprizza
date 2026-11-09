@@ -1,6 +1,6 @@
 # Frontend End-To-End (E2E) Testing Framework
 
-* Status: proposed
+* Status: accepted
 * Deciders: Development Team
 * Date: 2026-11-05
 

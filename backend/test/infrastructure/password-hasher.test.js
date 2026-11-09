@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as argon2 from 'argon2';
 import {
   ARGON2_OPTIONS,
   createPasswordHasher,
   passwordHasher,
 } from '../../src/infrastructure/security/password-hasher.js';
-import { FAST_ARGON2_OPTIONS } from './auth.dummy.dependencies.js';
+
+/** Cheap Argon2 parameters: tests stay fast without changing the behaviour. */
+const FAST_ARGON2_OPTIONS = Object.freeze({
+  type: argon2.argon2id,
+  memoryCost: 1024,
+  timeCost: 1,
+  parallelism: 1,
+});
 
 const hasher = createPasswordHasher(FAST_ARGON2_OPTIONS);
 const PASSWORD = 'StrongPassword123!';

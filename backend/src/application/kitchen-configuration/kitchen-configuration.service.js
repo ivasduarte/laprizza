@@ -8,6 +8,23 @@ import {
 import { DomainError } from '../../domain/domain-error.js';
 import { AppError } from '../app-error.js';
 
+// Persistence error codes meaning "another activation won the race":
+// 11000 = duplicate key on the partial unique index, 112 = WriteConflict.
+const ACTIVATION_CONFLICT_CODES = [11000, 112];
+const ACTIVATION_TARGET_NOT_FOUND = 'ACTIVATION_TARGET_NOT_FOUND';
+
+function isActivationConflict(err) {
+  return (
+    ACTIVATION_CONFLICT_CODES.includes(err?.code) ||
+    (typeof err?.hasErrorLabel === 'function' && err.hasErrorLabel('TransientTransactionError'))
+  );
+}
+
+function toAppError(err) {
+  // DomainError carries the individual violations (with property paths) in `details`.
+  return new AppError(err.message, 400, err.details);
+}
+
 export function toKitchenConfigurationDto(config) {
   return {
     id: config._id || config.id,
@@ -34,7 +51,7 @@ export async function createConfiguration(data, kitchenRepo = defaultKitchenRepo
     const newConfig = await kitchenRepo.create(validData);
     return toKitchenConfigurationDto(newConfig);
   } catch (err) {
-    if (err instanceof DomainError) throw new AppError(err.message, 400);
+    if (err instanceof DomainError) throw toAppError(err);
     throw err;
   }
 }
@@ -57,7 +74,7 @@ export async function updateConfiguration(id, updateData, kitchenRepo = defaultK
       dataToSave.content = validateKitchenConfigurationContent(updateData.content);
     }
   } catch (err) {
-    if (err instanceof DomainError) throw new AppError(err.message, 400);
+    if (err instanceof DomainError) throw toAppError(err);
     throw err;
   }
 
@@ -81,7 +98,7 @@ export function validateConfigurationContent(content) {
     validateKitchenConfigurationContent(content);
     return { valid: true };
   } catch (err) {
-    if (err instanceof DomainError) throw new AppError(err.message, 400);
+    if (err instanceof DomainError) throw toAppError(err);
     throw err;
   }
 }
@@ -99,7 +116,15 @@ export async function activateConfiguration(id, kitchenRepo = defaultKitchenRepo
     if (!activated) throw new AppError('Failed to activate configuration.', 500);
     return toKitchenConfigurationDto(activated);
   } catch (err) {
-    throw new AppError(`Activation failed: ${err.message}`, 500);
+    if (err instanceof AppError) throw err;
+    if (err?.code === ACTIVATION_TARGET_NOT_FOUND) {
+      throw new AppError('Kitchen configuration not found.', 404);
+    }
+    if (isActivationConflict(err)) {
+      throw new AppError('Another activation is in progress.', 409);
+    }
+    // Internal details are not exposed to the client (ARC03).
+    throw new AppError('Activation failed.', 500);
   }
 }
 

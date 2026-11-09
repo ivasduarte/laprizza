@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import KitchenConfiguration from './kitchen-configuration.model.js';
 
+export const ACTIVATION_TARGET_NOT_FOUND = 'ACTIVATION_TARGET_NOT_FOUND';
+
 export async function create(data) {
   return KitchenConfiguration.create(data);
 }
@@ -32,8 +34,8 @@ export async function remove(id) {
 }
 
 /**
-* Atomic activation using transactions.
-* Deactivates the currently active configuration and activates the new one.
+ * Atomic activation using transactions.
+ * Deactivates the currently active configuration and activates the new one.
  */
 export async function activateAtomic(id) {
   if (!mongoose.isValidObjectId(id)) return null;
@@ -58,7 +60,10 @@ export async function activateAtomic(id) {
       );
 
       if (!activatedConfig) {
-        throw new Error('Configuration not found during activation');
+        // Aborts the transaction, so the previously active configuration is kept.
+        const notFound = new Error('Configuration not found during activation');
+        notFound.code = ACTIVATION_TARGET_NOT_FOUND;
+        throw notFound;
       }
     });
   } finally {

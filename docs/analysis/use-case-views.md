@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration user story (WEB06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -28,6 +28,9 @@ This document shows who uses the LaPrizza information system and which business 
       - [Flow Mapping](#flow-mapping-9)
     - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
       - [Flow Mapping](#flow-mapping-10)
+    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
+      - [Use Case Descriptions](#use-case-descriptions)
+      - [Flow Mapping](#flow-mapping-11)
 
 ## Actors
 
@@ -37,6 +40,7 @@ This document shows who uses the LaPrizza information system and which business 
 | **LaPrizza Manager** | Administrator with full back-office access to manage users, customers, products, stock, and configurations.       |
 | **Employee**         | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas). |
 | **Customer**         | External client interacting with the system to consult the catalog or register their data.                        |
+| **3D Visualization Module** | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen. |
 
 ## Use Cases Diagram
 
@@ -186,3 +190,60 @@ This document shows who uses the LaPrizza information system and which business 
 | :--------- | :-------------------------- | :--------------- | :---------------------------------------------------------------------------- |
 | **BCK11**  | UC1: List Product Catalogue | LaPrizza Manager | [List Product Catalogue](../flows/product-catalogue/list-search-catalogue.md) |
 | **BCK11**  | UC2: Get Catalogue Item     | LaPrizza Manager | [Get Catalogue Item](../flows/product-catalogue/get-catalogue-item.md)        |
+
+### WEB06: Kitchen Configuration and 3D Integration
+
+The Kitchen Configuration and 3D Integration page lets a Manager import kitchen configurations (dimensions, equipment positions and visual properties), choose the one that is active and keep them up to date. The 3D Visualization Module renders the active configuration, which Managers and Employees can also see on the page. Employees have a read-only view: they can list and consult the configurations and see the viewer, but the page offers no create, edit, activate or delete controls and the API refuses those operations. The accepted JSON format is in [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    Employee([LaPrizza Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph WEB06 [WEB06: Kitchen Configuration and 3D Integration]
+        direction TB
+        UC1([UC1: Create/Import Configuration])
+        UC2([UC2: Activate Configuration])
+        UC3([UC3: Get Active Configuration])
+        UC4([UC4: List and Consult Configurations])
+        UC5([UC5: Edit Configuration])
+        UC6([UC6: Delete Configuration])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    Manager --> UC6
+
+    Employee --> UC3
+    Employee -.->|<< read-only >>| UC4
+
+    Viz3D -->|<< consumes >>| UC3
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Create/Import Configuration** | LaPrizza Manager | Creates a kitchen configuration from a JSON document. On the page, an imported file is read in the browser and loaded into the editor for review; saving sends it as `application/json` to the same endpoint used to create a configuration through the API. A dry-run endpoint validates a document without storing it. | The domain validates the structure with a JSON Schema (valid dimensions, scale limits) and enforces the business invariants (unique equipment ids, asset references that are absolute http(s) URLs or root-relative paths). All violations are returned together, each with its property path. The configuration is stored as a nested BSON object, keeps its assets as self-contained URL/URIs and is created inactive. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0022](../adr/0022-content-validation-strategy.md), [ADR-0026](../adr/0026-import-approach.md) |
+| **UC2: Activate Configuration** | LaPrizza Manager | Makes a stored configuration the one in use. The previously active configuration is deactivated. | Exactly one configuration is active at a time. The switch is atomic (partial unique index on the active flag and a transaction); concurrent activations answer 409 and activating the already active configuration is a no-op. After the switch, the page reloads the 3D viewer without a full page refresh. | [ADR-0023](../adr/0023-atomic-activation-strategy.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+| **UC3: Get Active Configuration** | LaPrizza Manager / Employee / 3D Visualization Module | Returns the active configuration so that the 3D viewer can render the kitchen. | A dedicated endpoint serves it to the staff roles, and the viewer requests it every time it is mounted. When no configuration is active the answer is 404, the viewer shows an empty state and no hardcoded fallback layout is returned. The payload is self-sufficient, so assets are loaded directly from their URL/URIs. | [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+| **UC4: List and Consult Configurations** | LaPrizza Manager / Employee | Lists the stored configurations, showing which one is active, and consults one of them (name and JSON content). | Read-only for the Employee: the page hides the Create, Edit, Activate and Delete controls. | [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+| **UC5: Edit Configuration** | LaPrizza Manager | Changes the content of a stored configuration, including the active one. | An edit is validated again with the same rules as the creation. Editing the active configuration is allowed if the new content passes all validations, and the page then remounts the viewer so that it fetches the updated layout. | [ADR-0022](../adr/0022-content-validation-strategy.md), [ADR-0024](../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+| **UC6: Delete Configuration** | LaPrizza Manager | Removes a stored configuration. | The active configuration cannot be deleted (409), and the page does not offer the Delete button for it, so that the viewer never ends up without a configuration. | [ADR-0024](../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case                                 | Primary Actor                                         | Flow Document (SAD)                                                                                       |
+| :--------- | :--------------------------------------- | :---------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| **WEB06**  | UC1: Create/Import Configuration         | LaPrizza Manager                                      | [Create / Import Kitchen Configuration](../flows/kitchen-configuration/create-import-kitchen-configuration.md) |
+| **WEB06**  | UC2: Activate Configuration              | LaPrizza Manager                                      | [Activate Kitchen Configuration](../flows/kitchen-configuration/activate-kitchen-configuration.md)         |
+| **WEB06**  | UC3: Get Active Configuration            | LaPrizza Manager / Employee / 3D Visualization Module | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md)     |
+| **WEB06**  | UC4: List and Consult Configurations     | LaPrizza Manager / Employee                           | [List and Consult Configurations](../flows/kitchen-configuration/list-and-consult-configurations.md) |                                                                             |
+| **WEB06**  | UC5: Edit Configuration                  | LaPrizza Manager                                      | [Edit Configuration](../flows/kitchen-configuration/edit-configuration.md)                                                                             |
+| **WEB06**  | UC6: Delete Configuration                | LaPrizza Manager                                      | [Delete Configuration](../flows/kitchen-configuration/delete-configuration.md)                                                                             |
+
+The C4 context, container and component views of the feature are in [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).

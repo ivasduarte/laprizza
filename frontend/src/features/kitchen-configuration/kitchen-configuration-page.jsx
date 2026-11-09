@@ -5,14 +5,16 @@ import {
   kitchenConfigurationApi,
   getKitchenConfigErrorKey,
 } from './kitchen-configuration-api.js';
-import { useKitchenConfiguration } from './use-kitchen-configuration.js';
 import KitchenConfigurationForm from './kitchen-configuration-form.jsx';
+import KitchenViewer from './kitchen-viewer.jsx';
 import './kitchen-configuration.css';
 
 export default function KitchenConfigurationPage() {
   const { t } = useTranslation();
   const { status, user } = useSession();
-  const { loadActive } = useKitchenConfiguration();
+  const roles = user?.roles ?? [];
+  const isManager = roles.includes('MANAGER');
+  const canView = isManager || roles.includes('EMPLOYEE');
 
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +41,12 @@ export default function KitchenConfigurationPage() {
   }, [t]);
 
   useEffect(() => {
-    if (status === 'authenticated' && user?.roles?.includes('MANAGER')) {
+    if (status === 'authenticated' && canView) {
       fetchConfigs();
     }
-  }, [status, user, fetchConfigs]);
+  }, [status, canView, fetchConfigs]);
 
-  if (status !== 'authenticated' || !user?.roles?.includes('MANAGER')) {
+  if (status !== 'authenticated' || !canView) {
     return (
       <main className="kitchen-config-page">
         <p className="message message-error" role="alert">
@@ -72,9 +74,7 @@ export default function KitchenConfigurationPage() {
     try {
       await kitchenConfigurationApi.activate(id);
       await fetchConfigs();
-      // Test the API retrieval hook for the 3D viewer
-      await loadActive();
-      // ADR-0027: Force viewer remount
+      // ADR-0027: remount the viewer, which fetches the new active configuration
       setViewerKey(Date.now());
       setSuccessMsg(t('kitchenConfig.activatedSuccess'));
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -84,6 +84,8 @@ export default function KitchenConfigurationPage() {
   };
 
   const handleFormSuccess = () => {
+    // ADR-0024/0027: an edit of the active configuration must reload the viewer
+    if (editingConfig?.isActive) setViewerKey(Date.now());
     setIsFormOpen(false);
     setEditingConfig(null);
     fetchConfigs();
@@ -93,7 +95,7 @@ export default function KitchenConfigurationPage() {
     <div className="kitchen-config-page">
       <header className="kitchen-config-header">
         <h1>{t('kitchenConfig.title')}</h1>
-        {!isFormOpen && !viewingJson && (
+        {isManager && !isFormOpen && !viewingJson && (
           <button onClick={() => setIsFormOpen(true)}>
             {t('kitchenConfig.createNew')}
           </button>
@@ -111,7 +113,7 @@ export default function KitchenConfigurationPage() {
         </p>
       )}
 
-      {isFormOpen && (
+      {isManager && isFormOpen && (
         <KitchenConfigurationForm
           initialData={editingConfig}
           onSuccess={handleFormSuccess}
@@ -167,16 +169,18 @@ export default function KitchenConfigurationPage() {
                     >
                       {t('kitchenConfig.viewBtn')}
                     </button>
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        setEditingConfig(config);
-                        setIsFormOpen(true);
-                      }}
-                    >
-                      {t('kitchenConfig.editBtn')}
-                    </button>
-                    {!config.isActive && (
+                    {isManager && (
+                      <button
+                        className="secondary"
+                        onClick={() => {
+                          setEditingConfig(config);
+                          setIsFormOpen(true);
+                        }}
+                      >
+                        {t('kitchenConfig.editBtn')}
+                      </button>
+                    )}
+                    {isManager && !config.isActive && (
                       <>
                         <button onClick={() => handleActivate(config.id)}>
                           {t('kitchenConfig.activateBtn')}
@@ -195,13 +199,8 @@ export default function KitchenConfigurationPage() {
             </div>
           )}
 
-          {/* Integration point for VIS module - React key reset applies ADR-0027 */}
-          <div className="viewer-mock-container" key={viewerKey}>
-            <p>
-              <strong>[3D Viewer Mount Point]</strong>
-            </p>
-            <p>{t('kitchenConfig.viewerReloaded')}</p>
-          </div>
+          {/* Integration point for the VIS module - the React key reset applies ADR-0027 */}
+          <KitchenViewer key={viewerKey} />
         </>
       )}
     </div>

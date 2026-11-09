@@ -1,17 +1,16 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import express from 'express';
 import { createRateLimiter, passThrough } from '../../src/api/middleware/rate-limit.js';
 import { errorHandler } from '../../src/api/middleware/error-handler.js';
-import { createFakeSecurityLogger } from '../infrastructure/auth.dummy.dependencies.js';
 
 /**
  * Starts a minimal app with a limit of 2 requests per minute.
  * @returns {Promise<{url: string, logger: object, close: () => void}>}
  */
 async function startLimitedServer() {
-  const logger = createFakeSecurityLogger();
+  const logger = { log: mock.fn() };
   const app = express();
   app.use(createRateLimiter({ name: 'test', windowMs: 60_000, limit: 2, securityLogger: logger }));
   app.post('/login', (_req, res) => res.status(204).end());
@@ -45,15 +44,18 @@ test('createRateLimiter answers 429 RATE_LIMITED after the limit', async (t) => 
   const retryAfter = Number(blocked.headers.get('retry-after'));
   assert.ok(retryAfter >= 1 && retryAfter <= 60);
 
-  assert.equal(logger.events[0].event, 'RATE_LIMITED');
-  assert.equal(logger.events[0].limiter, 'test');
+  assert.equal(logger.log.mock.callCount(), 1);
+  const [event, details] = logger.log.mock.calls[0].arguments;
+  assert.equal(event, 'RATE_LIMITED');
+  assert.equal(details.limiter, 'test');
 });
 
 /**
  * Unit test: passThrough (limits disabled) always calls next() with no error.
  */
 test('passThrough calls next without an error', () => {
-  const calls = [];
-  passThrough({}, {}, (err) => calls.push(err));
-  assert.deepEqual(calls, [undefined]);
+  const next = mock.fn();
+  passThrough({}, {}, next);
+  assert.equal(next.mock.callCount(), 1);
+  assert.deepEqual(next.mock.calls[0].arguments, []);
 });

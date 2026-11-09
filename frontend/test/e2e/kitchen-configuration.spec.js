@@ -38,31 +38,12 @@ async function loginAndOpenKitchenConfigs(page, email) {
 }
 
 test.describe('Kitchen Configuration Page E2E', () => {
-  test('RBAC: Rejects non-manager roles and shows unauthorized message', async ({
+  test('RBAC: Employee gets a read-only view (no management controls)', async ({
     page,
   }) => {
-    // 1. Simular o login de um Employee
     await page.route('**/api/v1/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
-
-    await loginAndOpenKitchenConfigs(page, 'emp@laprizza.pt');
-
-    // 3. Verificar mensagem de erro
-    await expect(page.locator('p[role="alert"]')).toContainText(
-      'Access denied'
-    );
-  });
-
-  test('Manager Flow: Switches active configuration and reloads viewer', async ({
-    page,
-  }) => {
-    // 1. Simular o login de um Manager
-    await page.route('**/api/v1/auth/login', async (route) => {
-      await route.fulfill({ json: mockManagerSession });
-    });
-
-    // Simular a listagem de configurações e a configuração ativa
     await page.route('**/api/v1/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
@@ -73,11 +54,89 @@ test.describe('Kitchen Configuration Page E2E', () => {
       }
     );
 
+    await loginAndOpenKitchenConfigs(page, 'emp@laprizza.pt');
+
+    // Can consult the list, the JSON and the viewer...
+    await expect(
+      page.getByRole('heading', { name: 'Standard Layout' })
+    ).toBeVisible();
+
+    await expect(
+      page.getByRole('heading', { name: 'Automated Line' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'View' }).first()
+    ).toBeVisible();
+    await expect(page.getByTestId('viewer-active-config')).toContainText(
+      'Standard Layout'
+    );
+
+    // ...but cannot create, edit, activate or delete.
+    await expect(page.getByRole('button', { name: 'Create New' })).toHaveCount(
+      0
+    );
+    await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Activate' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+  });
+
+  test('Viewer: shows an explicit empty state when no configuration is active (404)', async ({
+    page,
+  }) => {
+    await page.route('**/api/v1/auth/login', async (route) => {
+      await route.fulfill({ json: mockManagerSession });
+    });
+    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+      await route.fulfill({
+        json: mockConfigs.map((c) => ({ ...c, isActive: false })),
+      });
+    });
+    await page.route(
+      '**/api/v1/kitchen-configurations/active',
+      async (route) => {
+        await route.fulfill({
+          status: 404,
+          json: {
+            error: { message: 'No active kitchen configuration found.' },
+          },
+        });
+      }
+    );
+
+    await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
+
+    await expect(
+      page.locator('.viewer-mock-container p[role="alert"]')
+    ).toBeVisible();
+    await expect(page.getByTestId('viewer-active-config')).toHaveCount(0);
+  });
+
+  test('Manager Flow: Switches active configuration and reloads viewer', async ({
+    page,
+  }) => {
+    // 1. Simular o login de um Manager
+    await page.route('**/api/v1/auth/login', async (route) => {
+      await route.fulfill({ json: mockManagerSession });
+    });
+
+    // Simular a listagem de configurações e a configuração ativa (muda após a ativação)
+    let activeConfig = mockConfigs[0];
+    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+      await route.fulfill({ json: mockConfigs });
+    });
+    await page.route(
+      '**/api/v1/kitchen-configurations/active',
+      async (route) => {
+        await route.fulfill({ json: activeConfig });
+      }
+    );
+
     // Intercetar a chamada de ativação da configuração 2
     await page.route(
       '**/api/v1/kitchen-configurations/2/activate',
       async (route) => {
         // Quando ativamos a 2, a API devolveria a 2 ativa
+        activeConfig = { ...mockConfigs[1], isActive: true };
         await route.fulfill({ json: { ...mockConfigs[1], isActive: true } });
       }
     );
@@ -86,8 +145,13 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
 
     // Verificar se as duas configurações estão no ecrã
-    await expect(page.getByText('Standard Layout')).toBeVisible();
-    await expect(page.getByText('Automated Line')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Standard Layout' })
+    ).toBeVisible();
+
+    await expect(
+      page.getByRole('heading', { name: 'Automated Line' })
+    ).toBeVisible();
 
     // 2. Aceitar automaticamente o prompt de confirmação do browser
     page.on('dialog', (dialog) => dialog.accept());
@@ -101,7 +165,10 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await expect(
       page.locator('p[role="status"]').filter({ hasText: 'successfully' })
     ).toBeVisible();
-    await expect(page.locator('.viewer-mock-container')).toBeVisible();
+    // O viewer é remontado (ADR-0027) e volta a pedir a configuração ativa
+    await expect(page.getByTestId('viewer-active-config')).toContainText(
+      'Automated Line'
+    );
   });
 
   test('Manager Flow: Rejects an invalid JSON configuration edit', async ({
@@ -114,6 +181,12 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await page.route('**/api/v1/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
+    await page.route(
+      '**/api/v1/kitchen-configurations/active',
+      async (route) => {
+        await route.fulfill({ json: mockConfigs[0] });
+      }
+    );
 
     await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
 
@@ -136,7 +209,7 @@ test.describe('Kitchen Configuration Page E2E', () => {
     );
     await expect(page.locator('textarea#config-content')).toBeVisible(); // O formulário continua aberto para o utilizador corrigir
   });
-  
+
   test('Manager Flow: Rejects an invalid JSON file import', async ({
     page,
   }) => {
@@ -147,6 +220,12 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await page.route('**/api/v1/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
+    await page.route(
+      '**/api/v1/kitchen-configurations/active',
+      async (route) => {
+        await route.fulfill({ json: mockConfigs[0] });
+      }
+    );
 
     await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
 

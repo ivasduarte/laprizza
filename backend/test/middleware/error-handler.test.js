@@ -1,35 +1,37 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { errorHandler } from '../../src/api/middleware/error-handler.js';
 import { AppError } from '../../src/application/app-error.js';
 import { AuthErrorCode, tooManyAttempts } from '../../src/application/auth/auth-errors.js';
 
-/** Fake Express response that records status, headers and body. */
-function createDummyResponse() {
-  return {
-    statusCode: undefined,
-    headers: {},
-    body: undefined,
-    status(code) {
-      this.statusCode = code;
-      return this;
-    },
-    set(name, value) {
-      this.headers[name.toLowerCase()] = value;
-      return this;
-    },
-    json(body) {
-      this.body = body;
-      return this;
-    },
-  };
+/** Mocked Express response: status, set and json are chainable mocks. */
+function createResponseMock() {
+  const res = {};
+  res.status = mock.fn(() => res);
+  res.set = mock.fn(() => res);
+  res.json = mock.fn(() => res);
+  return res;
 }
 
-/** Runs the errorHandler and returns the response. */
+/**
+ * Runs the errorHandler and returns what it sent through the mocked response
+ * (status code, headers and body).
+ */
 function handle(err) {
-  const res = createDummyResponse();
-  errorHandler(err, {}, res, () => {});
-  return res;
+  const res = createResponseMock();
+  const next = mock.fn();
+  errorHandler(err, {}, res, next);
+
+  assert.equal(next.mock.callCount(), 0); // the handler always answers
+  assert.equal(res.status.mock.callCount(), 1);
+  assert.equal(res.json.mock.callCount(), 1);
+  return {
+    statusCode: res.status.mock.calls[0].arguments[0],
+    headers: Object.fromEntries(
+      res.set.mock.calls.map(({ arguments: [name, value] }) => [name.toLowerCase(), value]),
+    ),
+    body: res.json.mock.calls[0].arguments[0],
+  };
 }
 
 /**

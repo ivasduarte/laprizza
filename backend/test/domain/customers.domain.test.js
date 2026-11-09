@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { validatePhoneNumber, validateAddress, normalizePhoneNumber } from '../../src/domain/customers/customers.domain.js';
 import { DomainError } from '../../src/domain/domain-error.js';
@@ -39,17 +39,21 @@ test('normalizePhoneNumber returns the 9 national digits or null', () => {
 
 /**
  * Unit test: validateAddress domain function.
- * Validates the Dependency Injection logic using different dummy behaviors.
+ * Validates the Dependency Injection logic using a mocked validator with different behaviors.
  */
 test('validateAddress relies securely on the injected validator', async () => {
   const address = { postalCode: '4460-123', city: 'Senhora da Hora' };
 
-  // Dummy mimicking a successful match
-  const successValidator = { isValidMatch: async () => true };
+  // Mock answering a successful match
+  const successValidator = { isValidMatch: mock.fn(async () => true) };
   await assert.doesNotReject(async () => await validateAddress(address, successValidator));
+  assert.deepEqual(successValidator.isValidMatch.mock.calls[0].arguments, [
+    '4460-123',
+    'Senhora da Hora',
+  ]);
 
-  // Dummy mimicking a mismatch/failure
-  const failureValidator = { isValidMatch: async () => false };
+  // Mock answering a mismatch/failure
+  const failureValidator = { isValidMatch: mock.fn(async () => false) };
   await assert.rejects(
     async () => await validateAddress(address, failureValidator),
     (err) => {
