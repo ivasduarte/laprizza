@@ -17,7 +17,7 @@
     "test:flows:log": "httpyac send --all -o short \"test-flows/**/*.http\" > test-flows-output.txt 2>&1",
     "test:all": "npm test && npm run test:flows",
     "test:coverage": "node --test --experimental-test-coverage \"test/**/*.test.js\"",
-    "test:integration": "node --test \"test-integration/**/*.test.js\"",
+    "test:integration": "node --test --test-concurrency=1 \"test-integration/**/*.test.js\"",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -12,9 +12,26 @@ const MONGO_IMAGE = 'mongo:8.0';
 const DB_NAME = 'laprizza';
 
 export const STARTUP_TIMEOUT_MS = 180_000;
+const MAX_LOG_CHUNKS = 100;
 
 export async function startMongo() {
-  const container = await new MongoDBContainer(MONGO_IMAGE).start();
+  const recentLogs = [];
+  const keepRecentLogs = (stream) => {
+    stream.on('data', (chunk) => {
+      recentLogs.push(String(chunk));
+      if (recentLogs.length > MAX_LOG_CHUNKS) recentLogs.shift();
+    });
+  };
+  const printRecentLogs = () => {
+    console.error(`Last logs of the MongoDB container:\n${recentLogs.join('')}`);
+  };
+  let container;
+  try {
+    container = await new MongoDBContainer(MONGO_IMAGE).withLogConsumer(keepRecentLogs).start();
+  } catch (error) {
+    printRecentLogs();
+    throw error;
+  }
   try {
     const uri = `${container.getConnectionString().replace(/\/+$/, '')}/?directConnection=true`;
     try {
