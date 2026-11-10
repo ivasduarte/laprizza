@@ -35,7 +35,6 @@ function createAuthMocks() {
       ),
       findById: mock.fn(async (id) => userById(id)),
     },
-    // One always-active session per user (session id = user id).
     sessionsRepository: {
       create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
       findById: mock.fn(async (id) =>
@@ -56,7 +55,6 @@ function createAuthMocks() {
 
 async function setupTestServer() {
   const authMocks = createAuthMocks();
-  // Nothing exists until a test programs the answers of each step.
   const storage = {
     list: mock.fn(async () => []),
     findPath: mock.fn(async () => null),
@@ -91,6 +89,8 @@ async function loginAs(port, email) {
       body,
     });
 }
+
+const PDF = Buffer.from('%PDF-1.7\nconteudo');
 
 const auditEntries = (securityLogger) =>
   securityLogger.log.mock.calls
@@ -176,7 +176,6 @@ test('API /shared-resources upload creates or replaces and validates the request
   assert.ok(Buffer.isBuffer(savedContent));
   assert.equal(savedContent.toString(), 'conteudo');
 
-  // Step: a file with that name already exists.
   storage.save.mock.mockImplementationOnce(async () => false);
   const replaced = await request('PUT', '/shared-resources/manual.txt', { body: 'novo' });
   assert.equal(replaced.status, 200);
@@ -185,7 +184,7 @@ test('API /shared-resources upload creates or replaces and validates the request
     'PUT',
     `/shared-resources/${encodeURIComponent('relatório.pdf')}`,
     {
-      body: 'abc',
+      body: PDF,
     },
   );
   assert.equal(accented.status, 201);
@@ -206,6 +205,25 @@ test('API /shared-resources upload creates or replaces and validates the request
     contentType: 'application/json',
   });
   assert.equal(wrongType.status, 400);
+
+  for (const [name, body] of [
+    ['manual.pdf', 'abc'],
+    ['lista.xlsx', '{"_id": {"$oid": "..."}}'],
+    ['notas.txt', Buffer.from([0xff, 0xfe, 0x00])],
+  ]) {
+    const res = await request('PUT', `/shared-resources/${name}`, { body });
+    assert.equal(res.status, 400, name);
+  }
+
+  for (const [name, body] of [
+    ['Clientes.pdf', PDF],
+    ['perfis_alimentares.pdf', PDF],
+    ['notas.txt', 'Lista de clientes da semana'],
+    ['notas.md', 'Password do router'],
+  ]) {
+    const res = await request('PUT', `/shared-resources/${encodeURIComponent(name)}`, { body });
+    assert.equal(res.status, 400, `${name}: ${body}`);
+  }
 
   assert.equal(storage.save.mock.callCount(), callsBefore);
 });
@@ -287,7 +305,6 @@ test('API /shared-resources records every access in the security log', async (t)
   ]);
   assert.ok(entries.every((entry) => entry.userId));
 
-  // A denied write is recorded by the authentication layer, never as a folder operation.
   const before = auditEntries(securityLogger).length;
   const denied = await empRequest('PUT', '/shared-resources/manual.txt', { body: 'x' });
   assert.equal(denied.status, 403);

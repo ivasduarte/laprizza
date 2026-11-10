@@ -2,11 +2,26 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-const baseDir = () => path.resolve(process.env.SHARED_DIR);
+function baseDir() {
+  if (!process.env.SHARED_DIR) {
+    throw new Error('SHARED_DIR is not configured: set it to the shared folder path.');
+  }
+  return path.resolve(process.env.SHARED_DIR);
+}
 const fullPath = (name) => path.join(baseDir(), name);
 
+let ensuredDir = null;
+async function ensureBaseDir() {
+  const dir = baseDir();
+  if (ensuredDir !== dir) {
+    await fs.mkdir(dir, { recursive: true });
+    ensuredDir = dir;
+  }
+  return dir;
+}
+
 export async function list() {
-  const entries = await fs.readdir(baseDir(), { withFileTypes: true });
+  const entries = await fs.readdir(await ensureBaseDir(), { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
     if (!entry.isFile() || entry.name.startsWith('.')) continue;
@@ -27,6 +42,7 @@ export async function findPath(name) {
 }
 
 export async function save(name, content) {
+  await ensureBaseDir();
   const created = (await findPath(name)) === null;
   const tmp = fullPath(`.${randomUUID()}.tmp`);
   await fs.writeFile(tmp, content);

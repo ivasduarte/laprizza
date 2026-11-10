@@ -58,6 +58,14 @@ export function createHttpClient({
   refreshAccessToken = null,
   onSessionExpired = null,
 }) {
+  /**
+   * @param {string} path
+   * @param {object} [options]
+   * @param {string} [options.contentType] - Se definido, o body é enviado tal como está (ex.: um File)
+   *   com este Content-Type, em vez de ser serializado como JSON.
+   * @param {'json'|'blob'} [options.responseType='json'] - 'blob' devolve o corpo da resposta como Blob.
+   * @param {boolean} [options.withStatus=false] - Devolve { status, data } em vez de só os dados.
+   */
   async function request(path, options = {}) {
     const {
       method = 'GET',

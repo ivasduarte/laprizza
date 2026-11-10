@@ -219,9 +219,6 @@ test('Shared Resources API Client', async (t) => {
   sessionStore.end();
 });
 
-// ============================================================
-// Utils
-// ============================================================
 
 test('getSharedResourcesErrorKey maps HTTP statuses to translation keys without exposing internals', () => {
   assert.equal(
@@ -296,6 +293,36 @@ test('validateUpload rejects invalid uploads with the matching message key', () 
     validateUpload('noextension', { size: 1 }),
     'sharedResources.err.type'
   );
+});
+
+test('validateUpload rejects names that suggest personal or sensitive data', () => {
+  const file = { size: 1 };
+  for (const name of [
+    'Clientes Maria.xlsx',
+    'CLIENTES.xlsx',
+    'customer-list.xlsx',
+    'lista 912345678.xlsx',
+    'Backup_BD.docx',
+    'credenciais.txt',
+    'Palavra-Passe.md',
+    'palavra_passe.txt',
+    'perfis_alimentares.docx',
+    'Dietary Profiles.pdf',
+  ]) {
+    assert.equal(
+      validateUpload(name, file),
+      'sharedResources.err.personalData',
+      name
+    );
+  }
+});
+
+test('validateUpload still accepts dates and neutral names', () => {
+  const file = { size: 1 };
+  assert.equal(validateUpload('relatorio_2026-11-09.pdf', file), null);
+  assert.equal(validateUpload('fatura 20261109.pdf', file), null);
+  assert.equal(validateUpload('Relatório Operações.pdf', file), null);
+  assert.equal(validateUpload('alergenios do menu.pdf', file), null);
 });
 
 test('formatSize shows bytes, KB and MB', () => {
