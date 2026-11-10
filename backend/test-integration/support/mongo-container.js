@@ -8,7 +8,7 @@ import { connectDB } from '../../src/infrastructure/database.js';
 const execFileAsync = promisify(execFile);
 const BACKEND_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const MIGRATE_MONGO_BIN = 'node_modules/migrate-mongo/bin/migrate-mongo.js';
-const MONGO_IMAGE = 'mongo:8.0';
+const MONGO_IMAGE = 'mongo:7.0';
 const DB_NAME = 'laprizza';
 
 export const STARTUP_TIMEOUT_MS = 180_000;
