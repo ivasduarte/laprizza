@@ -29,6 +29,8 @@ import type {
   ComponentSizeConfiguration,
   Customer,
   Error,
+  Forecast,
+  ForecastInput,
   GetAllergensParams,
   GetCatalogueParams,
   GetCustomersParams,
@@ -71,7 +73,10 @@ import type {
   PutPredefinedPizzasIdBody,
   PutProductCategoriesIdBody,
   PutProductsProductIdSizeConfigurationsSizeIdBody,
+  SharedResource,
   Stock,
+  SupplierScenario,
+  SupplierScenarioInput,
   VersionInfo
 } from '../../model';
 
@@ -4520,4 +4525,642 @@ export const useDeleteKitchenConfigurationsId = <TError = Error,
         TContext
       > => {
       return useMutation(getDeleteKitchenConfigurationsIdMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List daily forecasts (MANAGER and EMPLOYEE)
+ */
+export const getForecasts = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<Forecast[]>(
+      {url: `/forecasts`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetForecastsQueryKey = () => {
+    return [
+    `/forecasts`
+    ] as const;
+    }
+
+
+export const getGetForecastsQueryOptions = <TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetForecastsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getForecasts>>> = ({ signal }) => getForecasts(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetForecastsQueryResult = NonNullable<Awaited<ReturnType<typeof getForecasts>>>
+export type GetForecastsQueryError = Error
+
+
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getForecasts>>,
+          TError,
+          Awaited<ReturnType<typeof getForecasts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getForecasts>>,
+          TError,
+          Awaited<ReturnType<typeof getForecasts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List daily forecasts (MANAGER and EMPLOYEE)
+ */
+
+export function useGetForecasts<TData = Awaited<ReturnType<typeof getForecasts>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getForecasts>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetForecastsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create daily forecast (MANAGER only)
+ */
+export const postForecasts = (
+    forecastInput: ForecastInput,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<Forecast>(
+      {url: `/forecasts`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: forecastInput, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostForecastsMutationKey = () => ['postForecasts'] as const;
+
+export const getPostForecastsMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext> => {
+
+const mutationKey = getPostForecastsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postForecasts>>, PostForecastsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postForecasts(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostForecastsMutationResult = NonNullable<Awaited<ReturnType<typeof postForecasts>>>
+    export type PostForecastsMutationBody = ForecastInput
+    export type PostForecastsMutationError = Error
+    export type PostForecastsMutationVariables = {data: ForecastInput}
+
+    /**
+ * @summary Create daily forecast (MANAGER only)
+ */
+export const usePostForecasts = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postForecasts>>, TError,PostForecastsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postForecasts>>,
+        TError,
+        PostForecastsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostForecastsMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List supplier scenarios (MANAGER and EMPLOYEE)
+ */
+export const getSupplierScenarios = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SupplierScenario[]>(
+      {url: `/supplier-scenarios`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetSupplierScenariosQueryKey = () => {
+    return [
+    `/supplier-scenarios`
+    ] as const;
+    }
+
+
+export const getGetSupplierScenariosQueryOptions = <TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupplierScenariosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierScenarios>>> = ({ signal }) => getSupplierScenarios(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSupplierScenariosQueryResult = NonNullable<Awaited<ReturnType<typeof getSupplierScenarios>>>
+export type GetSupplierScenariosQueryError = Error
+
+
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierScenarios>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierScenarios>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierScenarios>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierScenarios>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List supplier scenarios (MANAGER and EMPLOYEE)
+ */
+
+export function useGetSupplierScenarios<TData = Awaited<ReturnType<typeof getSupplierScenarios>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierScenarios>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSupplierScenariosQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create supplier scenario (MANAGER only)
+ */
+export const postSupplierScenarios = (
+    supplierScenarioInput: SupplierScenarioInput,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SupplierScenario>(
+      {url: `/supplier-scenarios`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: supplierScenarioInput, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostSupplierScenariosMutationKey = () => ['postSupplierScenarios'] as const;
+
+export const getPostSupplierScenariosMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext> => {
+
+const mutationKey = getPostSupplierScenariosMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postSupplierScenarios>>, PostSupplierScenariosMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postSupplierScenarios(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostSupplierScenariosMutationResult = NonNullable<Awaited<ReturnType<typeof postSupplierScenarios>>>
+    export type PostSupplierScenariosMutationBody = SupplierScenarioInput
+    export type PostSupplierScenariosMutationError = Error
+    export type PostSupplierScenariosMutationVariables = {data: SupplierScenarioInput}
+
+    /**
+ * @summary Create supplier scenario (MANAGER only)
+ */
+export const usePostSupplierScenarios = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postSupplierScenarios>>, TError,PostSupplierScenariosMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postSupplierScenarios>>,
+        TError,
+        PostSupplierScenariosMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostSupplierScenariosMutationOptions(options), queryClient);
+    }
+    /**
+ * Files in the shared folder (SHARED_DIR on the server). Every access is recorded in the security log.
+ * @summary List shared resources (any authenticated user)
+ */
+export const getSharedResources = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SharedResource[]>(
+      {url: `/shared-resources`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetSharedResourcesQueryKey = () => {
+    return [
+    `/shared-resources`
+    ] as const;
+    }
+
+
+export const getGetSharedResourcesQueryOptions = <TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSharedResourcesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedResources>>> = ({ signal }) => getSharedResources(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSharedResourcesQueryResult = NonNullable<Awaited<ReturnType<typeof getSharedResources>>>
+export type GetSharedResourcesQueryError = Error
+
+
+export function useGetSharedResources<TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSharedResources>>,
+          TError,
+          Awaited<ReturnType<typeof getSharedResources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSharedResources<TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSharedResources>>,
+          TError,
+          Awaited<ReturnType<typeof getSharedResources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSharedResources<TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List shared resources (any authenticated user)
+ */
+
+export function useGetSharedResources<TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResources>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSharedResourcesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Download a shared resource (any authenticated user)
+ */
+export const getSharedResourcesName = (
+    name: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<Blob>(
+      {url: `/shared-resources/${name}`, method: 'GET',
+        responseType: 'blob', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetSharedResourcesNameQueryKey = (name: string,) => {
+    return [
+    `/shared-resources/${name}`
+    ] as const;
+    }
+
+
+export const getGetSharedResourcesNameQueryOptions = <TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSharedResourcesNameQueryKey(name);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedResourcesName>>> = ({ signal }) => getSharedResourcesName(name, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: name !== null && name !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSharedResourcesNameQueryResult = NonNullable<Awaited<ReturnType<typeof getSharedResourcesName>>>
+export type GetSharedResourcesNameQueryError = Error
+
+
+export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(
+ name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSharedResourcesName>>,
+          TError,
+          Awaited<ReturnType<typeof getSharedResourcesName>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(
+ name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSharedResourcesName>>,
+          TError,
+          Awaited<ReturnType<typeof getSharedResourcesName>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(
+ name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Download a shared resource (any authenticated user)
+ */
+
+export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(
+ name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSharedResourcesName>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSharedResourcesNameQueryOptions(name,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * The request body is the raw file (Content-Type: application/octet-stream), up to 10 MB. Returns 201 when the file is new and 200 when an existing file was replaced.
+ * @summary Create or replace a shared resource (MANAGER only)
+ */
+export const putSharedResourcesName = (
+    name: string,
+    putSharedResourcesNameBody: Blob,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<SharedResource>(
+      {url: `/shared-resources/${name}`, method: 'PUT',
+      headers: {'Content-Type': 'application/octet-stream', },
+      data: putSharedResourcesNameBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPutSharedResourcesNameMutationKey = () => ['putSharedResourcesName'] as const;
+
+export const getPutSharedResourcesNameMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putSharedResourcesName>>, TError,PutSharedResourcesNameMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof putSharedResourcesName>>, TError,PutSharedResourcesNameMutationVariables, TContext> => {
+
+const mutationKey = getPutSharedResourcesNameMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putSharedResourcesName>>, PutSharedResourcesNameMutationVariables> = (props) => {
+          const {name,data} = props ?? {};
+
+          return  putSharedResourcesName(name,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutSharedResourcesNameMutationResult = NonNullable<Awaited<ReturnType<typeof putSharedResourcesName>>>
+    export type PutSharedResourcesNameMutationBody = Blob
+    export type PutSharedResourcesNameMutationError = Error
+    export type PutSharedResourcesNameMutationVariables = {name: string;data: Blob}
+
+    /**
+ * @summary Create or replace a shared resource (MANAGER only)
+ */
+export const usePutSharedResourcesName = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putSharedResourcesName>>, TError,PutSharedResourcesNameMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof putSharedResourcesName>>,
+        TError,
+        PutSharedResourcesNameMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutSharedResourcesNameMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Delete a shared resource (MANAGER only)
+ */
+export const deleteSharedResourcesName = (
+    name: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<void>(
+      {url: `/shared-resources/${name}`, method: 'DELETE', signal
+    },
+      options);
+    }
+
+
+
+
+export const getDeleteSharedResourcesNameMutationKey = () => ['deleteSharedResourcesName'] as const;
+
+export const getDeleteSharedResourcesNameMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSharedResourcesName>>, TError,DeleteSharedResourcesNameMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSharedResourcesName>>, TError,DeleteSharedResourcesNameMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSharedResourcesNameMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSharedResourcesName>>, DeleteSharedResourcesNameMutationVariables> = (props) => {
+          const {name} = props ?? {};
+
+          return  deleteSharedResourcesName(name,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSharedResourcesNameMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSharedResourcesName>>>
+
+    export type DeleteSharedResourcesNameMutationError = Error
+    export type DeleteSharedResourcesNameMutationVariables = {name: string}
+
+    /**
+ * @summary Delete a shared resource (MANAGER only)
+ */
+export const useDeleteSharedResourcesName = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSharedResourcesName>>, TError,DeleteSharedResourcesNameMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSharedResourcesName>>,
+        TError,
+        DeleteSharedResourcesNameMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSharedResourcesNameMutationOptions(options), queryClient);
     }

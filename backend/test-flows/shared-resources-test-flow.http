@@ -1,0 +1,69 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@customerPassword = StrongPassword123!
+@fileName = manual.txt
+
+### ==========================================
+### 1: AUTENTICAÇÃO E PREPARAÇÃO
+### ==========================================
+
+### 1.1 Login do Manager (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### 1.2 POST Criar Customer (201 Created)
+# O email é aleatório para o flow poder correr mais do que uma vez.
+# @name createCustomer
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "customer{{$randomInt 100000 999999}}@laprizza.pt",
+  "password": "{{customerPassword}}",
+  "role": "CUSTOMER"
+}
+?? status == 201
+
+### Variáveis
+@customerEmail = {{createCustomer.email}}
+
+### 1.3 Login do Customer (200 OK)
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{customerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Customer
+@customerToken = {{loginCustomer.accessToken}}
+
+### 1.4 DELETE Limpeza preventiva do ficheiro (204 ou 404 - sem asserção)
+# Garante que o 2. cria um ficheiro novo (201) mesmo que uma execução anterior tenha parado a meio.
+DELETE {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{adminToken}}
+
+
+### ==========================================
+### 2: UPLOAD E VALIDAÇÕES (PUT)
+### ==========================================
+
+### 2. PUT Upload como Manager, ficheiro novo (201 Created)
+PUT {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/octet-stream

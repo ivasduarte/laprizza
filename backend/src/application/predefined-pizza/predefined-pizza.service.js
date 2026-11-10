@@ -8,8 +8,7 @@ import {
 } from '../../domain/predefined-pizza/predefined-pizza.domain.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { AppError } from '../app-error.js';
-import { cached } from '../../infrastructure/cache/cache.js';
-import { invalidate } from '../../infrastructure/cache/cache.js';
+import { cached, invalidate } from '../../infrastructure/cache/cache.js';
 
 export function toPredefinedPizzaDto(pizza) {
   return {
@@ -100,6 +99,7 @@ async function buildDetails(pizza, pizzaRepository) {
 
   return toPredefinedPizzaDetailsDto(pizza, { product, sizes, components, componentTypes });
 }
+
 export async function getPredefinedPizzaById(id, pizzaRepository = defaultPizzaRepository) {
   return cached('predefined-pizza', ['id', String(id)], 60, async () => {
     const pizza = await pizzaRepository.findById(id);
@@ -138,7 +138,9 @@ export async function createPredefinedPizza(pizzaData, pizzaRepository = default
     const created = await pizzaRepository.create(
       createPredefinedPizzaData(pizzaData.productId, sizeIds, componentIds),
     );
-    await invalidate('predefined-pizza', 'ai-data');
+
+    await invalidate('predefined-pizza');
+
     return toPredefinedPizzaDto(created);
   } catch (err) {
     if (err.code === 11000)
@@ -183,6 +185,8 @@ export async function updatePredefinedPizza(
   }
 
   const updated = await pizzaRepository.update(id, changes);
-  await invalidate('predefined-pizza', 'ai-data');
+
+  await invalidate('predefined-pizza');
+
   return toPredefinedPizzaDto(updated);
 }

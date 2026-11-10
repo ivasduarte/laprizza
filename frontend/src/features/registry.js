@@ -52,4 +52,10 @@ export const features = [
     load: () =>
       import('./kitchen-configuration/kitchen-configuration-page.jsx'),
   },
+  {
+    id: 'shared-resources',
+    path: '/shared-resources',
+    labelKey: 'nav.sharedResources',
+    load: () => import('./shared-resources/shared-resources-page.jsx'),
+  },
 ];

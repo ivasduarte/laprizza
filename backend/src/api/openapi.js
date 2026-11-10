@@ -15,6 +15,14 @@ const objectIdPathParam = (name) => ({
 });
 const productIdParam = objectIdPathParam('productId');
 const sizeIdParam = objectIdPathParam('sizeId');
+const sharedResourceNameParam = {
+  name: 'name',
+  in: 'path',
+  required: true,
+  description:
+    'File name: letters (accents allowed), numbers, spaces, dots, hyphens or underscores (max. 100 characters), starting with a letter or number. Allowed extensions: .pdf, .md, .txt, .docx, .xlsx, .png, .jpg.',
+  schema: { type: 'string', maxLength: 100 },
+};
 
 /**
  * OpenAPI description of the API.
@@ -1748,6 +1756,151 @@ export const openApiSpec = {
         },
       },
     },
+    '/forecasts': {
+      get: {
+        summary: 'List daily forecasts (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Forecast' } },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+        },
+      },
+      post: {
+        summary: 'Create daily forecast (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/ForecastInput' } },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Forecast' } } },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          409: errorResponse('Name already in use'),
+        },
+      },
+    },
+    '/supplier-scenarios': {
+      get: {
+        summary: 'List supplier scenarios (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/SupplierScenario' } },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+        },
+      },
+      post: {
+        summary: 'Create supplier scenario (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/SupplierScenarioInput' } },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SupplierScenario' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+        },
+      },
+    },
+    '/shared-resources': {
+      get: {
+        summary: 'List shared resources (any authenticated user)',
+        description:
+          'Files in the shared folder (SHARED_DIR on the server). Every access is recorded in the security log.',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/SharedResource' } },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+        },
+      },
+    },
+    '/shared-resources/{name}': {
+      get: {
+        summary: 'Download a shared resource (any authenticated user)',
+        security: [{ BearerAuth: [] }],
+        parameters: [sharedResourceNameParam],
+        responses: {
+          200: {
+            description: 'The file content',
+            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+          },
+          400: errorResponse('Invalid file name or file type'),
+          401: errorResponse('Unauthorized'),
+          404: errorResponse('Resource not found'),
+        },
+      },
+      put: {
+        summary: 'Create or replace a shared resource (MANAGER only)',
+        description:
+          'The request body is the raw file (Content-Type: application/octet-stream), up to 10 MB. Returns 201 when the file is new and 200 when an existing file was replaced.',
+        security: [{ BearerAuth: [] }],
+        parameters: [sharedResourceNameParam],
+        requestBody: {
+          required: true,
+          content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+        },
+        responses: {
+          200: {
+            description: 'Replaced',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } } },
+          },
+          201: {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } } },
+          },
+          400: errorResponse('Invalid file name, file type or empty body'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          413: errorResponse('File larger than 10 MB'),
+        },
+      },
+      delete: {
+        summary: 'Delete a shared resource (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [sharedResourceNameParam],
+        responses: {
+          204: { description: 'Removed' },
+          400: errorResponse('Invalid file name or file type'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Resource not found'),
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -1944,6 +2097,102 @@ export const openApiSpec = {
           branch: { type: 'string', example: 'main' },
           commitDate: { type: 'string', format: 'date-time' },
           deployedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ForecastInput: {
+        type: 'object',
+        required: ['name', 'startDate', 'endDate', 'entries'],
+        properties: {
+          name: { type: 'string' },
+          version: { type: 'integer', default: 1 },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' },
+          entries: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['date', 'productId', 'quantity'],
+              properties: {
+                date: { type: 'string', format: 'date' },
+                productId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                sizeId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$', nullable: true },
+                quantity: { type: 'integer', minimum: 0 },
+              },
+            },
+          },
+        },
+      },
+      Forecast: {
+        allOf: [
+          { $ref: '#/components/schemas/ForecastInput' },
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              isActive: { type: 'boolean' },
+            },
+          },
+        ],
+      },
+      SupplierScenarioInput: {
+        type: 'object',
+        required: ['name', 'suppliers', 'products'],
+        properties: {
+          name: { type: 'string' },
+          version: { type: 'integer', default: 1 },
+          simulated: { type: 'boolean', default: true },
+          suppliers: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id'],
+              properties: { id: { type: 'string' }, name: { type: 'string' } },
+            },
+          },
+          products: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['productId', 'offers'],
+              properties: {
+                productId: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                offers: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    required: ['supplierId', 'priceEur', 'stockUnits', 'leadTimeDays'],
+                    properties: {
+                      supplierId: { type: 'string' },
+                      priceEur: { type: 'number', minimum: 0 },
+                      stockUnits: { type: 'integer', minimum: 1 },
+                      leadTimeDays: { type: 'integer', minimum: 0 },
+                      supplyLimit: { type: 'integer', minimum: 0 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      SupplierScenario: {
+        allOf: [
+          { $ref: '#/components/schemas/SupplierScenarioInput' },
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              isActive: { type: 'boolean' },
+            },
+          },
+        ],
+      },
+      SharedResource: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', example: 'operations-manual.pdf' },
+          size: { type: 'integer', description: 'Size in bytes.', example: 48213 },
+          updatedAt: { type: 'string', format: 'date-time' },
         },
       },
     },

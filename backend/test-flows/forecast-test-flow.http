@@ -1,0 +1,588 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicName = Forecast_{{$timestamp}}
+@missingId = 507f1f77bcf86cd799439011
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Manager (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### ==========================================
+### 2: DADOS DE SUPORTE (produto usado nas entradas)
+### ==========================================
+
+### 2. POST Categoria de suporte (201 Created)
+# @name createCategoryRef
+POST {{baseUrl}}/product-categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Categoria Forecast {{$timestamp}}"
+}
+?? status == 201
+
+### Variáveis
+@categoryId = {{createCategoryRef.id}}
+
+### 2.1 POST Produto de suporte (201 Created)
+# @name createProductRef
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Produto Forecast {{$timestamp}}",
+  "description": "Produto para entradas de forecast",
+  "sellable": false,
+  "stockControlled": false,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+### Variáveis
+@productId = {{createProductRef.id}}
+
+### ==========================================
+### 3: CRIAÇÃO E VALIDAÇÕES (POST)
+### ==========================================
+
+### 3. POST Forecast Novo - com espaços à volta para provar o trim (201 Created)
+# @name createForecast
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "   {{dynamicName}}   ",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    {
+      "date": "2026-11-01",
+      "productId": "{{productId}}",
+      "sizeId": null,
+      "quantity": 10
+    },
+    {
+      "date": "2026-11-02",
+      "productId": "{{productId}}",
+      "quantity": 0
+    }
+  ]
+}
+?? status == 201
+
+### Variáveis
+@forecastId = {{createForecast.id}}
+@createdName = {{createForecast.name}}
+
+### 3.1 POST Nome Duplicado (mesma versão) (409 Conflict)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 409
+
+### 3.2 POST Nome Duplicado com outras maiúsculas (409 Conflict)
+# Altera manualmente o nome abaixo para MAIÚSCULAS (ex.: FORECAST_1760000000)
+# para validar que a unicidade ignora maiúsculas/minúsculas.
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 409
+
+### 3.3 POST Mesmo nome com outra versão (201 Created - versões diferentes são permitidas)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "version": 2,
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 201
+
+### 3.4 POST Sem body - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 3.5 POST name vazio - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.6 POST name só com espaços - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "     ",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.7 POST name não-string - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": 123,
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.8 POST Sem startDate - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem_StartDate_{{$timestamp}}",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.9 POST Sem endDate - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem_EndDate_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "entries": []
+}
+?? status == 400
+
+### 3.10 POST Sem entries - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Sem_Entries_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30"
+}
+?? status == 400
+
+### 3.11 POST entries não é array - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entries_Invalido_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": "abc"
+}
+?? status == 400
+
+### 3.12 POST version inválida (0) - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Versao_Invalida_{{$timestamp}}",
+  "version": 0,
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.13 POST Entrada sem date - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemData_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "productId": "{{productId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3.14 POST Entrada sem productId - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemProduto_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3.15 POST Entrada com productId de formato inválido - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_ProdutoInvalido_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "productId": "abc", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3.16 POST Entrada com sizeId de formato inválido - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SizeInvalido_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "productId": "{{productId}}", "sizeId": "abc", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3.17 POST Entrada sem quantity - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemQuantidade_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "productId": "{{productId}}" }
+  ]
+}
+?? status == 400
+
+### 3.18 POST Entrada com quantity negativa - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_QtdNegativa_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "productId": "{{productId}}", "quantity": -1 }
+  ]
+}
+?? status == 400
+
+### 3.19 POST Entrada com quantity decimal - Joi (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_QtdDecimal_{{$timestamp}}",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": [
+    { "date": "2026-11-01", "productId": "{{productId}}", "quantity": 1.5 }
+  ]
+}
+?? status == 400
+
+### 3.20 POST Data que não é uma data válida (400 Bad Request)
+# O Joi só valida que é string; quem rejeita é o Mongoose (cast para Date).
+# Se este pedido devolver 500, falta mapear o erro de cast para 400.
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Data_Invalida_{{$timestamp}}",
+  "startDate": "isto-nao-e-uma-data",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 400
+
+### 3.21 POST Segundo Forecast, com campos extra ignorados (201 Created, isActive = true)
+# @name createSecondForecast
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Forecast_Extra_{{$randomInt 1000 9999}}",
+  "startDate": "2026-12-01",
+  "endDate": "2026-12-31",
+  "entries": [],
+  "isActive": false,
+  "role": "MANAGER"
+}
+?? status == 201
+
+### Variáveis
+@secondId = {{createSecondForecast.id}}
+@secondName = {{createSecondForecast.name}}
+
+
+### ==========================================
+### 4: PESQUISA E CONSULTAS (GET)
+### ==========================================
+
+### 4. GET Listar Todos (200 OK)
+GET {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.1 GET Pesquisa parcial por nome (200 OK)
+GET {{baseUrl}}/forecasts?name=Forecast
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.2 GET Pesquisa sem resultados (200 OK, [])
+GET {{baseUrl}}/forecasts?name=zzz_inexistente
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.3 GET Pesquisa com caracteres de regex tratados como texto (200 OK, [])
+GET {{baseUrl}}/forecasts?name=.*
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.4 GET name vazio - Joi (400 Bad Request)
+GET {{baseUrl}}/forecasts?name=
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.5 GET name enviado duas vezes - Joi (400 Bad Request)
+GET {{baseUrl}}/forecasts?name=a&name=b
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.6 GET Por ID (200 OK, com as 2 entradas)
+GET {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4.7 GET Por ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/forecasts/abc123
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.8 GET Por ID inexistente (404 Not Found)
+GET {{baseUrl}}/forecasts/{{missingId}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+
+### ==========================================
+### 5: DESATIVAR (PUT com isActive:false)
+### ==========================================
+# O PUT só aceita { "isActive": false } - não renomeia nem altera entradas.
+
+### 5. PUT Body vazio - Joi (400 Bad Request)
+PUT {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 5.1 PUT Só com name - Joi (400 Bad Request - não é possível renomear)
+PUT {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Outro_Nome"
+}
+?? status == 400
+
+### 5.2 PUT isActive:true - Joi (400 Bad Request)
+PUT {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true
+}
+?? status == 400
+
+### 5.3 PUT isActive inválido - Joi (400 Bad Request)
+PUT {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": "abc"
+}
+?? status == 400
+
+### 5.4 PUT ID com formato inválido (400 Bad Request)
+PUT {{baseUrl}}/forecasts/abc
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 400
+
+### 5.5 PUT ID inexistente (404 Not Found)
+PUT {{baseUrl}}/forecasts/{{missingId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 404
+
+### 5.6 PUT Desativar forecast (200 OK, isActive = false; o name enviado é ignorado)
+PUT {{baseUrl}}/forecasts/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Nome_Ignorado",
+  "isActive": false
+}
+?? status == 200
+
+
+### ==========================================
+### 6: CONSISTÊNCIA APÓS DESATIVAR
+### ==========================================
+
+### 6. GET Por ID do desativado (404 Not Found)
+GET {{baseUrl}}/forecasts/{{secondId}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+### 6.1 GET Listar - o desativado já não aparece (200 OK)
+GET {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 6.2 GET Pesquisa por nome - o desativado já não aparece (200 OK, [])
+GET {{baseUrl}}/forecasts?name={{secondName}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 6.3 PUT Desativar outra vez (404 Not Found)
+PUT {{baseUrl}}/forecasts/{{secondId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 404
+
+### 6.4 POST Mesmo nome do desativado (409 Conflict - o nome continua reservado)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{secondName}}",
+  "startDate": "2026-12-01",
+  "endDate": "2026-12-31",
+  "entries": []
+}
+?? status == 409
+
+
+### ==========================================
+### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
+### ==========================================
+
+### 7. GET Sem token (401 Unauthorized)
+GET {{baseUrl}}/forecasts
+?? status == 401
+
+### 7.1 POST Sem token (401 Unauthorized)
+POST {{baseUrl}}/forecasts
+Content-Type: application/json
+
+{
+  "name": "Sem_Token",
+  "startDate": "2026-11-01",
+  "endDate": "2026-11-30",
+  "entries": []
+}
+?? status == 401
+
+### 7.2 PUT Sem token (401 Unauthorized)
+PUT {{baseUrl}}/forecasts/{{forecastId}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+?? status == 401
+
+### 7.3 GET Com token inválido (401 Unauthorized)
+GET {{baseUrl}}/forecasts
+Authorization: Bearer token_invalido
+?? status == 401

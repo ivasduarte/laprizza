@@ -1,0 +1,62 @@
+.sr-card {
+  display: block;
+  margin-block: 1.25rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+
+.sr-card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.sr-card > * + * {
+  margin-top: 0.9rem;
+}
+
+.sr-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.sr-row:has(> h2) {
+  justify-content: space-between;
+}
+
+.sr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.sr-grid input {
+  width: 100%;
+}
+
+.sr-scroll {
+  overflow-x: auto;
+}
+
+.sr-field-error {
+  margin: 0;
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.sr-page input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+/* Variante destrutiva dos botões */
+.sr-page .danger {
+  background: var(--color-error);
+}
+
+.sr-page .danger:hover {
+  background: #8f1a22;
+}

@@ -7,7 +7,8 @@ import ProductModel from '../../infrastructure/products/products.model.js';
 import StockModel from '../../infrastructure/stock/stock.model.js';
 import PizzaSizeModel from '../../infrastructure/pizza-size/pizza-size.model.js';
 import PredefinedPizzaModel from '../../infrastructure/predefined-pizza/predefined-pizza.model.js';
-
+import ForecastModel from '../../infrastructure/forecast/forecast.model.js';
+import SupplierScenarioModel from '../../infrastructure/supplier-scenario/supplier-scenario.model.js';
 
 export default function aiDataRouterFactory(deps) {
   const aiDataRepository =
@@ -17,6 +18,8 @@ export default function aiDataRouterFactory(deps) {
       stockModel: StockModel,
       sizeModel: PizzaSizeModel,
       predefinedPizzaModel: PredefinedPizzaModel,
+      forecastModel: ForecastModel,
+      supplierScenarioModel: SupplierScenarioModel,
     });
 
   const router = Router();
