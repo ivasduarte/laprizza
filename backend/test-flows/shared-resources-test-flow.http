@@ -67,3 +67,94 @@ Authorization: Bearer {{adminToken}}
 PUT {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/octet-stream
+
+Conteudo de teste
+?? status == 201
+
+### 2.1 PUT Upload do mesmo nome, substitui o ficheiro (200 OK)
+PUT {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/octet-stream
+
+Conteudo atualizado
+?? status == 200
+
+### 2.2 PUT Extensão não permitida (400 Bad Request)
+PUT {{baseUrl}}/shared-resources/script.exe
+Authorization: Bearer {{adminToken}}
+Content-Type: application/octet-stream
+
+x
+?? status == 400
+
+### 2.3 PUT Upload como Customer (403 Forbidden - apenas Manager)
+PUT {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/octet-stream
+
+Conteudo de teste
+?? status == 403
+
+
+### ==========================================
+### 3: LISTAGEM E DOWNLOAD (GET)
+### ==========================================
+
+### 3. GET Listar como Customer (200 OK)
+GET {{baseUrl}}/shared-resources
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 3.1 GET Listar como Manager (200 OK)
+GET {{baseUrl}}/shared-resources
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 4. GET Download como Customer (200 OK - devolve o conteúdo atualizado no 2.1)
+GET {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{customerToken}}
+?? status == 200
+
+### 4.1 GET Path traversal (400 Bad Request)
+GET {{baseUrl}}/shared-resources/..%2F..%2Fetc%2Fpasswd
+Authorization: Bearer {{customerToken}}
+?? status == 400
+
+
+### ==========================================
+### 5: REMOÇÃO (DELETE)
+### ==========================================
+
+### 5. DELETE Como Customer (403 Forbidden - apenas Manager)
+DELETE {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{customerToken}}
+?? status == 403
+
+### 5.1 DELETE Como Manager (204 No Content)
+DELETE {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{adminToken}}
+?? status == 204
+
+
+### ==========================================
+### 6: CONSISTÊNCIA APÓS REMOVER
+### ==========================================
+
+### 6. GET Download do ficheiro removido (404 Not Found)
+GET {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{customerToken}}
+?? status == 404
+
+
+### ==========================================
+### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
+### ==========================================
+
+### 7. GET Listar sem token (401 Unauthorized)
+GET {{baseUrl}}/shared-resources
+?? status == 401
+
+### 7.1 GET Com token inválido (401 Unauthorized)
+GET {{baseUrl}}/shared-resources
+Authorization: Bearer token_invalido
+?? status == 401

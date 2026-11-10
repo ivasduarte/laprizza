@@ -18,7 +18,7 @@ export const messages = {
       forgotPassword: 'Forgot password',
       resetPassword: 'Reset password',
       kitchenConfig: 'Kitchen Configuration',
-      sharedResources: 'Shared Resources',
+      sharedResources: 'Shared resources',
     },
     home: {
       welcome: 'Welcome to LaPrizza',
@@ -285,6 +285,8 @@ export const messages = {
         empty: 'The selected file is empty.',
         name: 'Use letters, numbers, spaces, dots, hyphens or underscores (max. 100 characters), starting with a letter or number.',
         type: 'This file type is not allowed. Use one of the allowed types.',
+        personalData:
+          'The file suggests customer data, credentials or backups. These cannot be shared.',
       },
     },
   },
@@ -578,6 +580,8 @@ export const messages = {
         empty: 'O ficheiro selecionado está vazio.',
         name: 'Use letras, números, espaços, pontos, hífenes ou underscores (máx. 100 caracteres), começando por uma letra ou número.',
         type: 'Este tipo de ficheiro não é permitido. Use um dos tipos permitidos.',
+        personalData:
+          'O ficheiro indica dados de clientes, credenciais ou backups. Estes ficheiros não podem ser partilhados.',
       },
     },
   },

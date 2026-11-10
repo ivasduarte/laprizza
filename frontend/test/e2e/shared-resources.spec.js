@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 const mockManagerSession = {
   accessToken: 'fake-jwt-token',
-  user: { id: '1', email: 'admin@laprizza.pt', role: 'MANAGER' },
+  user: { id: '1', email: 'admin@laprizza.pt', role: 'MANAGER', roles: ['MANAGER'] },
 };
 
 const mockEmployeeSession = {
   accessToken: 'fake-jwt-token',
-  user: { id: '2', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  user: { id: '2', email: 'emp@laprizza.pt', role: 'EMPLOYEE', roles: ['EMPLOYEE'] },
 };
 
 const mockFiles = [
@@ -26,7 +26,8 @@ async function loginAndOpenSharedResources(page, email) {
     page.waitForResponse('**/api/v1/auth/login'),
     page.click('button[type="submit"]'),
   ]);
-  await page.getByRole('link', { name: 'Shared resources' }).click();
+  await page.getByRole('link', { name: /shared resources/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Shared resources', level: 1 })).toBeVisible();
 }
 
 test.describe('Shared Resources Page E2E', () => {
@@ -41,25 +42,15 @@ test.describe('Shared Resources Page E2E', () => {
     });
 
     await loginAndOpenSharedResources(page, 'emp@laprizza.pt');
-
     await expect(page.getByText('manual.pdf')).toBeVisible();
     await expect(page.getByText('relatorio.md')).toBeVisible();
-    await expect(
-      page.getByText('Only managers can add or remove them.')
-    ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Download manual.pdf' })
-    ).toBeVisible();
-
-    await expect(page.getByRole('button', { name: 'Upload file' })).toHaveCount(
-      0
-    );
+    await expect(page.getByText('Only managers can add or remove them.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Download manual.pdf' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Upload file' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Delete / })).toHaveCount(0);
   });
 
-  test('List: shows an explicit empty state when there are no files', async ({
-    page,
-  }) => {
+  test('List: shows an explicit empty state when there are no files', async ({ page }) => {
     await page.route('**/api/v1/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
@@ -69,24 +60,17 @@ test.describe('Shared Resources Page E2E', () => {
 
     await loginAndOpenSharedResources(page, 'admin@laprizza.pt');
 
-    await expect(
-      page.getByText('There are no shared files yet.')
-    ).toBeVisible();
+    await expect(page.getByText('There are no shared files yet.')).toBeVisible();
   });
 
-  test('List: a server error shows a generic message and a retry button', async ({
-    page,
-  }) => {
+  test('List: a server error shows a generic message and a retry button', async ({ page }) => {
     await page.route('**/api/v1/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
     let failList = true;
     await page.route(LIST_URL, async (route) => {
       if (failList) {
-        await route.fulfill({
-          status: 500,
-          json: { error: { message: 'Internal Server Error' } },
-        });
+        await route.fulfill({ status: 500, json: { error: { message: 'Internal Server Error' } } });
       } else {
         await route.fulfill({ json: mockFiles });
       }
@@ -94,12 +78,9 @@ test.describe('Shared Resources Page E2E', () => {
 
     await loginAndOpenSharedResources(page, 'admin@laprizza.pt');
 
-    await expect(page.getByRole('alert')).toContainText(
-      'Something went wrong',
-      {
-        timeout: 15_000,
-      }
-    );
+    await expect(page.getByRole('alert')).toContainText('Something went wrong', {
+      timeout: 15_000,
+    });
     await expect(page.getByText('Internal Server Error')).toHaveCount(0);
 
     failList = false;
@@ -107,9 +88,7 @@ test.describe('Shared Resources Page E2E', () => {
     await expect(page.getByText('manual.pdf')).toBeVisible();
   });
 
-  test('Download: downloads the file with its original name', async ({
-    page,
-  }) => {
+  test('Download: downloads the file with its original name', async ({ page }) => {
     await page.route('**/api/v1/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
@@ -145,14 +124,8 @@ test.describe('Shared Resources Page E2E', () => {
     await page.route(FILE_URL, async (route) => {
       if (route.request().method() !== 'PUT') return route.fallback();
       uploadRequest = route.request();
-      files = [
-        ...files,
-        { name: 'menu.txt', size: 12, updatedAt: '2026-11-09T12:00:00Z' },
-      ];
-      await route.fulfill({
-        status: 201,
-        json: { name: 'menu.txt', size: 12 },
-      });
+      files = [...files, { name: 'menu.txt', size: 12, updatedAt: '2026-11-09T12:00:00Z' }];
+      await route.fulfill({ status: 201, json: { name: 'menu.txt', size: 12 } });
     });
 
     await loginAndOpenSharedResources(page, 'admin@laprizza.pt');
@@ -165,20 +138,17 @@ test.describe('Shared Resources Page E2E', () => {
     await page.getByRole('button', { name: 'Upload file' }).click();
 
     await expect(
-      page.getByRole('status').filter({ hasText: '“menu.txt” was uploaded.' })
+      page.getByRole('status').filter({ hasText: '“menu.txt” was uploaded.' }),
     ).toBeVisible();
     await expect(page.getByText('menu.txt').first()).toBeVisible();
 
+    // O ficheiro foi enviado em bruto, não como JSON
     expect(uploadRequest.url()).toContain('/shared-resources/menu.txt');
-    expect(uploadRequest.headers()['content-type']).toBe(
-      'application/octet-stream'
-    );
+    expect(uploadRequest.headers()['content-type']).toBe('application/octet-stream');
     expect(uploadRequest.postDataBuffer()?.toString()).toBe('Pizza do dia');
   });
 
-  test('Manager Flow: Warns before replacing an existing file', async ({
-    page,
-  }) => {
+  test('Manager Flow: Warns before replacing an existing file', async ({ page }) => {
     await page.route('**/api/v1/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
@@ -187,10 +157,7 @@ test.describe('Shared Resources Page E2E', () => {
     });
     await page.route(FILE_URL, async (route) => {
       if (route.request().method() !== 'PUT') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: { name: 'manual.pdf', size: 3 },
-      });
+      await route.fulfill({ status: 200, json: { name: 'manual.pdf', size: 3 } });
     });
 
     await loginAndOpenSharedResources(page, 'admin@laprizza.pt');
@@ -202,14 +169,12 @@ test.describe('Shared Resources Page E2E', () => {
     });
 
     await expect(
-      page.getByText(
-        'A file with this name already exists and will be replaced.'
-      )
+      page.getByText('A file with this name already exists and will be replaced.'),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Replace file' }).click();
 
     await expect(
-      page.getByRole('status').filter({ hasText: '“manual.pdf” was replaced.' })
+      page.getByRole('status').filter({ hasText: '“manual.pdf” was replaced.' }),
     ).toBeVisible();
   });
 
@@ -238,9 +203,7 @@ test.describe('Shared Resources Page E2E', () => {
     });
     await page.getByRole('button', { name: 'Upload file' }).click();
 
-    await expect(page.getByRole('alert')).toContainText(
-      'This file type is not allowed.'
-    );
+    await expect(page.getByRole('alert')).toContainText('This file type is not allowed.');
     expect(uploadCalled).toBe(false);
   });
 
@@ -263,15 +226,13 @@ test.describe('Shared Resources Page E2E', () => {
 
     await page.getByRole('button', { name: 'Delete manual.pdf' }).click();
     await expect(page.getByRole('alert')).toContainText(
-      'Delete “manual.pdf”? This cannot be undone.'
+      'Delete “manual.pdf”? This cannot be undone.',
     );
     await page.getByRole('button', { name: 'Delete file' }).click();
 
     await expect(
-      page.getByRole('status').filter({ hasText: '“manual.pdf” was deleted.' })
+      page.getByRole('status').filter({ hasText: '“manual.pdf” was deleted.' }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Download manual.pdf' })
-    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Download manual.pdf' })).toHaveCount(0);
   });
 });

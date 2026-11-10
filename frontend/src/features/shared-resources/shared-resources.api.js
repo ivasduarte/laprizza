@@ -20,25 +20,3 @@ export const sharedResourcesApi = {
     return api.delete(resourcePath(name));
   },
 };
-
-/**
- * Maps API errors to user-friendly translation keys.
- */
-export function getSharedResourcesErrorKey(error) {
-  switch (error?.status) {
-    case 0:
-      return 'sharedResources.err.network';
-    case 400:
-      return 'sharedResources.err.invalid';
-    case 401:
-      return 'sharedResources.err.session';
-    case 403:
-      return 'sharedResources.err.forbidden';
-    case 404:
-      return 'sharedResources.err.notFound';
-    case 413:
-      return 'sharedResources.err.tooLarge';
-    default:
-      return 'sharedResources.err.generic';
-  }
-}

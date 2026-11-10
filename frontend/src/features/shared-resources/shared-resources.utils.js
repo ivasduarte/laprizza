@@ -11,6 +11,35 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}\p{M}._ -]{0,99}$/u;
 const MAX_NAME_BYTES = 255;
 
+
+const PERSONAL_NUMBER_PATTERN = /\d{9}/;
+export const FORBIDDEN_NAME_TERMS = [
+  'cliente',
+  'customer',
+  'dietary',
+  'perfil alimentar',
+  'perfis alimentares',
+  'backup',
+  'dump',
+  'password',
+  'palavra passe',
+  'credencia',
+  'credential',
+];
+
+const comparableName = (value) =>
+  value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[\s._-]+/g, ' ');
+
+export function looksLikePersonalData(name) {
+  if (PERSONAL_NUMBER_PATTERN.test(name)) return true;
+  const comparable = comparableName(name);
+  return FORBIDDEN_NAME_TERMS.some((term) => comparable.includes(term));
+}
+
 export function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -46,6 +75,9 @@ export function validateUpload(name, file) {
     new TextEncoder().encode(normalized).length > MAX_NAME_BYTES
   ) {
     return 'sharedResources.err.name';
+  }
+  if (looksLikePersonalData(normalized)) {
+    return 'sharedResources.err.personalData';
   }
   const dot = normalized.lastIndexOf('.');
   const extension = dot === -1 ? '' : normalized.slice(dot).toLowerCase();
