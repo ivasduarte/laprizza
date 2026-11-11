@@ -6,6 +6,9 @@ import AuthButton from './auth-button.jsx';
 import BackendStatus from './backend-status.jsx';
 import LanguageSwitcher from './language-switcher.jsx';
 import Logo from './logo.jsx';
+import GlobalProgress from './feedback/global-progress.jsx';
+import ToastRegion from './feedback/toast-region.jsx';
+import ConfirmDialogHost from './feedback/confirm-dialog-host.jsx';
 
 const navFeatures = features.filter((feature) => feature.showInNav !== false);
 
@@ -14,6 +17,7 @@ export default function Layout() {
 
   return (
     <div className="layout">
+      <GlobalProgress />
       <a className="skip-link" href="#main-content">
         {t('layout.skipToContent')}
       </a>
@@ -50,6 +54,8 @@ export default function Layout() {
           <BackendStatus />
         </div>
       </footer>
+      <ToastRegion />
+      <ConfirmDialogHost />
     </div>
   );
 }
