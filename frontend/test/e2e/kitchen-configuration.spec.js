@@ -106,7 +106,7 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
 
     await expect(
-      page.locator('.viewer-mock-container p[role="alert"]')
+      page.getByText('No active kitchen configuration to display.')
     ).toBeVisible();
     await expect(page.getByTestId('viewer-active-config')).toHaveCount(0);
   });
@@ -153,13 +153,16 @@ test.describe('Kitchen Configuration Page E2E', () => {
       page.getByRole('heading', { name: 'Automated Line' })
     ).toBeVisible();
 
-    // 2. Aceitar automaticamente o prompt de confirmação do browser
-    page.on('dialog', (dialog) => dialog.accept());
-
     // 3. Clicar em "Activate" na configuração inativa (Automated Line)
     // O botão Activate estará dentro do card que NÃO tem a classe 'active'
     const inactiveCard = page.locator('.kitchen-config-card:not(.active)');
     await inactiveCard.getByRole('button', { name: 'Activate' }).click();
+
+    // WEB04: confirmation dialog of the app (no longer window.confirm)
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Activate' })
+      .click();
 
     // 4. Verificar a mensagem de sucesso e o reload do viewer
     await expect(

@@ -4881,11 +4881,49 @@
               },
               "details": {
                 "type": "array",
+                "description": "Validation violations (HTTP 400). Clients translate by `type` and bind each item to an input by `field`. Kitchen configuration content violations are plain strings prefixed by their JSON pointer.",
                 "items": {
-                  "type": "string"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationDetail"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
                 }
               }
             }
+          }
+        }
+      },
+      "ValidationDetail": {
+        "type": "object",
+        "required": [
+          "field",
+          "type",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Dot-separated path of the invalid input. Empty when it concerns the whole payload.",
+            "example": "address.postalCode"
+          },
+          "type": {
+            "type": "string",
+            "description": "Stable Joi error type.",
+            "example": "string.min"
+          },
+          "message": {
+            "type": "string",
+            "description": "Technical English message (diagnostics only).",
+            "example": "\"name\" length must be at least 3 characters long"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Violated numeric limit (min/max/length rules).",
+            "example": 3
           }
         }
       },

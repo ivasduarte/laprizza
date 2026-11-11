@@ -4,6 +4,7 @@ import * as controller from './customers.controller.js';
 import { Router } from 'express';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 
 /**
@@ -55,13 +56,7 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
   const validateListQuery = (req, res, next) => {
     const { error } = listCustomersQuerySchema.validate({ ...req.query }, { allowUnknown: true });
     if (error) {
-      return next(
-        new AppError(
-          'Validation failed',
-          400,
-          error.details.map((d) => d.message),
-        ),
-      );
+      return next(new AppError('Validation failed', 400, joiDetails(error)));
     }
     next();
   };
@@ -83,13 +78,7 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
         });
 
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
 
         req.body = value;
@@ -156,13 +145,7 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
       try {
         const { error, value } = updateCustomerSchema.validate(req.body, { stripUnknown: true });
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
         req.body = value;
         next();

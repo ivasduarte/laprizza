@@ -1,9 +1,34 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../../shared/auth/auth-api.js';
-import { authErrorText } from '../../shared/auth/auth-error.js';
 import { useSession } from '../../shared/auth/use-session.js';
+import { useConfirm } from '../../shared/feedback/use-feedback.js';
+import { useSubmit } from '../../shared/forms/use-submit.js';
+import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
+import { fieldProps } from '../../shared/forms/field-props.js';
+import {
+  hasErrors,
+  passwordRules,
+  required,
+  sameAs,
+  validateForm,
+} from '../../shared/forms/validators.js';
+import FieldError from '../../shared/ui/feedback/field-error.jsx';
+import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
+import Spinner from '../../shared/ui/feedback/spinner.jsx';
+
+const IDS = {
+  currentPassword: 'change-current',
+  newPassword: 'change-new',
+  confirmation: 'change-confirm',
+};
+const idFor = (field) => IDS[field] ?? field;
+const SCHEMA = {
+  currentPassword: [required()],
+  newPassword: passwordRules(),
+  confirmation: [required(), sameAs('newPassword')],
+};
 
 /**
  * Authenticated password change. The back end keeps this session and ends the
@@ -12,14 +37,15 @@ import { useSession } from '../../shared/auth/use-session.js';
 export default function ChangePasswordPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { status, user } = useSession();
+  const formRef = useRef(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [error, setError] = useState(null);
-  const [mismatch, setMismatch] = useState(false);
   const [done, setDone] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const { submit, submitting, error } = useSubmit();
+  const { errors, setErrors, fromApi, clearField } = useFieldErrors(formRef);
 
   if (status === 'anonymous') return <Navigate to="/login" replace />;
   if (status !== 'authenticated') {
@@ -28,29 +54,48 @@ export default function ChangePasswordPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError(null);
     setDone(false);
-    setMismatch(newPassword !== confirmation);
-    if (newPassword !== confirmation) return;
+    const clientErrors = validateForm(
+      { currentPassword, newPassword, confirmation },
+      SCHEMA
+    );
+    setErrors(clientErrors);
+    if (hasErrors(clientErrors)) return;
 
-    setSubmitting(true);
-    try {
-      await authApi.changePassword(currentPassword, newPassword);
+    const result = await submit(() =>
+      authApi.changePassword(currentPassword, newPassword)
+    );
+    if (result.ok) {
       setDone(true);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setSubmitting(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmation('');
+    } else if (result.error) {
+      fromApi(result.error); // on failure the typed values are kept
     }
   }
 
-  function handleLogout(endSession) {
+  async function handleLogout(endSession, { needsConfirmation = false } = {}) {
+    if (
+      needsConfirmation &&
+      !(await confirm({
+        titleKey: 'auth.logoutAllTitle',
+        messageKey: 'auth.logoutAllConfirm',
+        confirmKey: 'auth.logoutAll',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
     navigate('/', { replace: true });
     endSession().catch(() => {});
   }
+
+  const labels = {
+    currentPassword: t('auth.currentPassword'),
+    newPassword: t('auth.newPassword'),
+    confirmation: t('auth.confirmPassword'),
+  };
 
   return (
     <section className="auth-page">
@@ -59,55 +104,65 @@ export default function ChangePasswordPage() {
       <p>{t('auth.passwordRules')}</p>
 
       <form
+        ref={formRef}
         className="auth-form"
         method="post"
         onSubmit={handleSubmit}
         noValidate
+        aria-busy={submitting}
       >
+        <FormErrors
+          errors={errors}
+          error={error}
+          labels={labels}
+          idFor={idFor}
+        />
         <div>
           <label htmlFor="change-current">{t('auth.currentPassword')}</label>
           <input
-            id="change-current"
             type="password"
             autoComplete="current-password"
             value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            required
+            onChange={(event) => {
+              setCurrentPassword(event.target.value);
+              clearField('currentPassword');
+            }}
+            {...fieldProps('currentPassword', errors, idFor)}
+          />
+          <FieldError
+            id="change-current-error"
+            error={errors.currentPassword}
           />
         </div>
         <div>
           <label htmlFor="change-new">{t('auth.newPassword')}</label>
           <input
-            id="change-new"
             type="password"
             autoComplete="new-password"
             value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            required
+            onChange={(event) => {
+              setNewPassword(event.target.value);
+              clearField('newPassword');
+            }}
+            {...fieldProps('newPassword', errors, idFor)}
           />
+          <FieldError id="change-new-error" error={errors.newPassword} />
         </div>
         <div>
           <label htmlFor="change-confirm">{t('auth.confirmPassword')}</label>
           <input
-            id="change-confirm"
             type="password"
             autoComplete="new-password"
             value={confirmation}
-            onChange={(event) => setConfirmation(event.target.value)}
-            required
+            onChange={(event) => {
+              setConfirmation(event.target.value);
+              clearField('confirmation');
+            }}
+            {...fieldProps('confirmation', errors, idFor)}
           />
+          <FieldError id="change-confirm-error" error={errors.confirmation} />
         </div>
 
-        {mismatch && (
-          <p className="message message-error" role="alert">
-            {t('auth.passwordsDiffer')}
-          </p>
-        )}
-        {error && (
-          <p className="message message-error" role="alert">
-            {authErrorText(t, error)}
-          </p>
-        )}
         {done && (
           <p className="message message-success" role="status">
             {t('auth.changeDone')}
@@ -116,6 +171,7 @@ export default function ChangePasswordPage() {
 
         <div className="auth-actions">
           <button type="submit" disabled={submitting}>
+            {submitting && <Spinner />}
             {t('auth.changeSubmit')}
           </button>
         </div>
@@ -133,7 +189,9 @@ export default function ChangePasswordPage() {
         <button
           type="button"
           className="secondary"
-          onClick={() => handleLogout(authApi.logoutAll)}
+          onClick={() =>
+            handleLogout(authApi.logoutAll, { needsConfirmation: true })
+          }
         >
           {t('auth.logoutAll')}
         </button>

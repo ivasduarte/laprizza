@@ -3,6 +3,7 @@ import * as controller from './products.controller.js';
 import Joi from 'joi';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 
 export default function productsRouterFactory(repos) {
@@ -59,14 +60,7 @@ export default function productsRouterFactory(repos) {
       { ...req.query },
       { allowUnknown: true, stripUnknown: true },
     );
-    if (error)
-      return next(
-        new AppError(
-          'Validation failed.',
-          400,
-          error.details.map((d) => d.message),
-        ),
-      );
+    if (error) return next(new AppError('Validation failed.', 400, joiDetails(error)));
     Object.keys(req.query).forEach((key) => delete req.query[key]);
     Object.assign(req.query, value);
     next();
@@ -91,14 +85,7 @@ export default function productsRouterFactory(repos) {
           abortEarly: false,
           stripUnknown: true,
         });
-        if (error)
-          return next(
-            new AppError(
-              'Validation failed.',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+        if (error) return next(new AppError('Validation failed.', 400, joiDetails(error)));
         req.body = value;
         next();
       } catch (error) {
@@ -146,14 +133,7 @@ export default function productsRouterFactory(repos) {
     async (req, res, next) => {
       try {
         const { error, value } = updateProductSchema.validate(req.body, { stripUnknown: true });
-        if (error)
-          return next(
-            new AppError(
-              'Validation failed.',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+        if (error) return next(new AppError('Validation failed.', 400, joiDetails(error)));
         req.body = value;
         next();
       } catch (error) {

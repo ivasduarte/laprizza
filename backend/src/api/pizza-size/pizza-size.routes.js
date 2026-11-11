@@ -3,6 +3,7 @@ import * as controller from './pizza-size.controller.js';
 import { Router } from 'express';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 
 export default function sizesRouterFactory(sizeRepository, productsRepository) {
@@ -21,13 +22,7 @@ export default function sizesRouterFactory(sizeRepository, productsRepository) {
   const validateListQuery = (req, res, next) => {
     const { error } = listSizesQuerySchema.validate({ ...req.query }, { allowUnknown: true });
     if (error) {
-      return next(
-        new AppError(
-          'Validation failed',
-          400,
-          error.details.map((d) => d.message),
-        ),
-      );
+      return next(new AppError('Validation failed', 400, joiDetails(error)));
     }
     next();
   };
@@ -47,13 +42,7 @@ export default function sizesRouterFactory(sizeRepository, productsRepository) {
           stripUnknown: true,
         });
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
         req.body = value;
         next();
@@ -96,13 +85,7 @@ export default function sizesRouterFactory(sizeRepository, productsRepository) {
       try {
         const { error, value } = updateSizeSchema.validate(req.body, { stripUnknown: true });
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
         req.body = value;
         next();

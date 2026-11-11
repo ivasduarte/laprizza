@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 
 export default function forecastRouterFactory(forecastRepository) {
   const router = Router();
@@ -84,13 +85,7 @@ export default function forecastRouterFactory(forecastRepository) {
           stripUnknown: true,
         });
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
         if (source === 'body') req.body = value;
         next();

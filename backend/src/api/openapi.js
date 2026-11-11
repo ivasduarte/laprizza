@@ -1856,7 +1856,9 @@ export const openApiSpec = {
         responses: {
           200: {
             description: 'The file content',
-            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            content: {
+              'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+            },
           },
           400: errorResponse('Invalid file name or file type'),
           401: errorResponse('Unauthorized'),
@@ -1876,11 +1878,15 @@ export const openApiSpec = {
         responses: {
           200: {
             description: 'Replaced',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } } },
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } },
+            },
           },
           201: {
             description: 'Created',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } } },
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SharedResource' } },
+            },
           },
           400: errorResponse('Invalid file name, file type or empty body'),
           401: errorResponse('Unauthorized'),
@@ -1916,8 +1922,39 @@ export const openApiSpec = {
               status: { type: 'integer', example: 400 },
               code: { type: 'string', example: 'BAD_REQUEST' },
               message: { type: 'string', example: 'Validation failed' },
-              details: { type: 'array', items: { type: 'string' } },
+              details: {
+                type: 'array',
+                description:
+                  'Validation violations (HTTP 400). Clients translate by `type` and bind each item to an input by `field`. ' +
+                  'Kitchen configuration content violations are plain strings prefixed by their JSON pointer.',
+                items: {
+                  oneOf: [{ $ref: '#/components/schemas/ValidationDetail' }, { type: 'string' }],
+                },
+              },
             },
+          },
+        },
+      },
+      ValidationDetail: {
+        type: 'object',
+        required: ['field', 'type', 'message'],
+        properties: {
+          field: {
+            type: 'string',
+            description:
+              'Dot-separated path of the invalid input. Empty when it concerns the whole payload.',
+            example: 'address.postalCode',
+          },
+          type: { type: 'string', description: 'Stable Joi error type.', example: 'string.min' },
+          message: {
+            type: 'string',
+            description: 'Technical English message (diagnostics only).',
+            example: '"name" length must be at least 3 characters long',
+          },
+          limit: {
+            type: 'number',
+            description: 'Violated numeric limit (min/max/length rules).',
+            example: 3,
           },
         },
       },

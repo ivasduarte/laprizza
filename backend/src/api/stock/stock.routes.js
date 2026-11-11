@@ -3,6 +3,7 @@ import * as controller from './stock.controller.js';
 import Joi from 'joi';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 
 export default function stockRouterFactory(repos) {
@@ -43,13 +44,7 @@ export default function stockRouterFactory(repos) {
       { allowUnknown: true, stripUnkown: true },
     );
     if (error) {
-      return next(
-        new AppError(
-          'Validation failed.',
-          400,
-          error.details.map((d) => d.message),
-        ),
-      );
+      return next(new AppError('Validation failed.', 400, joiDetails(error)));
     }
     Object.keys(req.query).forEach((key) => delete req.query[key]);
     Object.assign(req.query, value);
@@ -70,14 +65,7 @@ export default function stockRouterFactory(repos) {
     async (req, res, next) => {
       try {
         const { error, value } = adjustStockSchema.validate(req.body, { stripUnknown: true });
-        if (error)
-          return next(
-            new AppError(
-              'Validation failed.',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+        if (error) return next(new AppError('Validation failed.', 400, joiDetails(error)));
         req.body = value;
         next();
       } catch (error) {

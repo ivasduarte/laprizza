@@ -4,6 +4,7 @@ import * as controller from './kitchen-configuration.controller.js';
 import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 
 export default function kitchenConfigurationRouterFactory(kitchenRepo) {
   const router = Router();
@@ -43,13 +44,7 @@ export default function kitchenConfigurationRouterFactory(kitchenRepo) {
       try {
         const { error, value } = createConfigSchema.validate(req.body, { stripUnknown: true });
         if (error) {
-          return next(
-            new AppError(
-              'Validation error',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation error', 400, joiDetails(error)));
         }
         req.body = value;
         next();
@@ -81,13 +76,7 @@ export default function kitchenConfigurationRouterFactory(kitchenRepo) {
       try {
         const { error, value } = updateConfigSchema.validate(req.body, { stripUnknown: true });
         if (error) {
-          return next(
-            new AppError(
-              'Validation error',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation error', 400, joiDetails(error)));
         }
         req.body = value;
         next();

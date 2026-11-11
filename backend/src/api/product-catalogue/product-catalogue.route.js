@@ -3,6 +3,7 @@ import * as controller from './product-catalogue.controller.js';
 import Joi from 'joi';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 
 export default function catalogueRouterFactory(repos) {
@@ -30,14 +31,7 @@ export default function catalogueRouterFactory(repos) {
       { ...req.query },
       { allowUnknown: true, stripUnknown: true },
     );
-    if (error)
-      return next(
-        new AppError(
-          'Validation failed.',
-          400,
-          error.details.map((d) => d.message),
-        ),
-      );
+    if (error) return next(new AppError('Validation failed.', 400, joiDetails(error)));
     Object.keys(req.query).forEach((key) => delete req.query[key]);
     Object.assign(req.query, value);
     next();
