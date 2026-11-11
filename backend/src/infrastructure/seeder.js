@@ -76,9 +76,9 @@ export async function seedInitialKitchenConfigurations() {
     dimensions: { width: 10.5, length: 15.0, height: 3.2 },
     elements: [
       {
-        id: 'oven-wood-01',
+        id: 'oven-01',
         type: 'equipment',
-        modelReference: '/assets/models/wood-oven.gltf',
+        modelReference: '/assets/models/oven.glb',
         position: { x: 2.0, y: 0.0, z: -4.5 },
         rotation: { x: 0.0, y: 90.0, z: 0.0 },
         scale: { x: 1.0, y: 1.0, z: 1.0 },
@@ -93,7 +93,7 @@ export async function seedInitialKitchenConfigurations() {
       {
         id: 'conveyor-belt-main',
         type: 'assembly-line',
-        modelReference: '/assets/models/conveyor-belt.gltf',
+        modelReference: '/assets/models/convyor-belt.glb',
         position: { x: 0.0, y: 0.85, z: 0.0 },
         rotation: { x: 0.0, y: 0.0, z: 0.0 },
         scale: { x: 8.0, y: 1.0, z: 1.2 },

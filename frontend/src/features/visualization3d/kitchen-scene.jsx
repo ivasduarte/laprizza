@@ -1,22 +1,37 @@
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+
+function Model({ url, position, rotation, scale }) {
+  const { scene } = useGLTF(url);
+
+  return (
+    <primitive
+      object={scene.clone()}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    />
+  );
+}
 
 export default function KitchenScene({ config }) {
-  console.log('Configuração ativa carregada no motor 3D:', config);
+  if (!config || !config.content || !config.content.dimensions) return null;
 
-  // Extracts the JSON data that comes from the API
-  const dimensions = config?.content?.dimensions;
-  if (!dimensions) return null;
+  const dimensions = config.content.dimensions;
+  const elements = config.content.elements || [];
 
-  const elements = config?.content?.elements || [];
-  // Convert degrees to radians
-  const degToRad = (degrees) => degrees * (Math.PI / 180);
+  const safeWidth = Number(dimensions.width) || 10;
+  const safeLength = Number(dimensions.length) || 10;
+  const safeHeight = Number(dimensions.height) || 5;
+
+  const degToRad = (degrees) => (Number(degrees) || 0) * (Math.PI / 180);
 
   return (
     // Camera positioning according to kitchen size
     <Canvas
       camera={{
-        position: [0, dimensions.height * 2, dimensions.length],
+        position: [0, safeHeight * 2, safeLength],
         fov: 50,
       }}
     >
@@ -32,43 +47,104 @@ export default function KitchenScene({ config }) {
       <OrbitControls target={[0, 0, 0]} makeDefault />
 
       {/* Helper grid to match the floor size for easier debugging */}
-      <gridHelper args={[Math.max(dimensions.width, dimensions.length), 20]} />
+      <gridHelper args={[Math.max(safeWidth, safeLength), 20]} />
       <axesHelper args={[5]} />
 
       {/* Kitchen floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[dimensions.width, dimensions.length]} />
+        <planeGeometry args={[safeWidth, safeLength]} />
         <meshStandardMaterial color="#e6d5bd" />
       </mesh>
 
-      {}
-      {elements.map((element, index) => {
-        const posX = Number(element?.position?.x) || 0;
-        const posY = Number(element?.position?.y) || 0;
-        const posZ = Number(element?.position?.z) || 0;
-
-        const rotX = degToRad(element?.rotation?.x);
-        const rotY = degToRad(element?.rotation?.y);
-        const rotZ = degToRad(element?.rotation?.z);
-
-        const scaleX = Number(element?.scale?.x) || 1;
-        const scaleY = Number(element?.scale?.y) || 1;
-        const scaleZ = Number(element?.scale?.z) || 1;
-
-        return (
-          <mesh
-            key={element?.id || `fallback-id-${index}`}
-            position={[posX, posY, posZ]}
-            rotation={[rotX, rotY, rotZ]}
-            scale={[scaleX, scaleY, scaleZ]}
-          >
+      <Suspense
+        fallback={
+          <mesh position={[0, 1, 0]}>
             <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial
-              color={element?.material?.color || '#c8231a'}
-            />
+            <meshBasicMaterial color="yellow" wireframe />
           </mesh>
-        );
-      })}
+        }
+      >
+        {elements.map((element, index) => {
+          if (
+            !element ||
+            !element.position ||
+            !element.scale ||
+            !element.rotation
+          )
+            return null;
+
+          const pos = [
+            Number(element.position.x) || 0,
+            Number(element.position.y) || 0,
+            Number(element.position.z) || 0,
+          ];
+          const rot = [
+            degToRad(element.rotation.x),
+            degToRad(element.rotation.y),
+            degToRad(element.rotation.z),
+          ];
+          const scl = [
+            Number(element.scale.x) || 1,
+            Number(element.scale.y) || 1,
+            Number(element.scale.z) || 1,
+          ];
+
+          // 1. FORNO DE PEDRA PROCEDURAL (US2)
+          if (element.type === 'equipment') {
+            return (
+              <group key={element.id} position={pos} rotation={rot} scale={scl}>
+                {/* Base de pedra */}
+                <mesh position={[0, 0.5, 0]}>
+                  <boxGeometry args={[2, 1, 2]} />
+                  <meshStandardMaterial color="#696969" />
+                </mesh>
+                {/* Cúpula de pedra (Dome) */}
+                <mesh position={[0, 1, 0]}>
+                  <sphereGeometry
+                    args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]}
+                  />
+                  <meshStandardMaterial color="#A9A9A9" />
+                </mesh>
+              </group>
+            );
+          }
+
+          // 2. CORREIA TRANSPORTADORA PROCEDURAL (US3)
+          if (element.type === 'assembly-line') {
+            return (
+              <group key={element.id} position={pos} rotation={rot} scale={scl}>
+                {/* Base metálica da estrutura */}
+                <mesh position={[0, -0.2, 0]}>
+                  <boxGeometry args={[1, 0.4, 0.8]} />
+                  <meshStandardMaterial color="#708090" />{' '}
+                  {/* Cinzento metálico */}
+                </mesh>
+                {/* Tapete rolante */}
+                <mesh position={[0, 0.05, 0]}>
+                  <boxGeometry args={[1, 0.1, 0.9]} />
+                  <meshStandardMaterial color="#1C1C1C" />{' '}
+                  {/* Borracha escura */}
+                </mesh>
+              </group>
+            );
+          }
+
+          // 3. FALLBACK SEGURO
+          return (
+            <mesh
+              key={element.id || `fallback-id-${index}`}
+              position={pos}
+              rotation={rot}
+              scale={scl}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial
+                color={element.material?.color || '#c8231a'}
+              />
+            </mesh>
+          );
+        })}
+      </Suspense>
     </Canvas>
   );
 }
