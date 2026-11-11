@@ -8,9 +8,9 @@ export default function KitchenScene({ config }) {
   const dimensions = config?.content?.dimensions;
   if (!dimensions) return null;
 
-  //const elements = config?.content?.elements || [];
+  const elements = config?.content?.elements || [];
   // Convert degrees to radians
-  // const degToRad = (degrees) => degrees * (Math.PI / 180);
+  const degToRad = (degrees) => degrees * (Math.PI / 180);
 
   return (
     // Camera positioning according to kitchen size
@@ -41,11 +41,34 @@ export default function KitchenScene({ config }) {
         <meshStandardMaterial color="#e6d5bd" />
       </mesh>
 
-      {/* Updated test cube to receive light */}
-      <mesh position={[0, 1, 0]}>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshStandardMaterial color="#c8231a" />
-      </mesh>
+      {}
+      {elements.map((element, index) => {
+        const posX = Number(element?.position?.x) || 0;
+        const posY = Number(element?.position?.y) || 0;
+        const posZ = Number(element?.position?.z) || 0;
+
+        const rotX = degToRad(element?.rotation?.x);
+        const rotY = degToRad(element?.rotation?.y);
+        const rotZ = degToRad(element?.rotation?.z);
+
+        const scaleX = Number(element?.scale?.x) || 1;
+        const scaleY = Number(element?.scale?.y) || 1;
+        const scaleZ = Number(element?.scale?.z) || 1;
+
+        return (
+          <mesh
+            key={element?.id || `fallback-id-${index}`}
+            position={[posX, posY, posZ]}
+            rotation={[rotX, rotY, rotZ]}
+            scale={[scaleX, scaleY, scaleZ]}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial
+              color={element?.material?.color || '#c8231a'}
+            />
+          </mesh>
+        );
+      })}
     </Canvas>
   );
 }
