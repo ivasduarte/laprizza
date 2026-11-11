@@ -1,8 +1,8 @@
 import { api } from '../../shared/api/index.js';
 
 export const kitchenConfigurationApi = {
-  list() {
-    return api.get('/kitchen-configurations');
+  list(options) {
+    return api.get('/kitchen-configurations', options);
   },
   getById(id) {
     return api.get(`/kitchen-configurations/${id}`);

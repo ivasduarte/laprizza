@@ -1,0 +1,187 @@
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Global loading bar: appears only if the request takes longer than 150 ms (no flicker). */
+.global-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 4px;
+  pointer-events: none;
+}
+
+.global-progress-bar {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.global-progress[data-active='true'] .global-progress-bar {
+  opacity: 1;
+  transition-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .global-progress[data-active='true'] .global-progress-bar {
+    animation: progress-slide 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* Toasts */
+.toast-region {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(24rem, calc(100vw - 2rem));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 2px solid var(--color-info);
+  border-left-width: 6px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+
+.toast p {
+  margin: 0;
+}
+
+.toast-success {
+  border-color: var(--color-success);
+}
+
+.toast-warning {
+  border-color: var(--color-warning);
+}
+
+.toast-error {
+  border-color: var(--color-error);
+}
+
+/* Confirmation dialog */
+.confirm-dialog {
+  max-width: 28rem;
+  padding: 0;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--color-ink);
+  color: var(--color-text);
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(42, 21, 18, 0.55);
+}
+
+.confirm-dialog-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.confirm-dialog-body h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+/* Field and form errors */
+.field-error {
+  margin: 0.25rem 0 0;
+  color: var(--color-error);
+  font-size: 0.8125rem;
+}
+
+[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.form-errors ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+button.danger {
+  border-color: var(--color-error);
+  background: var(--color-surface);
+  color: var(--color-error);
+}
+
+button.danger:hover {
+  background: #fdeced;
+}
+
+/* Inline spinner (buttons while an action is running) */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: -0.125em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: spinner-rotate 0.7s linear infinite;
+  }
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Small screens: toasts use the full width and never push the layout */
+@media (max-width: 40rem) {
+  .toast-region {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+}
+
+.confirm-dialog {
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}

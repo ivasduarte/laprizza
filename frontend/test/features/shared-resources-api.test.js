@@ -49,7 +49,10 @@ test('Shared Resources API Client', async (t) => {
       assert.ok(calls[0].url.endsWith('/shared-resources'));
       assert.equal(calls[0].options.method, 'GET');
       assert.equal(calls[0].options.headers.Authorization, 'Bearer token-123');
-      assert.equal(calls[0].options.signal, controller.signal);
+      // WEB04: the client combines the caller's signal with its timeout, so fetch receives a
+      // derived AbortSignal (abort propagation is tested in http-client-feedback.test.js).
+      assert.ok(calls[0].options.signal instanceof AbortSignal);
+      assert.equal(calls[0].options.signal.aborted, false);
     }
   );
 

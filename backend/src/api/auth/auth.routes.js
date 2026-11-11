@@ -5,6 +5,7 @@ import { createAuthController } from './auth.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { createRateLimiter, passThrough } from '../middleware/rate-limit.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { AuthErrorCode, authError } from '../../application/auth/auth-errors.js';
 
 const email = Joi.string().trim().lowercase().email().max(254).required();
@@ -33,12 +34,7 @@ function validateBody(schema) {
     });
     if (error) {
       return next(
-        new AppError(
-          'Validation failed',
-          400,
-          error.details.map((d) => d.message),
-          AuthErrorCode.VALIDATION_FAILED,
-        ),
+        new AppError('Validation failed', 400, joiDetails(error), AuthErrorCode.VALIDATION_FAILED),
       );
     }
     req.body = value;

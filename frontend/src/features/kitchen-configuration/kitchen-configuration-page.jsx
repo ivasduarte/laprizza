@@ -1,6 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../shared/auth/use-session.js';
+import { useConfirm } from '../../shared/feedback/use-feedback.js';
+import { useSubmit } from '../../shared/forms/use-submit.js';
+import { errorMessage } from '../../shared/api/error-text.js';
+import {
+  isAbortError,
+  normalizeError,
+} from '../../shared/api/error-normalizer.js';
 import {
   kitchenConfigurationApi,
   getKitchenConfigErrorKey,
@@ -16,10 +23,12 @@ export default function KitchenConfigurationPage() {
   const isManager = roles.includes('MANAGER');
   const canView = isManager || roles.includes('EMPLOYEE');
 
+  const confirm = useConfirm();
+  const { submit, submitting, error } = useSubmit();
+
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
+  const [listError, setListError] = useState(null);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
@@ -27,18 +36,18 @@ export default function KitchenConfigurationPage() {
 
   const [viewerKey, setViewerKey] = useState(Date.now());
 
+  // 'silent': a failed list load is shown inline below, not also as a toast.
   const fetchConfigs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await kitchenConfigurationApi.list();
-      setConfigs(data);
-      setError(null);
+      setConfigs(await kitchenConfigurationApi.list({ feedback: 'silent' }));
+      setListError(null);
     } catch (err) {
-      setError(t(getKitchenConfigErrorKey(err)));
+      if (!isAbortError(err)) setListError(normalizeError(err));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     if (status === 'authenticated' && canView) {
@@ -57,29 +66,36 @@ export default function KitchenConfigurationPage() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('kitchenConfig.confirmDelete'))) return;
-    setError(null);
-    try {
-      await kitchenConfigurationApi.remove(id);
-      await fetchConfigs();
-    } catch (err) {
-      setError(t(getKitchenConfigErrorKey(err)));
-    }
+    const confirmed = await confirm({
+      titleKey: 'kitchenConfig.confirmDeleteTitle',
+      messageKey: 'kitchenConfig.confirmDelete',
+      confirmKey: 'kitchenConfig.deleteBtn',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    const result = await submit(() => kitchenConfigurationApi.remove(id), {
+      successKey: 'kitchenConfig.deletedSuccess',
+    });
+    // After a timeout the delete may have happened: show the real state.
+    if (result.ok || result.error?.outcomeUnknown) await fetchConfigs();
   };
 
   const handleActivate = async (id) => {
-    if (!window.confirm(t('kitchenConfig.confirmActivate'))) return;
-    setError(null);
-    setSuccessMsg(null);
-    try {
-      await kitchenConfigurationApi.activate(id);
-      await fetchConfigs();
+    const confirmed = await confirm({
+      titleKey: 'kitchenConfig.confirmActivateTitle',
+      messageKey: 'kitchenConfig.confirmActivate',
+      confirmKey: 'kitchenConfig.activateBtn',
+    });
+    if (!confirmed) return;
+
+    const result = await submit(() => kitchenConfigurationApi.activate(id), {
+      successKey: 'kitchenConfig.activatedSuccess',
+    });
+    if (result.ok || result.error?.outcomeUnknown) await fetchConfigs();
+    if (result.ok) {
       // ADR-0027: remount the viewer, which fetches the new active configuration
       setViewerKey(Date.now());
-      setSuccessMsg(t('kitchenConfig.activatedSuccess'));
-      setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err) {
-      setError(t(getKitchenConfigErrorKey(err)));
     }
   };
 
@@ -96,20 +112,24 @@ export default function KitchenConfigurationPage() {
       <header className="kitchen-config-header">
         <h1>{t('kitchenConfig.title')}</h1>
         {isManager && !isFormOpen && !viewingJson && (
-          <button onClick={() => setIsFormOpen(true)}>
+          <button type="button" onClick={() => setIsFormOpen(true)}>
             {t('kitchenConfig.createNew')}
           </button>
         )}
       </header>
 
-      {error && (
+      {/* Network, timeout, 5xx and 403 failures are reported by a global toast. */}
+      {error && !error.global && (
         <p className="message message-error" role="alert">
-          {error}
+          {t(getKitchenConfigErrorKey(error))}
         </p>
       )}
-      {successMsg && (
-        <p className="message message-success" role="status">
-          {successMsg}
+      {listError && (
+        <p className="message message-error" role="alert">
+          {errorMessage(t, listError)}{' '}
+          <button type="button" className="ghost small" onClick={fetchConfigs}>
+            {t('feedback.retry')}
+          </button>
         </p>
       )}
 
@@ -142,7 +162,7 @@ export default function KitchenConfigurationPage() {
         <>
           {loading ? (
             <p role="status">{t('layout.loading')}</p>
-          ) : configs.length === 0 ? (
+          ) : configs.length === 0 && !listError ? (
             <p>{t('kitchenConfig.noConfigs')}</p>
           ) : (
             <div className="kitchen-config-grid">
@@ -182,11 +202,17 @@ export default function KitchenConfigurationPage() {
                     )}
                     {isManager && !config.isActive && (
                       <>
-                        <button onClick={() => handleActivate(config.id)}>
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => handleActivate(config.id)}
+                        >
                           {t('kitchenConfig.activateBtn')}
                         </button>
                         <button
+                          type="button"
                           className="danger"
+                          disabled={submitting}
                           onClick={() => handleDelete(config.id)}
                         >
                           {t('kitchenConfig.deleteBtn')}

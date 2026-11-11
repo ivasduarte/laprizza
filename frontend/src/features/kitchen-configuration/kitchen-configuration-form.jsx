@@ -4,6 +4,17 @@ import {
   kitchenConfigurationApi,
   getKitchenConfigErrorKey,
 } from './kitchen-configuration-api.js';
+import { useSubmit } from '../../shared/forms/use-submit.js';
+import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
+import { fieldProps } from '../../shared/forms/field-props.js';
+import { hasErrors, required, validateForm } from '../../shared/forms/validators.js';
+import FieldError from '../../shared/ui/feedback/field-error.jsx';
+import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
+import Spinner from '../../shared/ui/feedback/spinner.jsx';
+
+const FIELD_IDS = { name: 'config-name', content: 'config-content' };
+const idFor = (field) => FIELD_IDS[field] ?? field;
+const SCHEMA = { name: [required()], content: [required()] };
 
 export default function KitchenConfigurationForm({
   initialData,
@@ -11,6 +22,7 @@ export default function KitchenConfigurationForm({
   onCancel,
 }) {
   const { t } = useTranslation();
+  const formRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const [name, setName] = useState(initialData?.name || '');
@@ -20,8 +32,10 @@ export default function KitchenConfigurationForm({
       : '{\n  "dimensions": {\n    "width": 10,\n    "length": 15,\n    "height": 3\n  },\n  "elements": []\n}'
   );
 
-  const [error, setError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // JSON syntax problems are found in the browser, before any request.
+  const [localError, setLocalError] = useState(null);
+  const { submit, submitting, error } = useSubmit();
+  const { errors, setErrors, fromApi, clearField } = useFieldErrors(formRef);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -32,9 +46,10 @@ export default function KitchenConfigurationForm({
       try {
         const parsed = JSON.parse(e.target.result);
         setContent(JSON.stringify(parsed, null, 2));
-        setError(null);
+        setLocalError(null);
+        clearField('content');
       } catch {
-        setError(t('kitchenConfig.form.invalidJsonFile'));
+        setLocalError(t('kitchenConfig.form.invalidJsonFile'));
       }
     };
     reader.readAsText(file);
@@ -43,48 +58,74 @@ export default function KitchenConfigurationForm({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+    setLocalError(null);
+
+    const clientErrors = validateForm({ name, content }, SCHEMA);
+    setErrors(clientErrors);
+    if (hasErrors(clientErrors)) return;
 
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
     } catch {
-      setError(t('kitchenConfig.form.parseError'));
-      setIsSubmitting(false);
+      setLocalError(t('kitchenConfig.form.parseError'));
       return;
     }
 
-    try {
-      if (initialData?.id) {
-        await kitchenConfigurationApi.update(initialData.id, {
-          name,
-          content: parsedContent,
-        });
-      } else {
-        await kitchenConfigurationApi.create({ name, content: parsedContent });
-      }
-      onSuccess();
-    } catch (err) {
-      setError(
-        err.details ? err.details.join(', ') : t(getKitchenConfigErrorKey(err))
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    const payload = { name, content: parsedContent };
+    const result = await submit(
+      () =>
+        initialData?.id
+          ? kitchenConfigurationApi.update(initialData.id, payload)
+          : kitchenConfigurationApi.create(payload),
+      { successKey: 'kitchenConfig.savedSuccess' }
+    );
+
+    if (result.ok) onSuccess();
+    else if (result.error) fromApi(result.error); // inputs keep their values
   };
 
+  const labels = {
+    name: t('kitchenConfig.form.name'),
+    content: t('kitchenConfig.form.jsonContent'),
+  };
+
+  // Violations listed by the API go to the summary; other 4xx keep the kitchen-specific text.
+  const hasDetails =
+    error && (error.fieldErrors.length > 0 || error.formErrors.length > 0);
+
   return (
-    <form onSubmit={handleSubmit} className="kitchen-config-card">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="kitchen-config-card"
+      noValidate
+      aria-busy={submitting}
+    >
+      <FormErrors
+        errors={errors}
+        error={hasDetails ? error : null}
+        labels={labels}
+        idFor={idFor}
+      />
+      {error && !error.global && !hasDetails && (
+        <p className="message message-error" role="alert">
+          {t(getKitchenConfigErrorKey(error))}
+        </p>
+      )}
+
       <div>
         <label htmlFor="config-name">{t('kitchenConfig.form.name')}</label>
         <input
-          id="config-name"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
+          onChange={(e) => {
+            setName(e.target.value);
+            clearField('name');
+          }}
+          {...fieldProps('name', errors, idFor)}
         />
+        <FieldError id="config-name-error" error={errors.name} />
       </div>
 
       <div>
@@ -111,17 +152,20 @@ export default function KitchenConfigurationForm({
           onChange={handleFileUpload}
         />
         <textarea
-          id="config-content"
           className="json-editor"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
+          onChange={(e) => {
+            setContent(e.target.value);
+            clearField('content');
+          }}
+          {...fieldProps('content', errors, idFor)}
         />
+        <FieldError id="config-content-error" error={errors.content} />
       </div>
 
-      {error && (
+      {localError && (
         <p className="message message-error" role="alert">
-          {error}
+          {localError}
         </p>
       )}
 
@@ -130,12 +174,13 @@ export default function KitchenConfigurationForm({
           type="button"
           className="secondary"
           onClick={onCancel}
-          disabled={isSubmitting}
+          disabled={submitting}
         >
           {t('ai.cancel')}
         </button>
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting
+        <button type="submit" disabled={submitting}>
+          {submitting && <Spinner />}
+          {submitting
             ? t('kitchenConfig.form.saving')
             : t('kitchenConfig.form.saveBtn')}
         </button>

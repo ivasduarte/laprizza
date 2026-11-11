@@ -3,6 +3,7 @@ import * as controller from './pizza-component-type.controller.js';
 
 import { Router } from 'express';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
 import { Roles } from '../../domain/users/users.domain.js';
 
@@ -63,13 +64,7 @@ export default function pizzaComponentTypesRouterFactory(
       });
 
       if (error) {
-        return next(
-          new AppError(
-            'Validation failed',
-            400,
-            error.details.map((d) => d.message),
-          ),
-        );
+        return next(new AppError('Validation failed', 400, joiDetails(error)));
       }
 
       req.body = value;
@@ -91,13 +86,7 @@ export default function pizzaComponentTypesRouterFactory(
         });
 
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
 
         next();

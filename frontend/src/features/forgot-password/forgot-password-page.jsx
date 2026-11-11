@@ -1,8 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../../shared/auth/auth-api.js';
-import { authErrorText } from '../../shared/auth/auth-error.js';
+import { useSubmit } from '../../shared/forms/use-submit.js';
+import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
+import { fieldProps } from '../../shared/forms/field-props.js';
+import {
+  email as emailRule,
+  hasErrors,
+  required,
+  validateForm,
+} from '../../shared/forms/validators.js';
+import FieldError from '../../shared/ui/feedback/field-error.jsx';
+import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
+import Spinner from '../../shared/ui/feedback/spinner.jsx';
+
+const idFor = (field) => (field === 'email' ? 'forgot-email' : field);
+const SCHEMA = { email: [required(), emailRule()] };
 
 /**
  * Password recovery request. The message after submitting is always the same,
@@ -10,23 +24,21 @@ import { authErrorText } from '../../shared/auth/auth-error.js';
  */
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
+  const formRef = useRef(null);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { submit, submitting, error } = useSubmit();
+  const { errors, setErrors, fromApi, clearField } = useFieldErrors(formRef);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await authApi.forgotPassword(email);
-      setSent(true);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setSubmitting(false);
-    }
+    const clientErrors = validateForm({ email }, SCHEMA);
+    setErrors(clientErrors);
+    if (hasErrors(clientErrors)) return;
+
+    const result = await submit(() => authApi.forgotPassword(email));
+    if (result.ok) setSent(true);
+    else if (result.error) fromApi(result.error);
   }
 
   return (
@@ -39,32 +51,38 @@ export default function ForgotPasswordPage() {
         </p>
       ) : (
         <form
+          ref={formRef}
           className="auth-form"
           method="post"
           onSubmit={handleSubmit}
           noValidate
+          aria-busy={submitting}
         >
           <p>{t('auth.forgotIntro')}</p>
+          <FormErrors
+            errors={errors}
+            error={error}
+            labels={{ email: t('auth.email') }}
+            idFor={idFor}
+          />
           <div>
             <label htmlFor="forgot-email">{t('auth.email')}</label>
             <input
-              id="forgot-email"
               type="email"
               autoComplete="username"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
+              onChange={(event) => {
+                setEmail(event.target.value);
+                clearField('email');
+              }}
+              {...fieldProps('email', errors, idFor)}
             />
+            <FieldError id="forgot-email-error" error={errors.email} />
           </div>
-
-          {error && (
-            <p className="message message-error" role="alert">
-              {authErrorText(t, error)}
-            </p>
-          )}
 
           <div className="auth-actions">
             <button type="submit" disabled={submitting}>
+              {submitting && <Spinner />}
               {t('auth.forgotSubmit')}
             </button>
           </div>

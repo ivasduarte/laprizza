@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
+import { joiDetails } from '../middleware/joi-details.js';
 
 /**
  * Factory function that creates and configures the Express router for user management endpoints.
@@ -59,13 +60,7 @@ export default function usersRouterFactory(usersRepository) {
         });
 
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
 
         req.body = value;
@@ -123,13 +118,7 @@ export default function usersRouterFactory(usersRepository) {
       try {
         const { error, value } = updateUserSchema.validate(req.body, { stripUnknown: true });
         if (error) {
-          return next(
-            new AppError(
-              'Validation failed',
-              400,
-              error.details.map((d) => d.message),
-            ),
-          );
+          return next(new AppError('Validation failed', 400, joiDetails(error)));
         }
         req.body = value;
         next();
