@@ -298,3 +298,178 @@ test('updateProduct still allows other changes to a product with size configurat
   // The configurations are not part of the patch.
   assert.equal(repos.productsRepository.update.mock.calls[0].arguments[1].sizeConfigurations, undefined);
 });
+
+// ---------------------------------------------------------------------------------------------
+// AI01: aggregates
+// ---------------------------------------------------------------------------------------------
+
+const FLOUR_ID = 'a9a9a9000000000000000001';
+const WATER_ID = 'a9a9a9000000000000000002';
+const DOUGH_ID = 'a9a9a9000000000000000003';
+const PIZZA_ID = 'a9a9a9000000000000000004';
+
+const PRODUCED_DOUGH = {
+  classification: 'PRODUCED',
+  items: [
+    { productId: FLOUR_ID, quantity: 2 },
+    { productId: WATER_ID, quantity: 1 },
+  ],
+};
+
+/**
+ * Repositories with the aggregate lookups: flour and water are simple products, DOUGH is an
+ * aggregate and PIZZA is a predefined pizza.
+ */
+function setupAggregateRepos(product = null, { isItemOfAggregate = false } = {}) {
+  const repos = setupRepos(product);
+  const infos = {
+    [FLOUR_ID]: { id: FLOUR_ID, name: 'Flour', isActive: true, isAggregate: false },
+    [WATER_ID]: { id: WATER_ID, name: 'Water', isActive: true, isAggregate: false },
+    [DOUGH_ID]: { id: DOUGH_ID, name: 'Dough', isActive: true, isAggregate: true },
+    [PIZZA_ID]: { id: PIZZA_ID, name: 'Margherita', isActive: true, isAggregate: false },
+  };
+  repos.productsRepository.findAggregateInfoByIds = mock.fn(async (ids) =>
+    ids.map((id) => infos[id]).filter(Boolean),
+  );
+  repos.productsRepository.existsAggregateWithItem = mock.fn(async () => isItemOfAggregate);
+  repos.predefinedPizzaRepository = {
+    findPizzaProductIds: mock.fn(async (ids) => ids.filter((id) => id === PIZZA_ID)),
+  };
+  return repos;
+}
+
+const rejectsWith = (promise, code) =>
+  assert.rejects(
+    promise,
+    (err) => err instanceof AppError && err.status === 400 && err.code === code,
+  );
+
+test('createProduct stores a valid produced aggregate and returns it in the DTO', async () => {
+  const repos = setupAggregateRepos();
+
+  const created = await createProduct(
+    { ...VALID_PRODUCT_DATA, categoryId: CATEGORY_ID, aggregate: PRODUCED_DOUGH },
+    repos,
+  );
+
+  assert.deepEqual(created.aggregate, PRODUCED_DOUGH);
+  assert.deepEqual(
+    repos.productsRepository.create.mock.calls[0].arguments[0].aggregate,
+    PRODUCED_DOUGH,
+  );
+});
+
+test('createProduct accepts a purchased aggregate without items', async () => {
+  const repos = setupAggregateRepos();
+
+  const created = await createProduct(
+    { ...VALID_PRODUCT_DATA, categoryId: CATEGORY_ID, aggregate: { classification: 'PURCHASED' } },
+    repos,
+  );
+
+  assert.deepEqual(created.aggregate, { classification: 'PURCHASED', items: [] });
+});
+
+test('createProduct without aggregate does not use the aggregate lookups', async () => {
+  const repos = setupAggregateRepos();
+
+  const created = await createProduct({ ...VALID_PRODUCT_DATA, categoryId: CATEGORY_ID }, repos);
+
+  assert.equal(created.aggregate, null);
+  assert.equal(repos.productsRepository.findAggregateInfoByIds.mock.callCount(), 0);
+  assert.equal(repos.predefinedPizzaRepository.findPizzaProductIds.mock.callCount(), 0);
+});
+
+test('createProduct rejects an invalid aggregate with 400 and the rule code, without creating', async () => {
+  const cases = [
+    [
+      { classification: 'PURCHASED', items: [{ productId: FLOUR_ID, quantity: 1 }] },
+      'AGGREGATE_PURCHASED_WITH_ITEMS',
+    ],
+    [{ classification: 'PRODUCED', items: [] }, 'AGGREGATE_PRODUCED_WITHOUT_ITEMS'],
+    [
+      { classification: 'PRODUCED', items: [{ productId: DOUGH_ID, quantity: 1 }] },
+      'AGGREGATE_NESTED',
+    ],
+    [
+      { classification: 'PRODUCED', items: [{ productId: PIZZA_ID, quantity: 1 }] },
+      'AGGREGATE_ITEM_IS_PIZZA',
+    ],
+    [
+      {
+        classification: 'PRODUCED',
+        items: [{ productId: 'a9a9a9000000000000000999', quantity: 1 }],
+      },
+      'AGGREGATE_ITEM_NOT_FOUND',
+    ],
+  ];
+  for (const [aggregate, code] of cases) {
+    const repos = setupAggregateRepos();
+    await rejectsWith(
+      createProduct({ ...VALID_PRODUCT_DATA, categoryId: CATEGORY_ID, aggregate }, repos),
+      code,
+    );
+    assert.equal(repos.productsRepository.create.mock.callCount(), 0, code);
+  }
+});
+
+test('updateProduct sets an aggregate on an existing product', async () => {
+  const repos = setupAggregateRepos({ _id: PRODUCT_ID, name: 'Dough', isActive: true });
+
+  const updated = await updateProduct(PRODUCT_ID, { aggregate: PRODUCED_DOUGH }, repos);
+
+  assert.deepEqual(updated.aggregate, PRODUCED_DOUGH);
+  assert.deepEqual(repos.productsRepository.update.mock.calls[0].arguments[1], {
+    aggregate: PRODUCED_DOUGH,
+  });
+});
+
+test('updateProduct removes the aggregate with null', async () => {
+  const repos = setupAggregateRepos({ _id: PRODUCT_ID, isActive: true, aggregate: PRODUCED_DOUGH });
+
+  const updated = await updateProduct(PRODUCT_ID, { aggregate: null }, repos);
+
+  assert.equal(updated.aggregate, null);
+});
+
+test('updateProduct rejects the product itself as an item', async () => {
+  const repos = setupAggregateRepos({ _id: PRODUCT_ID, isActive: true });
+  await rejectsWith(
+    updateProduct(
+      PRODUCT_ID,
+      {
+        aggregate: { classification: 'PRODUCED', items: [{ productId: PRODUCT_ID, quantity: 1 }] },
+      },
+      repos,
+    ),
+    'AGGREGATE_SELF_REFERENCE',
+  );
+});
+
+test('updateProduct rejects turning an item of another aggregate into an aggregate', async () => {
+  const repos = setupAggregateRepos(
+    { _id: PRODUCT_ID, isActive: true },
+    { isItemOfAggregate: true },
+  );
+  await rejectsWith(
+    updateProduct(PRODUCT_ID, { aggregate: { classification: 'PURCHASED' } }, repos),
+    'AGGREGATE_OWNER_IS_ITEM',
+  );
+  assert.equal(repos.productsRepository.update.mock.callCount(), 0);
+});
+
+test('updateProduct rejects turning a pizza into an aggregate', async () => {
+  const repos = setupAggregateRepos({ _id: PIZZA_ID, isActive: true });
+  await rejectsWith(
+    updateProduct(PIZZA_ID, { aggregate: { classification: 'PURCHASED' } }, repos),
+    'AGGREGATE_OWNER_IS_PIZZA',
+  );
+});
+
+test('updateProduct allows deactivating a product used in an aggregate', async () => {
+  const repos = setupAggregateRepos({ _id: FLOUR_ID, isActive: true }, { isItemOfAggregate: true });
+
+  const updated = await updateProduct(FLOUR_ID, { isActive: false }, repos);
+
+  assert.equal(updated.isActive, false);
+});

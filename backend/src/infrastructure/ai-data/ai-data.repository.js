@@ -12,12 +12,17 @@ export function createAiDataRepository({
   stockModel,
   forecastModel,
   supplierScenarioModel,
+  aiScenarioRepository,
 }) {
   return {
     listProducts: () =>
       productModel
-        .find(active, 'name sellable stockControlled pizzaComponentTypeId sizeConfigurations')
+        .find(
+          active,
+          'name sellable stockControlled pizzaComponentTypeId sizeConfigurations aggregate',
+        )
         .lean(),
+    findActiveScenarioByCode: (code) => aiScenarioRepository.findActiveByCode(code),
     listSizes: () => sizeModel.find(active, 'name').lean(),
     listPredefinedPizzas: () =>
       predefinedPizzaModel.find(active, 'productId sizeIds defaultConfiguration').lean(),

@@ -24,6 +24,7 @@
     "migrate:up": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js up",
     "migrate:down": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js down",
     "migrate:status": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js status",
+    "seed:ai01-demo": "node --env-file-if-exists=.env scripts/seed-ai01-demo.js",
     "openapi:export": "node scripts/export-openapi.js"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { cached } from '../../infrastructure/cache/cache.js';
+import { AppError } from '../app-error.js';
 
 const cmp =
   (...keys) =>
@@ -27,7 +28,7 @@ export function toPlanningSize(doc) {
   return { id: String(doc._id), name: doc.name };
 }
 
-export function buildBom(pizzas, productsById) {
+export function buildBom(pizzas, productsById, { reportUnmeasured = false } = {}) {
   const bom = [];
   const issues = [];
   for (const pizza of pizzas) {
@@ -40,11 +41,19 @@ export function buildBom(pizzas, productsById) {
           issues.push({ code: 'UNKNOWN_COMPONENT', pizzaId, sizeId, componentId });
           continue;
         }
-        if (component.stockControlled !== true) continue;
         const cfg = (component.sizeConfigurations ?? []).find(
           (c) => String(c.pizzaSizeId) === sizeId,
         );
         const quantity = cfg?.stockUnitsConsumed;
+        if (component.stockControlled !== true) {
+          if (!reportUnmeasured) continue;
+          if (isUnits(quantity) && quantity > 0) {
+            bom.push({ pizzaId, sizeId, componentId, quantity });
+          } else {
+            issues.push({ code: 'UNMEASURED_NON_STOCK_COMPONENT', pizzaId, sizeId, componentId });
+          }
+          continue;
+        }
         if (!isUnits(quantity)) {
           issues.push({ code: 'MISSING_OR_INVALID_STOCK_UNITS', pizzaId, sizeId, componentId });
           continue;
@@ -107,7 +116,153 @@ export function buildSnapshot(
   };
 }
 
-export async function getSnapshot(aiDataRepository, clock = () => new Date()) {
+const AGGREGATE_CLASSIFICATION = { PRODUCED: 'production', PURCHASED: 'purchase' };
+const hashOf = (value) =>
+  createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
+
+export function buildAggregates(products) {
+  return products
+    .filter((p) => p.aggregate?.classification)
+    .map((p) => ({
+      id: String(p._id),
+      classification:
+        AGGREGATE_CLASSIFICATION[p.aggregate.classification] ??
+        String(p.aggregate.classification).toLowerCase(),
+      items: (p.aggregate.items ?? [])
+        .map((item) => ({ componentId: String(item.productId), quantity: item.quantity }))
+        .sort(cmp('componentId')),
+    }))
+    .sort(cmp('id'));
+}
+
+export function buildPizzas(pizzas) {
+  return pizzas
+    .map((p) => ({ id: String(p.productId), sizeIds: (p.sizeIds ?? []).map(String) }))
+    .sort(cmp('id'));
+}
+
+export function buildLiveStock(products, stock, productsById, issues) {
+  const quantities = new Map();
+  for (const s of stock) {
+    const productId = String(s.productId);
+    const product = productsById.get(productId);
+    if (!product) {
+      issues.push({ code: 'STOCK_UNKNOWN_PRODUCT', productId });
+    } else if (product.stockControlled !== true) {
+      issues.push({ code: 'STOCK_NOT_CONTROLLED', productId });
+    } else if (!isUnits(s.quantity)) {
+      issues.push({ code: 'STOCK_INVALID_QUANTITY', productId });
+    } else {
+      quantities.set(productId, s.quantity);
+    }
+  }
+  return products
+    .filter((p) => p.stockControlled === true)
+    .map((p) => ({ productId: String(p._id), quantity: quantities.get(String(p._id)) ?? 0 }))
+    .sort(cmp('productId'));
+}
+
+/** Stock of the scenario, exactly as stored (missing products are detected by the AI service). */
+export function buildScenarioStock(scenario) {
+  return scenario.stock
+    .map((s) => ({ productId: String(s.productId), quantity: s.quantity }))
+    .sort(cmp('productId'));
+}
+
+export function buildScenarioSnapshot(
+  { products, sizes, pizzas, stock, scenario },
+  stockMode,
+  now = new Date(),
+) {
+  const productsById = new Map(products.map((p) => [String(p._id), p]));
+  const { bom, issues } = buildBom(pizzas, productsById, { reportUnmeasured: true });
+  const retrievedAt = now.toISOString();
+
+  const catalogue = {
+    products: products.map(toPlanningProduct).sort(cmp('id')),
+    sizes: sizes.map(toPlanningSize).sort(cmp('id')),
+    bom: bom.sort(cmp('pizzaId', 'sizeId', 'componentId')),
+    aggregates: buildAggregates(products),
+    pizzas: buildPizzas(pizzas),
+  };
+  const stockEntries =
+    stockMode === 'live'
+      ? buildLiveStock(products, stock, productsById, issues)
+      : buildScenarioStock(scenario);
+  const scenarioInfo = {
+    id: scenario.code,
+    name: scenario.name,
+    version: scenario.version,
+    simulated: true,
+    stockMode,
+  };
+  const orders = [
+    {
+      id: `${scenario.code}#1`,
+      simulated: true,
+      items: (scenario.orders ?? []).map((o) => ({
+        pizzaId: String(o.pizzaId),
+        sizeId: String(o.sizeId),
+        quantity: o.quantity,
+      })),
+    },
+  ];
+
+  const content = { ...catalogue, stock: stockEntries, scenario: scenarioInfo, orders };
+  const fromScenario = {
+    source: 'scenario',
+    scenarioId: scenario.code,
+    scenarioVersion: scenario.version,
+    retrievedAt,
+  };
+
+  return {
+    meta: {
+      snapshotId: hashOf(content),
+      retrievedAt,
+      source: 'backend',
+      simulated: true,
+      sources: {
+        catalogue: { source: 'backend', retrievedAt, version: hashOf(catalogue) },
+        stock: stockMode === 'live' ? { source: 'backend-live', retrievedAt } : fromScenario,
+        orders: fromScenario,
+      },
+    },
+    scenario: scenarioInfo,
+    ...catalogue,
+    stock: stockEntries,
+    orders,
+    forecast: null,
+    supplierScenario: null,
+    issues,
+  };
+}
+
+async function getScenarioSnapshot(aiDataRepository, clock, { scenarioId, stockMode }) {
+  const scenario = await aiDataRepository.findActiveScenarioByCode(scenarioId);
+  if (!scenario) {
+    throw new AppError('AI scenario not found.', 404, null, 'AI_SCENARIO_NOT_FOUND');
+  }
+  if (stockMode === 'scenario' && !Array.isArray(scenario.stock)) {
+    throw new AppError(
+      'The scenario has no stock of its own; use stockMode=live.',
+      400,
+      null,
+      'SCENARIO_WITHOUT_STOCK',
+    );
+  }
+  const [products, sizes, pizzas, stock] = await Promise.all([
+    aiDataRepository.listProducts(),
+    aiDataRepository.listSizes(),
+    aiDataRepository.listPredefinedPizzas(),
+    stockMode === 'live' ? aiDataRepository.listStock() : [],
+  ]);
+  return buildScenarioSnapshot({ products, sizes, pizzas, stock, scenario }, stockMode, clock());
+}
+
+export async function getSnapshot(aiDataRepository, clock = () => new Date(), params = {}) {
+  if (params.scenarioId) return getScenarioSnapshot(aiDataRepository, clock, params);
+
   return cached('ai-data', ['snapshot'], 60, async () => {
     const [products, sizes, pizzas, stock, forecast, scenario] = await Promise.all([
       aiDataRepository.listProducts(),

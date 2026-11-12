@@ -1,0 +1,361 @@
+{
+  "sizes": [
+    { "_id": "de01a0000000000000000001", "name": "[Demo] S" },
+    { "_id": "de01a0000000000000000002", "name": "[Demo] M" },
+    { "_id": "de01a0000000000000000003", "name": "[Demo] L" }
+  ],
+  "categories": [
+    { "_id": "de01ca000000000000000001", "name": "[Demo] Pizzas" },
+    { "_id": "de01ca000000000000000002", "name": "[Demo] Ingredientes" }
+  ],
+  "products": [
+    {
+      "_id": "de01b0000000000000000001",
+      "name": "[Demo] Massa",
+      "description": "Massa produzida internamente (agregado produzido).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Base Dough",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 2 }
+      ],
+      "aggregate": {
+        "classification": "PRODUCED",
+        "items": [
+          { "productId": "de01b0000000000000000008", "quantity": 2 },
+          { "productId": "de01b0000000000000000009", "quantity": 1 },
+          { "productId": "de01b000000000000000000a", "quantity": 1 }
+        ]
+      }
+    },
+    {
+      "_id": "de01b0000000000000000002",
+      "name": "[Demo] Molho",
+      "description": "Molho comprado pronto (agregado comprado).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Base Sauce",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 2 }
+      ],
+      "aggregate": { "classification": "PURCHASED", "items": [] }
+    },
+    {
+      "_id": "de01b0000000000000000003",
+      "name": "[Demo] Mozzarella",
+      "description": "Mozzarella.",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Cheese",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 2 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 3 }
+      ],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000004",
+      "name": "[Demo] Fiambre",
+      "description": "Fiambre.",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Topping",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 2 }
+      ],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000005",
+      "name": "[Demo] Cogumelos",
+      "description": "Cogumelos.",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Topping",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 2 }
+      ],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000006",
+      "name": "[Demo] Base pronta",
+      "description": "Base de pizza comprada pronta (produto simples).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": true,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Base Dough",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": 1 },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": 2 }
+      ],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000007",
+      "name": "[Demo] Orégãos",
+      "description": "Orégãos (sem controlo de stock).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": "Topping",
+      "sizeConfigurations": [
+        { "pizzaSizeId": "de01a0000000000000000001", "price": 0, "stockUnitsConsumed": null },
+        { "pizzaSizeId": "de01a0000000000000000002", "price": 0, "stockUnitsConsumed": null },
+        { "pizzaSizeId": "de01a0000000000000000003", "price": 0, "stockUnitsConsumed": null }
+      ],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000008",
+      "name": "[Demo] Farinha",
+      "description": "Farinha (ingrediente da massa, sem controlo de stock).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b0000000000000000009",
+      "name": "[Demo] Água",
+      "description": "Água (ingrediente da massa, sem controlo de stock).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b000000000000000000a",
+      "name": "[Demo] Fermento",
+      "description": "Fermento (ingrediente da massa, sem controlo de stock).",
+      "price": 0,
+      "sellable": false,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000002",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b000000000000000000b",
+      "name": "[Demo] Margherita",
+      "description": "Massa, molho e mozzarella.",
+      "price": 8,
+      "sellable": true,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000001",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b000000000000000000c",
+      "name": "[Demo] Prosciutto e Funghi",
+      "description": "Massa, molho, mozzarella, fiambre e cogumelos.",
+      "price": 10,
+      "sellable": true,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000001",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    },
+    {
+      "_id": "de01b000000000000000000d",
+      "name": "[Demo] Funghi Simples",
+      "description": "Base pronta, mozzarella, cogumelos e orégãos.",
+      "price": 9,
+      "sellable": true,
+      "stockControlled": false,
+      "categoryId": "de01ca000000000000000001",
+      "componentType": null,
+      "sizeConfigurations": [],
+      "aggregate": null
+    }
+  ],
+  "predefinedPizzas": [
+    {
+      "_id": "de01c0000000000000000001",
+      "productId": "de01b000000000000000000b",
+      "sizeIds": [
+        "de01a0000000000000000001",
+        "de01a0000000000000000002",
+        "de01a0000000000000000003"
+      ],
+      "componentIds": [
+        "de01b0000000000000000001",
+        "de01b0000000000000000002",
+        "de01b0000000000000000003"
+      ]
+    },
+    {
+      "_id": "de01c0000000000000000002",
+      "productId": "de01b000000000000000000c",
+      "sizeIds": [
+        "de01a0000000000000000001",
+        "de01a0000000000000000002",
+        "de01a0000000000000000003"
+      ],
+      "componentIds": [
+        "de01b0000000000000000001",
+        "de01b0000000000000000002",
+        "de01b0000000000000000003",
+        "de01b0000000000000000004",
+        "de01b0000000000000000005"
+      ]
+    },
+    {
+      "_id": "de01c0000000000000000003",
+      "productId": "de01b000000000000000000d",
+      "sizeIds": [
+        "de01a0000000000000000001",
+        "de01a0000000000000000002",
+        "de01a0000000000000000003"
+      ],
+      "componentIds": [
+        "de01b0000000000000000006",
+        "de01b0000000000000000003",
+        "de01b0000000000000000005",
+        "de01b0000000000000000007"
+      ]
+    }
+  ],
+  "stock": [
+    { "productId": "de01b0000000000000000001", "quantity": 0 },
+    { "productId": "de01b0000000000000000002", "quantity": 2 },
+    { "productId": "de01b0000000000000000003", "quantity": 5 },
+    { "productId": "de01b0000000000000000004", "quantity": 4 },
+    { "productId": "de01b0000000000000000005", "quantity": 1 },
+    { "productId": "de01b0000000000000000006", "quantity": 5 }
+  ],
+  "scenarios": [
+    {
+      "_id": "de01d0000000000000000001",
+      "code": "DEMO-BASIC",
+      "name": "[Demo] Só produtos básicos",
+      "description": "3 Funghi Simples M. Stock suficiente; sem agregados.",
+      "version": 1,
+      "simulated": true,
+      "orders": [
+        {
+          "pizzaId": "de01b000000000000000000d",
+          "sizeId": "de01a0000000000000000002",
+          "quantity": 3
+        }
+      ],
+      "stock": [
+        { "productId": "de01b0000000000000000006", "quantity": 5 },
+        { "productId": "de01b0000000000000000003", "quantity": 6 },
+        { "productId": "de01b0000000000000000005", "quantity": 4 }
+      ]
+    },
+    {
+      "_id": "de01d0000000000000000002",
+      "code": "DEMO-SUFFICIENT",
+      "name": "[Demo] Stock suficiente",
+      "description": "2 Margherita M + 1 Prosciutto e Funghi M. Agregados todos em stock.",
+      "version": 1,
+      "simulated": true,
+      "orders": [
+        {
+          "pizzaId": "de01b000000000000000000b",
+          "sizeId": "de01a0000000000000000002",
+          "quantity": 2
+        },
+        {
+          "pizzaId": "de01b000000000000000000c",
+          "sizeId": "de01a0000000000000000002",
+          "quantity": 1
+        }
+      ],
+      "stock": [
+        { "productId": "de01b0000000000000000001", "quantity": 5 },
+        { "productId": "de01b0000000000000000002", "quantity": 5 },
+        { "productId": "de01b0000000000000000003", "quantity": 10 },
+        { "productId": "de01b0000000000000000004", "quantity": 3 },
+        { "productId": "de01b0000000000000000005", "quantity": 3 }
+      ]
+    },
+    {
+      "_id": "de01d0000000000000000003",
+      "code": "DEMO-INSUFFICIENT",
+      "name": "[Demo] Stock insuficiente",
+      "description": "2 Prosciutto e Funghi L + 1 Margherita M + 1 Funghi Simples L.",
+      "version": 1,
+      "simulated": true,
+      "orders": [
+        {
+          "pizzaId": "de01b000000000000000000c",
+          "sizeId": "de01a0000000000000000003",
+          "quantity": 2
+        },
+        {
+          "pizzaId": "de01b000000000000000000b",
+          "sizeId": "de01a0000000000000000002",
+          "quantity": 1
+        },
+        {
+          "pizzaId": "de01b000000000000000000d",
+          "sizeId": "de01a0000000000000000003",
+          "quantity": 1
+        }
+      ],
+      "stock": [
+        { "productId": "de01b0000000000000000001", "quantity": 0 },
+        { "productId": "de01b0000000000000000002", "quantity": 2 },
+        { "productId": "de01b0000000000000000003", "quantity": 5 },
+        { "productId": "de01b0000000000000000004", "quantity": 4 },
+        { "productId": "de01b0000000000000000005", "quantity": 1 },
+        { "productId": "de01b0000000000000000006", "quantity": 1 }
+      ]
+    },
+    {
+      "_id": "de01d0000000000000000004",
+      "code": "DEMO-PARTIAL",
+      "name": "[Demo] Agregado parcialmente em stock",
+      "description": "3 Margherita M. Há 1 massa em stock; as 2 restantes são produzidas.",
+      "version": 1,
+      "simulated": true,
+      "orders": [
+        {
+          "pizzaId": "de01b000000000000000000b",
+          "sizeId": "de01a0000000000000000002",
+          "quantity": 3
+        }
+      ],
+      "stock": [
+        { "productId": "de01b0000000000000000001", "quantity": 1 },
+        { "productId": "de01b0000000000000000002", "quantity": 5 },
+        { "productId": "de01b0000000000000000003", "quantity": 4 }
+      ]
+    }
+  ]
+}

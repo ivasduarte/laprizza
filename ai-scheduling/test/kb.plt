@@ -24,6 +24,24 @@ mutate_first(Key, Field, Val, D, D2) :-
 
 count(G, N) :- aggregate_all(count, G, N).
 
+% Problems of loading D: [] if it loads, otherwise the list of kb_error(invalid_data(Problems)).
+load_problems(D, Problems) :-
+    catch(( load_kb_from_dict(D), Problems = [] ), kb_error(invalid_data(Problems)), true).
+
+% There is a problem with Code whose fields include every Key-Value in Pairs.
+has_problem(Problems, Code, Pairs) :-
+    member(P, Problems),
+    get_dict(code, P, Code),
+    forall(member(K-V, Pairs), get_dict(K, P, V)), !.
+
+% A WEB07 section whose own parser failed: one INVALID_SNAPSHOT with the old error in reason.
+has_section_problem(Problems, Section, Fragment) :-
+    member(P, Problems),
+    get_dict(code, P, "INVALID_SNAPSHOT"),
+    get_dict(section, P, Section),
+    get_dict(reason, P, Reason),
+    sub_string(Reason, _, _, _, Fragment), !.
+
 % Mutations of the WEB07 sections.
 with_forecast(Mod, D) :-
     sample(D0), get_dict(forecast, D0, F0), call(Mod, F0, F), put_dict(forecast, D0, F, D).
@@ -143,124 +161,169 @@ test(forecast_and_scenario_are_optional) :-
 :- end_tests(load).
 
 % ------------------------------------------------------------------
-% Invalid snapshots are rejected with a clear error and leave the KB untouched.
+% Invalid snapshots are rejected with kb_error(invalid_data(Problems)), with every problem
+% (code, JSON path and details), and leave the KB untouched.
 
 :- begin_tests(validation, [setup(load_sample), cleanup(load_sample)]).
 
 kb_untouched :- count(bom_item(_,_,_,_), 19), count(stock(_,_), 8), kb_meta(_,_,_).
 
-test(missing_section, throws(kb_error(missing(bom, snapshot)))) :-
-    sample(D0), del_dict(bom, D0, _, D), load_kb_from_dict(D).
+test(missing_section) :-
+    sample(D0), del_dict(bom, D0, _, D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT", [path-bom, reason-"missing"]).
 
-test(missing_field, throws(kb_error(missing(name, products)))) :-
-    sample(D0), mutate_first(products, name, null, D0, D), load_kb_from_dict(D).
+test(missing_field) :-
+    sample(D0), mutate_first(products, name, null, D0, D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT", [path-"products[0]", field-name, reason-"missing_field"]).
 
-test(section_not_a_list, throws(kb_error(invalid_snapshot(not_a_list(bom))))) :-
-    sample(D0), put_dict(bom, D0, "x", D), load_kb_from_dict(D).
+test(section_not_a_list) :-
+    sample(D0), put_dict(bom, D0, "x", D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT", [path-bom, reason-"not_a_list"]).
 
-test(unknown_component, throws(kb_error(unknown_reference(bom_component, nope)))) :-
-    sample(D0), mutate_first(bom, componentId, "nope", D0, D), load_kb_from_dict(D).
+test(unknown_component) :-
+    sample(D0), mutate_first(bom, componentId, "nope", D0, D), load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"bom[0]", field-componentId, id-nope]).
 
-test(unknown_size, throws(kb_error(unknown_reference(bom_size, nope)))) :-
-    sample(D0), mutate_first(bom, sizeId, "nope", D0, D), load_kb_from_dict(D).
+test(unknown_size) :-
+    sample(D0), mutate_first(bom, sizeId, "nope", D0, D), load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"bom[0]", field-sizeId, id-nope]).
 
-test(non_integer_units, throws(kb_error(invalid_value(quantity, _, 1.5)))) :-
-    sample(D0), mutate_first(bom, quantity, 1.5, D0, D), load_kb_from_dict(D).
+test(non_integer_units) :-
+    sample(D0), mutate_first(bom, quantity, 1.5, D0, D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_QUANTITY", [path-"bom[0]", quantity-1.5]).
 
-test(negative_stock, throws(kb_error(invalid_value(quantity, _, -1)))) :-
-    sample(D0), mutate_first(stock, quantity, -1, D0, D), load_kb_from_dict(D).
+test(negative_stock) :-
+    sample(D0), mutate_first(stock, quantity, -1, D0, D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_QUANTITY", [path-"stock[0]", quantity-(-1)]).
 
-test(stock_of_non_controlled_product, throws(kb_error(not_stock_controlled('p-margherita')))) :-
-    sample(D0), mutate_first(stock, productId, "p-margherita", D0, D), load_kb_from_dict(D).
+test(stock_of_non_controlled_product) :-
+    sample(D0), mutate_first(stock, productId, "p-margherita", D0, D), load_problems(D, Ps),
+    has_problem(Ps, "STOCK_NOT_CONTROLLED", [path-"stock[0]", productId-'p-margherita']).
 
-test(bad_aggregate_classification, throws(kb_error(invalid_value(classification, _, other)))) :-
-    sample(D0), mutate_first(aggregates, classification, "other", D0, D), load_kb_from_dict(D).
+test(bad_aggregate_classification) :-
+    sample(D0), mutate_first(aggregates, classification, "other", D0, D), load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT",
+                [path-"aggregates[0]", reason-"invalid_classification", classification-"other"]).
 
-test(unknown_order_pizza, throws(kb_error(unknown_reference(order_pizza, nope)))) :-
+test(unknown_order_pizza) :-
     sample(D0),
     put_dict(orders, D0, [_{id:"o", simulated:true, items:[_{pizzaId:"nope", sizeId:"size-s", quantity:1}]}], D),
-    load_kb_from_dict(D).
+    load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"orders[0].items[0]", field-pizzaId, id-nope]).
 
-test(order_missing_simulated_label, throws(kb_error(missing(simulated, orders)))) :-
+test(order_missing_simulated_label) :-
     sample(D0),
     put_dict(orders, D0, [_{id:"o", items:[_{pizzaId:"p-margherita", sizeId:"size-s", quantity:1}]}], D),
-    load_kb_from_dict(D).
+    load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT", [path-"orders[0]", field-simulated, reason-"missing_field"]).
 
-test(order_simulated_must_be_boolean, throws(kb_error(invalid_value(simulated, _, _)))) :-
+test(order_simulated_must_be_boolean) :-
     sample(D0),
     put_dict(orders, D0, [_{id:"o", simulated:"yes", items:[_{pizzaId:"p-margherita", sizeId:"size-s", quantity:1}]}], D),
-    load_kb_from_dict(D).
+    load_problems(D, Ps),
+    has_problem(Ps, "INVALID_SNAPSHOT", [path-"orders[0].simulated", reason-"not_a_boolean"]).
 
-test(order_quantity_must_be_positive, throws(kb_error(invalid_value(quantity, _, 0)))) :-
+test(order_quantity_must_be_positive) :-
     sample(D0),
     put_dict(orders, D0, [_{id:"o", simulated:true, items:[_{pizzaId:"p-margherita", sizeId:"size-s", quantity:0}]}], D),
-    load_kb_from_dict(D).
+    load_problems(D, Ps),
+    has_problem(Ps, "INVALID_QUANTITY", [path-"orders[0].items[0]", quantity-0]).
 
 test(failed_load_keeps_previous_kb) :-
     sample(D0), mutate_first(bom, componentId, "nope", D0, D),
     catch(load_kb_from_dict(D), kb_error(_), true),
     kb_untouched.
 
-test(forecast_missing_version, throws(kb_error(missing(version, forecast)))) :-
-    with_forecast([F0, F]>>del_dict(version, F0, _, F), D), load_kb_from_dict(D).
+% WEB07 sections keep their own rules: the first error of the section becomes one problem.
 
-test(forecast_period_start_after_end, throws(kb_error(invalid_value(period, _, _)))) :-
-    with_forecast([F0, F]>>put_dict(endDate, F0, "2026-10-01", F), D), load_kb_from_dict(D).
+test(forecast_missing_version) :-
+    with_forecast([F0, F]>>del_dict(version, F0, _, F), D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "missing(version,forecast)").
 
-test(forecast_date_not_a_real_date, throws(kb_error(invalid_value(date, _, _)))) :-
-    with_forecast(set_first_entry(date, "2026-02-30"), D), load_kb_from_dict(D).
+test(forecast_period_start_after_end) :-
+    with_forecast([F0, F]>>put_dict(endDate, F0, "2026-10-01", F), D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "invalid_value(period").
 
-test(forecast_date_outside_period, throws(kb_error(date_outside_period(_, _, _)))) :-
-    with_forecast(set_first_entry(date, "2027-01-01"), D), load_kb_from_dict(D).
+test(forecast_date_not_a_real_date) :-
+    with_forecast(set_first_entry(date, "2026-02-30"), D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "invalid_value(date").
 
-test(forecast_duplicate_entry, throws(kb_error(duplicate_forecast_entry(_)))) :-
-    with_forecast(dup_first_entry, D), load_kb_from_dict(D).
+test(forecast_date_outside_period) :-
+    with_forecast(set_first_entry(date, "2027-01-01"), D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "date_outside_period").
 
-test(forecast_negative_quantity, throws(kb_error(invalid_value(quantity, _, -3)))) :-
-    with_forecast(set_first_entry(quantity, -3), D), load_kb_from_dict(D).
+test(forecast_duplicate_entry) :-
+    with_forecast(dup_first_entry, D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "duplicate_forecast_entry").
 
-test(forecast_unknown_product, throws(kb_error(unknown_reference(forecast_product, nope)))) :-
-    with_forecast(set_first_entry(productId, "nope"), D), load_kb_from_dict(D).
+test(forecast_negative_quantity) :-
+    with_forecast(set_first_entry(quantity, -3), D), load_problems(D, Ps),
+    has_section_problem(Ps, forecast, "invalid_value(quantity").
 
-test(forecast_unknown_size, throws(kb_error(unknown_reference(forecast_size, nope)))) :-
-    with_forecast(set_first_entry(sizeId, "nope"), D), load_kb_from_dict(D).
+test(forecast_unknown_product) :-
+    with_forecast(set_first_entry(productId, "nope"), D), load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"forecast", field-productId, id-nope]).
 
-test(scenario_simulated_must_be_boolean, throws(kb_error(invalid_value(simulated, _, _)))) :-
-    with_scenario([S0, S]>>put_dict(simulated, S0, "yes", S), D), load_kb_from_dict(D).
+test(forecast_unknown_size) :-
+    with_forecast(set_first_entry(sizeId, "nope"), D), load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"forecast", field-sizeId, id-nope]).
 
-test(scenario_duplicate_supplier, throws(kb_error(duplicate_supplier('sup-a')))) :-
-    with_scenario(dup_first_supplier, D), load_kb_from_dict(D).
+test(scenario_simulated_must_be_boolean) :-
+    with_scenario([S0, S]>>put_dict(simulated, S0, "yes", S), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "invalid_value(simulated").
 
-test(offer_unknown_supplier, throws(kb_error(unknown_reference(offer_supplier, nope)))) :-
-    with_scenario(set_first_offer(supplierId, "nope"), D), load_kb_from_dict(D).
+test(scenario_duplicate_supplier) :-
+    with_scenario(dup_first_supplier, D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "duplicate_supplier('sup-a')").
 
-test(offer_unknown_product, throws(kb_error(unknown_reference(offer_product, nope)))) :-
+test(offer_unknown_supplier) :-
+    with_scenario(set_first_offer(supplierId, "nope"), D), load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"supplierScenario", field-supplierId, id-nope]).
+
+test(offer_unknown_product) :-
     with_scenario([S0, S]>>( get_dict(products, S0, [P|R]), put_dict(productId, P, "nope", P2),
                              put_dict(products, S0, [P2|R], S) ), D),
-    load_kb_from_dict(D).
+    load_problems(D, Ps),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"supplierScenario", field-productId, id-nope]).
 
-test(offer_duplicate, throws(kb_error(duplicate_offer('sup-a', 'c-mozzarella')))) :-
-    with_scenario(dup_first_offer, D), load_kb_from_dict(D).
+test(offer_duplicate) :-
+    with_scenario(dup_first_offer, D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "duplicate_offer('sup-a','c-mozzarella')").
 
-test(offer_negative_price, throws(kb_error(invalid_value(price, _, -1)))) :-
-    with_scenario(set_first_offer(priceEur, -1), D), load_kb_from_dict(D).
+test(offer_negative_price) :-
+    with_scenario(set_first_offer(priceEur, -1), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "invalid_value(price").
 
-test(offer_stock_units_must_be_positive, throws(kb_error(invalid_value(stock_units, _, 0)))) :-
-    with_scenario(set_first_offer(stockUnits, 0), D), load_kb_from_dict(D).
+test(offer_stock_units_must_be_positive) :-
+    with_scenario(set_first_offer(stockUnits, 0), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "invalid_value(stock_units").
 
-test(offer_missing_lead_time, throws(kb_error(missing(leadTimeDays, offers)))) :-
-    with_scenario(del_first_offer(leadTimeDays), D), load_kb_from_dict(D).
+test(offer_missing_lead_time) :-
+    with_scenario(del_first_offer(leadTimeDays), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "missing(leadTimeDays,offers)").
 
-test(offer_negative_lead_time, throws(kb_error(invalid_value(lead_time, _, -2)))) :-
-    with_scenario(set_first_offer(leadTimeDays, -2), D), load_kb_from_dict(D).
+test(offer_negative_lead_time) :-
+    with_scenario(set_first_offer(leadTimeDays, -2), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "invalid_value(lead_time").
 
-test(offer_invalid_supply_limit, throws(kb_error(invalid_value(supply_limit, _, -5)))) :-
-    with_scenario(set_first_offer(supplyLimit, -5), D), load_kb_from_dict(D).
+test(offer_invalid_supply_limit) :-
+    with_scenario(set_first_offer(supplyLimit, -5), D), load_problems(D, Ps),
+    has_section_problem(Ps, supplierScenario, "invalid_value(supply_limit").
 
 test(failed_forecast_load_keeps_previous_kb) :-
     with_forecast(set_first_entry(productId, "nope"), D),
     catch(load_kb_from_dict(D), kb_error(_), true),
     kb_untouched, count(forecast_item(_,_,_,_,_), 4).
+
+test(all_problems_are_reported_at_once) :-
+    sample(D0),
+    mutate_first(bom, quantity, 0, D0, D1),
+    mutate_first(stock, productId, "nope", D1, D2),
+    mutate_first(aggregates, classification, "other", D2, D),
+    load_problems(D, Ps),
+    has_problem(Ps, "INVALID_QUANTITY", [path-"bom[0]"]),
+    has_problem(Ps, "UNKNOWN_ITEM", [path-"stock[0]", id-nope]),
+    has_problem(Ps, "INVALID_SNAPSHOT", [reason-"invalid_classification"]).
 
 :- end_tests(validation).
 

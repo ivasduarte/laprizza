@@ -3,6 +3,7 @@ import PizzaSize from '../pizza-size/pizza-size.model.js';
 import Products from '../products/products.model.js';
 import * as componentTypeRepository from '../pizza-component-type/pizza-component-type.repository.js';
 import { escapeRegex } from '../utils/escape-regex.js';
+import mongoose from 'mongoose';
 
 const activeCondition = { isActive: { $ne: false } };
 
@@ -106,6 +107,28 @@ export async function existsWithProduct(productId) {
 
 export async function existsPredefinedPizzaWithPizzaSize(sizeId) {
   return (await PredefinedPizza.exists({ sizeIds: sizeId, ...activeCondition })) !== null;
+}
+
+export async function findPizzaProductIds(productIds) {
+  const validIds = productIds.filter((id) => mongoose.isValidObjectId(id));
+  if (validIds.length === 0) return [];
+
+  const pizzas = await PredefinedPizza.find(
+    { productId: { $in: validIds }, ...activeCondition },
+    'productId',
+  ).lean();
+  return pizzas.map((p) => String(p.productId));
+}
+
+export async function findActiveByProductIds(productIds) {
+  const validIds = productIds.filter((id) => mongoose.isValidObjectId(id));
+  if (validIds.length === 0) return [];
+
+  const pizzas = await PredefinedPizza.find(
+    { productId: { $in: validIds }, ...activeCondition },
+    'productId sizeIds',
+  ).lean();
+  return pizzas.map((p) => ({ productId: String(p.productId), sizeIds: p.sizeIds.map(String) }));
 }
 
 export async function existsPredefinedPizzaWithProduct(productId) {

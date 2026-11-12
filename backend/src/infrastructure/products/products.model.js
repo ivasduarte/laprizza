@@ -1,6 +1,27 @@
 import mongoose from 'mongoose';
 import { componentSizeConfigurationSchema } from '../component-size-configuration/component-size-configuration.model.js';
 
+const aggregateItemSchema = new mongoose.Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Products', required: true },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+      validate: { validator: Number.isInteger, message: 'Quantity must be an integer' },
+    },
+  },
+  { _id: false },
+);
+
+const aggregateSchema = new mongoose.Schema(
+  {
+    classification: { type: String, enum: ['PRODUCED', 'PURCHASED'], required: true },
+    items: { type: [aggregateItemSchema], default: [] },
+  },
+  { _id: false },
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
@@ -16,6 +37,7 @@ const productSchema = new mongoose.Schema(
     },
     allergenIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Allergen' }],
     sizeConfigurations: { type: [componentSizeConfigurationSchema], default: [] },
+    aggregate: { type: aggregateSchema, default: null },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

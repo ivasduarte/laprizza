@@ -71,7 +71,12 @@ async function setupTestServer() {
     update: mock.fn(async () => null),
     addSizeConfiguration: mock.fn(async () => null),
     removeSizeConfiguration: mock.fn(async () => null),
+    // AI01: aggregate lookups (no item exists and nothing is an item of an aggregate by default).
+    findAggregateInfoByIds: mock.fn(async () => []),
+    existsAggregateWithItem: mock.fn(async () => false),
   };
+  // AI01: no product is a predefined pizza by default.
+  const pizzaRepo = { findPizzaProductIds: mock.fn(async () => []) };
   const allergensRepo = { findById: mock.fn(async () => null) };
   const typesRepo = { findById: mock.fn(async () => null) };
   const stockRepo = { create: mock.fn(async (data) => ({ _id: 'f0f0f0000000000000000001', ...data })) };
@@ -87,6 +92,7 @@ async function setupTestServer() {
     pizzaComponentTypeRepository: typesRepo,
     stockRepository: stockRepo,
     sizeRepository: sizeRepo,
+    predefinedPizzaRepository: pizzaRepo,
   }).listen(0);
 
   await once(server, 'listening');
@@ -100,6 +106,7 @@ async function setupTestServer() {
     typesRepo,
     stockRepo,
     sizeRepo,
+    pizzaRepo,
     catId: CATEGORY_ID,
   };
 }
@@ -401,4 +408,203 @@ test('API PATCH /products/:id refuses to deactivate a product with size configur
   assert.equal(deactivated.status, 200);
   assert.equal((await deactivated.json()).isActive, false);
   assert.deepEqual(productsRepo.update.mock.calls.at(-1).arguments, [id, { isActive: false }]);
+});
+
+// ---------------------------------------------------------------------------------------------
+// AI01: aggregates
+// ---------------------------------------------------------------------------------------------
+
+const FLOUR_ID = 'a9a9a9000000000000000001';
+const DOUGH_ID = 'a9a9a9000000000000000003';
+const PIZZA_ID = 'a9a9a9000000000000000004';
+
+/** Programs the aggregate lookups: flour is simple, DOUGH is an aggregate, PIZZA is a pizza. */
+function programAggregateLookups({ productsRepo, pizzaRepo }) {
+  const infos = {
+    [FLOUR_ID]: { id: FLOUR_ID, name: 'Flour', isActive: true, isAggregate: false },
+    [DOUGH_ID]: { id: DOUGH_ID, name: 'Dough', isActive: true, isAggregate: true },
+    [PIZZA_ID]: { id: PIZZA_ID, name: 'Margherita', isActive: true, isAggregate: false },
+  };
+  productsRepo.findAggregateInfoByIds.mock.mockImplementation(async (ids) =>
+    ids.map((id) => infos[id]).filter(Boolean),
+  );
+  pizzaRepo.findPizzaProductIds.mock.mockImplementation(async (ids) =>
+    ids.filter((id) => id === PIZZA_ID),
+  );
+}
+
+const newProduct = (catId, aggregate) => ({
+  name: 'Massa',
+  description: 'Massa da casa',
+  sellable: false,
+  stockControlled: true,
+  categoryId: catId,
+  aggregate,
+});
+
+test('API POST /products creates a produced aggregate and returns it', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  programAggregateLookups(ctx);
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+  const aggregate = { classification: 'PRODUCED', items: [{ productId: FLOUR_ID, quantity: 2 }] };
+
+  const res = await request(ctx.port, 'POST', '/products', {
+    token,
+    body: newProduct(ctx.catId, aggregate),
+  });
+
+  assert.equal(res.status, 201);
+  assert.deepEqual((await res.json()).aggregate, aggregate);
+});
+
+test('API POST /products rejects invalid aggregates with 400 and the rule code', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  programAggregateLookups(ctx);
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+
+  const cases = [
+    [
+      { classification: 'PURCHASED', items: [{ productId: FLOUR_ID, quantity: 1 }] },
+      'AGGREGATE_PURCHASED_WITH_ITEMS',
+    ],
+    [{ classification: 'PRODUCED', items: [] }, 'AGGREGATE_PRODUCED_WITHOUT_ITEMS'],
+    [
+      {
+        classification: 'PRODUCED',
+        items: [
+          { productId: FLOUR_ID, quantity: 1 },
+          { productId: FLOUR_ID, quantity: 2 },
+        ],
+      },
+      'AGGREGATE_DUPLICATE_ITEM',
+    ],
+    [
+      { classification: 'PRODUCED', items: [{ productId: DOUGH_ID, quantity: 1 }] },
+      'AGGREGATE_NESTED',
+    ],
+    [
+      { classification: 'PRODUCED', items: [{ productId: PIZZA_ID, quantity: 1 }] },
+      'AGGREGATE_ITEM_IS_PIZZA',
+    ],
+    [
+      { classification: 'PRODUCED', items: [{ productId: NON_EXISTENT_ID, quantity: 1 }] },
+      'AGGREGATE_ITEM_NOT_FOUND',
+    ],
+  ];
+  for (const [aggregate, code] of cases) {
+    const res = await request(ctx.port, 'POST', '/products', {
+      token,
+      body: newProduct(ctx.catId, aggregate),
+    });
+    assert.equal(res.status, 400, code);
+    assert.equal((await res.json()).error.code, code);
+  }
+  assert.equal(ctx.productsRepo.create.mock.callCount(), 0);
+});
+
+test('API POST /products: Joi rejects an unknown classification and quantities below 1', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+
+  for (const aggregate of [
+    { classification: 'OTHER' },
+    { classification: 'PRODUCED', items: [{ productId: FLOUR_ID, quantity: 0 }] },
+    { classification: 'PRODUCED', items: [{ productId: 'not-an-id', quantity: 1 }] },
+  ]) {
+    const res = await request(ctx.port, 'POST', '/products', {
+      token,
+      body: newProduct(ctx.catId, aggregate),
+    });
+    assert.equal(res.status, 400);
+  }
+  assert.equal(ctx.productsRepo.create.mock.callCount(), 0);
+});
+
+test('API PATCH /products/:id sets, rejects and removes an aggregate', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  programAggregateLookups(ctx);
+  storeProduct(ctx.productsRepo, {
+    _id: PRODUCT_ID,
+    name: 'Massa',
+    description: 'd',
+    sellable: false,
+    stockControlled: true,
+    categoryId: ctx.catId,
+    isActive: true,
+    aggregate: null,
+  });
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+  const patch = (body) => request(ctx.port, 'PATCH', `/products/${PRODUCT_ID}`, { token, body });
+
+  const aggregate = { classification: 'PRODUCED', items: [{ productId: FLOUR_ID, quantity: 2 }] };
+  const ok = await patch({ aggregate });
+  assert.equal(ok.status, 200);
+  assert.deepEqual((await ok.json()).aggregate, aggregate);
+
+  const self = await patch({
+    aggregate: { classification: 'PRODUCED', items: [{ productId: PRODUCT_ID, quantity: 1 }] },
+  });
+  assert.equal((await self.json()).error.code, 'AGGREGATE_SELF_REFERENCE');
+
+  const cleared = await patch({ aggregate: null });
+  assert.equal(cleared.status, 200);
+  assert.equal((await cleared.json()).aggregate, null);
+});
+
+test('API PATCH /products/:id rejects turning an aggregate item or a pizza into an aggregate', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  programAggregateLookups(ctx);
+  storeProduct(ctx.productsRepo, { _id: PRODUCT_ID, name: 'Farinha', isActive: true });
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+  const body = { aggregate: { classification: 'PURCHASED' } };
+
+  ctx.productsRepo.existsAggregateWithItem.mock.mockImplementation(async () => true);
+  const item = await request(ctx.port, 'PATCH', `/products/${PRODUCT_ID}`, { token, body });
+  assert.equal((await item.json()).error.code, 'AGGREGATE_OWNER_IS_ITEM');
+
+  ctx.productsRepo.existsAggregateWithItem.mock.mockImplementation(async () => false);
+  ctx.pizzaRepo.findPizzaProductIds.mock.mockImplementation(async () => [PRODUCT_ID]);
+  const pizza = await request(ctx.port, 'PATCH', `/products/${PRODUCT_ID}`, { token, body });
+  assert.equal((await pizza.json()).error.code, 'AGGREGATE_OWNER_IS_PIZZA');
+
+  assert.equal(ctx.productsRepo.update.mock.callCount(), 0);
+});
+
+test('API PATCH /products/:id without aggregate does not use the aggregate lookups', async (t) => {
+  const ctx = await setupTestServer();
+  t.after(() => {
+    ctx.server.close();
+    ctx.server.closeAllConnections();
+  });
+  storeProduct(ctx.productsRepo, { _id: PRODUCT_ID, name: 'Farinha', isActive: true });
+  const token = await loginAs(ctx.port, 'admin@laprizza.pt');
+
+  const res = await request(ctx.port, 'PATCH', `/products/${PRODUCT_ID}`, {
+    token,
+    body: { isActive: false },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(ctx.productsRepo.findAggregateInfoByIds.mock.callCount(), 0);
+  assert.equal(ctx.productsRepo.existsAggregateWithItem.mock.callCount(), 0);
 });

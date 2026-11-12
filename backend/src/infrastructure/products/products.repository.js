@@ -135,3 +135,25 @@ export async function existsByPizzaComponentType(pizzaComponentTypeId) {
   if (!mongoose.isValidObjectId(pizzaComponentTypeId)) return false;
   return (await Products.exists({ pizzaComponentTypeId, isActive: { $ne: false } })) !== null;
 }
+
+export async function findAggregateInfoByIds(ids) {
+  const validIds = ids.filter((id) => mongoose.isValidObjectId(id));
+  if (validIds.length === 0) return [];
+
+  const products = await Products.find(
+    { _id: { $in: validIds } },
+    'name isActive aggregate',
+  ).lean();
+
+  return products.map((p) => ({
+    id: String(p._id),
+    name: p.name,
+    isActive: p.isActive !== false,
+    isAggregate: p.aggregate != null,
+  }));
+}
+
+export async function existsAggregateWithItem(productId) {
+  if (!mongoose.isValidObjectId(productId)) return false;
+  return (await Products.exists({ 'aggregate.items.productId': productId })) !== null;
+}

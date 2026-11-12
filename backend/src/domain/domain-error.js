@@ -3,8 +3,9 @@
  * It carries no HTTP concerns; the application layer decides how to expose it.
  */
 export class DomainError extends Error {
-  constructor(message) {
+  constructor(message, code = null) {
     super(message);
     this.name = 'DomainError';
+    this.code = code;
   }
 }

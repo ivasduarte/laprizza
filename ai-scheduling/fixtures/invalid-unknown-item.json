@@ -1,0 +1,443 @@
+{
+  "meta": {
+    "snapshotId": "fixture-invalid-unknown-item",
+    "retrievedAt": "2026-11-10T09:00:00.000Z",
+    "source": "backend",
+    "simulated": true,
+    "sources": {
+      "catalogue": {
+        "source": "backend",
+        "retrievedAt": "2026-11-10T09:00:00.000Z",
+        "version": "fixture"
+      },
+      "stock": {
+        "source": "scenario",
+        "scenarioId": "DEMO-PARTIAL",
+        "scenarioVersion": 1,
+        "retrievedAt": "2026-11-10T09:00:00.000Z"
+      },
+      "orders": {
+        "source": "scenario",
+        "scenarioId": "DEMO-PARTIAL",
+        "scenarioVersion": 1,
+        "retrievedAt": "2026-11-10T09:00:00.000Z"
+      }
+    }
+  },
+  "scenario": {
+    "id": "DEMO-PARTIAL",
+    "name": "[Demo] Agregado parcialmente em stock",
+    "version": 1,
+    "simulated": true,
+    "stockMode": "scenario"
+  },
+  "pizzas": [
+    {
+      "id": "p-funghi-simples",
+      "sizeIds": [
+        "size-s",
+        "size-m",
+        "size-l"
+      ]
+    },
+    {
+      "id": "p-margherita",
+      "sizeIds": [
+        "size-s",
+        "size-m",
+        "size-l"
+      ]
+    },
+    {
+      "id": "p-prosciutto",
+      "sizeIds": [
+        "size-s",
+        "size-m",
+        "size-l"
+      ]
+    }
+  ],
+  "aggregates": [
+    {
+      "id": "c-massa",
+      "classification": "production",
+      "items": [
+        {
+          "componentId": "i-farinha",
+          "quantity": 2
+        },
+        {
+          "componentId": "i-agua",
+          "quantity": 1
+        },
+        {
+          "componentId": "i-fermento",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "c-molho",
+      "classification": "purchase",
+      "items": []
+    }
+  ],
+  "orders": [
+    {
+      "id": "DEMO-PARTIAL#1",
+      "simulated": true,
+      "items": [
+        {
+          "pizzaId": "p-margherita",
+          "sizeId": "size-xl",
+          "quantity": 3
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "c-base-pronta",
+      "name": "[Demo] Base pronta",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-cogumelos",
+      "name": "[Demo] Cogumelos",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-fiambre",
+      "name": "[Demo] Fiambre",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-massa",
+      "name": "[Demo] Massa",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-molho",
+      "name": "[Demo] Molho",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-mozzarella",
+      "name": "[Demo] Mozzarella",
+      "sellable": false,
+      "stockControlled": true,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "c-oregaos",
+      "name": "[Demo] Orégãos",
+      "sellable": false,
+      "stockControlled": false,
+      "isPizzaComponent": true
+    },
+    {
+      "id": "i-agua",
+      "name": "[Demo] Água",
+      "sellable": false,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "i-farinha",
+      "name": "[Demo] Farinha",
+      "sellable": false,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "i-fermento",
+      "name": "[Demo] Fermento",
+      "sellable": false,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "p-funghi-simples",
+      "name": "[Demo] Funghi Simples",
+      "sellable": true,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "p-margherita",
+      "name": "[Demo] Margherita",
+      "sellable": true,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    },
+    {
+      "id": "p-prosciutto",
+      "name": "[Demo] Prosciutto e Funghi",
+      "sellable": true,
+      "stockControlled": false,
+      "isPizzaComponent": false
+    }
+  ],
+  "sizes": [
+    {
+      "id": "size-l",
+      "name": "L"
+    },
+    {
+      "id": "size-m",
+      "name": "M"
+    },
+    {
+      "id": "size-s",
+      "name": "S"
+    }
+  ],
+  "bom": [
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-l",
+      "componentId": "c-nao-existe",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-l",
+      "componentId": "c-cogumelos",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-l",
+      "componentId": "c-mozzarella",
+      "quantity": 3
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-m",
+      "componentId": "c-base-pronta",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-m",
+      "componentId": "c-cogumelos",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-m",
+      "componentId": "c-mozzarella",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-s",
+      "componentId": "c-base-pronta",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-s",
+      "componentId": "c-cogumelos",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-s",
+      "componentId": "c-mozzarella",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "c-massa",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "c-molho",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-l",
+      "componentId": "c-mozzarella",
+      "quantity": 3
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "c-massa",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "c-molho",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-m",
+      "componentId": "c-mozzarella",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "c-massa",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "c-molho",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-margherita",
+      "sizeId": "size-s",
+      "componentId": "c-mozzarella",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-cogumelos",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-fiambre",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-massa",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-molho",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-l",
+      "componentId": "c-mozzarella",
+      "quantity": 3
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-cogumelos",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-fiambre",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-massa",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-molho",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-m",
+      "componentId": "c-mozzarella",
+      "quantity": 2
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-s",
+      "componentId": "c-cogumelos",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-s",
+      "componentId": "c-fiambre",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-s",
+      "componentId": "c-massa",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-s",
+      "componentId": "c-molho",
+      "quantity": 1
+    },
+    {
+      "pizzaId": "p-prosciutto",
+      "sizeId": "size-s",
+      "componentId": "c-mozzarella",
+      "quantity": 1
+    }
+  ],
+  "stock": [
+    {
+      "productId": "c-massa",
+      "quantity": 1
+    },
+    {
+      "productId": "c-molho",
+      "quantity": 5
+    },
+    {
+      "productId": "c-mozzarella",
+      "quantity": 4
+    },
+    {
+      "productId": "c-desconhecido",
+      "quantity": 1
+    }
+  ],
+  "issues": [
+    {
+      "code": "UNMEASURED_NON_STOCK_COMPONENT",
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-s",
+      "componentId": "c-oregaos"
+    },
+    {
+      "code": "UNMEASURED_NON_STOCK_COMPONENT",
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-m",
+      "componentId": "c-oregaos"
+    },
+    {
+      "code": "UNMEASURED_NON_STOCK_COMPONENT",
+      "pizzaId": "p-funghi-simples",
+      "sizeId": "size-l",
+      "componentId": "c-oregaos"
+    }
+  ]
+}

@@ -195,6 +195,7 @@ export function createApp(config = loadConfig(), repos = {}) {
             pizzaComponentTypesRepository:
               repos.pizzaComponentTypesRepository || repos.pizzaComponentTypeRepository,
             stockRepository: repos.stockRepository,
+            predefinedPizzaRepository: repos.predefinedPizzaRepository,
           }
         : undefined,
     ),

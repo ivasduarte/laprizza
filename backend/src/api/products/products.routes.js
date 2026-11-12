@@ -15,6 +15,27 @@ export default function productsRouterFactory(repos) {
     'string.length': 'Invalid ID format.',
   });
 
+  const aggregateSchema = Joi.object({
+    classification: Joi.string().valid('PRODUCED', 'PURCHASED').required().messages({
+      'any.only': 'Aggregate classification must be PRODUCED or PURCHASED.',
+      'any.required': 'Aggregate classification is required.',
+    }),
+    items: Joi.array()
+      .items(
+        Joi.object({
+          productId: objectIdSchema.required(),
+          quantity: Joi.number().integer().min(1).required().messages({
+            'number.base': 'Aggregate item quantity must be a number',
+            'number.integer': 'Aggregate item quantity must be an integer.',
+            'number.min': 'Aggregate item quantity must be at least 1.',
+          }),
+        }),
+      )
+      .default([]),
+  })
+    .allow(null)
+    .optional();
+
   const createProductSchema = Joi.object({
     name: Joi.string().min(1).max(100).trim().required().messages({
       'any.required': 'Mandatory field.',
@@ -41,6 +62,7 @@ export default function productsRouterFactory(repos) {
     allergenIds: Joi.array().items(objectIdSchema).unique().optional().messages({
       'array.unique': 'Duplicate allergen IDs are not allowed.',
     }),
+    aggregate: aggregateSchema,
   });
 
   const listProductsQuerySchema = Joi.object({
@@ -114,6 +136,7 @@ export default function productsRouterFactory(repos) {
     allergenIds: Joi.array().items(objectIdSchema).unique().optional().messages({
       'array.unique': 'Duplicate allergen IDs are not allowed.',
     }),
+    aggregate: aggregateSchema,
     isActive: Joi.boolean().optional(),
   })
     .min(1)

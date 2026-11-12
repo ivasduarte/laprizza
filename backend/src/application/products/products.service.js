@@ -3,13 +3,29 @@ import * as categoriesRepository from '../../infrastructure/product-categories/p
 import * as allergensRepository from '../../infrastructure/allergen/allergen.repository.js';
 import * as pizzaComponentTypesRepository from '../../infrastructure/pizza-component-type/pizza-component-type.repository.js';
 import * as stockRepository from '../../infrastructure/stock/stock.repository.js';
+import * as predefinedPizzaRepository from '../../infrastructure/predefined-pizza/predefined-pizza.repository.js';
 import {
   validateProductName,
   validateProductDescription,
+  normalizeAggregate,
+  validateAggregateShape,
+  validateAggregateItems,
+  validateAggregateOwner,
 } from '../../domain/products/products.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { invalidate } from '../../infrastructure/cache/cache.js';
+
+function toAggregateDTO(aggregate) {
+  if (!aggregate) return null;
+  return {
+    classification: aggregate.classification,
+    items: (aggregate.items ?? []).map((item) => ({
+      productId: String(item.productId?._id ?? item.productId),
+      quantity: item.quantity,
+    })),
+  };
+}
 
 export function toProductDTO(product) {
   return {
@@ -23,8 +39,39 @@ export function toProductDTO(product) {
     isPizzaComponent: !!product.pizzaComponentTypeId,
     pizzaComponentTypeId: product.pizzaComponentTypeId?._id || product.pizzaComponentTypeId || null,
     allergenIds: product.allergenIds?.map((a) => a._id || a) || [],
+    aggregate: toAggregateDTO(product.aggregate),
     isActive: product.isActive ?? true,
   };
+}
+
+async function validateAggregate(productId, aggregate, repos) {
+  const normalized = normalizeAggregate(aggregate);
+  if (normalized === null) return null;
+
+  try {
+    validateAggregateShape(productId, normalized);
+
+    if (productId) {
+      const [ownerPizzaIds, isItemOfAggregate] = await Promise.all([
+        repos.predefinedPizzaRepository.findPizzaProductIds([String(productId)]),
+        repos.productsRepository.existsAggregateWithItem(productId),
+      ]);
+      validateAggregateOwner({ isPizza: ownerPizzaIds.length > 0, isItemOfAggregate });
+    }
+    const itemIds = normalized.items.map((item) => item.productId);
+    if (itemIds.length > 0) {
+      const [itemProducts, pizzaProductIds] = await Promise.all([
+        repos.productsRepository.findAggregateInfoByIds(itemIds),
+        repos.predefinedPizzaRepository.findPizzaProductIds(itemIds),
+      ]);
+      validateAggregateItems(normalized.items, itemProducts, pizzaProductIds);
+    }
+  } catch (err) {
+    if (err instanceof DomainError) throw new AppError(err.message, 400, null, err.code);
+    throw err;
+  }
+
+  return normalized;
 }
 
 async function validateReferences(data, repos) {
@@ -70,6 +117,7 @@ export async function createProduct(
     allergensRepository,
     pizzaComponentTypesRepository,
     stockRepository,
+    predefinedPizzaRepository,
   },
 ) {
   try {
@@ -84,6 +132,10 @@ export async function createProduct(
   }
 
   await validateReferences(data, repos);
+
+  if (data.aggregate !== undefined) {
+    data.aggregate = await validateAggregate(null, data.aggregate, repos);
+  }
 
   const existingProduct = await repos.productsRepository.findByName(data.name);
   if (existingProduct) {
@@ -111,6 +163,7 @@ export async function updateProduct(
     categoriesRepository,
     allergensRepository,
     pizzaComponentTypesRepository,
+    predefinedPizzaRepository,
   },
 ) {
   const product = await repos.productsRepository.findById(id);
@@ -146,6 +199,12 @@ export async function updateProduct(
     updateData.pizzaComponentTypeId = null;
   }
 
+  const aggregateChanged = updateData.aggregate !== undefined;
+  if (aggregateChanged) {
+    updateData.aggregate = await validateAggregate(id, updateData.aggregate, repos);
+  }
+
   const updatedProduct = await repos.productsRepository.update(id, updateData);
+  if (aggregateChanged) await invalidate('catalogue', 'ai-data');
   return toProductDTO(updatedProduct);
 }
