@@ -1,0 +1,220 @@
+@backendUrl = http://10.9.22.22/api/v1
+@aiUrl = http://localhost:5000
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@employeePassword = Ai01Employee123!
+
+@massa = de01b0000000000000000001
+@molho = de01b0000000000000000002
+@mozzarella = de01b0000000000000000003
+@fiambre = de01b0000000000000000004
+@cogumelos = de01b0000000000000000005
+@basePronta = de01b0000000000000000006
+@oregaos = de01b0000000000000000007
+@farinha = de01b0000000000000000008
+@agua = de01b0000000000000000009
+@fermento = de01b000000000000000000a
+
+### 1 - Serviço Prolog ativo e ligado ao back end de @backendUrl (200)
+GET {{aiUrl}}/health
+
+?? status == 200
+?? js response.parsedBody.status == ok
+?? js response.parsedBody.backend.replace('://localhost', '://127.0.0.1') === backendUrl.replace(/\/+$/, '').replace('://localhost', '://127.0.0.1') == true
+
+### 2 - Login de MANAGER no back end: o token é reencaminhado pelo Prolog (200)
+# @name loginManager
+POST {{backendUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.accessToken isString
+
+### Token do MANAGER
+@token = {{loginManager.accessToken}}
+
+### 3 - DEMO-BASIC: só produtos simples e o stock do cenário chega (200, feasible)
+# Os orégãos não têm controlo de stock nem consumo definido: não entram nas contas e
+# aparecem como aviso UNMEASURED_NON_STOCK_COMPONENT.
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-BASIC", "stockMode": "scenario" }
+
+?? status == 200
+?? js response.parsedBody.status == ok
+?? js response.parsedBody.simulation == true
+?? js response.parsedBody.feasible == true
+?? js response.parsedBody.shortages.length == 0
+?? js response.parsedBody.production.length == 0
+?? js response.parsedBody.items.some((i) => i.productId === oregaos) == false
+?? js response.parsedBody.warnings.some((w) => w.code === 'UNMEASURED_NON_STOCK_COMPONENT' && w.componentId === oregaos) == true
+
+### 4 - DEMO-SUFFICIENT: a massa (agregado produzido) chega do stock (200, feasible)
+# Há massa suficiente em stock: não é produzida, por isso os seus ingredientes não aparecem.
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-SUFFICIENT", "stockMode": "scenario" }
+
+?? status == 200
+?? js response.parsedBody.feasible == true
+?? js response.parsedBody.shortages.length == 0
+?? js response.parsedBody.production.length == 0
+?? js response.parsedBody.items.find((i) => i.productId === massa).remaining == 2
+?? js response.parsedBody.items.find((i) => i.productId === massa).toProduce == 0
+?? js response.parsedBody.items.some((i) => [farinha, agua, fermento].includes(i.productId)) == false
+
+### 5 - DEMO-INSUFFICIENT: faltas e massa a produzir a partir dos ingredientes (200, not feasible)
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-INSUFFICIENT", "stockMode": "scenario" }
+
+?? status == 200
+?? js response.parsedBody.feasible == false
+?? js response.parsedBody.shortages.length == 4
+?? js response.parsedBody.shortages.find((s) => s.productId === molho).replenishmentNeeded == 3
+?? js response.parsedBody.shortages.find((s) => s.productId === mozzarella).replenishmentNeeded == 6
+?? js response.parsedBody.shortages.find((s) => s.productId === cogumelos).replenishmentNeeded == 5
+?? js response.parsedBody.shortages.find((s) => s.productId === basePronta).replenishmentNeeded == 1
+?? js response.parsedBody.production.length == 1
+?? js response.parsedBody.production[0].productId === massa == true
+?? js response.parsedBody.production[0].toProduce == 5
+?? js response.parsedBody.production[0].canProduce == true
+?? js response.parsedBody.items.find((i) => i.productId === farinha).required == 10
+
+### 6 - DEMO-PARTIAL: 1 massa em stock, só as 2 em falta são produzidas (200, not feasible)
+# Farinha 4 = 2 massas x 2: a massa em stock não é contada outra vez (sem dupla contagem).
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-PARTIAL", "stockMode": "scenario" }
+
+?? status == 200
+?? js response.parsedBody.feasible == false
+?? js response.parsedBody.shortages.length == 1
+?? js response.parsedBody.shortages[0].productId === mozzarella == true
+?? js response.parsedBody.shortages[0].replenishmentNeeded == 2
+?? js response.parsedBody.production.find((p) => p.productId === massa).toProduce == 2
+?? js response.parsedBody.items.find((i) => i.productId === farinha).required == 4
+
+### 7a - Stock real dos produtos [Demo] antes do cálculo em live (200)
+# Listagem de stock (só leitura). O GET /stock/:productId não é usado porque cria um registo
+# quando o produto ainda não tem stock.
+# @name stockBefore
+GET {{backendUrl}}/stock
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js response.parsedBody.filter((s) => [massa, molho, mozzarella, fiambre, cogumelos, basePronta].includes(String(s.productId))).length == 6
+
+### 7b - DEMO-PARTIAL com o stock real (200, simulação com stock live)
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-PARTIAL", "stockMode": "live" }
+
+?? status == 200
+?? js response.parsedBody.simulation == true
+?? js response.parsedBody.scenario.stockMode == live
+?? js response.parsedBody.inputs.sources.stock.source == backend-live
+
+### 7c - O cálculo não alterou o stock real (200, igual ao 7a)
+GET {{backendUrl}}/stock
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js JSON.stringify(response.parsedBody.filter((s) => [massa, molho, mozzarella, fiambre, cogumelos, basePronta].includes(String(s.productId))).map((s) => [String(s.productId), s.quantity]).sort()) === JSON.stringify(stockBefore.filter((s) => [massa, molho, mozzarella, fiambre, cogumelos, basePronta].includes(String(s.productId))).map((s) => [String(s.productId), s.quantity]).sort()) == true
+
+### 8 - Sem Authorization: o Prolog recusa sem chamar o back end (401)
+POST {{aiUrl}}/bom
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-PARTIAL", "stockMode": "scenario" }
+
+?? status == 401
+?? js response.parsedBody.error.code == TOKEN_MISSING
+
+### 9 - Criar um EMPLOYEE temporário para o teste de permissões (201)
+# @name createEmployee
+POST {{backendUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "ai01_employee_{{$timestamp}}@laprizza.pt",
+  "password": "{{employeePassword}}",
+  "role": "EMPLOYEE"
+}
+
+?? status == 201
+
+### Dados do EMPLOYEE criado
+@employeeId = {{createEmployee.id}}
+@employeeEmail = {{createEmployee.email}}
+
+### 10 - Login do EMPLOYEE (200)
+# @name loginEmployee
+POST {{backendUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{employeePassword}}"
+}
+
+?? status == 200
+
+### 11 - EMPLOYEE não pode calcular a BOM: o back end recusa o snapshot (403)
+POST {{aiUrl}}/bom
+Authorization: Bearer {{loginEmployee.accessToken}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-PARTIAL", "stockMode": "scenario" }
+
+?? status == 403
+
+### 12 - Cenário inexistente (404)
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-NOPE", "stockMode": "scenario" }
+
+?? status == 404
+?? js response.parsedBody.error.code == AI_SCENARIO_NOT_FOUND
+?? js response.parsedBody.error.details.scenarioId == DEMO-NOPE
+
+### 13 - Corpo inválido: stockMode em falta (400)
+POST {{aiUrl}}/bom
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "scenarioId": "DEMO-PARTIAL" }
+
+?? status == 400
+?? js response.parsedBody.error.code == VALIDATION_ERROR
+?? js response.parsedBody.error.details[0].field == stockMode
+?? js response.parsedBody.error.details[0].type == any.required
+
+### 14 - Desativar o EMPLOYEE temporário (200)
+PATCH {{backendUrl}}/users/{{employeeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+?? status == 200

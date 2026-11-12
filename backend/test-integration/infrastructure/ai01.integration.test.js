@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { after, before, beforeEach, test } from 'node:test';
@@ -15,6 +16,10 @@ import AiScenario, {
 import * as productsRepository from '../../src/infrastructure/products/products.repository.js';
 import * as predefinedPizzaRepository from '../../src/infrastructure/predefined-pizza/predefined-pizza.repository.js';
 import * as aiScenarioRepository from '../../src/infrastructure/ai-scenario/ai-scenario.repository.js';
+import Forecast from '../../src/infrastructure/forecast/forecast.model.js';
+import SupplierScenario from '../../src/infrastructure/supplier-scenario/supplier-scenario.model.js';
+import { createAiDataRepository } from '../../src/infrastructure/ai-data/ai-data.repository.js';
+import { getSnapshot } from '../../src/application/ai-data/ai-data.service.js';
 import { seedInitialPizzaComponentTypes } from '../../src/infrastructure/seeder.js';
 import { up, down } from '../../migrations/ai01-bom-aggregates-and-scenarios.js';
 import { startMongo, STARTUP_TIMEOUT_MS } from '../support/mongo-container.js';
@@ -223,4 +228,120 @@ test('seed: never overwrites a document that is not a demo document', async () =
   await assert.rejects(runSeed('--confirm'), (err) => err.code === 1);
   assert.equal((await Products.findById('de01b0000000000000000001')).name, 'Real dough');
   assert.equal(await AiScenario.countDocuments({}), 0);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Snapshot of a BOM scenario, from the seed, against the fixture used by the Prolog tests
+// ---------------------------------------------------------------------------------------------
+
+const FIXTURE = JSON.parse(
+  readFileSync(new URL('../../../ai-scheduling/fixtures/demo-partial.json', import.meta.url), 'utf8'),
+);
+const SEED = JSON.parse(readFileSync(new URL('../../seed/ai01-demo.json', import.meta.url), 'utf8'));
+
+const aiDataRepository = createAiDataRepository({
+  productModel: Products,
+  sizeModel: PizzaSize,
+  predefinedPizzaModel: PredefinedPizza,
+  stockModel: Stock,
+  forecastModel: Forecast,
+  supplierScenarioModel: SupplierScenario,
+  aiScenarioRepository,
+});
+
+/**
+ * Replaces the ids of the seed by the readable ids of the fixture: products by name and sizes
+ * by name without the "[Demo] " prefix.
+ */
+function toFixtureIds(value) {
+  const ids = new Map();
+  for (const p of SEED.products) {
+    const f = FIXTURE.products.find((fp) => fp.name === p.name);
+    if (f) ids.set(p._id, f.id);
+  }
+  for (const s of SEED.sizes) {
+    const f = FIXTURE.sizes.find((fs) => fs.name === s.name.replace('[Demo] ', ''));
+    if (f) ids.set(s._id, f.id);
+  }
+  const tr = (v) => {
+    if (Array.isArray(v)) return v.map(tr);
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, tr(x)]));
+    }
+    return typeof v === 'string' && ids.has(v) ? ids.get(v) : v;
+  };
+  return tr(value);
+}
+
+const asSet = (list) => list.map((x) => JSON.stringify(x)).sort();
+const sortedItems = (aggregates) =>
+  aggregates.map((a) => ({ ...a, items: asSet(a.items) })).sort((a, b) => a.id.localeCompare(b.id));
+const withoutTimes = (sources) =>
+  Object.fromEntries(
+    Object.entries(sources).map(([k, s]) => [
+      k,
+      Object.fromEntries(
+        Object.entries(s).filter(([key]) => !['retrievedAt', 'version'].includes(key)),
+      ),
+    ]),
+  );
+
+test('snapshot: DEMO-PARTIAL from the seed matches the fixture of the Prolog tests', { timeout: 60_000 }, async () => {
+  await runSeed('--confirm');
+  const snap = toFixtureIds(
+    await getSnapshot(aiDataRepository, () => new Date(), {
+      scenarioId: 'DEMO-PARTIAL',
+      stockMode: 'scenario',
+    }),
+  );
+
+  // Ids, times and hashes are generated; everything else must be the same.
+  assert.equal(snap.meta.source, FIXTURE.meta.source);
+  assert.equal(snap.meta.simulated, FIXTURE.meta.simulated);
+  assert.deepEqual(withoutTimes(snap.meta.sources), withoutTimes(FIXTURE.meta.sources));
+  assert.deepEqual(snap.scenario, FIXTURE.scenario);
+  assert.deepEqual(snap.orders, FIXTURE.orders);
+  assert.deepEqual(asSet(snap.pizzas), asSet(FIXTURE.pizzas));
+  assert.deepEqual(sortedItems(snap.aggregates), sortedItems(FIXTURE.aggregates));
+  assert.deepEqual(asSet(snap.products), asSet(FIXTURE.products));
+  assert.deepEqual(asSet(snap.sizes.map((s) => s.id)), asSet(FIXTURE.sizes.map((s) => s.id)));
+  assert.deepEqual(asSet(snap.bom), asSet(FIXTURE.bom));
+  assert.deepEqual(asSet(snap.stock), asSet(FIXTURE.stock));
+  assert.deepEqual(asSet(snap.issues), asSet(FIXTURE.issues));
+  assert.equal(snap.forecast, null);
+  assert.equal(snap.supplierScenario, null);
+});
+
+test('snapshot: DEMO-PARTIAL in live mode uses the stock written by the seed', { timeout: 60_000 }, async () => {
+  await runSeed('--confirm');
+  const snap = await getSnapshot(aiDataRepository, () => new Date(), {
+    scenarioId: 'DEMO-PARTIAL',
+    stockMode: 'live',
+  });
+
+  const expected = SEED.stock
+    .map((s) => ({ productId: s.productId, quantity: s.quantity }))
+    .sort((a, b) => a.productId.localeCompare(b.productId));
+  assert.deepEqual(snap.stock, expected);
+  assert.equal(snap.meta.sources.stock.source, 'backend-live');
+});
+
+test('snapshot: unknown scenario and scenario without stock', async () => {
+  await runSeed('--confirm');
+  await assert.rejects(
+    getSnapshot(aiDataRepository, () => new Date(), {
+      scenarioId: 'DEMO-NOPE',
+      stockMode: 'scenario',
+    }),
+    (err) => err.status === 404 && err.code === 'AI_SCENARIO_NOT_FOUND',
+  );
+
+  await AiScenario.updateOne({ code: 'DEMO-PARTIAL' }, { stock: null });
+  await assert.rejects(
+    getSnapshot(aiDataRepository, () => new Date(), {
+      scenarioId: 'DEMO-PARTIAL',
+      stockMode: 'scenario',
+    }),
+    (err) => err.status === 400 && err.code === 'SCENARIO_WITHOUT_STOCK',
+  );
 });
