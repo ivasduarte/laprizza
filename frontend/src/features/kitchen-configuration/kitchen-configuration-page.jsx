@@ -14,6 +14,7 @@ import {
 } from './kitchen-configuration-api.js';
 import KitchenConfigurationForm from './kitchen-configuration-form.jsx';
 import KitchenViewer from './kitchen-viewer.jsx';
+import AssemblyLineConfigurationSection from '../assembly-line-configuration/assembly-line-configuration-section.jsx';
 import './kitchen-configuration.css';
 
 export default function KitchenConfigurationPage() {
@@ -224,6 +225,12 @@ export default function KitchenConfigurationPage() {
               ))}
             </div>
           )}
+
+          {/* VIS03: library of assembly lines placed by the kitchen configurations */}
+          <AssemblyLineConfigurationSection
+            isManager={isManager}
+            onChanged={() => setViewerKey(Date.now())}
+          />
 
           {/* Integration point for the VIS module - the React key reset applies ADR-0027 */}
           <KitchenViewer key={viewerKey} />

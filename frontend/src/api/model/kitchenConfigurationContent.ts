@@ -4,8 +4,11 @@
  * LaPrizza API
  * OpenAPI spec version: 0.1.0
  */
+import type { KitchenAssemblyLinePlacement } from './kitchenAssemblyLinePlacement';
 
 /**
  * JSON object defining kitchen dimensions and elements.
  */
-export type KitchenConfigurationContent = { [key: string]: unknown };
+export type KitchenConfigurationContent = {
+  assemblyLine?: KitchenAssemblyLinePlacement;
+};

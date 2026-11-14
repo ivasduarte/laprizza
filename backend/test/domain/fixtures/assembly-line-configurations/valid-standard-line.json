@@ -1,0 +1,21 @@
+{
+  "dimensions": { "width": 12, "length": 30, "height": 4 },
+  "elements": [
+    {
+      "id": "conveyor-01",
+      "type": "assembly-line",
+      "modelReference": "/assets/models/conveyor.gltf",
+      "position": { "x": 0, "y": 0, "z": 0 },
+      "rotation": { "x": 0, "y": 0, "z": 0 },
+      "scale": { "x": 1, "y": 1, "z": 1 }
+    },
+    {
+      "id": "oven-01",
+      "type": "equipment",
+      "modelReference": "/assets/models/oven.gltf",
+      "position": { "x": 4, "y": 0, "z": 10 },
+      "rotation": { "x": 0, "y": 90, "z": 0 },
+      "scale": { "x": 1, "y": 1, "z": 1 }
+    }
+  ]
+}

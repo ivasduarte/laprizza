@@ -1,0 +1,593 @@
+@baseUrl = http://localhost:3000/api/v1
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@dynamicSuffix = {{$timestamp}}
+
+### ==========================================
+### 1: AUTENTICAÇÃO E SETUP DE DEPENDÊNCIAS
+### ==========================================
+
+### 1.1 Login do Admin (Manager)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### 1.2 Criar um Funcionário (Employee) para testar RBAC
+# @name createEmployee
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "emp_{{dynamicSuffix}}@laprizza.pt",
+  "password": "{{managerPassword}}",
+  "role": "EMPLOYEE"
+}
+?? status == 201
+@empEmail = {{createEmployee.email}}
+
+### 1.3 Login do Funcionário (Employee)
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{empEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+@empToken = {{loginEmployee.accessToken}}
+
+### 1.4 Criar um Cliente (Customer) para testar RBAC
+# @name createCustomer
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "cust_{{dynamicSuffix}}@laprizza.pt",
+  "password": "{{managerPassword}}",
+  "role": "CUSTOMER"
+}
+?? status == 201
+@custEmail = {{createCustomer.email}}
+
+### 1.5 Login do Cliente
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{custEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+@custToken = {{loginCustomer.accessToken}}
+
+
+### ==========================================
+### 2: SEGURANÇA E ACESSOS (RBAC)
+### ==========================================
+
+### 2.1 Sem Token (401 Unauthorized)
+GET {{baseUrl}}/assembly-line-configurations
+?? status == 401
+
+### 2.2 Token de Customer (403 Forbidden - Acesso negado a clientes)
+GET {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{custToken}}
+?? status == 403
+
+### 2.3 Token de Employee tenta CRIAR (403 Forbidden - Apenas Manager)
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{empToken}}
+Content-Type: application/json
+
+{
+  "name": "Unauthorized Config",
+  "content": { "dimensions": { "width": 12, "length": 30, "height": 4 }, "elements": [] }
+}
+?? status == 403
+
+### 2.4 Token de Employee consegue LER (200 OK)
+GET {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{empToken}}
+?? status == 200
+
+
+### ==========================================
+### 3: VALIDAÇÃO E REJEIÇÃO
+### ==========================================
+
+### 3.1 Falha Joi: Body vazio (400 Bad Request)
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 3.2 Falha Domínio: JSON Inválido / Sem dimensions (400 Bad Request)
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Invalid Config",
+  "content": {
+    "elements": []
+  }
+}
+?? status == 400
+?? js response.parsedBody.error.message.includes('dimensions')
+
+### 3.3 Dry-run de validação com conteúdo válido (200 OK)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 12, "length": 30, "height": 4 },
+    "elements": []
+  }
+}
+?? status == 200
+?? body valid == true
+
+### 3.4 Dry-run de validação com conteúdo inválido (400 Bad Request)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": -5, "length": 30, "height": 4 },
+    "elements": []
+  }
+}
+?? status == 400
+
+### 3.5 Falha Domínio: modelReference relativo (400 Bad Request, com paths em details)
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Relative Asset {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 12, "length": 30, "height": 4 },
+    "elements": [
+      {
+        "id": "conveyor-01",
+        "type": "assembly-line",
+        "modelReference": "models/conveyor.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 400
+?? js response.parsedBody.error.message.includes('/elements/0/modelReference')
+
+### 3.6 Dry-run com modelReference em URL absoluta (200 OK)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 12, "length": 30, "height": 4 },
+    "elements": [
+      {
+        "id": "conveyor-01",
+        "type": "assembly-line",
+        "modelReference": "https://cdn.laprizza.pt/models/conveyor.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 200
+?? body valid == true
+
+### 3.6b Dry-run da linha VIS03: plataforma e dispenser à esquerda, tapete, braços e forno à direita (200 OK)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": {
+      "width": 9,
+      "length": 1.4,
+      "height": 2.6
+    },
+    "elements": [
+      {
+        "id": "counter-01",
+        "type": "counter",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0.7
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 9,
+          "y": 1,
+          "z": 1.2
+        }
+      },
+      {
+        "id": "platform-01",
+        "type": "receiving-platform",
+        "position": {
+          "x": -3.8,
+          "y": 0.9,
+          "z": 0.7
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "dispenser-01",
+        "type": "crust-dispenser",
+        "position": {
+          "x": -3.8,
+          "y": 0.9,
+          "z": 0.7
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "conveyor-01",
+        "type": "conveyor-belt",
+        "position": {
+          "x": 0,
+          "y": 0.9,
+          "z": 0.7
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 6.4,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "arm-01",
+        "type": "robotic-arm",
+        "position": {
+          "x": -2.2,
+          "y": 0.9,
+          "z": 0.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "arm-02",
+        "type": "robotic-arm",
+        "position": {
+          "x": -0.8,
+          "y": 0.9,
+          "z": 0.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "arm-03",
+        "type": "robotic-arm",
+        "position": {
+          "x": 0.6,
+          "y": 0.9,
+          "z": 0.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "arm-04",
+        "type": "robotic-arm",
+        "position": {
+          "x": 2.0,
+          "y": 0.9,
+          "z": 0.15
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      {
+        "id": "oven-01",
+        "type": "wood-fired-oven",
+        "position": {
+          "x": 3.9,
+          "y": 0.9,
+          "z": 0.7
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      }
+    ]
+  }
+}
+?? status == 200
+?? body valid == true
+
+### 3.7 Falha Schema: tipo de elemento desconhecido (400 Bad Request)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 12, "length": 30, "height": 4 },
+    "elements": [
+      {
+        "id": "robot-01",
+        "type": "robot",
+        "modelReference": "/assets/models/robot.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 400
+
+### 3.8 ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/assembly-line-configurations/not-a-valid-id
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+
+### ==========================================
+### 4: CRIAÇÃO E ATUALIZAÇÃO DE CONFIGURAÇÕES
+### ==========================================
+
+### 4.1 Criar Configuração A - Standard (201 Created)
+# @name createConfigA
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Standard Line {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 12, "length": 30, "height": 4 },
+    "elements": [
+      {
+        "id": "conveyor-01",
+        "type": "assembly-line",
+        "modelReference": "/assets/models/conveyor.gltf",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      }
+    ]
+  }
+}
+?? status == 201
+?? js Object.hasOwn(response.parsedBody, 'isActive') == false
+@configA_Id = {{createConfigA.id}}
+
+### 4.2 Criar Configuração B - Full Line (201 Created)
+# @name createConfigB
+POST {{baseUrl}}/assembly-line-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Full Line {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 20, "length": 45, "height": 5 },
+    "elements": []
+  }
+}
+?? status == 201
+@configB_Id = {{createConfigB.id}}
+
+### 4.3 Atualizar o nome da Configuração B (200 OK)
+PATCH {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Full Line Rev2 {{dynamicSuffix}}"
+}
+?? status == 200
+?? body id == {{configB_Id}}
+
+### 4.4 Falha Joi: PATCH com body vazio (400 Bad Request)
+PATCH {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+?? status == 400
+
+### 4.5 Employee não consegue atualizar (403 Forbidden)
+PATCH {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{empToken}}
+Content-Type: application/json
+
+{
+  "name": "Hacked"
+}
+?? status == 403
+
+
+### ==========================================
+### 5: REFERÊNCIA A PARTIR DA KITCHEN CONFIGURATION
+### ==========================================
+
+### 5.1 As linhas não têm estado ativo (o campo isActive não existe)
+GET {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js Object.hasOwn(response.parsedBody, 'isActive') == false
+
+### 5.2 Kitchen com configurationId mal formado (400 Bad Request - schema da kitchen)
+POST {{baseUrl}}/kitchen-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 20, "length": 40, "height": 4 },
+    "elements": [],
+    "assemblyLine": {
+      "configurationId": "not-an-id",
+      "position": { "x": 0, "y": 0, "z": -15 },
+      "rotation": { "x": 0, "y": 0, "z": 0 }
+    }
+  }
+}
+?? status == 400
+
+### 5.3 Criar uma Kitchen Configuration que coloca a Linha B numa parede (201 Created)
+# @name createKitchenWithLine
+POST {{baseUrl}}/kitchen-configurations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Kitchen With Line {{dynamicSuffix}}",
+  "content": {
+    "dimensions": { "width": 20, "length": 40, "height": 4 },
+    "elements": [],
+    "assemblyLine": {
+      "configurationId": "{{configB_Id}}",
+      "position": { "x": 0, "y": 0, "z": -15 },
+      "rotation": { "x": 0, "y": 0, "z": 0 }
+    }
+  }
+}
+?? status == 201
+@kitchenWithLine_Id = {{createKitchenWithLine.id}}
+
+### 5.4 Tentar eliminar a Linha B, referenciada pela kitchen (409 Conflict)
+DELETE {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 409
+
+### 5.5 Eliminar a Linha A, que ninguém referencia (204 No Content)
+DELETE {{baseUrl}}/assembly-line-configurations/{{configA_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 204
+
+### 5.6 Obter a Linha A (404 Not Found)
+GET {{baseUrl}}/assembly-line-configurations/{{configA_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+### 5.7 Employee não consegue eliminar (403 Forbidden)
+DELETE {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{empToken}}
+?? status == 403
+
+### 5.8 Eliminar uma linha inexistente (404 Not Found)
+DELETE {{baseUrl}}/assembly-line-configurations/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+?? status == 404
+
+### 5.9 A rota /active já não existe: 'active' é tratado como um ID inválido (400 Bad Request)
+GET {{baseUrl}}/assembly-line-configurations/active
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+
+### ==========================================
+### 6: LIMPEZA
+### ==========================================
+
+### 6.1 Eliminar a kitchen que referencia a Linha B (204 No Content - está inativa)
+DELETE {{baseUrl}}/kitchen-configurations/{{kitchenWithLine_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 204
+
+### 6.2 Sem referências, a Linha B já pode ser eliminada (204 No Content)
+DELETE {{baseUrl}}/assembly-line-configurations/{{configB_Id}}
+Authorization: Bearer {{adminToken}}
+?? status == 204

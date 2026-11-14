@@ -25,6 +25,8 @@ import type {
 
 import type {
   Allergen,
+  AssemblyLineConfiguration,
+  AssemblyLineConfigurationInput,
   CatalogueItem,
   ComponentSizeConfiguration,
   Customer,
@@ -43,6 +45,7 @@ import type {
   GetProductsParams,
   GetStockParams,
   KitchenConfiguration,
+  PatchAssemblyLineConfigurationsIdBody,
   PatchCustomersIdBody,
   PatchKitchenConfigurationsIdBody,
   PatchPizzaSizeIdBody,
@@ -51,6 +54,8 @@ import type {
   PizzaComponentType,
   PizzaSize,
   PostAllergensBody,
+  PostAssemblyLineConfigurationsValidate200,
+  PostAssemblyLineConfigurationsValidateBody,
   PostAuthLogin200,
   PostAuthLoginBody,
   PostCustomersBody,
@@ -4525,6 +4530,462 @@ export const useDeleteKitchenConfigurationsId = <TError = Error,
         TContext
       > => {
       return useMutation(getDeleteKitchenConfigurationsIdMutationOptions(options), queryClient);
+    }
+    /**
+ * Library of line definitions, sorted by creation date, most recent first.
+ * @summary List assembly line configurations (MANAGER and EMPLOYEE)
+ */
+export const getAssemblyLineConfigurations = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AssemblyLineConfiguration[]>(
+      {url: `/assembly-line-configurations`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetAssemblyLineConfigurationsQueryKey = () => {
+    return [
+    `/assembly-line-configurations`
+    ] as const;
+    }
+
+
+export const getGetAssemblyLineConfigurationsQueryOptions = <TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssemblyLineConfigurationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>> = ({ signal }) => getAssemblyLineConfigurations(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAssemblyLineConfigurationsQueryResult = NonNullable<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>>
+export type GetAssemblyLineConfigurationsQueryError = Error
+
+
+export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssemblyLineConfigurations>>,
+          TError,
+          Awaited<ReturnType<typeof getAssemblyLineConfigurations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssemblyLineConfigurations>>,
+          TError,
+          Awaited<ReturnType<typeof getAssemblyLineConfigurations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List assembly line configurations (MANAGER and EMPLOYEE)
+ */
+
+export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAssemblyLineConfigurationsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Adds a line definition to the library. Lines have no active state: a kitchen configuration places one through content.assemblyLine. Unknown body properties are ignored. The content is validated against the assembly line schema and the domain rules (unique element ids, asset references must be absolute http(s) URLs or root-relative paths).
+ * @summary Create assembly line configuration (MANAGER only)
+ */
+export const postAssemblyLineConfigurations = (
+    assemblyLineConfigurationInput: AssemblyLineConfigurationInput,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AssemblyLineConfiguration>(
+      {url: `/assembly-line-configurations`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: assemblyLineConfigurationInput, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostAssemblyLineConfigurationsMutationKey = () => ['postAssemblyLineConfigurations'] as const;
+
+export const getPostAssemblyLineConfigurationsMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurations>>, TError,PostAssemblyLineConfigurationsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurations>>, TError,PostAssemblyLineConfigurationsMutationVariables, TContext> => {
+
+const mutationKey = getPostAssemblyLineConfigurationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAssemblyLineConfigurations>>, PostAssemblyLineConfigurationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postAssemblyLineConfigurations(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAssemblyLineConfigurationsMutationResult = NonNullable<Awaited<ReturnType<typeof postAssemblyLineConfigurations>>>
+    export type PostAssemblyLineConfigurationsMutationBody = AssemblyLineConfigurationInput
+    export type PostAssemblyLineConfigurationsMutationError = Error
+    export type PostAssemblyLineConfigurationsMutationVariables = {data: AssemblyLineConfigurationInput}
+
+    /**
+ * @summary Create assembly line configuration (MANAGER only)
+ */
+export const usePostAssemblyLineConfigurations = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurations>>, TError,PostAssemblyLineConfigurationsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAssemblyLineConfigurations>>,
+        TError,
+        PostAssemblyLineConfigurationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAssemblyLineConfigurationsMutationOptions(options), queryClient);
+    }
+    /**
+ * Validates the content without saving it.
+ * @summary Validate assembly line configuration content (MANAGER only)
+ */
+export const postAssemblyLineConfigurationsValidate = (
+    postAssemblyLineConfigurationsValidateBody: PostAssemblyLineConfigurationsValidateBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<PostAssemblyLineConfigurationsValidate200>(
+      {url: `/assembly-line-configurations/validate`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postAssemblyLineConfigurationsValidateBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostAssemblyLineConfigurationsValidateMutationKey = () => ['postAssemblyLineConfigurationsValidate'] as const;
+
+export const getPostAssemblyLineConfigurationsValidateMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>, TError,PostAssemblyLineConfigurationsValidateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>, TError,PostAssemblyLineConfigurationsValidateMutationVariables, TContext> => {
+
+const mutationKey = getPostAssemblyLineConfigurationsValidateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>, PostAssemblyLineConfigurationsValidateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postAssemblyLineConfigurationsValidate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAssemblyLineConfigurationsValidateMutationResult = NonNullable<Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>>
+    export type PostAssemblyLineConfigurationsValidateMutationBody = PostAssemblyLineConfigurationsValidateBody
+    export type PostAssemblyLineConfigurationsValidateMutationError = Error
+    export type PostAssemblyLineConfigurationsValidateMutationVariables = {data: PostAssemblyLineConfigurationsValidateBody}
+
+    /**
+ * @summary Validate assembly line configuration content (MANAGER only)
+ */
+export const usePostAssemblyLineConfigurationsValidate = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>, TError,PostAssemblyLineConfigurationsValidateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAssemblyLineConfigurationsValidate>>,
+        TError,
+        PostAssemblyLineConfigurationsValidateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAssemblyLineConfigurationsValidateMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Get assembly line configuration by ID (MANAGER and EMPLOYEE)
+ */
+export const getAssemblyLineConfigurationsId = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AssemblyLineConfiguration>(
+      {url: `/assembly-line-configurations/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetAssemblyLineConfigurationsIdQueryKey = (id: string,) => {
+    return [
+    `/assembly-line-configurations/${id}`
+    ] as const;
+    }
+
+
+export const getGetAssemblyLineConfigurationsIdQueryOptions = <TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssemblyLineConfigurationsIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>> = ({ signal }) => getAssemblyLineConfigurationsId(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAssemblyLineConfigurationsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>>
+export type GetAssemblyLineConfigurationsIdQueryError = Error
+
+
+export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>,
+          TError,
+          Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>,
+          TError,
+          Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get assembly line configuration by ID (MANAGER and EMPLOYEE)
+ */
+
+export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAssemblyLineConfigurationsIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Partial update of name and/or content. The content, when sent, is replaced as a whole and fully validated before being saved, so kitchen configurations that reference the line never receive an invalid definition.
+ * @summary Update assembly line configuration (MANAGER only)
+ */
+export const patchAssemblyLineConfigurationsId = (
+    id: string,
+    patchAssemblyLineConfigurationsIdBody: PatchAssemblyLineConfigurationsIdBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AssemblyLineConfiguration>(
+      {url: `/assembly-line-configurations/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchAssemblyLineConfigurationsIdBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPatchAssemblyLineConfigurationsIdMutationKey = () => ['patchAssemblyLineConfigurationsId'] as const;
+
+export const getPatchAssemblyLineConfigurationsIdMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>, TError,PatchAssemblyLineConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>, TError,PatchAssemblyLineConfigurationsIdMutationVariables, TContext> => {
+
+const mutationKey = getPatchAssemblyLineConfigurationsIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>, PatchAssemblyLineConfigurationsIdMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchAssemblyLineConfigurationsId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchAssemblyLineConfigurationsIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>>
+    export type PatchAssemblyLineConfigurationsIdMutationBody = PatchAssemblyLineConfigurationsIdBody
+    export type PatchAssemblyLineConfigurationsIdMutationError = Error
+    export type PatchAssemblyLineConfigurationsIdMutationVariables = {id: string;data: PatchAssemblyLineConfigurationsIdBody}
+
+    /**
+ * @summary Update assembly line configuration (MANAGER only)
+ */
+export const usePatchAssemblyLineConfigurationsId = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>, TError,PatchAssemblyLineConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchAssemblyLineConfigurationsId>>,
+        TError,
+        PatchAssemblyLineConfigurationsIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchAssemblyLineConfigurationsIdMutationOptions(options), queryClient);
+    }
+    /**
+ * Physical removal. A line referenced by any kitchen configuration (content.assemblyLine.configurationId) cannot be deleted.
+ * @summary Delete assembly line configuration (MANAGER only)
+ */
+export const deleteAssemblyLineConfigurationsId = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<void>(
+      {url: `/assembly-line-configurations/${id}`, method: 'DELETE', signal
+    },
+      options);
+    }
+
+
+
+
+export const getDeleteAssemblyLineConfigurationsIdMutationKey = () => ['deleteAssemblyLineConfigurationsId'] as const;
+
+export const getDeleteAssemblyLineConfigurationsIdMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>, TError,DeleteAssemblyLineConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>, TError,DeleteAssemblyLineConfigurationsIdMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAssemblyLineConfigurationsIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>, DeleteAssemblyLineConfigurationsIdMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAssemblyLineConfigurationsId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAssemblyLineConfigurationsIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>>
+
+    export type DeleteAssemblyLineConfigurationsIdMutationError = Error
+    export type DeleteAssemblyLineConfigurationsIdMutationVariables = {id: string}
+
+    /**
+ * @summary Delete assembly line configuration (MANAGER only)
+ */
+export const useDeleteAssemblyLineConfigurationsId = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>, TError,DeleteAssemblyLineConfigurationsIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAssemblyLineConfigurationsId>>,
+        TError,
+        DeleteAssemblyLineConfigurationsIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAssemblyLineConfigurationsIdMutationOptions(options), queryClient);
     }
     /**
  * @summary List daily forecasts (MANAGER and EMPLOYEE)

@@ -34,6 +34,7 @@ import componentSizeConfigurationRouterFactory from './api/component-size-config
 import productCatalogueRouterFactory from './api/product-catalogue/product-catalogue.route.js';
 import aiDataRouterFactory from './api/ai-data/ai-data.routes.js';
 import kitchenConfigurationRouterFactory from './api/kitchen-configuration/kitchen-configuration.routes.js';
+import assemblyLineConfigurationRouterFactory from './api/assembly-line-configuration/assembly-line-configuration.routes.js';
 import systemRouterFactory from './api/system/system.routes.js';
 import forecastRouterFactory from './api/forecast/forecast.routes.js';
 import supplierScenarioRouterFactory from './api/supplier-scenario/supplier-scenario.routes.js';
@@ -254,6 +255,12 @@ export function createApp(config = loadConfig(), repos = {}) {
     '/kitchen-configurations',
     kitchenConfigurationRouterFactory(
       repos.kitchenConfigurationRepository || repos.kitchenRepository,
+    ),
+  );
+  api.use(
+    '/assembly-line-configurations',
+    assemblyLineConfigurationRouterFactory(
+      repos.assemblyLineConfigurationRepository || repos.assemblyLineRepository,
     ),
   );
   api.use('/forecasts', forecastRouterFactory(repos.forecastRepository));

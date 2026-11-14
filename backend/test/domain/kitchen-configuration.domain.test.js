@@ -122,6 +122,23 @@ test('validateKitchenConfigurationContent accepts an absolute URL as modelRefere
   assert.doesNotThrow(() => validateKitchenConfigurationContent(content));
 });
 
+test('validateKitchenConfigurationContent accepts a procedural element without modelReference', () => {
+  const content = buildContent();
+  delete content.elements[0].modelReference;
+  assert.doesNotThrow(() => validateKitchenConfigurationContent(content));
+});
+
+test('validateKitchenConfigurationContent rejects an empty modelReference when present', () => {
+  assert.throws(
+    () => validateKitchenConfigurationContent(buildContent({ modelReference: '' })),
+    (err) => {
+      assert.ok(err instanceof DomainError);
+      assert.ok(err.details.some((d) => d.startsWith('/elements/0/modelReference')));
+      return true;
+    },
+  );
+});
+
 test('validateKitchenConfigurationContent rejects a relative modelReference and reports its path in details', () => {
   assert.throws(
     () => validateKitchenConfigurationContent(buildContent({ modelReference: 'models/oven.gltf' })),

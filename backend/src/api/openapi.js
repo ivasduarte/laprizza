@@ -15,6 +15,14 @@ const objectIdPathParam = (name) => ({
 });
 const productIdParam = objectIdPathParam('productId');
 const sizeIdParam = objectIdPathParam('sizeId');
+const idParam = objectIdPathParam('id');
+
+const assemblyLineConfigurationResponse = (description) => ({
+  description,
+  content: {
+    'application/json': { schema: { $ref: '#/components/schemas/AssemblyLineConfiguration' } },
+  },
+});
 const sharedResourceNameParam = {
   name: 'name',
   in: 'path',
@@ -1756,6 +1764,143 @@ export const openApiSpec = {
         },
       },
     },
+    '/assembly-line-configurations': {
+      get: {
+        summary: 'List assembly line configurations (MANAGER and EMPLOYEE)',
+        description: 'Library of line definitions, sorted by creation date, most recent first.',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/AssemblyLineConfiguration' },
+                },
+              },
+            },
+          },
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+      post: {
+        summary: 'Create assembly line configuration (MANAGER only)',
+        description:
+          'Adds a line definition to the library. Lines have no active state: a kitchen configuration places one through content.assemblyLine. Unknown body properties are ignored. The content is validated against the assembly line schema and the domain rules (unique element ids, asset references must be absolute http(s) URLs or root-relative paths).',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AssemblyLineConfigurationInput' },
+            },
+          },
+        },
+        responses: {
+          201: assemblyLineConfigurationResponse('Created'),
+          400: errorResponse('Validation error or invalid content'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
+    '/assembly-line-configurations/validate': {
+      post: {
+        summary: 'Validate assembly line configuration content (MANAGER only)',
+        description: 'Validates the content without saving it.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['content'],
+                properties: {
+                  content: { $ref: '#/components/schemas/AssemblyLineConfigurationContent' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'The content is valid',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { valid: { type: 'boolean', example: true } },
+                },
+              },
+            },
+          },
+          400: errorResponse('Invalid content. details lists each violation with its path'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+        },
+      },
+    },
+    '/assembly-line-configurations/{id}': {
+      get: {
+        summary: 'Get assembly line configuration by ID (MANAGER and EMPLOYEE)',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        responses: {
+          200: assemblyLineConfigurationResponse('Success'),
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Assembly line configuration not found'),
+        },
+      },
+      patch: {
+        summary: 'Update assembly line configuration (MANAGER only)',
+        description:
+          'Partial update of name and/or content. The content, when sent, is replaced as a whole and fully validated before being saved, so kitchen configurations that reference the line never receive an invalid definition.',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                minProperties: 1,
+                properties: {
+                  name: { type: 'string', minLength: 1, example: 'Line A - Rev. 2' },
+                  content: { $ref: '#/components/schemas/AssemblyLineConfigurationContent' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: assemblyLineConfigurationResponse('Success'),
+          400: errorResponse('Validation error or invalid content'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Assembly line configuration not found'),
+        },
+      },
+      delete: {
+        summary: 'Delete assembly line configuration (MANAGER only)',
+        description:
+          'Physical removal. A line referenced by any kitchen configuration (content.assemblyLine.configurationId) cannot be deleted.',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        responses: {
+          204: { description: 'Removed' },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse('Assembly line configuration not found'),
+          409: errorResponse('The line is referenced by one or more kitchen configurations'),
+        },
+      },
+    },
     '/forecasts': {
       get: {
         summary: 'List daily forecasts (MANAGER and EMPLOYEE)',
@@ -1922,39 +2067,8 @@ export const openApiSpec = {
               status: { type: 'integer', example: 400 },
               code: { type: 'string', example: 'BAD_REQUEST' },
               message: { type: 'string', example: 'Validation failed' },
-              details: {
-                type: 'array',
-                description:
-                  'Validation violations (HTTP 400). Clients translate by `type` and bind each item to an input by `field`. ' +
-                  'Kitchen configuration content violations are plain strings prefixed by their JSON pointer.',
-                items: {
-                  oneOf: [{ $ref: '#/components/schemas/ValidationDetail' }, { type: 'string' }],
-                },
-              },
+              details: { type: 'array', items: { type: 'string' } },
             },
-          },
-        },
-      },
-      ValidationDetail: {
-        type: 'object',
-        required: ['field', 'type', 'message'],
-        properties: {
-          field: {
-            type: 'string',
-            description:
-              'Dot-separated path of the invalid input. Empty when it concerns the whole payload.',
-            example: 'address.postalCode',
-          },
-          type: { type: 'string', description: 'Stable Joi error type.', example: 'string.min' },
-          message: {
-            type: 'string',
-            description: 'Technical English message (diagnostics only).',
-            example: '"name" length must be at least 3 characters long',
-          },
-          limit: {
-            type: 'number',
-            description: 'Violated numeric limit (min/max/length rules).',
-            example: 3,
           },
         },
       },
@@ -2122,7 +2236,128 @@ export const openApiSpec = {
           content: {
             type: 'object',
             description: 'JSON object defining kitchen dimensions and elements.',
+            properties: {
+              assemblyLine: { $ref: '#/components/schemas/KitchenAssemblyLinePlacement' },
+            },
           },
+        },
+      },
+      KitchenAssemblyLinePlacement: {
+        type: 'object',
+        description:
+          'Optional. Places an assembly line configuration in the kitchen (VIS03), as a back-end reference resolved by id (WEB06).',
+        required: ['configurationId', 'position', 'rotation'],
+        additionalProperties: false,
+        properties: {
+          configurationId: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$',
+            example: '6650f1c2a9b3e4d5f6a7b8c9',
+          },
+          position: { $ref: '#/components/schemas/Vector3' },
+          rotation: { $ref: '#/components/schemas/Vector3' },
+        },
+      },
+      Vector3: {
+        type: 'object',
+        required: ['x', 'y', 'z'],
+        properties: {
+          x: { type: 'number', example: 0 },
+          y: { type: 'number', example: 0 },
+          z: { type: 'number', example: 0 },
+        },
+      },
+      PositiveVector3: {
+        type: 'object',
+        required: ['x', 'y', 'z'],
+        properties: {
+          x: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 1 },
+          y: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 1 },
+          z: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 1 },
+        },
+      },
+      AssemblyLineElement: {
+        type: 'object',
+        required: ['id', 'type', 'position', 'rotation', 'scale'],
+        properties: {
+          id: {
+            type: 'string',
+            minLength: 1,
+            description: 'Unique within the configuration.',
+            example: 'arm-01',
+          },
+          type: {
+            type: 'string',
+            description:
+              'VIS03 components: counter, receiving-platform, crust-dispenser (overhead crust supply), conveyor-belt, robotic-arm, wood-fired-oven. The generic types are kept for compatibility.',
+            enum: [
+              'counter',
+              'receiving-platform',
+              'crust-dispenser',
+              'conveyor-belt',
+              'robotic-arm',
+              'wood-fired-oven',
+              'equipment',
+              'assembly-line',
+              'decoration',
+              'tool',
+            ],
+            example: 'robotic-arm',
+          },
+          modelReference: {
+            type: 'string',
+            format: 'uri-reference',
+            description:
+              'Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0021). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).',
+            example: '/assets/models/conveyor.gltf',
+          },
+          position: { $ref: '#/components/schemas/Vector3' },
+          rotation: { $ref: '#/components/schemas/Vector3' },
+          scale: { $ref: '#/components/schemas/PositiveVector3' },
+          material: {
+            type: 'object',
+            description: 'Texture maps, when present, follow the same rule as modelReference.',
+            properties: {
+              color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', example: '#c0c0c0' },
+              roughnessMap: { type: 'string', format: 'uri-reference' },
+              bumpMap: { type: 'string', format: 'uri-reference' },
+              normalMap: { type: 'string', format: 'uri-reference' },
+            },
+          },
+        },
+      },
+      AssemblyLineConfigurationContent: {
+        type: 'object',
+        description:
+          'Line definition in its own local coordinate system (origin at the line origin). dimensions is the footprint of the line; element transforms are relative to the line origin.',
+        required: ['dimensions', 'elements'],
+        properties: {
+          dimensions: {
+            type: 'object',
+            required: ['width', 'length', 'height'],
+            properties: {
+              width: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 12 },
+              length: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 30 },
+              height: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 4 },
+            },
+          },
+          elements: { type: 'array', items: { $ref: '#/components/schemas/AssemblyLineElement' } },
+        },
+      },
+      AssemblyLineConfigurationInput: {
+        type: 'object',
+        required: ['name', 'content'],
+        properties: {
+          name: { type: 'string', minLength: 1, example: 'Line A' },
+          content: { $ref: '#/components/schemas/AssemblyLineConfigurationContent' },
+        },
+      },
+      AssemblyLineConfiguration: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '65231abcd345678901234567' },
+          name: { type: 'string', example: 'Line A' },
+          content: { $ref: '#/components/schemas/AssemblyLineConfigurationContent' },
         },
       },
       VersionInfo: {

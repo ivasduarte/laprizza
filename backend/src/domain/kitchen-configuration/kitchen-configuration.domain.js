@@ -67,8 +67,9 @@ export function validateKitchenConfigurationContent(content) {
     }
     elementIds.add(element.id);
 
-    // 2.2 Asset references: absolute http(s) URL or root-relative path
-    if (!isValidAssetReference(element.modelReference)) {
+    // 2.2 Asset references (when present): absolute http(s) URL or root-relative path
+    // modelReference is optional: without it the element is procedural (VIS03).
+    if (element.modelReference !== undefined && !isValidAssetReference(element.modelReference)) {
       violations.push(
         `/elements/${index}/modelReference must be an absolute http(s) URL or a root-relative path`,
       );

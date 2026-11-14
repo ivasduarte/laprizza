@@ -38,6 +38,17 @@ async function loginAndOpenKitchenConfigs(page, email) {
 }
 
 test.describe('Kitchen Configuration Page E2E', () => {
+  // The page also lists the assembly lines (VIS03) and the kitchen form loads them for
+  // its picker: mock that list so no request leaves the test.
+  test.beforeEach(async ({ page }) => {
+    await page.route(
+      '**/api/v1/assembly-line-configurations',
+      async (route) => {
+        await route.fulfill({ json: [] });
+      }
+    );
+  });
+
   test('RBAC: Employee gets a read-only view (no management controls)', async ({
     page,
   }) => {

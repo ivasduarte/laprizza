@@ -22,7 +22,11 @@
             "type": "string",
             "enum": ["equipment", "assembly-line", "decoration", "tool"]
           },
-          "modelReference": { "type": "string", "format": "uri-reference" },
+          "modelReference": {
+            "description": "Optional. Imported model URL (absolute http(s) URL or root-relative path). When absent, the element is created procedurally from its type (VIS03).",
+            "type": "string",
+            "format": "uri-reference"
+          },
           "position": {
             "type": "object",
             "properties": {
@@ -60,8 +64,35 @@
             }
           }
         },
-        "required": ["id", "type", "modelReference", "position", "rotation", "scale"]
+        "required": ["id", "type", "position", "rotation", "scale"]
       }
+    },
+    "assemblyLine": {
+      "description": "Placement of the automated pizza assembly line (VIS03). References an Assembly Line Configuration, resolved by the back end (WEB06).",
+      "type": "object",
+      "properties": {
+        "configurationId": { "type": "string", "pattern": "^[0-9a-fA-F]{24}$" },
+        "position": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          },
+          "required": ["x", "y", "z"]
+        },
+        "rotation": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          },
+          "required": ["x", "y", "z"]
+        }
+      },
+      "required": ["configurationId", "position", "rotation"],
+      "additionalProperties": false
     }
   },
   "required": ["dimensions", "elements"]

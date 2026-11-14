@@ -11,11 +11,20 @@ import KitchenScene from '../visualization3d/kitchen-scene.jsx';
  * The parent changes its React key to force a remount (ADR-0027), which triggers a new fetch.
  * When no configuration is active (404) it shows an explicit empty state and never falls
  * back to a hardcoded layout (ADR-0025).
+ *
+ * The assembly line referenced by the kitchen (content.assemblyLine) is resolved too. If it
+ * cannot be loaded, the kitchen is still shown with a visible warning, never with another line.
  */
 export default function KitchenViewer() {
   const { t } = useTranslation();
-  const { activeConfig, loading, error, loadActive } =
-    useKitchenConfiguration();
+  const {
+    activeConfig,
+    assemblyLine,
+    assemblyLineError,
+    loading,
+    error,
+    loadActive,
+  } = useKitchenConfiguration();
 
   useEffect(() => {
     // The error is already exposed through the hook state.
@@ -48,7 +57,26 @@ export default function KitchenViewer() {
       <p data-testid="viewer-active-config" style={{ margin: '0 0 1rem 0' }}>
         {t('kitchenConfig.viewer.showing', 'Showing')}:{' '}
         <strong>{activeConfig.name}</strong>
+        {assemblyLine && (
+          <>
+            {' · '}
+            {t('assemblyLine.viewer.showing', 'Assembly line')}:{' '}
+            <strong data-testid="viewer-assembly-line">
+              {assemblyLine.name}
+            </strong>
+          </>
+        )}
       </p>
+
+      {assemblyLineError && (
+        <p
+          className="message message-error"
+          role="alert"
+          style={{ margin: '0 0 1rem 0' }}
+        >
+          {t('assemblyLine.viewer.unavailable')} {assemblyLineError}
+        </p>
+      )}
 
       {/* The 3D mechanism will expand to fill the rest of the available screen */}
       <div
@@ -59,7 +87,7 @@ export default function KitchenViewer() {
           border: '2px solid var(--color-ink)',
         }}
       >
-        <KitchenScene config={activeConfig} />
+        <KitchenScene config={activeConfig} assemblyLine={assemblyLine} />
       </div>
     </div>
   );

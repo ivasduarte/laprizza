@@ -78,3 +78,20 @@
   text-align: center;
   background: #f9f9f9;
 }
+
+.assembly-line-section {
+  margin: 3rem 0 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.assembly-line-section h2 {
+  margin: 0;
+}
+
+.assembly-line-intro,
+.assembly-line-meta {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted, inherit);
+  font-size: 0.9rem;
+}

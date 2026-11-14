@@ -295,6 +295,40 @@ export const messages = {
           'An unexpected error occurred while communicating with the server.',
       },
     },
+    assemblyLine: {
+      title: 'Assembly lines',
+      intro:
+        'Library of automated assembly lines. Each kitchen configuration chooses the line it places on a wall.',
+      createNew: 'New assembly line',
+      noLines: 'There are no assembly lines yet.',
+      elementCount_one: '{{count}} element',
+      elementCount_other: '{{count}} elements',
+      confirmDeleteTitle: 'Delete assembly line',
+      confirmDelete:
+        'Are you sure you want to delete this assembly line? This cannot be undone.',
+      deletedSuccess: 'Assembly line deleted.',
+      errors: {
+        invalid: 'The assembly line is invalid. Fix the listed errors.',
+        notFound: 'The assembly line was not found.',
+        referenced:
+          'This line is used by one or more kitchen configurations. Remove it from those kitchens before deleting it.',
+        default: 'The assembly line operation could not be completed.',
+      },
+      picker: {
+        label: 'Assembly line',
+        none: '— No assembly line —',
+        unknown: 'Missing line ({{id}})',
+        hint: 'The chosen line is placed against the back wall. You can adjust position and rotation (in degrees) in the JSON.',
+        fixJsonFirst: 'Fix the JSON before choosing the assembly line.',
+        loadFailed:
+          'The assembly lines could not be loaded. You can still set configurationId directly in the JSON.',
+      },
+      viewer: {
+        showing: 'Assembly line',
+        unavailable:
+          "This kitchen's assembly line could not be loaded and is not shown.",
+      },
+    },
     sharedResources: {
       title: 'Shared resources',
       intro:
@@ -649,6 +683,40 @@ export const messages = {
         conflict:
           'Operação não permitida. A configuração poderá já existir ou estar ativa.',
         default: 'Ocorreu um erro inesperado ao comunicar com o servidor.',
+      },
+    },
+    assemblyLine: {
+      title: 'Linhas de montagem',
+      intro:
+        'Biblioteca de linhas de montagem automáticas. Cada configuração de cozinha escolhe a linha que coloca numa parede.',
+      createNew: 'Nova linha de montagem',
+      noLines: 'Ainda não existem linhas de montagem.',
+      elementCount_one: '{{count}} elemento',
+      elementCount_other: '{{count}} elementos',
+      confirmDeleteTitle: 'Eliminar linha de montagem',
+      confirmDelete:
+        'Tem a certeza de que pretende eliminar esta linha de montagem? Esta ação não pode ser desfeita.',
+      deletedSuccess: 'Linha de montagem eliminada.',
+      errors: {
+        invalid: 'A linha de montagem é inválida. Corrija os erros indicados.',
+        notFound: 'A linha de montagem não foi encontrada.',
+        referenced:
+          'Esta linha está a ser usada por uma ou mais configurações de cozinha. Retire-a dessas cozinhas antes de a eliminar.',
+        default: 'Não foi possível concluir a operação na linha de montagem.',
+      },
+      picker: {
+        label: 'Linha de montagem',
+        none: '— Sem linha de montagem —',
+        unknown: 'Linha inexistente ({{id}})',
+        hint: 'Ao escolher uma linha, ela é colocada junto à parede do fundo. Pode ajustar position e rotation (em graus) no JSON.',
+        fixJsonFirst: 'Corrija o JSON antes de escolher a linha de montagem.',
+        loadFailed:
+          'Não foi possível carregar as linhas de montagem. Pode indicar o configurationId diretamente no JSON.',
+      },
+      viewer: {
+        showing: 'Linha de montagem',
+        unavailable:
+          'A linha de montagem desta cozinha não pôde ser carregada e não é apresentada.',
       },
     },
     sharedResources: {

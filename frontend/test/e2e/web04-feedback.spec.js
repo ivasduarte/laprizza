@@ -45,6 +45,9 @@ async function mockBackend(page) {
   await page.route('**/api/v1/kitchen-configurations/active', (route) =>
     route.fulfill({ json: configs[0] })
   );
+  await page.route('**/api/v1/assembly-line-configurations', (route) =>
+    route.fulfill({ json: [] })
+  );
 }
 
 async function openKitchenConfigs(page) {
