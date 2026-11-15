@@ -1,0 +1,34 @@
+# Configuração do deploy automático do front end
+# Copiar para /opt/laprizza/deploy-web.conf (dono: deploy, chmod 640).
+# Este ficheiro NÃO tem segredos.
+
+# Branch publicado. A forma ${VAR:-valor} permite sobrepor na linha de comandos:
+#   DEPLOY_BRANCH=feat/xyz /opt/laprizza/bin/laprizza-deploy-web.sh deploy
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+
+# Pasta do front end dentro do repositório e pasta que o build produz
+WEB_SUBDIR=frontend
+BUILD_OUTPUT=dist
+
+# Quantas versões manter em /var/www/laprizza/releases (inclui a atual e a anterior)
+KEEP_RELEASES=5
+
+# Validação antes de publicar (pôr false se o script não existir no package.json do frontend)
+RUN_LINT=true
+RUN_TESTS=true
+
+# Variáveis de ambiente usadas no build. O Vite só expõe as que começam por VITE_.
+# O nginx reencaminha /api/ para o back end, por isso o front end usa um caminho
+# relativo e não precisa de saber o endereço público da VM.
+# O frontend lê VITE_API_BASE_URL (frontend/src/health.js).
+WEB_BUILD_ENV=("VITE_API_BASE_URL=/api/v1")
+
+# Se o build contiver este texto, o deploy aborta. Está desativado porque o
+# health.js tem http://localhost:3000/api/v1 como valor por omissão, que fica
+# sempre dentro do bundle (mesmo com a variável definida).
+BUILD_MUST_NOT_CONTAIN=""
+
+# Verificação depois de trocar a versão (nginx local)
+SITE_URL=http://localhost/
+VERSION_URL=http://localhost/version.json
+HEALTH_TIMEOUT_SECONDS=30
