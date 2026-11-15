@@ -17,6 +17,8 @@ const validPlacement = {
   rotation: { x: 0, y: 0, z: 0 },
 };
 
+const omit = (object, key) => Object.fromEntries(Object.entries(object).filter(([k]) => k !== key));
+
 const expectSchemaViolation = (content, pathFragment) =>
   assert.throws(
     () => validateKitchenConfigurationContent(content),
@@ -46,13 +48,11 @@ test('validateKitchenConfigurationContent rejects a malformed assembly line conf
 });
 
 test('validateKitchenConfigurationContent rejects an assembly line placement without position', () => {
-  const { position, ...withoutPosition } = validPlacement;
-  expectSchemaViolation(buildKitchen(withoutPosition), 'position');
+  expectSchemaViolation(buildKitchen(omit(validPlacement, 'position')), 'position');
 });
 
 test('validateKitchenConfigurationContent rejects an assembly line placement without rotation', () => {
-  const { rotation, ...withoutRotation } = validPlacement;
-  expectSchemaViolation(buildKitchen(withoutRotation), 'rotation');
+  expectSchemaViolation(buildKitchen(omit(validPlacement, 'rotation')), 'rotation');
 });
 
 test('validateKitchenConfigurationContent rejects unknown properties in the assembly line placement', () => {
