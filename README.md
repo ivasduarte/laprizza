@@ -5,6 +5,12 @@ LaPrizza is a modern pizza restaurant information system developed as the 5th-se
 
 The system supports the business and operational processes of the restaurant, from customer management and pizza configuration to order processing and kitchen scheduling.
 
+## Website
+
+The web application is deployed at <http://vs814.dei.isep.ipp.pt>.
+
+> **Note:** the website can only be accessed from within the DEI network. When off campus, connect to the DEI VPN first.
+
 ## System Modules
 The project integrates four main technological areas:
 * **Web Application:** The primary interface for business capabilities (identity, catalogue, order management).
