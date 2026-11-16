@@ -1,4 +1,5 @@
 import { DoubleSide } from 'three';
+import { Surface } from './scene-materials.jsx';
 
 /**
  * Procedural models of the automated pizza assembly line (VIS03).
@@ -6,6 +7,10 @@ import { DoubleSide } from 'three';
  * Line local axes: x runs along the line (left -> right), y is up, z grows from the wall
  * towards the kitchen. Every model stands on y = 0 of its own origin, so the JSON
  * position places its base (e.g. on the counter top, y = 0.9).
+ *
+ * `material` (VIS04) is the material of the element from the JSON, applied to the main
+ * surfaces; small detail parts keep their own colours. Without it the default colours
+ * are used.
  *
  * Parts that will be animated in Sprint 3 are named groups with their pivot at the
  * joint, so animating means rotating or moving that group:
@@ -31,27 +36,27 @@ const COLORS = {
 };
 
 /** Large counter under the line: unit footprint 1 x 1 (stretched by scale), 0.9 high. */
-export function CounterModel() {
+export function CounterModel({ material }) {
   return (
     <group>
       <mesh position={[0, 0.42, 0]}>
         <boxGeometry args={[1, 0.84, 1]} />
-        <meshStandardMaterial color={COLORS.darkSteel} />
+        <Surface material={material} color={COLORS.darkSteel} />
       </mesh>
       <mesh position={[0, 0.87, 0]}>
         <boxGeometry args={[1, 0.06, 1]} />
-        <meshStandardMaterial color={COLORS.counterTop} />
+        <Surface material={material} color={COLORS.counterTop} />
       </mesh>
     </group>
   );
 }
 
 /** Rectangular receiving platform for the pre-formed crusts (left end of the line). */
-export function ReceivingPlatformModel() {
+export function ReceivingPlatformModel({ material }) {
   return (
     <mesh position={[0, 0.04, 0]}>
       <boxGeometry args={[1.2, 0.08, 1]} />
-      <meshStandardMaterial color={COLORS.platform} />
+      <Surface material={material} color={COLORS.platform} />
     </mesh>
   );
 }
@@ -65,19 +70,19 @@ const DISPENSER_POSTS = [
 ];
 
 /** Overhead system that supplies the crusts onto the receiving platform below it. */
-export function CrustDispenserModel() {
+export function CrustDispenserModel({ material }) {
   const shelfY = 1.5;
   return (
     <group>
       {DISPENSER_POSTS.map(([x, z]) => (
         <mesh key={`${x}:${z}`} position={[x, 0.85, z]}>
           <cylinderGeometry args={[0.03, 0.03, 1.7, 12]} />
-          <meshStandardMaterial color={COLORS.steel} />
+          <Surface material={material} color={COLORS.steel} />
         </mesh>
       ))}
       <mesh position={[0, shelfY, 0]}>
         <boxGeometry args={[1.2, 0.05, 1]} />
-        <meshStandardMaterial color={COLORS.darkSteel} />
+        <Surface material={material} color={COLORS.darkSteel} />
       </mesh>
       <group name="crust-stack" position={[0, shelfY + 0.025, 0]}>
         {Array.from({ length: CRUST_COUNT }, (_, i) => (
@@ -105,7 +110,7 @@ const BELT_WIDTH = 0.6;
  * Integrated conveyor belt connecting the platform to the oven. `length` is the JSON
  * scale.x: it lengthens the belt and adds slats instead of stretching them.
  */
-export function ConveyorBeltModel({ length }) {
+export function ConveyorBeltModel({ length, material }) {
   const safeLength = Math.max(Number(length) || 1, 0.5);
   const slatCount = Math.max(1, Math.floor(safeLength / SLAT_SPACING));
   const firstSlatX = -((slatCount - 1) * SLAT_SPACING) / 2;
@@ -120,7 +125,7 @@ export function ConveyorBeltModel({ length }) {
       ))}
       <mesh position={[0, 0.08, 0]}>
         <boxGeometry args={[safeLength, 0.08, BELT_WIDTH]} />
-        <meshStandardMaterial color={COLORS.rubber} />
+        <Surface material={material} color={COLORS.rubber} />
       </mesh>
       {/* Belt surface: slats move along +x in Sprint 3 */}
       <group name="belt" position={[0, 0.13, 0]}>
@@ -152,7 +157,7 @@ export function ConveyorBeltModel({ length }) {
  * Articulated robotic arm mounted behind the belt, reaching over it (+z) to deposit
  * ingredients. Hierarchy: base (yaw) -> shoulder -> elbow -> wrist, each pivot at its joint.
  */
-export function RoboticArmModel() {
+export function RoboticArmModel({ material }) {
   return (
     <group name="base">
       <mesh position={[0, 0.05, 0]}>
@@ -161,7 +166,7 @@ export function RoboticArmModel() {
       </mesh>
       <mesh position={[0, 0.45, 0]}>
         <cylinderGeometry args={[0.06, 0.06, 0.7, 16]} />
-        <meshStandardMaterial color={COLORS.armWhite} />
+        <Surface material={material} color={COLORS.armWhite} />
       </mesh>
 
       <group name="shoulder" position={[0, 0.82, 0]}>
@@ -171,7 +176,7 @@ export function RoboticArmModel() {
         </mesh>
         <mesh position={[0, 0, 0.28]}>
           <boxGeometry args={[0.09, 0.09, 0.56]} />
-          <meshStandardMaterial color={COLORS.armWhite} />
+          <Surface material={material} color={COLORS.armWhite} />
         </mesh>
 
         <group name="elbow" position={[0, 0, 0.56]}>
@@ -181,7 +186,7 @@ export function RoboticArmModel() {
           </mesh>
           <mesh position={[0, -0.14, 0]}>
             <boxGeometry args={[0.07, 0.28, 0.07]} />
-            <meshStandardMaterial color={COLORS.armWhite} />
+            <Surface material={material} color={COLORS.armWhite} />
           </mesh>
 
           <group name="wrist" position={[0, -0.28, 0]}>
@@ -202,7 +207,7 @@ export function RoboticArmModel() {
 }
 
 /** Traditional wood-fired oven (right end), mouth facing the conveyor (-x). */
-export function WoodFiredOvenModel() {
+export function WoodFiredOvenModel({ material }) {
   return (
     <group>
       <mesh position={[0, 0.2, 0]}>
@@ -211,7 +216,7 @@ export function WoodFiredOvenModel() {
       </mesh>
       <mesh position={[0, 0.4, 0]}>
         <sphereGeometry args={[0.62, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={COLORS.terracotta} />
+        <Surface material={material} color={COLORS.terracotta} />
       </mesh>
       {/* Mouth, where the conveyor delivers the pizzas */}
       <mesh position={[-0.55, 0.58, 0]}>
@@ -221,7 +226,7 @@ export function WoodFiredOvenModel() {
       {/* Chimney */}
       <mesh position={[0.15, 1.15, 0]}>
         <cylinderGeometry args={[0.07, 0.09, 0.6, 16]} />
-        <meshStandardMaterial color={COLORS.terracotta} />
+        <Surface material={material} color={COLORS.terracotta} />
       </mesh>
     </group>
   );

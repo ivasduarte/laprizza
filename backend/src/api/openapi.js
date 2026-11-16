@@ -2237,6 +2237,12 @@ export const openApiSpec = {
             type: 'object',
             description: 'JSON object defining kitchen dimensions and elements.',
             properties: {
+              floor: {
+                type: 'object',
+                description: 'Kitchen floor (VIS04).',
+                additionalProperties: false,
+                properties: { material: { $ref: '#/components/schemas/Material' } },
+              },
               assemblyLine: { $ref: '#/components/schemas/KitchenAssemblyLinePlacement' },
             },
           },
@@ -2314,14 +2320,42 @@ export const openApiSpec = {
           position: { $ref: '#/components/schemas/Vector3' },
           rotation: { $ref: '#/components/schemas/Vector3' },
           scale: { $ref: '#/components/schemas/PositiveVector3' },
-          material: {
+          material: { $ref: '#/components/schemas/Material' },
+        },
+      },
+      Material: {
+        type: 'object',
+        description:
+          'Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0021). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.',
+        additionalProperties: false,
+        properties: {
+          color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', example: '#c0c0c0' },
+          colorMap: {
+            type: 'string',
+            format: 'uri-reference',
+            example: '/textures/red_brick/diffuse.jpg',
+          },
+          roughnessMap: {
+            type: 'string',
+            format: 'uri-reference',
+            example: '/textures/red_brick/rough.jpg',
+          },
+          bumpMap: { type: 'string', format: 'uri-reference' },
+          normalMap: {
+            type: 'string',
+            format: 'uri-reference',
+            example: '/textures/red_brick/normal.jpg',
+          },
+          roughness: { type: 'number', minimum: 0, maximum: 1, example: 0.8 },
+          metalness: { type: 'number', minimum: 0, maximum: 1, example: 0 },
+          repeat: {
             type: 'object',
-            description: 'Texture maps, when present, follow the same rule as modelReference.',
+            description: 'How many times the textures repeat across the surface.',
+            required: ['x', 'y'],
+            additionalProperties: false,
             properties: {
-              color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', example: '#c0c0c0' },
-              roughnessMap: { type: 'string', format: 'uri-reference' },
-              bumpMap: { type: 'string', format: 'uri-reference' },
-              normalMap: { type: 'string', format: 'uri-reference' },
+              x: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 2 },
+              y: { type: 'number', minimum: 0, exclusiveMinimum: true, example: 1 },
             },
           },
         },

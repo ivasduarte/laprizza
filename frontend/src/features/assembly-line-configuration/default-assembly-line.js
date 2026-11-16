@@ -6,6 +6,9 @@
  * towards the kitchen. Counter top at y = 0.9; crust platform and overhead dispenser on
  * the left, conveyor belt in the middle (length = scale.x), robotic arms behind the belt,
  * wood-fired oven on the right. No modelReference: every component is procedural.
+ *
+ * VIS04: each component has its own textured material (Poly Haven, CC0), served from
+ * public/textures/<slug>/{diffuse,normal,rough}.jpg.
  */
 export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
   dimensions: {
@@ -32,6 +35,16 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         y: 1,
         z: 1.2,
       },
+      material: {
+        colorMap: '/textures/blue_metal_plate/diffuse.jpg',
+        normalMap: '/textures/blue_metal_plate/normal.jpg',
+        roughnessMap: '/textures/blue_metal_plate/rough.jpg',
+        metalness: 0.6,
+        repeat: {
+          x: 6,
+          y: 1,
+        },
+      },
     },
     {
       id: 'platform-01',
@@ -50,6 +63,11 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         x: 1,
         y: 1,
         z: 1,
+      },
+      material: {
+        colorMap: '/textures/wood_table_001/diffuse.jpg',
+        normalMap: '/textures/wood_table_001/normal.jpg',
+        roughnessMap: '/textures/wood_table_001/rough.jpg',
       },
     },
     {
@@ -70,6 +88,12 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         y: 1,
         z: 1,
       },
+      material: {
+        colorMap: '/textures/metal_plate/diffuse.jpg',
+        normalMap: '/textures/metal_plate/normal.jpg',
+        roughnessMap: '/textures/metal_plate/rough.jpg',
+        metalness: 0.7,
+      },
     },
     {
       id: 'conveyor-01',
@@ -88,6 +112,15 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         x: 6.4,
         y: 1,
         z: 1,
+      },
+      material: {
+        colorMap: '/textures/rubber_tiles/diffuse.jpg',
+        normalMap: '/textures/rubber_tiles/normal.jpg',
+        roughnessMap: '/textures/rubber_tiles/rough.jpg',
+        repeat: {
+          x: 8,
+          y: 1,
+        },
       },
     },
     {
@@ -108,6 +141,11 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         y: 1,
         z: 1,
       },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
+      },
     },
     {
       id: 'arm-02',
@@ -126,6 +164,11 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         x: 1,
         y: 1,
         z: 1,
+      },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
       },
     },
     {
@@ -146,6 +189,11 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         y: 1,
         z: 1,
       },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
+      },
     },
     {
       id: 'arm-04',
@@ -165,6 +213,11 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         y: 1,
         z: 1,
       },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
+      },
     },
     {
       id: 'oven-01',
@@ -183,6 +236,15 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
         x: 1,
         y: 1,
         z: 1,
+      },
+      material: {
+        colorMap: '/textures/red_brick/diffuse.jpg',
+        normalMap: '/textures/red_brick/normal.jpg',
+        roughnessMap: '/textures/red_brick/rough.jpg',
+        repeat: {
+          x: 2,
+          y: 1,
+        },
       },
     },
   ],

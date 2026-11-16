@@ -1,15 +1,32 @@
 {
-  "dimensions": { "width": 20, "length": 45.5, "height": 5 },
+  "dimensions": {
+    "width": 20,
+    "length": 45.5,
+    "height": 5
+  },
   "elements": [
     {
       "id": "conveyor-main",
       "type": "assembly-line",
       "modelReference": "https://cdn.laprizza.pt/models/conveyor-long.glb",
-      "position": { "x": 0, "y": 0, "z": 0 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 2, "y": 1, "z": 1 },
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 2,
+        "y": 1,
+        "z": 1
+      },
       "material": {
         "color": "#c0c0c0",
+        "colorMap": "https://cdn.laprizza.pt/textures/steel-color.jpg",
         "roughnessMap": "https://cdn.laprizza.pt/textures/steel-roughness.png",
         "bumpMap": "/assets/textures/steel-bump.png",
         "normalMap": "/assets/textures/steel-normal.png"
@@ -19,18 +36,44 @@
       "id": "sauce-dispenser",
       "type": "tool",
       "modelReference": "/assets/models/sauce-dispenser.gltf",
-      "position": { "x": 3, "y": 1.2, "z": 5 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "scale": { "x": 0.5, "y": 0.5, "z": 0.5 }
+      "position": {
+        "x": 3,
+        "y": 1.2,
+        "z": 5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      }
     },
     {
       "id": "plant-01",
       "type": "decoration",
       "modelReference": "/assets/models/plant.gltf",
-      "position": { "x": -8, "y": 0, "z": 20 },
-      "rotation": { "x": 0, "y": 45, "z": 0 },
-      "scale": { "x": 1, "y": 1, "z": 1 },
-      "material": { "color": "#2e7d32" }
+      "position": {
+        "x": -8,
+        "y": 0,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 45,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "material": {
+        "color": "#2e7d32"
+      }
     }
   ]
 }
