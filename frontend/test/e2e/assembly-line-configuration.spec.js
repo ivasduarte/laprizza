@@ -301,4 +301,89 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
     ).toBeVisible();
     await expect(page.getByTestId('viewer-assembly-line')).toHaveCount(0);
   });
+
+  // --- VIS04: textures and materials from the back end ---
+
+  const texturedLine = {
+    ...mockLine,
+    content: {
+      ...mockLine.content,
+      elements: mockLine.content.elements.map((element) => ({
+        ...element,
+        material: {
+          colorMap: `/textures/${element.id}/diffuse.jpg`,
+          normalMap: `/textures/${element.id}/normal.jpg`,
+          roughnessMap: `/textures/${element.id}/rough.jpg`,
+        },
+      })),
+    },
+  };
+
+  // 1x1 PNG, enough for the texture loader.
+  const PIXEL = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+
+  test('Viewer: loads the textures referenced by the JSON material of each element', async ({
+    page,
+  }) => {
+    await mockApi(page, {
+      session: mockManagerSession,
+      activeKitchen: kitchenWithLine,
+      lines: [texturedLine],
+    });
+    await page.route(
+      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      (route) => route.fulfill({ json: texturedLine })
+    );
+    const requested = new Set();
+    await page.route('**/textures/**', (route) => {
+      requested.add(new URL(route.request().url()).pathname);
+      return route.fulfill({ body: PIXEL, contentType: 'image/png' });
+    });
+
+    await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
+    await expect(page.getByTestId('viewer-assembly-line')).toContainText(
+      'Linha VIS03'
+    );
+
+    const expected = texturedLine.content.elements.flatMap((element) => [
+      `/textures/${element.id}/diffuse.jpg`,
+      `/textures/${element.id}/normal.jpg`,
+      `/textures/${element.id}/rough.jpg`,
+    ]);
+    await expect
+      .poll(() => expected.filter((path) => !requested.has(path)))
+      .toEqual([]);
+  });
+
+  test('Viewer: a missing texture does not break the scene', async ({
+    page,
+  }) => {
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+
+    await mockApi(page, {
+      session: mockManagerSession,
+      activeKitchen: kitchenWithLine,
+      lines: [texturedLine],
+    });
+    await page.route(
+      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      (route) => route.fulfill({ json: texturedLine })
+    );
+    await page.route('**/textures/**', (route) =>
+      route.fulfill({ status: 404, body: '' })
+    );
+
+    await loginAndOpenKitchenConfigs(page, 'admin@laprizza.pt');
+
+    // The kitchen, the line and the canvas stay on screen (plain materials are used).
+    await expect(page.getByTestId('viewer-assembly-line')).toContainText(
+      'Linha VIS03'
+    );
+    await expect(page.locator('canvas')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
 });

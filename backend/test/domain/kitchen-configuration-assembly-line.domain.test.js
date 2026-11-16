@@ -17,7 +17,9 @@ const validPlacement = {
   rotation: { x: 0, y: 0, z: 0 },
 };
 
-const omit = (object, key) => Object.fromEntries(Object.entries(object).filter(([k]) => k !== key));
+/** Copy of `object` without `key`. */
+const omit = (object, key) =>
+  Object.fromEntries(Object.entries(object).filter(([k]) => k !== key));
 
 const expectSchemaViolation = (content, pathFragment) =>
   assert.throws(
@@ -58,3 +60,42 @@ test('validateKitchenConfigurationContent rejects an assembly line placement wit
 test('validateKitchenConfigurationContent rejects unknown properties in the assembly line placement', () => {
   expectSchemaViolation(buildKitchen({ ...validPlacement, isActive: true }), 'assemblyLine');
 });
+
+// --- Floor material (VIS04) ---
+
+test('validateKitchenConfigurationContent accepts a textured floor', () => {
+  const content = {
+    ...buildKitchen(),
+    floor: {
+      material: {
+        colorMap: '/textures/tiled_floor_001/diffuse.jpg',
+        normalMap: '/textures/tiled_floor_001/normal.jpg',
+        roughnessMap: '/textures/tiled_floor_001/rough.jpg',
+        repeat: { x: 6, y: 10 },
+      },
+    },
+  };
+  assert.doesNotThrow(() => validateKitchenConfigurationContent(content));
+});
+
+test('validateKitchenConfigurationContent reports floor material violations with their path', () => {
+  const content = {
+    ...buildKitchen(),
+    floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg' } },
+  };
+  assert.throws(
+    () => validateKitchenConfigurationContent(content),
+    (err) => {
+      assert.ok(err instanceof DomainError);
+      assert.deepEqual(err.details, [
+        '/floor/material must include a roughnessMap, bumpMap or normalMap with the colorMap',
+      ]);
+      return true;
+    },
+  );
+});
+
+test('validateKitchenConfigurationContent rejects unknown floor properties', () => {
+  expectSchemaViolation({ ...buildKitchen(), floor: { colour: '#ffffff' } }, 'floor');
+});
+

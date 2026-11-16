@@ -5,10 +5,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { KitchenAssemblyLinePlacement } from './kitchenAssemblyLinePlacement';
+import type { KitchenConfigurationContentFloor } from './kitchenConfigurationContentFloor';
 
 /**
  * JSON object defining kitchen dimensions and elements.
  */
 export type KitchenConfigurationContent = {
+  /** Kitchen floor (VIS04). */
+  floor?: KitchenConfigurationContentFloor;
   assemblyLine?: KitchenAssemblyLinePlacement;
 };

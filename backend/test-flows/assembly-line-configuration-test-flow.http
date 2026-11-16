@@ -394,6 +394,29 @@ Content-Type: application/json
 ?? status == 200
 ?? body valid == true
 
+### 3.6c VIS04: material com textura mas sem mapa de cor (400 Bad Request, com o caminho em details)
+POST {{baseUrl}}/assembly-line-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 9, "length": 1.4, "height": 2.6 },
+    "elements": [
+      {
+        "id": "oven-01",
+        "type": "wood-fired-oven",
+        "position": { "x": 3.9, "y": 0.9, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": { "normalMap": "/textures/red_brick/normal.jpg" }
+      }
+    ]
+  }
+}
+?? status == 400
+?? js response.parsedBody.error.message.includes('/elements/0/material/colorMap') == true
+
 ### 3.7 Falha Schema: tipo de elemento desconhecido (400 Bad Request)
 POST {{baseUrl}}/assembly-line-configurations/validate
 Authorization: Bearer {{adminToken}}
@@ -525,6 +548,28 @@ Content-Type: application/json
   }
 }
 ?? status == 400
+
+### 5.2b VIS04: chão da cozinha com textura (200 OK)
+POST {{baseUrl}}/kitchen-configurations/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": {
+    "dimensions": { "width": 10, "length": 15, "height": 3 },
+    "elements": [],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
+  }
+}
+?? status == 200
+?? body valid == true
 
 ### 5.3 Criar uma Kitchen Configuration que coloca a Linha B numa parede (201 Created)
 # @name createKitchenWithLine

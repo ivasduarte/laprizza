@@ -1,4 +1,4 @@
-@backendUrl = http://10.9.22.22/api/v1
+@backendUrl = http://localhost:3000/api/v1
 @aiUrl = http://localhost:5000
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
@@ -15,12 +15,23 @@
 @agua = de01b0000000000000000009
 @fermento = de01b000000000000000000a
 
-### 1 - Serviço Prolog ativo e ligado ao back end de @backendUrl (200)
+### 1 - Serviço Prolog ativo; o flow usa o mesmo back end que o Prolog (200)
+# O URL do back end vem do próprio serviço Prolog (AI_BACKEND_URL no ai-scheduling/.env ou no
+# terminal). Para trocar entre a VM e o back end local, basta arrancar o Prolog com outro URL.
+# @name aiHealth
 GET {{aiUrl}}/health
 
 ?? status == 200
 ?? js response.parsedBody.status == ok
-?? js response.parsedBody.backend.replace('://localhost', '://127.0.0.1') === backendUrl.replace(/\/+$/, '').replace('://localhost', '://127.0.0.1') == true
+?? js response.parsedBody.backend isString
+
+### Back end usado pelo Prolog
+@backendUrl = {{aiHealth.backend}}
+
+### 1b - Back end acessível (com a VM, a VPN tem de estar ligada) (200)
+GET {{backendUrl}}/health
+
+?? status == 200
 
 ### 2 - Login de MANAGER no back end: o token é reencaminhado pelo Prolog (200)
 # @name loginManager
