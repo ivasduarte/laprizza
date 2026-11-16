@@ -94,7 +94,7 @@ export default function authRouterFactory({ authService, config, securityLogger 
 
   router.post('/login', validateBody(schemas.login), controller.login);
   router.post('/refresh', requireAllowedOrigin(config.corsOrigins), controller.refresh);
-  router.post('/logout', verifyToken, controller.logout);
+  router.post('/logout', requireAllowedOrigin(config.corsOrigins), verifyToken, controller.logout);
   router.post('/logout-all', verifyToken, controller.logoutAll);
   router.post(
     '/password/forgot',

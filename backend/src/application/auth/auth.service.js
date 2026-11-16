@@ -181,6 +181,7 @@ export function createAuthService({
       user: toAuthenticatedUserDto(user, roles),
     };
   }
+  
 
   /** Local login (email + password). */
   async function login({ email, password }, context = {}) {

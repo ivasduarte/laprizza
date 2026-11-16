@@ -47,11 +47,14 @@ export function createAuthController({ authService, config }) {
 
     async logout(req, res, next) {
       try {
-        await authService.logout(req.user, contextOf(req));
+        if (req.user) {
+           await authService.logout(req.user, contextOf(req));
+        }
+
         clearRefreshCookie(res);
         res.status(204).end();
-      } catch (err) {
-        next(err);
+      } catch (error) {
+        next(error); 
       }
     },
 
