@@ -2,6 +2,7 @@
 %
 %   GET  /health   {status: "ok", backend: <AI_BACKEND_URL>}; never calls the back end
 %   POST /bom      {scenarioId, stockMode} with "Authorization: Bearer <token of a MANAGER>"
+%   POST /requirements   same request; requirements planning of the forecast (AI02)
 %
 % Start:  swipl ai-scheduling/server.pl      (or ./ai-scheduling/start-server.sh)
 % Configuration (environment, or ai-scheduling/.env for the variables not yet set):
@@ -21,6 +22,7 @@
 :- use_module(library(apply)).
 :- use_module(kb).
 :- use_module(bom).
+:- use_module(requirements).
 
 :- initialization(main, main).
 
@@ -132,10 +134,12 @@ check_config(Port) :-
 
 :- http_handler('/health', route(health), []).
 :- http_handler('/bom', route(bom), []).
+:- http_handler('/requirements', route(requirements), []).
 :- http_handler(/, route(not_found), [prefix]).
 
 route_method(health, get).
 route_method(bom, post).
+route_method(requirements, post).
 
 %  Runs the route, sends the JSON reply and writes one line to the console (no headers).
 route(Route, Request) :-
@@ -168,17 +172,23 @@ handle_route(health, _, 200, _{status: "ok", backend: Backend}) :-
     backend_base_url(Url),
     atom_string(Url, Backend).
 handle_route(bom, Request, Status, Body) :-
+    authenticated(bom_calculate, Request, Status, Body).
+handle_route(requirements, Request, Status, Body) :-
+    authenticated(requirements_calculate, Request, Status, Body).
+
+%  Calc is called as call(Calc, Params, Result) inside with_snapshot/2.
+authenticated(Calc, Request, Status, Body) :-
     (   bearer_token(Request, Token)
-    ->  bom_request(Request, Token, Status, Body)
+    ->  plan_request(Calc, Request, Token, Status, Body)
     ;   Status = 401,
         error_body(401, "TOKEN_MISSING", "Authentication required.", Body)
     ).
 
 % ---------------------------------------------------------------------------------------------
-% POST /bom
+% POST /bom and POST /requirements
 % ---------------------------------------------------------------------------------------------
 
-bom_request(Request, Token, Status, Body) :-
+plan_request(Calc, Request, Token, Status, Body) :-
     read_body(Request, Input),
     validate_input(Input, Details, Params),
     (   Details \== []
@@ -189,7 +199,7 @@ bom_request(Request, Token, Status, Body) :-
         format(string(Label), "~w ~w", [Id, Mode]),
         nb_setval(ai_request_label, Label),
         fetch_with_deadline(Params, Token, Snapshot),
-        calculate(Snapshot, Params, Status, Body)
+        calculate(Calc, Snapshot, Params, Status, Body)
     ).
 
 %  The timeout of http_open only covers reading: connecting to an address that does not answer
@@ -217,9 +227,9 @@ fetch_worker(Queue, Params, Token) :-
     ),
     catch(thread_send_message(Queue, Reply), _, true).   % the queue is gone after a timeout
 
-%  200 with the result; 422 when kb.pl rejects the snapshot or bom.pl finds invalid data.
-calculate(Snapshot, Params, Status, Body) :-
-    catch(( with_snapshot(Snapshot, bom_calculate(Params, Result0))
+%  200 with the result; 422 when kb.pl rejects the snapshot or the calculation finds invalid data.
+calculate(Calc, Snapshot, Params, Status, Body) :-
+    catch(( with_snapshot(Snapshot, call(Calc, Params, Result0))
           ->  Result = Result0
           ;   throw(error(bom_calculation_failed, _))
           ),
