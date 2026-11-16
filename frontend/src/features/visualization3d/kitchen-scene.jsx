@@ -1,6 +1,7 @@
-import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useMemo, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
+import { Object3D } from 'three';
 import {
   CounterModel,
   ReceivingPlatformModel,
@@ -48,6 +49,95 @@ const VIS03_MODELS = {
   'robotic-arm': RoboticArmModel,
   'wood-fired-oven': WoodFiredOvenModel,
 };
+
+/**
+ * VIS05: scene lighting. Fixed in world space and derived only from the kitchen
+ * dimensions (nothing comes from the JSON), so the look does not depend on the camera,
+ * zoom or angle.
+ * - ambient + hemisphere: base visibility from any angle (no pitch-black faces);
+ * - directional "sun" (shadows): volume and contours for the whole kitchen;
+ * - spotlight (shadows) above the kitchen: focal light and extra depth.
+ */
+function SceneLighting({ width, length, height, lineFocus }) {
+  const spotTarget = useMemo(() => new Object3D(), []);
+  const lineTarget = useMemo(() => new Object3D(), []);
+  const half = Math.max(width, length) * 0.75; // shadow frustum fitted to the room
+
+  // Light-to-origin distance plus half the floor diagonal, so corners are never cut.
+  const sunPos = [width * 0.6, height * 3, length * 0.6];
+  const sunFar = Math.hypot(...sunPos) + Math.hypot(width, length) / 2 + 1;
+
+  return (
+    <>
+      <ambientLight intensity={0.35} />
+      <hemisphereLight args={['#ffffff', '#3a2a22', 0.45]} />
+
+      <directionalLight
+        position={sunPos}
+        intensity={1.1}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-half}
+        shadow-camera-right={half}
+        shadow-camera-top={half}
+        shadow-camera-bottom={-half}
+        shadow-camera-near={0.5}
+        shadow-camera-far={sunFar}
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.03}
+      />
+
+      <primitive object={spotTarget} position={[0, 0, 0]} />
+      <spotLight
+        position={[0, height * 0.95, length * 0.25]}
+        target={spotTarget}
+        angle={Math.PI / 3}
+        penumbra={0.6}
+        intensity={3}
+        decay={0}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.03}
+      />
+
+      {/* Second spotlight, over the assembly line (fixed, softer, no extra shadows) */}
+      <primitive object={lineTarget} position={lineFocus} />
+      <spotLight
+        position={[lineFocus[0], height * 0.95, lineFocus[2] + 1]}
+        target={lineTarget}
+        angle={Math.PI / 3}
+        penumbra={0.7}
+        intensity={2}
+        decay={0}
+      />
+    </>
+  );
+}
+
+/**
+ * Makes every mesh of the group cast/receive shadows. Checked periodically because
+ * meshes can be remounted when textures finish loading (VIS04).
+ */
+function ShadowGroup({ children }) {
+  const ref = useRef();
+  const frame = useRef(0);
+
+  useFrame(() => {
+    if (frame.current++ % 30 !== 0 || !ref.current) return;
+    ref.current.traverse((o) => {
+      if (o.isMesh && !o.userData.shadowsSet) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+        o.userData.shadowsSet = true;
+      }
+    });
+  });
+
+  return <group ref={ref}>{children}</group>;
+}
 
 /**
  * One configuration element (kitchen or assembly line). Transforms are relative to the
@@ -175,9 +265,21 @@ export default function KitchenScene({ config, assemblyLine }) {
   const safeLength = Number(dimensions.length) || 10;
   const safeHeight = Number(dimensions.height) || 5;
 
+  // Fixed focus of the line spotlight: the assembly line placement (room center if none).
+  const lineFocus = toPosition(assemblyLine?.placement?.position);
+
+  // The initial camera must always be inside the zoom limits.
+  const initialDistance = Math.hypot(safeHeight * 2, safeLength);
+  const maxDistance = Math.max(
+    initialDistance * 1.5,
+    Math.max(safeWidth, safeLength) * 2
+  );
+
   return (
     // Camera positioning according to kitchen size
     <Canvas
+      shadows
+      dpr={[1, 2]}
       camera={{
         position: [0, safeHeight * 2, safeLength],
         fov: 50,
@@ -186,17 +288,22 @@ export default function KitchenScene({ config, assemblyLine }) {
       {/* Base background color */}
       <color attach="background" args={['#2a1512']} />
 
-      {/* 1. Ambient and Focused Lighting */}
-      <ambientLight intensity={0.6} color="#ffffff" />
-      <directionalLight position={[10, 15, 10]} intensity={1} castShadow />
+      {/* VIS05: fixed scene lighting */}
+      <SceneLighting
+        width={safeWidth}
+        length={safeLength}
+        height={safeHeight}
+        lineFocus={lineFocus}
+      />
 
-      {/* 2. Mouse Controls */}
-      {/* Targeting [0,0,0] ensures that we orbit around the center of the ground */}
-      <OrbitControls target={[0, 0, 0]} makeDefault />
-
-      {/* Helper grid to match the floor size for easier debugging */}
-      <gridHelper args={[Math.max(safeWidth, safeLength), 20]} />
-      <axesHelper args={[5]} />
+      {/* Mouse controls: orbit around the center of the ground, camera kept above the floor */}
+      <OrbitControls
+        target={[0, 0, 0]}
+        makeDefault
+        minDistance={2}
+        maxDistance={maxDistance}
+        maxPolarAngle={Math.PI / 2 - 0.05}
+      />
 
       {/* Kitchen floor (VIS04: optional material in content.floor) */}
       <WithMaterial
@@ -204,7 +311,11 @@ export default function KitchenScene({ config, assemblyLine }) {
         fallbackColor="#e6d5bd"
       >
         {(material) => (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0, 0]}
+            receiveShadow
+          >
             <planeGeometry args={[safeWidth, safeLength]} />
             <Surface material={material} color="#e6d5bd" />
           </mesh>
@@ -219,14 +330,16 @@ export default function KitchenScene({ config, assemblyLine }) {
           </mesh>
         }
       >
-        {elements.map((element, index) => (
-          <SceneElement
-            key={element?.id || `fallback-id-${index}`}
-            element={element}
-          />
-        ))}
+        <ShadowGroup>
+          {elements.map((element, index) => (
+            <SceneElement
+              key={element?.id || `fallback-id-${index}`}
+              element={element}
+            />
+          ))}
 
-        {assemblyLine && <AssemblyLine line={assemblyLine} />}
+          {assemblyLine && <AssemblyLine line={assemblyLine} />}
+        </ShadowGroup>
       </Suspense>
     </Canvas>
   );
