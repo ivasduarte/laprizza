@@ -1,4 +1,10 @@
-export function createSessionStore() {
+import { createRefreshLock } from './refresh-lock.js';
+
+/**
+ * @param {{runExclusive?: (task: () => Promise<any>) => Promise<any>}} [options]
+ *   runExclusive: runs a refresh while no other tab is refreshing (see refresh-lock.js).
+ */
+export function createSessionStore({ runExclusive = (task) => task() } = {}) {
   let state = { status: 'unknown', user: null, expired: false };
   let accessToken = null;
   let refreshInFlight = null;
@@ -23,7 +29,7 @@ export function createSessionStore() {
     if (!refreshInFlight) {
       refreshInFlight = (async () => {
         try {
-          start(await fetchSession());
+          await runExclusive(async () => start(await fetchSession()));
           return true;
         } catch {
           return false;
@@ -53,4 +59,6 @@ export function createSessionStore() {
   };
 }
 
-export const sessionStore = createSessionStore();
+export const sessionStore = createSessionStore({
+  runExclusive: createRefreshLock(),
+});
