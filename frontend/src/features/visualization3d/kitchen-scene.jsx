@@ -9,6 +9,7 @@ import {
   RoboticArmModel,
   WoodFiredOvenModel,
 } from './assembly-line-models.jsx';
+import { Surface, WithMaterial } from './scene-materials.jsx';
 
 function Model({ url, position, rotation, scale }) {
   const { scene } = useGLTF(url);
@@ -37,6 +38,9 @@ const toScale = (v) => [
   Number(v?.z) || 1,
 ];
 
+/** Colour of a JSON material that sets properties but no colour. */
+const DEFAULT_SURFACE_COLOR = '#c8c8c8';
+
 const VIS03_MODELS = {
   counter: CounterModel,
   'receiving-platform': ReceivingPlatformModel,
@@ -53,6 +57,17 @@ function SceneElement({ element }) {
   if (!element || !element.position || !element.scale || !element.rotation)
     return null;
 
+  // VIS04: material from the JSON; without one the models keep their default colours.
+  return (
+    <WithMaterial spec={element.material} fallbackColor={DEFAULT_SURFACE_COLOR}>
+      {(material) => (
+        <SceneElementModel element={element} material={material} />
+      )}
+    </WithMaterial>
+  );
+}
+
+function SceneElementModel({ element, material }) {
   const pos = toPosition(element.position);
   const rot = toRotation(element.rotation);
   const scl = toScale(element.scale);
@@ -63,7 +78,7 @@ function SceneElement({ element }) {
   if (Vis03Model) {
     return (
       <group name={element.id} position={pos} rotation={rot} scale={scl}>
-        <Vis03Model />
+        <Vis03Model material={material} />
       </group>
     );
   }
@@ -77,7 +92,7 @@ function SceneElement({ element }) {
         rotation={rot}
         scale={[1, scl[1], scl[2]]}
       >
-        <ConveyorBeltModel length={scl[0]} />
+        <ConveyorBeltModel length={scl[0]} material={material} />
       </group>
     );
   }
@@ -89,12 +104,12 @@ function SceneElement({ element }) {
         {/* Base de pedra */}
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[2, 1, 2]} />
-          <meshStandardMaterial color="#696969" />
+          <Surface material={material} color="#696969" />
         </mesh>
         {/* Cúpula de pedra (Dome) */}
         <mesh position={[0, 1, 0]}>
           <sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#A9A9A9" />
+          <Surface material={material} color="#A9A9A9" />
         </mesh>
       </group>
     );
@@ -112,7 +127,7 @@ function SceneElement({ element }) {
         {/* Tapete rolante (borracha escura) */}
         <mesh position={[0, 0.05, 0]}>
           <boxGeometry args={[1, 0.1, 0.9]} />
-          <meshStandardMaterial color="#1C1C1C" />
+          <Surface material={material} color="#1C1C1C" />
         </mesh>
       </group>
     );
@@ -122,7 +137,7 @@ function SceneElement({ element }) {
   return (
     <mesh position={pos} rotation={rot} scale={scl}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={element.material?.color || '#c8231a'} />
+      <Surface material={material} color="#c8231a" />
     </mesh>
   );
 }
@@ -183,11 +198,18 @@ export default function KitchenScene({ config, assemblyLine }) {
       <gridHelper args={[Math.max(safeWidth, safeLength), 20]} />
       <axesHelper args={[5]} />
 
-      {/* Kitchen floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[safeWidth, safeLength]} />
-        <meshStandardMaterial color="#e6d5bd" />
-      </mesh>
+      {/* Kitchen floor (VIS04: optional material in content.floor) */}
+      <WithMaterial
+        spec={config.content.floor?.material}
+        fallbackColor="#e6d5bd"
+      >
+        {(material) => (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+            <planeGeometry args={[safeWidth, safeLength]} />
+            <Surface material={material} color="#e6d5bd" />
+          </mesh>
+        )}
+      </WithMaterial>
 
       <Suspense
         fallback={

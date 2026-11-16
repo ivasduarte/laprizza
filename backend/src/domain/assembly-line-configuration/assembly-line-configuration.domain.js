@@ -1,6 +1,13 @@
 import Ajv from 'ajv';
 import { DomainError } from '../domain-error.js';
 import schema from './assembly-line-configuration.schema.json' with { type: 'json' };
+import {
+  collectMaterialViolations,
+  isValidAssetReference,
+} from '../material/material.domain.js';
+
+// Kept as part of this module's API (used by existing callers and tests).
+export { isValidAssetReference };
 
 const ajv = new Ajv({ allErrors: true });
 const validateSchema = ajv.compile(schema);
@@ -12,19 +19,6 @@ function contentError(violations) {
   return error;
 }
 
-export function isValidAssetReference(reference) {
-  if (typeof reference !== 'string' || reference.trim().length === 0) return false;
-  if (reference.startsWith('//')) return false;
-  if (reference.startsWith('/')) return true;
-  try {
-    const { protocol } = new URL(reference);
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-const TEXTURE_PROPERTIES = ['roughnessMap', 'bumpMap', 'normalMap'];
 
 export function validateAssemblyLineConfigurationContent(content) {
   // Schema validation
@@ -51,14 +45,8 @@ export function validateAssemblyLineConfigurationContent(content) {
         `/elements/${index}/modelReference must be an absolute http(s) URL or a root-relative path`,
       );
     }
-    for (const property of TEXTURE_PROPERTIES) {
-      const reference = element.material?.[property];
-      if (reference !== undefined && !isValidAssetReference(reference)) {
-        violations.push(
-          `/elements/${index}/material/${property} must be an absolute http(s) URL or a root-relative path`,
-        );
-      }
-    }
+    // Textures and material properties (VIS04)
+    violations.push(...collectMaterialViolations(element.material, `/elements/${index}/material`));
   }
   if (violations.length > 0) throw contentError(violations);
   return content;

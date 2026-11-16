@@ -1,6 +1,10 @@
 import Ajv from 'ajv';
 import { DomainError } from '../domain-error.js';
 import schema from './kitchen-configuration.schema.json' with { type: 'json' };
+import { collectMaterialViolations, isValidAssetReference } from '../material/material.domain.js';
+
+// Kept as part of this module's API (used by existing callers and tests).
+export { isValidAssetReference };
 
 const ajv = new Ajv({ allErrors: true });
 const validateSchema = ajv.compile(schema);
@@ -18,27 +22,6 @@ function contentError(violations) {
   error.details = violations;
   return error;
 }
-
-/**
- * An asset reference is either an absolute http(s) URL (e.g. served by an asset host/CDN)
- * or a root-relative path (e.g. '/assets/models/oven.gltf'). Protocol-relative ('//host/x'),
- * other schemes (javascript:, data:, file:) and bare relative paths are rejected.
- * @param {unknown} reference
- * @returns {boolean}
- */
-export function isValidAssetReference(reference) {
-  if (typeof reference !== 'string' || reference.trim().length === 0) return false;
-  if (reference.startsWith('//')) return false;
-  if (reference.startsWith('/')) return true;
-  try {
-    const { protocol } = new URL(reference);
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-const TEXTURE_PROPERTIES = ['roughnessMap', 'bumpMap', 'normalMap'];
 
 /**
  * Validates the parsed JSON content against the schema and domain business rules.
@@ -75,15 +58,12 @@ export function validateKitchenConfigurationContent(content) {
       );
     }
 
-    for (const property of TEXTURE_PROPERTIES) {
-      const reference = element.material?.[property];
-      if (reference !== undefined && !isValidAssetReference(reference)) {
-        violations.push(
-          `/elements/${index}/material/${property} must be an absolute http(s) URL or a root-relative path`,
-        );
-      }
-    }
+    // 2.3 Textures and material properties (VIS04)
+    violations.push(...collectMaterialViolations(element.material, `/elements/${index}/material`));
   }
+
+  // 2.4 Floor material (VIS04)
+  violations.push(...collectMaterialViolations(content.floor?.material, '/floor/material'));
 
   if (violations.length > 0) throw contentError(violations);
 

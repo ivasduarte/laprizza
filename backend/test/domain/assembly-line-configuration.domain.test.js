@@ -12,7 +12,7 @@ import validFullLine from './fixtures/assembly-line-configurations/valid-full-li
 import invalidMissingDimensions from './fixtures/assembly-line-configurations/invalid-missing-dimensions.json' with { type: 'json' };
 import invalidNegativeScale from './fixtures/assembly-line-configurations/invalid-negative-scale.json' with { type: 'json' };
 import invalidDuplicateIds from './fixtures/assembly-line-configurations/invalid-duplicate-ids.json' with { type: 'json' };
-import validAssemblyLine from './fixtures/assembly-line-configurations/valid-assembly-line.json' with { type: 'json' };
+import validVis03Line from './fixtures/assembly-line-configurations/valid-vis03-line.json' with { type: 'json' };
 
 test('validateAssemblyLineConfigurationContent accepts valid configurations', () => {
   assert.doesNotThrow(() => validateAssemblyLineConfigurationContent(validStandardLine));
@@ -20,7 +20,7 @@ test('validateAssemblyLineConfigurationContent accepts valid configurations', ()
 });
 
 test('validateAssemblyLineConfigurationContent accepts the VIS03 line (platform, dispenser, conveyor, arms, oven)', () => {
-  assert.doesNotThrow(() => validateAssemblyLineConfigurationContent(validAssemblyLine));
+  assert.doesNotThrow(() => validateAssemblyLineConfigurationContent(validVis03Line));
 });
 
 test('validateAssemblyLineConfigurationContent accepts every VIS03 component type', () => {
@@ -33,10 +33,7 @@ test('validateAssemblyLineConfigurationContent accepts every VIS03 component typ
     'wood-fired-oven',
   ];
   for (const type of vis03Types) {
-    assert.doesNotThrow(
-      () => validateAssemblyLineConfigurationContent(buildContent({ type })),
-      type,
-    );
+    assert.doesNotThrow(() => validateAssemblyLineConfigurationContent(buildContent({ type })), type);
   }
 });
 
@@ -205,7 +202,12 @@ test('validateAssemblyLineConfigurationContent rejects invalid texture reference
 
 test('validateAssemblyLineConfigurationContent checks every texture property', () => {
   const content = buildContent({
-    material: { roughnessMap: 'data:x', bumpMap: 'relative.png', normalMap: '//evil/x.png' },
+    material: {
+      colorMap: '/textures/steel/diffuse.jpg',
+      roughnessMap: 'data:x',
+      bumpMap: 'relative.png',
+      normalMap: '//evil/x.png',
+    },
   });
   assert.throws(
     () => validateAssemblyLineConfigurationContent(content),
@@ -244,3 +246,43 @@ test('validateAssemblyLineConfigurationContent exposes schema violations in deta
     },
   );
 });
+
+// --- Textures and materials (VIS04) ---
+
+test('validateAssemblyLineConfigurationContent accepts the VIS03 line with a textured material per element', () => {
+  for (const element of validVis03Line.elements) {
+    assert.ok(element.material?.colorMap, `${element.id} has a colour map`);
+  }
+  assert.doesNotThrow(() => validateAssemblyLineConfigurationContent(validVis03Line));
+});
+
+test('validateAssemblyLineConfigurationContent rejects a textured material without a colour map', () => {
+  const content = buildContent({ material: { normalMap: '/textures/steel/normal.jpg' } });
+  assert.throws(
+    () => validateAssemblyLineConfigurationContent(content),
+    (err) => {
+      assert.ok(err instanceof DomainError);
+      assert.deepEqual(err.details, [
+        '/elements/0/material/colorMap is required when the material has texture maps',
+      ]);
+      return true;
+    },
+  );
+});
+
+test('validateAssemblyLineConfigurationContent rejects out-of-range material properties (schema)', () => {
+  const invalidMaterials = [
+    { roughness: 1.5 },
+    { metalness: -0.1 },
+    { repeat: { x: 0, y: 1 } },
+    { colourMap: '/textures/typo.jpg' },
+  ];
+  for (const material of invalidMaterials) {
+    assert.throws(
+      () => validateAssemblyLineConfigurationContent(buildContent({ material })),
+      (err) => err instanceof DomainError && err.message.includes('material'),
+      JSON.stringify(material),
+    );
+  }
+});
+

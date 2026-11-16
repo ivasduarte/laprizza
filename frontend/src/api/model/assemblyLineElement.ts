@@ -4,8 +4,8 @@
  * LaPrizza API
  * OpenAPI spec version: 0.1.0
  */
-import type { AssemblyLineElementMaterial } from './assemblyLineElementMaterial';
 import type { AssemblyLineElementType } from './assemblyLineElementType';
+import type { Material } from './material';
 import type { PositiveVector3 } from './positiveVector3';
 import type { Vector3 } from './vector3';
 
@@ -22,6 +22,5 @@ export interface AssemblyLineElement {
   position: Vector3;
   rotation: Vector3;
   scale: PositiveVector3;
-  /** Texture maps, when present, follow the same rule as modelReference. */
-  material?: AssemblyLineElementMaterial;
+  material?: Material;
 }

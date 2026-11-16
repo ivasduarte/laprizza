@@ -3,6 +3,32 @@
   "title": "Assembly Line Configuration",
   "description": "Definition of an assembly line in its own local coordinate system (origin at the line origin). The kitchen configuration places the line in the kitchen through content.assemblyLine.",
   "type": "object",
+  "definitions": {
+    "material": {
+      "description": "Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths; a textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.",
+      "type": "object",
+      "properties": {
+        "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "colorMap": { "type": "string", "format": "uri-reference" },
+        "roughnessMap": { "type": "string", "format": "uri-reference" },
+        "bumpMap": { "type": "string", "format": "uri-reference" },
+        "normalMap": { "type": "string", "format": "uri-reference" },
+        "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "metalness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "repeat": {
+          "description": "How many times the textures repeat across the surface.",
+          "type": "object",
+          "properties": {
+            "x": { "type": "number", "exclusiveMinimum": 0 },
+            "y": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "dimensions": {
       "description": "Footprint of the line (bounding box in local coordinates).",
@@ -69,15 +95,7 @@
             },
             "required": ["x", "y", "z"]
           },
-          "material": {
-            "type": "object",
-            "properties": {
-              "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
-              "roughnessMap": { "type": "string", "format": "uri-reference" },
-              "bumpMap": { "type": "string", "format": "uri-reference" },
-              "normalMap": { "type": "string", "format": "uri-reference" }
-            }
-          }
+          "material": { "$ref": "#/definitions/material" }
         },
         "required": ["id", "type", "position", "rotation", "scale"]
       }
