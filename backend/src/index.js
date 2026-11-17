@@ -43,6 +43,7 @@ import systemRouterFactory from './api/system/system.routes.js';
 import forecastRouterFactory from './api/forecast/forecast.routes.js';
 import supplierScenarioRouterFactory from './api/supplier-scenario/supplier-scenario.routes.js';
 import sharedResourcesRouterFactory from './api/shared-resources/shared-resources.routes.js';
+import planningRouterFactory from './api/planning/planning.routes.js';
 
 const toInt = (value, fallback) => {
   const n = Number.parseInt(value, 10);
@@ -112,6 +113,11 @@ export function loadConfig(env = process.env) {
       unknownAccountThrottleRetentionMs: toInt(env.LOGIN_THROTTLE_RETENTION_HOURS, 24) * 3_600_000,
       passwordResetTtlMs: toInt(env.PASSWORD_RESET_TTL_MINUTES, 30) * 60_000,
       passwordResetUrl: `${appBaseUrl}/reset-password`,
+    },
+    aiService: {
+      url: env.AI_SERVICE_URL ?? 'http://127.0.0.1:5000',
+      apiKey: env.AI_SERVICE_KEY || undefined,
+      timeoutMs: toInt(env.AI_SERVICE_TIMEOUT_SECONDS, 15) * 1000,
     },
     mail: {
       host: env.SMTP_HOST ?? 'localhost',
@@ -282,6 +288,15 @@ export function createApp(config = loadConfig(), repos = {}) {
 
   api.use('/supplier-scenarios', supplierScenarioRouterFactory(repos.supplierScenarioRepository));
   api.use('/shared-resources', sharedResourcesRouterFactory(repos.sharedResourcesStorage));
+  api.use(
+    '/planning',
+    planningRouterFactory({
+      planningService: repos.planningService,
+      aiServiceClient: repos.aiServiceClient,
+      aiDataRepository: repos.aiDataRepository,
+      aiServiceConfig: config.aiService,
+    }),
+  );
   // Every version shares the same router (and the same rate-limit state);
   // only the OpenAPI document and the deprecation headers differ.
   for (const version of SUPPORTED_API_VERSIONS) {
@@ -303,6 +318,9 @@ export function createApp(config = loadConfig(), repos = {}) {
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const config = loadConfig();
+    if (!config.aiService.apiKey) {
+      console.warn('AI_SERVICE_KEY is not set: the /planning endpoints will answer 503.');
+    }
     await connectDB(config.mongoUri);
     await passwordHasher.warmUp();
     await seedInitialManager();

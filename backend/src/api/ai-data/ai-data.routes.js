@@ -19,18 +19,21 @@ const snapshotQuerySchema = Joi.object({
   stockMode: Joi.string().valid('live', 'scenario'),
 }).and('scenarioId', 'stockMode');
 
+/** Repository wired to the Mongoose models (also used by the planning routes, AI05). */
+export function createDefaultAiDataRepository() {
+  return createAiDataRepository({
+    productModel: ProductModel,
+    stockModel: StockModel,
+    sizeModel: PizzaSizeModel,
+    predefinedPizzaModel: PredefinedPizzaModel,
+    forecastModel: ForecastModel,
+    supplierScenarioModel: SupplierScenarioModel,
+    aiScenarioRepository,
+  });
+}
+
 export default function aiDataRouterFactory(deps) {
-  const aiDataRepository =
-    deps?.aiDataRepository ??
-    createAiDataRepository({
-      productModel: ProductModel,
-      stockModel: StockModel,
-      sizeModel: PizzaSizeModel,
-      predefinedPizzaModel: PredefinedPizzaModel,
-      forecastModel: ForecastModel,
-      supplierScenarioModel: SupplierScenarioModel,
-      aiScenarioRepository,
-    });
+  const aiDataRepository = deps?.aiDataRepository ?? createDefaultAiDataRepository();
 
   const router = Router();
 
