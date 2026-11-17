@@ -3970,6 +3970,578 @@
         }
       }
     },
+    "/planning/bom": {
+      "post": {
+        "summary": "Bill of Materials calculation (MANAGER only)",
+        "description": "Explodes the orders of the scenario through the BOM and compares the requirements with the stock. Simulation only (simulation: true): the calculation never changes stock nor registers purchase orders. The back end builds the snapshot (same as GET /ai-data/snapshot) and sends it to the Prolog AI service, authenticated with a service key.",
+        "tags": [
+          "AI Planning"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scenarioId",
+                  "stockMode"
+                ],
+                "properties": {
+                  "scenarioId": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9-]{1,64}$",
+                    "description": "Code of an active AI scenario (same id as GET /ai-data/snapshot)."
+                  },
+                  "stockMode": {
+                    "type": "string",
+                    "enum": [
+                      "live",
+                      "scenario"
+                    ],
+                    "description": "\"live\": current stock of the back end; \"scenario\": stock of the scenario."
+                  }
+                }
+              },
+              "examples": {
+                "scenario": {
+                  "value": {
+                    "scenarioId": "DEMO-PARTIAL",
+                    "stockMode": "scenario"
+                  }
+                },
+                "live": {
+                  "value": {
+                    "scenarioId": "DEMO-PARTIAL",
+                    "stockMode": "live"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calculation done. warnings never block the calculation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "status": "ok",
+                  "simulation": true,
+                  "feasible": false,
+                  "calculatedAt": "2026-11-17T09:00:00.000Z",
+                  "scenario": {
+                    "id": "DEMO-PARTIAL",
+                    "name": "Demo",
+                    "version": 1,
+                    "stockMode": "scenario"
+                  },
+                  "inputs": {
+                    "snapshotId": "39f659e4dbf709b3",
+                    "sources": {}
+                  },
+                  "orders": [
+                    {
+                      "orderId": "DEMO-PARTIAL#1",
+                      "pizzaId": "p-margherita",
+                      "pizzaName": "Margherita",
+                      "sizeId": "s-medium",
+                      "sizeName": "Medium",
+                      "quantity": 2
+                    }
+                  ],
+                  "items": [
+                    {
+                      "productId": "c-mozzarella",
+                      "name": "Mozzarella",
+                      "kind": "simple",
+                      "stockControlled": true,
+                      "required": 4,
+                      "requiredDirect": 4,
+                      "requiredFromAggregates": 0,
+                      "available": 2,
+                      "used": 2,
+                      "remaining": 0,
+                      "shortage": 2
+                    }
+                  ],
+                  "shortages": [
+                    {
+                      "productId": "c-mozzarella",
+                      "name": "Mozzarella",
+                      "kind": "simple",
+                      "replenishmentNeeded": 2
+                    }
+                  ],
+                  "production": [],
+                  "warnings": [
+                    {
+                      "code": "PIZZA_STOCK_IGNORED",
+                      "pizzaId": "p-margherita"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (VALIDATION_ERROR, MALFORMED_JSON) or scenario without its own stock (SCENARIO_WITHOUT_STOCK).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "error": {
+                        "status": 400,
+                        "code": "VALIDATION_ERROR",
+                        "message": "Validation failed.",
+                        "details": [
+                          {
+                            "field": "stockMode",
+                            "type": "any.only",
+                            "message": "\"stockMode\" must be one of [live, scenario]"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "scenarioWithoutStock": {
+                    "value": {
+                      "error": {
+                        "status": 400,
+                        "code": "SCENARIO_WITHOUT_STOCK",
+                        "message": "The scenario has no stock of its own; use stockMode=live."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missing": {
+                    "value": {
+                      "error": {
+                        "status": 401,
+                        "code": "TOKEN_MISSING",
+                        "message": "Authentication required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role of the user is not allowed (only MANAGER).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "error": {
+                        "status": 403,
+                        "code": "FORBIDDEN",
+                        "message": "Forbidden."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AI scenario not found or not active.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "error": {
+                        "status": 404,
+                        "code": "AI_SCENARIO_NOT_FOUND",
+                        "message": "AI scenario not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing information: the data needed for the calculation is invalid or incomplete (no recipe, stock entry missing, no forecast, ...). details.problems lists every problem.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingStock": {
+                    "value": {
+                      "error": {
+                        "status": 422,
+                        "code": "AI_INVALID_DATA",
+                        "message": "The data needed for the calculation is invalid or incomplete.",
+                        "details": {
+                          "scenario": {
+                            "id": "DEMO-PARTIAL",
+                            "name": "Demo",
+                            "version": 1,
+                            "stockMode": "scenario"
+                          },
+                          "inputs": {
+                            "snapshotId": "39f659e4dbf709b3",
+                            "sources": {}
+                          },
+                          "problems": [
+                            {
+                              "code": "MISSING_SCENARIO_STOCK",
+                              "productId": "c-mozzarella",
+                              "required": 4
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The AI service is not available (details.reason: connection_failed, not_configured, service_auth_failed, ai_service_error, invalid_ai_response). Sends Retry-After.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "down": {
+                    "value": {
+                      "error": {
+                        "status": 503,
+                        "code": "SERVICE_UNAVAILABLE",
+                        "message": "Service Unavailable",
+                        "details": {
+                          "reason": "connection_failed"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The AI service did not answer in time (AI_SERVICE_TIMEOUT_SECONDS).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "timeout": {
+                    "value": {
+                      "error": {
+                        "status": 504,
+                        "code": "GATEWAY_TIMEOUT",
+                        "message": "Gateway Timeout",
+                        "details": {
+                          "reason": "timeout"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planning/requirements": {
+      "post": {
+        "summary": "Requirements planning of the forecast (MANAGER only)",
+        "description": "Net requirements per day and purchase plan with the suppliers of the active supplier scenario. Simulation only (simulation: true): the calculation never changes stock nor registers purchase orders. The back end builds the snapshot (same as GET /ai-data/snapshot) and sends it to the Prolog AI service, authenticated with a service key.",
+        "tags": [
+          "AI Planning"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scenarioId",
+                  "stockMode"
+                ],
+                "properties": {
+                  "scenarioId": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9-]{1,64}$",
+                    "description": "Code of an active AI scenario (same id as GET /ai-data/snapshot)."
+                  },
+                  "stockMode": {
+                    "type": "string",
+                    "enum": [
+                      "live",
+                      "scenario"
+                    ],
+                    "description": "\"live\": current stock of the back end; \"scenario\": stock of the scenario."
+                  }
+                }
+              },
+              "examples": {
+                "scenario": {
+                  "value": {
+                    "scenarioId": "DEMO-PARTIAL",
+                    "stockMode": "scenario"
+                  }
+                },
+                "live": {
+                  "value": {
+                    "scenarioId": "DEMO-PARTIAL",
+                    "stockMode": "live"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calculation done: required quantities, purchases per supplier (suggestions only) and warnings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (VALIDATION_ERROR, MALFORMED_JSON) or scenario without its own stock (SCENARIO_WITHOUT_STOCK).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "error": {
+                        "status": 400,
+                        "code": "VALIDATION_ERROR",
+                        "message": "Validation failed.",
+                        "details": [
+                          {
+                            "field": "stockMode",
+                            "type": "any.only",
+                            "message": "\"stockMode\" must be one of [live, scenario]"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "scenarioWithoutStock": {
+                    "value": {
+                      "error": {
+                        "status": 400,
+                        "code": "SCENARIO_WITHOUT_STOCK",
+                        "message": "The scenario has no stock of its own; use stockMode=live."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missing": {
+                    "value": {
+                      "error": {
+                        "status": 401,
+                        "code": "TOKEN_MISSING",
+                        "message": "Authentication required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The role of the user is not allowed (only MANAGER).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "error": {
+                        "status": 403,
+                        "code": "FORBIDDEN",
+                        "message": "Forbidden."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AI scenario not found or not active.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "error": {
+                        "status": 404,
+                        "code": "AI_SCENARIO_NOT_FOUND",
+                        "message": "AI scenario not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing information: the data needed for the calculation is invalid or incomplete (no recipe, stock entry missing, no forecast, ...). details.problems lists every problem.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingStock": {
+                    "value": {
+                      "error": {
+                        "status": 422,
+                        "code": "AI_INVALID_DATA",
+                        "message": "The data needed for the calculation is invalid or incomplete.",
+                        "details": {
+                          "scenario": {
+                            "id": "DEMO-PARTIAL",
+                            "name": "Demo",
+                            "version": 1,
+                            "stockMode": "scenario"
+                          },
+                          "inputs": {
+                            "snapshotId": "39f659e4dbf709b3",
+                            "sources": {}
+                          },
+                          "problems": [
+                            {
+                              "code": "MISSING_SCENARIO_STOCK",
+                              "productId": "c-mozzarella",
+                              "required": 4
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The AI service is not available (details.reason: connection_failed, not_configured, service_auth_failed, ai_service_error, invalid_ai_response). Sends Retry-After.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "down": {
+                    "value": {
+                      "error": {
+                        "status": 503,
+                        "code": "SERVICE_UNAVAILABLE",
+                        "message": "Service Unavailable",
+                        "details": {
+                          "reason": "connection_failed"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The AI service did not answer in time (AI_SERVICE_TIMEOUT_SECONDS).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "timeout": {
+                    "value": {
+                      "error": {
+                        "status": 504,
+                        "code": "GATEWAY_TIMEOUT",
+                        "message": "Gateway Timeout",
+                        "details": {
+                          "reason": "timeout"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/kitchen-configurations": {
       "get": {
         "summary": "List kitchen configurations (MANAGER and EMPLOYEE)",

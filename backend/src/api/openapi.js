@@ -1,5 +1,6 @@
 import pkg from '../../package.json' with { type: 'json' };
 import { API_VERSIONS, CURRENT_API_VERSION, SUPPORTED_API_VERSIONS, apiPrefix } from './api-versions.js';
+import { planningPaths } from './planning/planning.openapi.js';
 
 const errorResponse = (description) => ({
   description,
@@ -1606,6 +1607,7 @@ const baseSpec = {
         },
       },
     },
+    ...planningPaths,
     '/kitchen-configurations': {
       get: {
         summary: 'List kitchen configurations (MANAGER and EMPLOYEE)',

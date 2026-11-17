@@ -55,7 +55,7 @@ export function createAuthController({ authService, config }) {
            await authService.logout(req.user, contextOf(req));
         }
 
-        clearRefreshCookie(res);
+        clearRefreshCookie(req, res);
         res.status(204).end();
       } catch (error) {
         next(error); 
