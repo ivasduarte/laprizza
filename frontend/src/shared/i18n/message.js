@@ -5,9 +5,20 @@ export const messages = {
       homeLink: 'LaPrizza - go to the home page',
       primaryNav: 'Primary navigation',
       loading: 'Loading...',
+      openMenu: 'Open menu',
+      closeMenu: 'Close menu',
     },
     language: {
       label: 'Language',
+    },
+    theme: {
+      dark: 'Dark mode',
+      switchToDark: 'Switch to dark mode',
+      switchToLight: 'Switch to light mode',
+    },
+    account: {
+      menu: 'Account',
+      signedInAs: 'Signed in as',
     },
     nav: {
       home: 'Home',
@@ -392,9 +403,20 @@ export const messages = {
       homeLink: 'LaPrizza - ir para a página inicial',
       primaryNav: 'Navegação principal',
       loading: 'A carregar...',
+      openMenu: 'Abrir menu',
+      closeMenu: 'Fechar menu',
     },
     language: {
       label: 'Idioma',
+    },
+    theme: {
+      dark: 'Modo escuro',
+      switchToDark: 'Mudar para modo escuro',
+      switchToLight: 'Mudar para modo claro',
+    },
+    account: {
+      menu: 'Conta',
+      signedInAs: 'Sessão iniciada como',
     },
     nav: {
       home: 'Início',

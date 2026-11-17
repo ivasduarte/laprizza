@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { features } from '../registry.js';
-import logoUrl from '../../shared/assets/logo.png';
+import BrandLogoLarge from '../../shared/ui/brand-logo-large.jsx';
 import { useSession } from '../../shared/auth/use-session.js';
 
 const quickLinks = features.filter(
@@ -25,7 +25,7 @@ export default function HomePage() {
           )}
         </div>
         <div className="hero-art">
-          <img className="hero-logo" src={logoUrl} alt="" />
+          <BrandLogoLarge className="hero-logo" />
         </div>
       </section>
 
@@ -48,4 +48,4 @@ export default function HomePage() {
       )}
     </>
   );
-}
+}

@@ -23,7 +23,7 @@ const configs = [
 async function mockBackend(page) {
   // Lowest priority (routes registered last win): requests nobody mocks must not hang and keep
   // the global loader on. The silent session refresh at start answers "no session".
-  await page.route('**/api/v1/**', (route) =>
+  await page.route('**/api/v2/**', (route) =>
     route.request().url().endsWith('/auth/refresh')
       ? route.fulfill({
           status: 401,
@@ -34,18 +34,18 @@ async function mockBackend(page) {
           json: { error: { status: 404, code: 'NOT_FOUND' } },
         })
   );
-  await page.route('**/api/v1/auth/login', (route) =>
+  await page.route('**/api/v2/auth/login', (route) =>
     route.fulfill({ json: managerSession })
   );
-  await page.route('**/api/v1/kitchen-configurations', (route) => {
+  await page.route('**/api/v2/kitchen-configurations', (route) => {
     if (route.request().method() === 'GET')
       return route.fulfill({ json: configs });
     return route.fallback();
   });
-  await page.route('**/api/v1/kitchen-configurations/active', (route) =>
+  await page.route('**/api/v2/kitchen-configurations/active', (route) =>
     route.fulfill({ json: configs[0] })
   );
-  await page.route('**/api/v1/assembly-line-configurations', (route) =>
+  await page.route('**/api/v2/assembly-line-configurations', (route) =>
     route.fulfill({ json: [] })
   );
 }
@@ -55,7 +55,7 @@ async function openKitchenConfigs(page) {
   await page.fill('input[type="email"]', 'admin@laprizza.pt');
   await page.fill('input[type="password"]', 'StrongPassword123!');
   await Promise.all([
-    page.waitForResponse('**/api/v1/auth/login'),
+    page.waitForResponse('**/api/v2/auth/login'),
     page.click('button[type="submit"]'),
   ]);
   await page.getByRole('link', { name: 'Kitchen Configuration' }).click();
@@ -66,7 +66,7 @@ test.describe('WEB04 - user feedback and validation', () => {
     page,
   }) => {
     let loginRequests = 0;
-    await page.route('**/api/v1/auth/login', (route) => {
+    await page.route('**/api/v2/auth/login', (route) => {
       loginRequests += 1;
       return route.fulfill({ json: managerSession });
     });
@@ -90,7 +90,7 @@ test.describe('WEB04 - user feedback and validation', () => {
   }) => {
     await mockBackend(page);
     let posts = 0;
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       posts += 1;
       await new Promise((resolve) => setTimeout(resolve, 600));
@@ -123,7 +123,7 @@ test.describe('WEB04 - user feedback and validation', () => {
     page,
   }) => {
     await mockBackend(page);
-    await page.route('**/api/v1/kitchen-configurations', (route) => {
+    await page.route('**/api/v2/kitchen-configurations', (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       return route.fulfill({
         status: 400,
@@ -168,7 +168,7 @@ test.describe('WEB04 - user feedback and validation', () => {
     page,
   }) => {
     await mockBackend(page);
-    await page.route('**/api/v1/kitchen-configurations', (route) => {
+    await page.route('**/api/v2/kitchen-configurations', (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       return route.fulfill({
         status: 500,
@@ -200,7 +200,7 @@ test.describe('WEB04 - user feedback and validation', () => {
     page,
   }) => {
     await mockBackend(page);
-    await page.route('**/api/v1/kitchen-configurations', (route) => {
+    await page.route('**/api/v2/kitchen-configurations', (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       return route.abort('connectionreset');
     });
@@ -223,7 +223,7 @@ test.describe('WEB04 - user feedback and validation', () => {
   }) => {
     await mockBackend(page);
     let patches = 0;
-    await page.route('**/api/v1/kitchen-configurations/2', (route) => {
+    await page.route('**/api/v2/kitchen-configurations/2', (route) => {
       if (route.request().method() !== 'PATCH') return route.fallback();
       patches += 1;
       return route.fulfill({ json: { ...configs[1], name: 'Renamed line' } });
@@ -246,7 +246,7 @@ test.describe('WEB04 - user feedback and validation', () => {
   test('a failed list load offers a safe retry', async ({ page }) => {
     await mockBackend(page);
     let failList = true;
-    await page.route('**/api/v1/kitchen-configurations', (route) => {
+    await page.route('**/api/v2/kitchen-configurations', (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       return failList
         ? route.fulfill({
@@ -271,7 +271,7 @@ test.describe('WEB04 - user feedback and validation', () => {
   }) => {
     await mockBackend(page);
     let deletes = 0;
-    await page.route('**/api/v1/kitchen-configurations/2', (route) => {
+    await page.route('**/api/v2/kitchen-configurations/2', (route) => {
       if (route.request().method() !== 'DELETE') return route.fallback();
       deletes += 1;
       return route.fulfill({ status: 204, body: '' });

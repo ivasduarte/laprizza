@@ -31,7 +31,7 @@ async function loginAndOpenKitchenConfigs(page, email) {
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', 'StrongPassword123!');
   await Promise.all([
-    page.waitForResponse('**/api/v1/auth/login'),
+    page.waitForResponse('**/api/v2/auth/login'),
     page.click('button[type="submit"]'),
   ]);
   await page.getByRole('link', { name: 'Kitchen Configuration' }).click();
@@ -42,7 +42,7 @@ test.describe('Kitchen Configuration Page E2E', () => {
   // its picker: mock that list so no request leaves the test.
   test.beforeEach(async ({ page }) => {
     await page.route(
-      '**/api/v1/assembly-line-configurations',
+      '**/api/v2/assembly-line-configurations',
       async (route) => {
         await route.fulfill({ json: [] });
       }
@@ -52,14 +52,14 @@ test.describe('Kitchen Configuration Page E2E', () => {
   test('RBAC: Employee gets a read-only view (no management controls)', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
     await page.route(
-      '**/api/v1/kitchen-configurations/active',
+      '**/api/v2/kitchen-configurations/active',
       async (route) => {
         await route.fulfill({ json: mockConfigs[0] });
       }
@@ -94,16 +94,16 @@ test.describe('Kitchen Configuration Page E2E', () => {
   test('Viewer: shows an explicit empty state when no configuration is active (404)', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       await route.fulfill({
         json: mockConfigs.map((c) => ({ ...c, isActive: false })),
       });
     });
     await page.route(
-      '**/api/v1/kitchen-configurations/active',
+      '**/api/v2/kitchen-configurations/active',
       async (route) => {
         await route.fulfill({
           status: 404,
@@ -126,17 +126,17 @@ test.describe('Kitchen Configuration Page E2E', () => {
     page,
   }) => {
     // 1. Simular o login de um Manager
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
 
     // Simular a listagem de configurações e a configuração ativa (muda após a ativação)
     let activeConfig = mockConfigs[0];
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
     await page.route(
-      '**/api/v1/kitchen-configurations/active',
+      '**/api/v2/kitchen-configurations/active',
       async (route) => {
         await route.fulfill({ json: activeConfig });
       }
@@ -144,7 +144,7 @@ test.describe('Kitchen Configuration Page E2E', () => {
 
     // Intercetar a chamada de ativação da configuração 2
     await page.route(
-      '**/api/v1/kitchen-configurations/2/activate',
+      '**/api/v2/kitchen-configurations/2/activate',
       async (route) => {
         // Quando ativamos a 2, a API devolveria a 2 ativa
         activeConfig = { ...mockConfigs[1], isActive: true };
@@ -189,14 +189,14 @@ test.describe('Kitchen Configuration Page E2E', () => {
     page,
   }) => {
     // 1. Simular o login de um Manager
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
     await page.route(
-      '**/api/v1/kitchen-configurations/active',
+      '**/api/v2/kitchen-configurations/active',
       async (route) => {
         await route.fulfill({ json: mockConfigs[0] });
       }
@@ -228,14 +228,14 @@ test.describe('Kitchen Configuration Page E2E', () => {
     page,
   }) => {
     // 1. Simular o login de um Manager
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
-    await page.route('**/api/v1/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations', async (route) => {
       await route.fulfill({ json: mockConfigs });
     });
     await page.route(
-      '**/api/v1/kitchen-configurations/active',
+      '**/api/v2/kitchen-configurations/active',
       async (route) => {
         await route.fulfill({ json: mockConfigs[0] });
       }

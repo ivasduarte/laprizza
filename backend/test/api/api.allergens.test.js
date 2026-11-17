@@ -72,14 +72,14 @@ async function setupTestServer() {
 }
 
 async function loginAs(port, email) {
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email, password: 'StrongPassword123!' }),
   });
   const { accessToken: token } = await res.json();
   return (method, path, body) =>
-    fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+    fetch(`http://127.0.0.1:${port}/api/v2${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),

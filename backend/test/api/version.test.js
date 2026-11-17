@@ -8,7 +8,7 @@ import { createApp, loadConfig } from '../../src/index.js';
 import { loadVersionInfo } from '../../src/infrastructure/system/version-file.reader.js';
 
 /**
- * Integration tests: GET /api/v1/version.
+ * Integration tests: GET /api/v2/version.
  * VERSION.json is written to a temporary folder, so the tests never read the real
  * back-end root and work the same locally and on the staging VM.
  */
@@ -37,10 +37,10 @@ async function startServer(t, versionInfo) {
     server.closeAllConnections();
   });
   await once(server, 'listening');
-  return `http://127.0.0.1:${server.address().port}/api/v1/version`;
+  return `http://127.0.0.1:${server.address().port}/api/v2/version`;
 }
 
-test('GET /api/v1/version returns the contents of VERSION.json', async (t) => {
+test('GET /api/v2/version returns the contents of VERSION.json', async (t) => {
   const file = join(createTempDir(t), 'VERSION.json');
   writeFileSync(file, JSON.stringify({ ...VERSION, extra: 'ignored' }));
   const url = await startServer(t, loadVersionInfo(file));
@@ -52,7 +52,7 @@ test('GET /api/v1/version returns the contents of VERSION.json', async (t) => {
   assert.deepEqual(await response.json(), VERSION);
 });
 
-test('GET /api/v1/version returns unknown when VERSION.json does not exist', async (t) => {
+test('GET /api/v2/version returns unknown when VERSION.json does not exist', async (t) => {
   const missing = join(createTempDir(t), 'VERSION.json');
   const url = await startServer(t, loadVersionInfo(missing));
 
@@ -62,7 +62,7 @@ test('GET /api/v1/version returns unknown when VERSION.json does not exist', asy
   assert.deepEqual(await response.json(), { sha: 'unknown', shortSha: 'unknown' });
 });
 
-test('GET /api/v1/version keeps the value read at startup', async (t) => {
+test('GET /api/v2/version keeps the value read at startup', async (t) => {
   const file = join(createTempDir(t), 'VERSION.json');
   writeFileSync(file, JSON.stringify(VERSION));
   const url = await startServer(t, loadVersionInfo(file));

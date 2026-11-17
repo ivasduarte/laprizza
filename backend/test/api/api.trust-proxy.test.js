@@ -24,7 +24,7 @@ async function startServer(env = {}) {
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
 
-  const url = `http://127.0.0.1:${server.address().port}/api/v1/auth/login`;
+  const url = `http://127.0.0.1:${server.address().port}/api/v2/auth/login`;
   return {
     app,
     logger: infra.securityLogger,

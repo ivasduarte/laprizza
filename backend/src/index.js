@@ -7,7 +7,9 @@ import {
   seedInitialKitchenConfigurations,
 } from './infrastructure/seeder.js';
 import { dummyPostalCodeValidator } from './infrastructure/external/postal-code.validator.js';
-import { openApiSpec } from './api/openapi.js';
+import { openApiSpecs } from './api/openapi.js';
+import { API_PREFIX, SUPPORTED_API_VERSIONS, apiPrefix } from './api/api-versions.js';
+import { apiDeprecation } from './api/middleware/api-deprecation.js';
 import { createAuthModule } from './api/auth/auth.module.js';
 import { passwordHasher } from './infrastructure/security/password-hasher.js';
 import { createMongooseHealthProbe } from './infrastructure/system/database-health.probe.js';
@@ -39,8 +41,6 @@ import systemRouterFactory from './api/system/system.routes.js';
 import forecastRouterFactory from './api/forecast/forecast.routes.js';
 import supplierScenarioRouterFactory from './api/supplier-scenario/supplier-scenario.routes.js';
 import sharedResourcesRouterFactory from './api/shared-resources/shared-resources.routes.js';
-
-const API_PREFIX = '/api/v1';
 
 const toInt = (value, fallback) => {
   const n = Number.parseInt(value, 10);
@@ -233,7 +233,6 @@ export function createApp(config = loadConfig(), repos = {}) {
     '/product-categories',
     productCategoriesRouterFactory(repos.productCategoriesRepository, repos.productsRepository),
   );
-  api.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
   api.use(
     '/customers',
     customersRouterFactory(
@@ -267,7 +266,17 @@ export function createApp(config = loadConfig(), repos = {}) {
 
   api.use('/supplier-scenarios', supplierScenarioRouterFactory(repos.supplierScenarioRepository));
   api.use('/shared-resources', sharedResourcesRouterFactory(repos.sharedResourcesStorage));
-  app.use(API_PREFIX, api);
+  // Every version shares the same router (and the same rate-limit state);
+  // only the OpenAPI document and the deprecation headers differ.
+  for (const version of SUPPORTED_API_VERSIONS) {
+    const spec = openApiSpecs[version];
+    const versioned = express.Router();
+    versioned.use(apiDeprecation(version));
+    versioned.get('/openapi.json', (_req, res) => res.json(spec));
+    versioned.use('/docs', swaggerUi.serveFiles(spec), swaggerUi.setup(spec));
+    versioned.use(api);
+    app.use(apiPrefix(version), versioned);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

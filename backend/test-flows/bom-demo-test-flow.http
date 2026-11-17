@@ -1,4 +1,4 @@
-@backendUrl = http://localhost:3000/api/v1
+@backendUrl = http://localhost:3000/api/v2
 @aiUrl = http://localhost:5000
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!

@@ -15,7 +15,7 @@ import {
 import FieldError from '../../shared/ui/feedback/field-error.jsx';
 import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
 import Spinner from '../../shared/ui/feedback/spinner.jsx';
-import logoUrl from '../../shared/assets/logo.png';
+import BrandLogoLarge from '../../shared/ui/brand-logo-large.jsx';
 
 const IDS = { email: 'login-email', password: 'login-password' };
 const idFor = (field) => IDS[field] ?? field;
@@ -54,8 +54,7 @@ export default function LoginPage() {
   return (
     <section className="login">
       <div className="login-aside">
-        <img className="login-logo" src={logoUrl} alt="" />
-        <p className="login-brand">LaPrizza</p>
+        <BrandLogoLarge className="login-logo" alt="LaPrizza" />
         <p className="login-tagline">{t('home.description')}</p>
       </div>
 

@@ -103,7 +103,7 @@ test('API POST /auth/login (400, 401, 200)', async (t) => {
     server.closeAllConnections();
   });
 
-  let res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  let res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt' }),
@@ -111,7 +111,7 @@ test('API POST /auth/login (400, 401, 200)', async (t) => {
   assert.equal(res.status, 400);
   assert.equal(usersRepository.findByEmailWithPasswordHash.mock.callCount(), 0);
 
-  res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'Wrong!' }),
@@ -119,7 +119,7 @@ test('API POST /auth/login (400, 401, 200)', async (t) => {
   assert.equal(res.status, 401);
   assert.deepEqual(usersRepository.registerFailedLogin.mock.calls[0].arguments, [ADMIN_ID]);
 
-  res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
@@ -141,25 +141,25 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
     server.closeAllConnections();
   });
 
-  const r1 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const r1 = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
   const adminToken = (await r1.json()).accessToken;
 
-  const r2 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const r2 = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
   });
   const empToken = (await r2.json()).accessToken;
 
-  assert.equal((await fetch(`http://127.0.0.1:${port}/api/v1/users`)).status, 401);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/v2/users`)).status, 401);
 
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         headers: { Authorization: `Bearer ${empToken}` },
       })
     ).status,
@@ -168,7 +168,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
 
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       })
     ).status,
@@ -178,7 +178,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   // 400 Bad Request (Missing role)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'new@p.pt', password: 'StrongPassword123!' }),
@@ -190,7 +190,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   // 403 Forbidden (EMPLOYEE trying to create a user)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${empToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -211,7 +211,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   });
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,7 +225,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   );
 
   // 201 Created (Valid payload) - Validates if the DTO omits the password
-  const postRes = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+  const postRes = await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -244,7 +244,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   assert.match(saved.passwordHash, /^\$argon2id\$/);
 
   // 200 OK GET - Validates if the DTO omits the password in the list
-  const listRes = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+  const listRes = await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   const listBody = await listRes.json();
@@ -264,21 +264,21 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
     server.closeAllConnections();
   });
 
-  const r1 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const r1 = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
   const adminToken = (await r1.json()).accessToken;
 
-  const r2 = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const r2 = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
   });
   const empToken = (await r2.json()).accessToken;
 
-  const createRes = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+  const createRes = await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -297,7 +297,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 400 Bad Request - Invalid ID format
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/id_invalido_curto`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/id_invalido_curto`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       })
     ).status,
@@ -307,7 +307,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 404 Not Found - GET with valid format but non-existent ID
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/abcdef000000000000000999`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/abcdef000000000000000999`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       })
     ).status,
@@ -317,7 +317,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 404 Not Found - PATCH with valid format but non-existent ID
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/abcdef000000000000000999`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/abcdef000000000000000999`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false }),
@@ -327,17 +327,17 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   );
 
   // GET /users/:id (200 OK) - Validates if the DTO omits the password
-  const get200 = await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`, {
+  const get200 = await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   assert.equal(get200.status, 200);
   assert.equal((await get200.json()).password, undefined);
 
   // 401 & 403 - General protections
-  assert.equal((await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`)).status, 401);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`)).status, 401);
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
         headers: { Authorization: `Bearer ${empToken}` },
       })
     ).status,
@@ -345,7 +345,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   );
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${empToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false }),
@@ -355,7 +355,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   );
 
   // PATCH /users/:id (200 - Disable account)
-  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`, {
+  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive: false, role: 'EMPLOYEE' }),
@@ -378,7 +378,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   ]);
 
   // 403 Forbidden - Login blocked for disabled account (AA01: correct password + disabled account -> ACCOUNT_DISABLED)
-  const loginRes = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const loginRes = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'alvo@laprizza.pt', password: 'StrongPassword123!' }),
@@ -389,7 +389,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 400 Bad Request - Empty PATCH (Joi validation)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${targetId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -405,7 +405,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 403 Forbidden - Manager attempts to disable themselves
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${adminId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${adminId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false }),
@@ -417,7 +417,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 403 Forbidden - toUpperCase() protection in action
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${adminId.toUpperCase()}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${adminId.toUpperCase()}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false }),
@@ -430,7 +430,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   // 200 OK - Manager can change their own password
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/users/${adminId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/users/${adminId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: 'AnotherStrongPassword123!' }),

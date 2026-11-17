@@ -1,12 +1,13 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "LaPrizza API",
-    "version": "0.1.0"
+    "title": "LaPrizza API (v2)",
+    "version": "2.0.0",
+    "description": "Current API version. Application version 0.1.0."
   },
   "servers": [
     {
-      "url": "/api/v1"
+      "url": "/api/v2"
     }
   ],
   "paths": {
