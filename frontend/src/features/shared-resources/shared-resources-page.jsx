@@ -18,7 +18,8 @@ export default function SharedResourcesPage() {
   const { status, user } = useSession();
   const authenticated = status === 'authenticated';
   const queryClient = useQueryClient();
-  const canManage = user?.role === 'MANAGER';
+  // Same permission the back end requires for upload/delete (AA05: the session has roles/permissions, not role).
+  const canManage = (user?.permissions ?? []).includes('resources:write');
   const queryKey = ['shared-resources', user?.id ?? user?.userId];
 
   const [message, setMessage] = useState(null);

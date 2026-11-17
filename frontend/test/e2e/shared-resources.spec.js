@@ -5,8 +5,8 @@ const mockManagerSession = {
   user: {
     id: '1',
     email: 'admin@laprizza.pt',
-    role: 'MANAGER',
     roles: ['MANAGER'],
+    permissions: ['resources:read', 'resources:write'],
   },
 };
 
@@ -15,8 +15,8 @@ const mockEmployeeSession = {
   user: {
     id: '2',
     email: 'emp@laprizza.pt',
-    role: 'EMPLOYEE',
     roles: ['EMPLOYEE'],
+    permissions: ['resources:read'],
   },
 };
 
