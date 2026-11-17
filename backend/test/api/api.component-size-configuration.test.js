@@ -134,7 +134,7 @@ function request(port, method, path, { token, body } = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  return fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+  return fetch(`http://127.0.0.1:${port}/api/v2${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),

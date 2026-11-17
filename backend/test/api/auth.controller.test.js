@@ -4,7 +4,7 @@ import { createAuthController } from '../../src/api/auth/auth.controller.js';
 import { AuthErrorCode, authError } from '../../src/application/auth/auth-errors.js';
 
 const CONFIG = {
-  cookie: { name: 'lp_rt', secure: true, sameSite: 'strict', path: '/api/v1/auth' },
+  cookie: { name: 'lp_rt', secure: true, sameSite: 'strict', path: '/api/v2/auth' },
 };
 const EXPIRES_AT = new Date('2026-11-09T10:00:00.000Z');
 const SESSION_RESULT = {
@@ -40,8 +40,8 @@ function sent(res) {
 }
 
 /** Minimal request. */
-function createRequest({ body = {}, cookies = {}, user } = {}) {
-  return { body, cookies, user, ip: '127.0.0.1', get: (h) => (h === 'user-agent' ? 'node-test' : undefined) };
+function createRequest({ body = {}, cookies = {}, user, baseUrl } = {}) {
+  return { body, cookies, user, baseUrl, ip: '127.0.0.1', get: (h) => (h === 'user-agent' ? 'node-test' : undefined) };
 }
 
 /** Mocked authService: each use case resolves with a successful result by default. */
@@ -88,7 +88,7 @@ test('login returns the access token and sets the refresh cookie securely', asyn
     {
       name: 'lp_rt',
       value: 'opaque-refresh-token',
-      options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v1/auth', expires: EXPIRES_AT },
+      options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v2/auth', expires: EXPIRES_AT },
     },
   ]);
   assert.equal(authService.login.mock.callCount(), 1);
@@ -96,6 +96,20 @@ test('login returns the access token and sets the refresh cookie securely', asyn
     { email: 'a@b.pt', password: 'x' },
     { ip: '127.0.0.1', userAgent: 'node-test' },
   ]);
+});
+
+/**
+ * Unit test: the cookie path follows the API version that issued it (req.baseUrl).
+ */
+test('login scopes the refresh cookie to the auth path of the requested API version', async () => {
+  const controller = createAuthController({ authService: createAuthServiceMock(), config: CONFIG });
+
+  const { res } = await run(
+    controller.login,
+    createRequest({ body: { email: 'a@b.pt', password: 'x' }, baseUrl: '/api/v1/auth' }),
+  );
+
+  assert.equal(res.cookies[0].options.path, '/api/v1/auth');
 });
 
 /**
@@ -144,7 +158,7 @@ test('refresh clears the cookie when the session is invalid', async () => {
 
   assert.equal(error, failure);
   assert.deepEqual(res.cleared, [
-    { name: 'lp_rt', options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v1/auth' } },
+    { name: 'lp_rt', options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v2/auth' } },
   ]);
 });
 

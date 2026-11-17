@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './app.jsx';
 import './shared/i18n/i18n.js';
+import { themeStore } from './shared/theme/theme-store.js';
+
+// Before the first render (index.html already applies it to avoid a flash).
+themeStore.init();
 
 const queryClient = new QueryClient({
   defaultOptions: {

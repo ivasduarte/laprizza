@@ -74,7 +74,7 @@ function storeSize(sizeRepo, size) {
 }
 
 async function loginAs(port, email) {
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email, password: 'StrongPassword123!' }),
@@ -94,14 +94,14 @@ test('API POST /pizza-size enforces Joi, RBAC and Conflicts', async (t) => {
 
   // 401 Unauthorized (Sem token)
   assert.equal(
-    (await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, { method: 'POST' })).status,
+    (await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, { method: 'POST' })).status,
     401,
   );
 
   // 403 Forbidden (EMPLOYEE bloqueado)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${empToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Small' }),
@@ -113,7 +113,7 @@ test('API POST /pizza-size enforces Joi, RBAC and Conflicts', async (t) => {
   // 400 Bad Request (Joi: falta name)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -124,7 +124,7 @@ test('API POST /pizza-size enforces Joi, RBAC and Conflicts', async (t) => {
   assert.equal(sizeRepo.create.mock.callCount(), 0);
 
   // 201 Created
-  const postRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+  const postRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Small' }),
@@ -136,7 +136,7 @@ test('API POST /pizza-size enforces Joi, RBAC and Conflicts', async (t) => {
   sizeRepo.create.mock.mockImplementationOnce(async () => {
     throw Object.assign(new Error('Duplicate key'), { code: 11000, keyPattern: { name: 1 } });
   });
-  const postDup = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+  const postDup = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Small' }),
@@ -154,7 +154,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   const adminToken = await loginAs(port, 'admin@laprizza.pt');
 
   // Criar registo inicial
-  const createRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+  const createRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Large' }),
@@ -165,7 +165,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   // 400 Bad Request (Formato MongoDB ObjectId inválido bloqueado pelo Joi)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/abc`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/abc`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       })
     ).status,
@@ -175,7 +175,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   // 404 Not Found (Formato válido mas não existe)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/abcdef000000000000000999`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/abcdef000000000000000999`, {
         headers: { Authorization: `Bearer ${adminToken}` },
       })
     ).status,
@@ -183,7 +183,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   );
 
   // 200 OK (GET)
-  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/${id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   assert.equal(getRes.status, 200);
@@ -191,7 +191,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   // 400 Bad Request (PATCH Vazio)
   assert.equal(
     (
-      await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+      await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/${id}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -201,7 +201,7 @@ test('API GET and PATCH /pizza-size/:id handles formats, 404s and updates', asyn
   );
 
   // 200 OK (PATCH desativar)
-  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/${id}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive: false }),
@@ -220,7 +220,7 @@ test('API PATCH /pizza-size/:id refuses to deactivate a size used by a size conf
 
   const adminToken = await loginAs(port, 'admin@laprizza.pt');
 
-  const createRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size`, {
+  const createRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Large' }),
@@ -234,7 +234,7 @@ test('API PATCH /pizza-size/:id refuses to deactivate a size used by a size conf
   );
 
   // 409 Conflict (tamanho usado por uma configuração)
-  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/${id}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive: false }),
@@ -243,7 +243,7 @@ test('API PATCH /pizza-size/:id refuses to deactivate a size used by a size conf
   assert.equal(sizeRepo.update.mock.callCount(), 0);
 
   // Continua ativo
-  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/pizza-size/${id}`, {
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v2/pizza-size/${id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   assert.equal((await getRes.json()).isActive, true);

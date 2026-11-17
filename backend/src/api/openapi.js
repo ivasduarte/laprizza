@@ -1,6 +1,5 @@
 import pkg from '../../package.json' with { type: 'json' };
-
-const API_PREFIX = '/api/v1';
+import { API_VERSIONS, CURRENT_API_VERSION, SUPPORTED_API_VERSIONS, apiPrefix } from './api-versions.js';
 
 const errorResponse = (description) => ({
   description,
@@ -33,15 +32,11 @@ const sharedResourceNameParam = {
 };
 
 /**
- * OpenAPI description of the API.
- * Defines the available endpoints, request bodies, and responses for Swagger UI.
- *
- * @type {Object}
+ * Version-independent part of the OpenAPI description: endpoints, request bodies,
+ * responses and schemas. `buildOpenApiSpec` adds the per-version metadata.
  */
-export const openApiSpec = {
+const baseSpec = {
   openapi: '3.0.3',
-  info: { title: 'LaPrizza API', version: pkg.version },
-  servers: [{ url: API_PREFIX }],
   paths: {
     '/health': {
       get: {
@@ -2504,3 +2499,51 @@ export const openApiSpec = {
     },
   },
 };
+
+const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
+
+/** Marks every operation as deprecated (Swagger UI shows them struck through). */
+const deprecateOperations = (paths) =>
+  Object.fromEntries(
+    Object.entries(paths).map(([path, item]) => [
+      path,
+      Object.fromEntries(
+        Object.entries(item).map(([key, value]) =>
+          HTTP_METHODS.has(key) ? [key, { ...value, deprecated: true }] : [key, value],
+        ),
+      ),
+    ]),
+  );
+
+/**
+ * Builds the OpenAPI document of one API version.
+ *
+ * @param {string} [version=CURRENT_API_VERSION] - API version key (e.g. 'v2').
+ * @returns {Object} OpenAPI 3.0.3 document.
+ * @throws {Error} If the version is not supported.
+ */
+export function buildOpenApiSpec(version = CURRENT_API_VERSION) {
+  const info = API_VERSIONS[version];
+  if (!info) throw new Error(`Unsupported API version: ${version}`);
+
+  const deprecated = info.status === 'deprecated';
+  const description = deprecated
+    ? `**Deprecated.** Use ${apiPrefix(info.successor)} instead. Application version ${pkg.version}.`
+    : `Current API version. Application version ${pkg.version}.`;
+
+  return {
+    openapi: baseSpec.openapi,
+    info: { title: `LaPrizza API (${version})`, version: info.specVersion, description },
+    servers: [{ url: apiPrefix(version) }],
+    paths: deprecated ? deprecateOperations(baseSpec.paths) : baseSpec.paths,
+    components: baseSpec.components,
+  };
+}
+
+/** OpenAPI document of every supported version, keyed by version. */
+export const openApiSpecs = Object.freeze(
+  Object.fromEntries(SUPPORTED_API_VERSIONS.map((version) => [version, buildOpenApiSpec(version)])),
+);
+
+/** OpenAPI document of the current version. */
+export const openApiSpec = openApiSpecs[CURRENT_API_VERSION];

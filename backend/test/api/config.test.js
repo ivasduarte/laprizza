@@ -32,7 +32,7 @@ test('loadConfig applies the AA01 defaults', () => {
     name: 'lp_rt',
     secure: true,
     sameSite: 'strict',
-    path: '/api/v1/auth',
+    path: '/api/v2/auth',
   });
   assert.deepEqual(config.corsOrigins, ['http://localhost:4200']);
   assert.equal(config.trustProxy, false);

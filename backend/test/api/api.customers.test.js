@@ -90,7 +90,7 @@ function storeCustomer(customersRepo, customer) {
  * Logs in as the seeded MANAGER and returns a request helper bound to that token.
  */
 async function loginAsManager(port) {
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
@@ -98,7 +98,7 @@ async function loginAsManager(port) {
   const { accessToken: token } = await res.json();
 
   return (method, path, body) =>
-    fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+    fetch(`http://127.0.0.1:${port}/api/v2${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -127,7 +127,7 @@ test('API /customers strictly enforces MANAGER role access', async (t) => {
     server.closeAllConnections();
   });
 
-  const rEmp = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const rEmp = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'emp@laprizza.pt', password: 'StrongPassword123!' }),
@@ -135,7 +135,7 @@ test('API /customers strictly enforces MANAGER role access', async (t) => {
   const empToken = (await rEmp.json()).accessToken;
 
   // EMPLOYEE trying to list customers (Blocked)
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/customers`, {
     headers: { Authorization: `Bearer ${empToken}` },
   });
   assert.equal(res.status, 403);
@@ -152,7 +152,7 @@ test('API /customers full lifecycle and payload validation', async (t) => {
     server.closeAllConnections();
   });
 
-  const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
@@ -167,7 +167,7 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   };
 
   // 1. POST - Invalid Payload (Missing address) -> 400
-  const postBad = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
+  const postBad = await fetch(`http://127.0.0.1:${port}/api/v2/customers`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -180,7 +180,7 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   assert.equal(customersRepo.create.mock.callCount(), 0);
 
   // 2. POST - Valid Creation -> 201
-  const postRes = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
+  const postRes = await fetch(`http://127.0.0.1:${port}/api/v2/customers`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(validPayload),
@@ -193,14 +193,14 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   storeCustomer(customersRepo, { _id: targetId, ...validPayload, isActive: true });
 
   // 3. GET - Fetch created Customer -> 200
-  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/customers/${targetId}`, {
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v2/customers/${targetId}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   assert.equal(getRes.status, 200);
   assert.equal((await getRes.json()).name, 'Integração');
 
   // 4. PATCH - Valid partial update (Inactivation) -> 200
-  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v1/customers/${targetId}`, {
+  const patchRes = await fetch(`http://127.0.0.1:${port}/api/v2/customers/${targetId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ isActive: false }),
@@ -210,7 +210,7 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   assert.deepEqual(customersRepo.update.mock.calls[0].arguments, [targetId, { isActive: false }]);
 
   // 5. PATCH - Empty Payload -> 400 (min 1 rule)
-  const patchEmpty = await fetch(`http://127.0.0.1:${port}/api/v1/customers/${targetId}`, {
+  const patchEmpty = await fetch(`http://127.0.0.1:${port}/api/v2/customers/${targetId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
@@ -218,7 +218,7 @@ test('API /customers full lifecycle and payload validation', async (t) => {
   assert.equal(patchEmpty.status, 400);
 
   // 6. GET - search sent twice (array) -> 400
-  const searchBad = await fetch(`http://127.0.0.1:${port}/api/v1/customers?search=a&search=b`, {
+  const searchBad = await fetch(`http://127.0.0.1:${port}/api/v2/customers?search=a&search=b`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   assert.equal(searchBad.status, 400);
@@ -234,14 +234,14 @@ test('API /customers returns 400 when postal code and city do not match', async 
     server.closeAllConnections();
   });
 
-  const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const rAdmin = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'admin@laprizza.pt', password: 'StrongPassword123!' }),
   });
   const adminToken = (await rAdmin.json()).accessToken;
 
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/customers`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/customers`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({

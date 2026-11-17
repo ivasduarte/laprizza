@@ -5,15 +5,17 @@
  * @param {{authService: object, config: object}} deps
  */
 export function createAuthController({ authService, config }) {
-  const cookieOptions = {
+  // The cookie is scoped to the auth path of the API version that issued it
+  // (e.g. /api/v2/auth), so each version refreshes its own session cookie.
+  const cookieOptionsFor = (req) => ({
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
-    path: config.cookie.path,
-  };
-  const setRefreshCookie = (res, token, expiresAt) =>
-    res.cookie(config.cookie.name, token, { ...cookieOptions, expires: new Date(expiresAt) });
-  const clearRefreshCookie = (res) => res.clearCookie(config.cookie.name, cookieOptions);
+    path: req.baseUrl || config.cookie.path,
+  });
+  const setRefreshCookie = (req, res, token, expiresAt) =>
+    res.cookie(config.cookie.name, token, { ...cookieOptionsFor(req), expires: new Date(expiresAt) });
+  const clearRefreshCookie = (req, res) => res.clearCookie(config.cookie.name, cookieOptionsFor(req));
   const contextOf = (req) => ({ ip: req.ip, userAgent: req.get('user-agent') });
 
   const sessionBody = (result) => ({
@@ -27,7 +29,7 @@ export function createAuthController({ authService, config }) {
     async login(req, res, next) {
       try {
         const result = await authService.login(req.body, contextOf(req));
-        setRefreshCookie(res, result.refreshToken, result.refreshTokenExpiresAt);
+        setRefreshCookie(req, res, result.refreshToken, result.refreshTokenExpiresAt);
         res.status(200).json(sessionBody(result));
       } catch (err) {
         next(err);
@@ -37,10 +39,10 @@ export function createAuthController({ authService, config }) {
     async refresh(req, res, next) {
       try {
         const result = await authService.refresh(req.cookies?.[config.cookie.name], contextOf(req));
-        setRefreshCookie(res, result.refreshToken, result.refreshTokenExpiresAt);
+        setRefreshCookie(req, res, result.refreshToken, result.refreshTokenExpiresAt);
         res.status(200).json(sessionBody(result));
       } catch (err) {
-        if (err.status === 401) clearRefreshCookie(res);
+        if (err.status === 401) clearRefreshCookie(req, res);
         next(err);
       }
     },
@@ -48,7 +50,7 @@ export function createAuthController({ authService, config }) {
     async logout(req, res, next) {
       try {
         await authService.logout(req.user, contextOf(req));
-        clearRefreshCookie(res);
+        clearRefreshCookie(req, res);
         res.status(204).end();
       } catch (err) {
         next(err);
@@ -58,7 +60,7 @@ export function createAuthController({ authService, config }) {
     async logoutAll(req, res, next) {
       try {
         await authService.logoutAll(req.user, contextOf(req));
-        clearRefreshCookie(res);
+        clearRefreshCookie(req, res);
         res.status(204).end();
       } catch (err) {
         next(err);
@@ -74,7 +76,7 @@ export function createAuthController({ authService, config }) {
     async resetPassword(req, res, next) {
       try {
         await authService.resetPassword(req.body, contextOf(req));
-        clearRefreshCookie(res);
+        clearRefreshCookie(req, res);
         res.status(204).end();
       } catch (err) {
         next(err);

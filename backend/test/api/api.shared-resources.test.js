@@ -73,14 +73,14 @@ async function setupTestServer() {
 }
 
 async function loginAs(port, email) {
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password: PASSWORD }),
   });
   const { accessToken: token } = await res.json();
   return (method, requestPath, { body, contentType = 'application/octet-stream' } = {}) =>
-    fetch(`http://127.0.0.1:${port}/api/v1${requestPath}`, {
+    fetch(`http://127.0.0.1:${port}/api/v2${requestPath}`, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -104,7 +104,7 @@ test('API /shared-resources requires authentication', async (t) => {
     server.closeAllConnections();
   });
 
-  const base = `http://127.0.0.1:${port}/api/v1/shared-resources`;
+  const base = `http://127.0.0.1:${port}/api/v2/shared-resources`;
 
   const list = await fetch(base);
   assert.equal(list.status, 401);

@@ -14,7 +14,7 @@
 }
 .ai-section {
   margin-top: 2.5rem;
-  scroll-margin-top: 5rem;
+  scroll-margin-top: calc(var(--header-h) + 1rem);
 }
 .ai-card {
   margin-top: 1rem;
@@ -96,8 +96,8 @@
   margin: 0.75rem 0 0;
   padding: 0.75rem;
   border-radius: 4px;
-  background: var(--color-text);
-  color: #fff;
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
   font-size: 0.75rem;
   overflow-x: auto;
 }
@@ -127,6 +127,11 @@ button.danger {
   background: var(--color-surface);
   color: var(--color-error);
 }
+@media (max-width: 64rem) {
+  .ai-entry {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (max-width: 40rem) {
   .ai-entry {
     grid-template-columns: 1fr;
@@ -152,7 +157,7 @@ button.danger {
 }
 .ai-tab[aria-selected='true'] {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .ai-card h2 {
   margin: 0 0 0.5rem;

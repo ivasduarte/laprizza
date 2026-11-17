@@ -5,7 +5,7 @@ import {
   createHttpClient,
 } from '../../../src/shared/api/http-client.js';
 
-const BASE = 'http://localhost:3000/api/v1';
+const BASE = 'http://localhost:3000/api/v2';
 
 function jsonResponse(status, body) {
   return {

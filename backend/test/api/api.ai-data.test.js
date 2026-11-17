@@ -165,7 +165,7 @@ async function setupTestServer(aiDataRepository = createAiDataRepository()) {
 }
 
 async function loginAs(port, email) {
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+  const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password: 'StrongPassword123!' }),
@@ -176,7 +176,7 @@ async function loginAs(port, email) {
 function request(port, method, path, { token } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
-  return fetch(`http://127.0.0.1:${port}/api/v1${path}`, { method, headers });
+  return fetch(`http://127.0.0.1:${port}/api/v2${path}`, { method, headers });
 }
 
 test('API /ai-data/snapshot RBAC: 401 without token, 403 for EMPLOYEE, 200 for MANAGER', async (t) => {

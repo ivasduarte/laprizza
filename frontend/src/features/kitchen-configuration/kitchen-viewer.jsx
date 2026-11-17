@@ -48,8 +48,8 @@ export default function KitchenViewer() {
     <div
       style={{
         width: '100%',
-        height: '70vh',
-        minHeight: '600px',
+        // Fills most of the screen on every device without forcing a 600px canvas on phones.
+        height: 'clamp(22rem, 70dvh, 56rem)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -84,7 +84,7 @@ export default function KitchenViewer() {
           flex: 1,
           borderRadius: '14px',
           overflow: 'hidden',
-          border: '2px solid var(--color-ink)',
+          border: '2px solid var(--color-outline)',
         }}
       >
         <KitchenScene config={activeConfig} assemblyLine={assemblyLine} />

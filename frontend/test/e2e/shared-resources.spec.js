@@ -25,15 +25,15 @@ const mockFiles = [
   { name: 'relatorio.md', size: 500, updatedAt: '2026-11-08T15:30:00Z' },
 ];
 
-const LIST_URL = '**/api/v1/shared-resources';
-const FILE_URL = '**/api/v1/shared-resources/*';
+const LIST_URL = '**/api/v2/shared-resources';
+const FILE_URL = '**/api/v2/shared-resources/*';
 
 async function loginAndOpenSharedResources(page, email) {
   await page.goto('/login');
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', 'StrongPassword123!');
   await Promise.all([
-    page.waitForResponse('**/api/v1/auth/login'),
+    page.waitForResponse('**/api/v2/auth/login'),
     page.click('button[type="submit"]'),
   ]);
   await page
@@ -49,7 +49,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('RBAC: Employee gets a read-only view (can download, cannot upload or delete)', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
     await page.route(LIST_URL, async (route) => {
@@ -74,7 +74,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('List: shows an explicit empty state when there are no files', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
     await page.route(LIST_URL, async (route) => {
@@ -91,7 +91,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('List: a server error shows a generic message and a retry button', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
     let failList = true;
@@ -124,7 +124,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('Download: downloads the file with its original name', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
     await page.route(LIST_URL, async (route) => {
@@ -146,7 +146,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('Manager Flow: Uploads a new file as raw binary and refreshes the list', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
 
@@ -194,7 +194,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('Manager Flow: Warns before replacing an existing file', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
     await page.route(LIST_URL, async (route) => {
@@ -231,7 +231,7 @@ test.describe('Shared Resources Page E2E', () => {
   test('Manager Flow: Rejects a disallowed file type without calling the API', async ({
     page,
   }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
     await page.route(LIST_URL, async (route) => {
@@ -260,7 +260,7 @@ test.describe('Shared Resources Page E2E', () => {
   });
 
   test('Manager Flow: Deletes a file after confirmation', async ({ page }) => {
-    await page.route('**/api/v1/auth/login', async (route) => {
+    await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockManagerSession });
     });
 

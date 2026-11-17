@@ -59,16 +59,16 @@ const kitchenWithLine = {
 
 /** Mocks login, the kitchen endpoints and the assembly line list. */
 async function mockApi(page, { session, activeKitchen, lines }) {
-  await page.route('**/api/v1/auth/login', (route) =>
+  await page.route('**/api/v2/auth/login', (route) =>
     route.fulfill({ json: session })
   );
-  await page.route('**/api/v1/kitchen-configurations', (route) =>
+  await page.route('**/api/v2/kitchen-configurations', (route) =>
     route.fulfill({ json: [activeKitchen] })
   );
-  await page.route('**/api/v1/kitchen-configurations/active', (route) =>
+  await page.route('**/api/v2/kitchen-configurations/active', (route) =>
     route.fulfill({ json: activeKitchen })
   );
-  await page.route('**/api/v1/assembly-line-configurations', (route) =>
+  await page.route('**/api/v2/assembly-line-configurations', (route) =>
     route.fulfill({ json: lines })
   );
 }
@@ -78,7 +78,7 @@ async function loginAndOpenKitchenConfigs(page, email) {
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', 'StrongPassword123!');
   await Promise.all([
-    page.waitForResponse('**/api/v1/auth/login'),
+    page.waitForResponse('**/api/v2/auth/login'),
     page.click('button[type="submit"]'),
   ]);
   await page.getByRole('link', { name: 'Kitchen Configuration' }).click();
@@ -128,7 +128,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
     });
     // Registered last, so it takes precedence: serves the list and the creation.
     await page.route(
-      '**/api/v1/assembly-line-configurations',
+      '**/api/v2/assembly-line-configurations',
       async (route) => {
         if (route.request().method() === 'POST') {
           createdBody = route.request().postDataJSON();
@@ -183,7 +183,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
       lines: [mockLine],
     });
     await page.route(
-      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      `**/api/v2/assembly-line-configurations/${LINE_ID}`,
       async (route) => {
         if (route.request().method() === 'DELETE') {
           await route.fulfill({
@@ -257,7 +257,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
       lines: [mockLine],
     });
     await page.route(
-      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      `**/api/v2/assembly-line-configurations/${LINE_ID}`,
       (route) => route.fulfill({ json: mockLine })
     );
 
@@ -280,7 +280,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
       lines: [],
     });
     await page.route(
-      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      `**/api/v2/assembly-line-configurations/${LINE_ID}`,
       (route) =>
         route.fulfill({
           status: 404,
@@ -334,7 +334,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
       lines: [texturedLine],
     });
     await page.route(
-      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      `**/api/v2/assembly-line-configurations/${LINE_ID}`,
       (route) => route.fulfill({ json: texturedLine })
     );
     const requested = new Set();
@@ -370,7 +370,7 @@ test.describe('Assembly Line Configuration E2E (VIS03)', () => {
       lines: [texturedLine],
     });
     await page.route(
-      `**/api/v1/assembly-line-configurations/${LINE_ID}`,
+      `**/api/v2/assembly-line-configurations/${LINE_ID}`,
       (route) => route.fulfill({ json: texturedLine })
     );
     await page.route('**/textures/**', (route) =>

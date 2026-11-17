@@ -41,7 +41,7 @@ function createRequest(authorization, extra = {}) {
     headers: authorization ? { authorization } : {},
     ip: '127.0.0.1',
     method: 'GET',
-    baseUrl: '/api/v1/users',
+    baseUrl: '/api/v2/users',
     path: '/',
     ...extra,
   };
@@ -65,7 +65,7 @@ test('authenticate rejects missing or non-Bearer Authorization headers', async (
   assert.equal(logger.log.mock.callCount(), 2);
   const [event, details] = loggedCalls(logger)[0];
   assert.equal(event, 'ACCESS_DENIED');
-  assert.equal(details.path, '/api/v1/users/');
+  assert.equal(details.path, '/api/v2/users/');
 });
 
 /**
@@ -225,7 +225,7 @@ test('requireRole blocks unauthorized roles with 403 and logs it', () => {
     user: { userId: 'u9', role: 'CUSTOMER' },
     ip: '127.0.0.1',
     method: 'GET',
-    baseUrl: '/api/v1/users',
+    baseUrl: '/api/v2/users',
     path: '/',
     app: { locals: { securityLogger: logger } },
   };

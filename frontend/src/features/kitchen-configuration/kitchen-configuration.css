@@ -14,7 +14,7 @@
 
 .kitchen-config-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -51,8 +51,8 @@
 }
 
 .json-viewer {
-  background: var(--color-text);
-  color: var(--color-surface);
+  background: var(--color-code-bg);
+  color: var(--color-code-text);
   padding: 1rem;
   border-radius: 4px;
   overflow: auto;
@@ -62,7 +62,7 @@
 
 .active-badge {
   background: var(--color-success);
-  color: white;
+  color: var(--color-on-status);
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -76,7 +76,7 @@
   padding: 2rem;
   border: 2px dashed var(--color-border-strong);
   text-align: center;
-  background: #f9f9f9;
+  background: var(--color-surface-alt);
 }
 
 .assembly-line-section {
@@ -92,6 +92,6 @@
 .assembly-line-intro,
 .assembly-line-meta {
   margin: 0.25rem 0 0;
-  color: var(--color-text-muted, inherit);
+  color: var(--color-muted);
   font-size: 0.9rem;
 }
