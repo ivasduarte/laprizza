@@ -1,6 +1,8 @@
 # Authentication - Design Diagrams (Mermaid)
 
-The Authentication aggregate covers how a user proves their identity (login) and how a Manager registers new users.
+The Authentication aggregate covers how a user proves their identity (login), how the resulting session is kept, renewed and ended, and how a Manager registers new users.
+
+> The diagram of [UC1 - Login](./login.md) shows the original single-token flow of BCK01. The current session model (access token, rotating refresh cookie, lockout) is documented in [Session Handling (AA04)](./session-handling.md).
 
 Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end API** container (2 diagrams). They were converted from the original PlantUML sequence diagrams.
 
@@ -10,6 +12,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 |---|---|---|---|---|
 | [UC1 - Login](./login.md) | `POST /auth/login` | Public (no authentication) | 200 OK (JWT token) | `login.puml` |
 | [UC2 - Register User](./register-user.md) | `POST /users` | MANAGER | 201 Created | `register.puml` |
+| [Session Handling (AA04)](./session-handling.md) | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Public (login, refresh), authenticated (logout) | 200 OK, 204 No Content | - |
 
 ## Business rules shown in the diagrams
 
