@@ -166,3 +166,33 @@ button.danger {
 summary {
   cursor: pointer;
 }
+
+/* AI05 planning panel */
+.ai-radio {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-right: 1rem;
+  font-weight: normal;
+}
+.ai-card fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+.ai-tag-ok {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+.ai-tag-warn {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+.ai-shortage {
+  font-weight: 700;
+  color: var(--color-error);
+}
+.ai-subject {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
