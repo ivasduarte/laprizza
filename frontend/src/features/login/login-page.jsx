@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../../shared/auth/auth-api.js';
 import { useSession } from '../../shared/auth/use-session.js';
+import { safeRedirectPath } from '../../shared/auth/redirect.js';
 import { useSubmit } from '../../shared/forms/use-submit.js';
 import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
 import { fieldProps } from '../../shared/forms/field-props.js';
@@ -24,6 +25,8 @@ const SCHEMA = { email: [required(), emailRule()], password: [required()] };
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const target = safeRedirectPath(location.state?.from); // set by RequireAuth
   const { status, expired } = useSession();
   const formRef = useRef(null);
   const [email, setEmail] = useState('');
@@ -32,7 +35,7 @@ export default function LoginPage() {
   const { submit, submitting, error } = useSubmit();
   const { errors, setErrors, fromApi, clearField } = useFieldErrors(formRef);
 
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  if (status === 'authenticated') return <Navigate to={target} replace />;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -42,7 +45,7 @@ export default function LoginPage() {
 
     const result = await submit(() => authApi.login(email, password));
     if (result.ok) {
-      navigate('/', { replace: true });
+      navigate(target, { replace: true });
     } else if (result.error) {
       fromApi(result.error);
       setPassword(''); // the e-mail is kept; a rejected password is never kept

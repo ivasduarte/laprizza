@@ -9,12 +9,14 @@ export const features = [
     id: 'visualization3d',
     path: '/visualization3d',
     labelKey: 'nav.visualization3d',
+    requiresAuth: true,
     load: () => import('./visualization3d/visualization3d-page.jsx'),
   },
   {
     id: 'ai',
     path: '/ai',
     labelKey: 'nav.ai',
+    requiresAuth: true,
     load: () => import('./ai/ai-page.jsx'),
   },
   {
@@ -29,6 +31,7 @@ export const features = [
     path: '/change-password',
     labelKey: 'nav.changePassword',
     showInNav: false,
+    requiresAuth: true,
     load: () => import('./change-password/change-password-page.jsx'),
   },
   {
@@ -49,6 +52,7 @@ export const features = [
     id: 'kitchen-configuration',
     path: '/kitchen-configurations',
     labelKey: 'nav.kitchenConfig',
+    requiresAuth: true,
     load: () =>
       import('./kitchen-configuration/kitchen-configuration-page.jsx'),
   },
@@ -56,6 +60,7 @@ export const features = [
     id: 'shared-resources',
     path: '/shared-resources',
     labelKey: 'nav.sharedResources',
+    requiresAuth: true,
     load: () => import('./shared-resources/shared-resources-page.jsx'),
   },
 ];
