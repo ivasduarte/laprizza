@@ -14,6 +14,7 @@ import { createAuthModule } from './api/auth/auth.module.js';
 import { passwordHasher } from './infrastructure/security/password-hasher.js';
 import { createMongooseHealthProbe } from './infrastructure/system/database-health.probe.js';
 import { loadVersionInfo } from './infrastructure/system/version-file.reader.js';
+import { noStore } from './api/middleware/no-store.js';
 import { createRateLimiter, passThrough } from './api/middleware/rate-limit.js';
 
 import cookieParser from 'cookie-parser';
@@ -163,6 +164,7 @@ export function createApp(config = loadConfig(), repos = {}) {
   app.use(cors({ origin: config.corsOrigins, credentials: true, exposedHeaders: ['Retry-After'] }));
   app.use(express.json());
   app.use(cookieParser());
+  app.use('/api', noStore);
 
   const auth = createAuthModule(config, repos);
   app.locals.authenticate = auth.authenticate; // used by requirePermission/requireAuthenticated

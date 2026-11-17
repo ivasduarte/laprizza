@@ -183,6 +183,7 @@ export function createAuthService({
       user: toSessionUserDto(user, roles),
     };
   }
+  
 
   /** Local login (email + password). */
   async function login({ email, password }, context = {}) {
