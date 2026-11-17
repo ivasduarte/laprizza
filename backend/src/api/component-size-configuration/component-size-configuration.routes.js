@@ -4,14 +4,15 @@ import * as controller from './component-size-configuration.controller.js';
 import { Router } from 'express';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 
 export default function componentSizeConfigurationRouterFactory(repos) {
   // mergeParams makes the :productId of the parent path available in this router
   const router = Router({ mergeParams: true });
 
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.PIZZAS_WRITE);
 
   const objectIdSchema = Joi.string().hex().length(24).messages({
     'string.base': 'Invalid ID format',
@@ -72,27 +73,25 @@ export default function componentSizeConfigurationRouterFactory(repos) {
     }
   };
 
-  router.get('/', verifyToken, requireRole(readRoles), validateIds, (req, res, next) =>
+  router.get('/', canRead, validateIds, (req, res, next) =>
     controller.list(req, res, next, repos),
   );
 
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateIds,
     validateBody(createSchema),
     (req, res, next) => controller.create(req, res, next, repos),
   );
 
-  router.get('/:sizeId', verifyToken, requireRole(readRoles), validateIds, (req, res, next) =>
+  router.get('/:sizeId', canRead, validateIds, (req, res, next) =>
     controller.getBySize(req, res, next, repos),
   );
 
   router.put(
     '/:sizeId',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateIds,
     validateBody(updateSchema),
     (req, res, next) => controller.update(req, res, next, repos),
@@ -100,8 +99,7 @@ export default function componentSizeConfigurationRouterFactory(repos) {
 
   router.delete(
     '/:sizeId',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateIds,
     (req, res, next) => controller.remove(req, res, next, repos),
   );

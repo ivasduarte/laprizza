@@ -1,13 +1,16 @@
 import Joi from 'joi';
 import * as controller from './pizza-size.controller.js';
 import { Router } from 'express';
-import { Roles } from '../../domain/users/users.domain.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
 
 export default function sizesRouterFactory(sizeRepository, productsRepository) {
   const router = Router();
+
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.PIZZAS_WRITE);
 
   const createSizeSchema = Joi.object({
     name: Joi.string().min(3).max(50).trim().required().messages({
@@ -27,14 +30,13 @@ export default function sizesRouterFactory(sizeRepository, productsRepository) {
     next();
   };
 
-  router.get('/', verifyToken, requireRole([Roles.MANAGER]), validateListQuery, (req, res, next) =>
+  router.get('/', canRead, validateListQuery, (req, res, next) =>
     controller.list(req, res, next, sizeRepository),
   );
 
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     async (req, res, next) => {
       try {
         const { error, value } = createSizeSchema.validate(req.body, {
@@ -72,14 +74,13 @@ export default function sizesRouterFactory(sizeRepository, productsRepository) {
     next();
   };
 
-  router.get('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, sizeRepository),
   );
 
   router.patch(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     async (req, res, next) => {
       try {

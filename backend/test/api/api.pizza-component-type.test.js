@@ -22,8 +22,8 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -125,32 +125,37 @@ function storeTypes(typesRepo, types) {
 const cheese = (extra = {}) => ({ _id: CHEESE_ID, ...CHEESE, isActive: true, ...extra });
 const topping = (extra = {}) => ({ _id: TOPPING_ID, ...TOPPING, isActive: true, ...extra });
 
-test('API /pizza-component-type (401 and 403)', async (t) => {
+test('API /pizza-component-type (401, 403 and Employee read access)', async (t) => {
   const { server, port, employeeToken, typesRepo } = await setupTestServer();
 
   t.after(() => closeServer(server));
 
   const endpoints = [
-    ['GET', BASE_PATH],
-    ['POST', BASE_PATH],
-    ['GET', `${BASE_PATH}/${NON_EXISTENT_ID}`],
-    ['PUT', `${BASE_PATH}/${NON_EXISTENT_ID}`],
-    ['DELETE', `${BASE_PATH}/${NON_EXISTENT_ID}`],
+    ['GET', BASE_PATH, true],
+    ['POST', BASE_PATH, false],
+    ['GET', `${BASE_PATH}/${NON_EXISTENT_ID}`, true],
+    ['PUT', `${BASE_PATH}/${NON_EXISTENT_ID}`, false],
+    ['DELETE', `${BASE_PATH}/${NON_EXISTENT_ID}`, false],
   ];
 
-  for (const [method, path] of endpoints) {
+  for (const [method, path, employeeAllowed] of endpoints) {
     const body = method === 'POST' || method === 'PUT' ? CHEESE : undefined;
+    const label = `${method} ${path}`;
 
-    assert.equal((await request(port, method, path, { body })).status, 401, `${method} ${path}`);
-    assert.equal(
-      (await request(port, method, path, { token: employeeToken, body })).status,
-      403,
-      `${method} ${path}`,
-    );
+    assert.equal((await request(port, method, path, { body })).status, 401, label);
+
+    const employeeStatus = (await request(port, method, path, { token: employeeToken, body }))
+      .status;
+    if (employeeAllowed) {
+      assert.ok(![401, 403].includes(employeeStatus), `${label} -> ${employeeStatus}`);
+    } else {
+      assert.equal(employeeStatus, 403, label);
+    }
   }
 
-  // The repository is never reached
-  for (const method of Object.values(typesRepo)) assert.equal(method.mock.callCount(), 0);
+  // Refused writes never reach the repository
+  assert.equal(typesRepo.create.mock.callCount(), 0);
+  assert.equal(typesRepo.update.mock.callCount(), 0);
 });
 
 test('API POST /pizza-component-type (201)', async (t) => {

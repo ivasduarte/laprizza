@@ -2,8 +2,8 @@ import { Router } from 'express';
 import Joi from 'joi';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import * as controller from './ai-data.controller.js';
 import { createAiDataRepository } from '../../infrastructure/ai-data/ai-data.repository.js';
 import ProductModel from '../../infrastructure/products/products.model.js';
@@ -34,7 +34,7 @@ export default function aiDataRouterFactory(deps) {
 
   const router = Router();
 
-  router.get('/snapshot', verifyToken, requireRole([Roles.MANAGER]), (req, res, next) => {
+  router.get('/snapshot', requirePermission(Permission.PLANNING_EXECUTE), (req, res, next) => {
     const { error, value } = snapshotQuerySchema.validate(req.query, {
       abortEarly: false,
       allowUnknown: true,

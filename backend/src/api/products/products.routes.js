@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import * as controller from './products.controller.js';
 import Joi from 'joi';
-import { Roles } from '../../domain/users/users.domain.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
 
 export default function productsRouterFactory(repos) {
   const router = Router();
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.PRODUCTS_WRITE);
 
   const objectIdSchema = Joi.string().hex().length(24).messages({
     'string.hex': 'Invalid ID format.',
@@ -94,13 +96,12 @@ export default function productsRouterFactory(repos) {
     next();
   };
 
-  router.get('/', verifyToken, requireRole(readRoles), validateListQuery, (req, res, next) =>
+  router.get('/', canRead, validateListQuery, (req, res, next) =>
     controller.list(req, res, next, repos),
   );
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     async (req, res, next) => {
       try {
         const { error, value } = createProductSchema.validate(req.body, {
@@ -144,14 +145,13 @@ export default function productsRouterFactory(repos) {
       'object.min': 'At least one field must be provided for update.',
     });
 
-  router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) => {
+  router.get('/:id', canRead, validateId, (req, res, next) => {
     controller.getById(req, res, next, repos);
   });
 
   router.patch(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     async (req, res, next) => {
       try {

@@ -21,9 +21,11 @@ export async function getStockByProductId(
     stockRepository: defaultStockRepository,
     productsRepository: defaultProductsRepository,
   },
+  { includeInactive = false } = {},
 ) {
   const product = await repos.productsRepository.findById(productId);
   if (!product) throw new AppError('Product not found.', 404);
+  if (product.isActive === false && !includeInactive) throw new AppError('Product not found.', 404);
   if (!product.stockControlled) throw new AppError('Product is not stock controlled.', 400);
 
   let stock = await repos.stockRepository.findByProductId(productId);
@@ -78,7 +80,9 @@ export async function adjustStock(
 }
 
 export async function listStock(query = {}, repos = { stockRepository: defaultStockRepository }) {
-  const stocks = await repos.stockRepository.listStock(query);
-  const filteredStocks = stocks.filter((s) => s.productId);
-  return filteredStocks.map(toStockDTO);
+  const includeInactive = query.includeInactive === true;
+  const stocks = await repos.stockRepository.listStock({ search: query.search, includeInactive });
+  return stocks
+    .filter((s) => s.productId && (includeInactive || s.productId.isActive !== false))
+    .map(toStockDTO);
 }

@@ -3,6 +3,7 @@ import { passwordHasher } from '../../infrastructure/security/password-hasher.js
 import { Roles, AccountStatus, statusFromIsActive } from '../../domain/users/users.domain.js';
 import { assertPasswordPolicy } from '../auth/password-policy.js';
 import { AppError } from '../app-error.js';
+import { evaluateRoleChange } from '../../domain/auth/permissions.domain.js';
 
 /**
  * Converts a user document into a safe DTO (no password hash or internal fields).
@@ -16,7 +17,7 @@ export function toUserDto(user) {
     id: user._id || user.id,
     username: user.username,
     email: user.email,
-    role: user.role,
+    roles: Array.isArray(user.roles) ? [...user.roles] : [],
     status,
     isActive: status === AccountStatus.ACTIVE,
     customerId: user.customerId || null,
@@ -58,7 +59,6 @@ export async function getUserById(id, usersRepository = defaultUsersRepository) 
  *
  * @param {string} id - The unique identifier of the user to update.
  * @param {Object} updateData - The fields to update.
- * @param {string} [updateData.role] - The new role to assign to the user.
  * @param {boolean} [updateData.isActive] - The new active status of the user.
  * @param {string} [updateData.password] - The new plain text password (will be hashed).
  * @param {Object} [usersRepository=defaultUsersRepository] - The injected repository for database operations.
@@ -71,11 +71,6 @@ export async function updateUser(id, updateData, usersRepository = defaultUsersR
 
   const dataToSave = {};
   let revokeSessions = false;
-
-  if (updateData.role) {
-    dataToSave.role = updateData.role;
-    if (updateData.role !== Roles.CUSTOMER) dataToSave.customerId = null;
-  }
 
   if (updateData.isActive !== undefined) {
     dataToSave.status = statusFromIsActive(updateData.isActive);
@@ -94,4 +89,51 @@ export async function updateUser(id, updateData, usersRepository = defaultUsersR
 
   const updatedUser = await usersRepository.update(id, dataToSave);
   return toUserDto(updatedUser);
+}
+
+export function assertRoleChangeAllowed(actor, targetId, currentRoles, nextRoles) {
+  const decision = evaluateRoleChange({
+    actorPermissions: actor?.permissions ?? [],
+    isSelf: Boolean(targetId) && String(actor?.userId) === String(targetId),
+    currentRoles,
+    nextRoles,
+  });
+
+  if (!decision.allowed) {
+    throw new AppError(
+      'You are not allowed to change these roles.',
+      403,
+      { roles: decision.roles },
+      decision.reason,
+    );
+  }
+}
+
+export async function addRole(actor, targetId, role, usersRepository = defaultUsersRepository) {
+  const user = await usersRepository.findById(targetId);
+  if (!user) throw new AppError('User not found', 404);
+
+  const current = user.roles ?? [];
+  assertRoleChangeAllowed(actor, targetId, current, [...current, role]);
+
+  const updated = await usersRepository.addRole(targetId, role);
+  return toUserDto(updated ?? user);
+}
+
+export async function removeRole(actor, targetId, role, usersRepository = defaultUsersRepository) {
+  const user = await usersRepository.findById(targetId);
+  if (!user) throw new AppError('User not found', 404);
+
+  const current = user.roles ?? [];
+  assertRoleChangeAllowed(
+    actor,
+    targetId,
+    current,
+    current.filter((r) => r !== role),
+  );
+
+  const updated = await usersRepository.removeRole(targetId, role, {
+    clearCustomerId: role === Roles.CUSTOMER,
+  });
+  return toUserDto(updated ?? user);
 }

@@ -2,7 +2,7 @@ import Joi from 'joi';
 
 import { Router } from 'express';
 import { createAuthController } from './auth.controller.js';
-import { verifyToken } from '../middleware/auth.middleware.js';
+import { requireAuthenticated } from '../middleware/authorization.middleware.js';
 import { createRateLimiter, passThrough } from '../middleware/rate-limit.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
@@ -90,12 +90,15 @@ export default function authRouterFactory({ authService, config, securityLogger 
       })
     : passThrough;
 
+  router.get('/me', noStore, requireAuthenticated, controller.me);
+  router.get('/guest-permissions', controller.guestPermissions);
+
   router.use(noStore, authLimiter);
 
   router.post('/login', validateBody(schemas.login), controller.login);
   router.post('/refresh', requireAllowedOrigin(config.corsOrigins), controller.refresh);
-  router.post('/logout', verifyToken, controller.logout);
-  router.post('/logout-all', verifyToken, controller.logoutAll);
+  router.post('/logout', requireAuthenticated, controller.logout);
+  router.post('/logout-all', requireAuthenticated, controller.logoutAll);
   router.post(
     '/password/forgot',
     forgotLimiter,
@@ -105,7 +108,7 @@ export default function authRouterFactory({ authService, config, securityLogger 
   router.post('/password/reset', validateBody(schemas.reset), controller.resetPassword);
   router.post(
     '/password/change',
-    verifyToken,
+    requireAuthenticated,
     validateBody(schemas.change),
     controller.changePassword,
   );

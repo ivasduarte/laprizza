@@ -2,15 +2,16 @@ import Joi from 'joi';
 import * as controller from './forecast.controller.js';
 
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 
 export default function forecastRouterFactory(forecastRepository) {
   const router = Router();
 
-  const readRoles = [Roles.MANAGER];
+  const canRead = requirePermission(Permission.FORECASTS_READ);
+  const canWrite = requirePermission(Permission.FORECASTS_WRITE);
 
   const forecastEntrySchema = Joi.object({
     date: Joi.string().trim().required().messages({
@@ -96,28 +97,25 @@ export default function forecastRouterFactory(forecastRepository) {
 
   router.get(
     '/',
-    verifyToken,
-    requireRole(readRoles),
+    canRead,
     validate(searchSchema, 'query'),
     (req, res, next) => controller.list(req, res, next, forecastRepository),
   );
 
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validate(forecastSchema),
     (req, res, next) => controller.create(req, res, next, forecastRepository),
   );
 
-  router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, forecastRepository),
   );
 
   router.put(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     validate(deactivateSchema),
     (req, res, next) => controller.update(req, res, next, forecastRepository),

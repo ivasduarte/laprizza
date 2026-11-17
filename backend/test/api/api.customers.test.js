@@ -11,8 +11,15 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
+  {
+    _id: 'abcdef000000000000000003',
+    email: 'customer@laprizza.pt',
+    roles: ['CUSTOMER'],
+    customerId: 'c0c0c0000000000000000001',
+  },
+  { _id: 'abcdef000000000000000004', email: 'unlinked@laprizza.pt', roles: ['CUSTOMER'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -27,7 +34,9 @@ function createAuthMocks() {
   const userById = (id) => USERS.find((u) => u._id === String(id)) ?? null;
   return {
     usersRepository: {
-      findByEmailWithPasswordHash: mock.fn(async (email) => USERS.find((u) => u.email === email) ?? null),
+      findByEmailWithPasswordHash: mock.fn(
+        async (email) => USERS.find((u) => u.email === email) ?? null,
+      ),
       findById: mock.fn(async (id) => userById(id)),
     },
     // One always-active session per user (session id = user id).
@@ -35,7 +44,13 @@ function createAuthMocks() {
       create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
       findById: mock.fn(async (id) =>
         userById(id)
-          ? { _id: id, userId: id, tokenVersion: 0, expiresAt: new Date(Date.now() + 3_600_000), revokedAt: null }
+          ? {
+              _id: id,
+              userId: id,
+              tokenVersion: 0,
+              expiresAt: new Date(Date.now() + 3_600_000),
+              revokedAt: null,
+            }
           : null,
       ),
     },
@@ -53,7 +68,9 @@ const duplicateKeyError = (field) =>
  * Setup isolated test environment with injected mocked repositories.
  * Nothing is stored: each test programs the answers of the repository for its steps.
  */
-async function setupTestServer({ postalCodeValidator = { isValidMatch: mock.fn(async () => true) } } = {}) {
+async function setupTestServer({
+  postalCodeValidator = { isValidMatch: mock.fn(async () => true) },
+} = {}) {
   const customersRepo = {
     listCustomers: mock.fn(async () => []),
     findById: mock.fn(async () => undefined),
@@ -283,7 +300,10 @@ test('API /customers rejects duplicated dietary restrictions on create and updat
   assert.equal(created.status, 201);
   const { id } = await created.json();
   assert.equal(customersRepo.create.mock.callCount(), 1); // the duplicated payload never reached it
-  storeCustomer(customersRepo, { _id: id, ...validCustomer({ dietaryRestrictions: [allergenId] }) });
+  storeCustomer(customersRepo, {
+    _id: id,
+    ...validCustomer({ dietaryRestrictions: [allergenId] }),
+  });
 
   const patchDuplicated = await request('PATCH', `/customers/${id}`, {
     dietaryRestrictions: [allergenId, allergenId],
@@ -391,7 +411,11 @@ test('API /customers search filters by name, email and phone number', async (t) 
 
   const maria = {
     _id: CUSTOMER_ID,
-    ...validCustomer({ name: 'Maria Santos', email: 'maria@laprizza.pt', phoneNumber: '912345678' }),
+    ...validCustomer({
+      name: 'Maria Santos',
+      email: 'maria@laprizza.pt',
+      phoneNumber: '912345678',
+    }),
   };
   const joao = {
     _id: SECOND_CUSTOMER_ID,
@@ -419,4 +443,82 @@ test('API /customers search filters by name, email and phone number', async (t) 
     customersRepo.listCustomers.mock.calls.slice(1).map((c) => c.arguments[0].search),
     ['MARIA', 'joao@laprizza', '2234', 'xyz'],
   );
+});
+
+/**
+ * Integration Test (AA05, data ownership): a customer reads only their own record, through /customers/me.
+ * Changing a record reference in the URL or a request parameter never reaches another customer's data.
+ */
+test('API /customers/me: customers read only their own record (no IDOR)', async (t) => {
+  const { server, port, customersRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  storeCustomer(customersRepo, {
+    _id: CUSTOMER_ID,
+    name: 'Own Customer',
+    email: 'own@laprizza.pt',
+    phoneNumber: '912345678',
+    address: {},
+    dietaryRestrictions: [],
+    isActive: true,
+  });
+
+  const loginAs = async (email) => {
+    const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: PASSWORD }),
+    });
+    const { accessToken } = await res.json();
+    return (method, path, body) =>
+      fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+  };
+  const customer = await loginAs('customer@laprizza.pt');
+  const unlinked = await loginAs('unlinked@laprizza.pt');
+  const manager = await loginAsManager(port);
+
+  // Own record: the id comes from the session; personal data is never cached
+  const me = await customer('GET', '/customers/me');
+  assert.equal(me.status, 200);
+  assert.equal(me.headers.get('cache-control'), 'no-store');
+  assert.equal((await me.json()).id, CUSTOMER_ID);
+
+  // Tampered request parameters are ignored
+  const tampered = await customer(
+    'GET',
+    `/customers/me?id=${SECOND_CUSTOMER_ID}&customerId=${SECOND_CUSTOMER_ID}`,
+  );
+  assert.equal((await tampered.json()).id, CUSTOMER_ID);
+
+  // Changing the record reference in the URL is refused before reaching the database
+  for (const [method, path, body] of [
+    ['GET', `/customers/${SECOND_CUSTOMER_ID}`],
+    ['PATCH', `/customers/${SECOND_CUSTOMER_ID}`, { name: 'Changed Name' }],
+    ['GET', `/customers/${CUSTOMER_ID}`], // even the own id: customers use /me
+    ['GET', '/customers'],
+  ]) {
+    assert.equal((await customer(method, path, body)).status, 403, `${method} ${path}`);
+  }
+  assert.ok(
+    customersRepo.findById.mock.calls.every((call) => String(call.arguments[0]) === CUSTOMER_ID),
+    'only the own customer was ever read',
+  );
+  assert.equal(customersRepo.update.mock.callCount(), 0);
+  assert.equal(customersRepo.listCustomers.mock.callCount(), 0);
+
+  // A customer account without a linked customer record
+  const none = await unlinked('GET', '/customers/me');
+  assert.equal(none.status, 404);
+  assert.equal((await none.json()).error.code, 'CUSTOMER_PROFILE_NOT_FOUND');
+
+  // /me is a customer endpoint: the manager uses /customers/:id; Guests are not authenticated
+  assert.equal((await manager('GET', '/customers/me')).status, 403);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/v1/customers/me`)).status, 401);
 });

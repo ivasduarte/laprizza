@@ -11,8 +11,8 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -27,7 +27,9 @@ function createAuthMocks() {
   const userById = (id) => USERS.find((u) => u._id === String(id)) ?? null;
   return {
     usersRepository: {
-      findByEmailWithPasswordHash: mock.fn(async (email) => USERS.find((u) => u.email === email) ?? null),
+      findByEmailWithPasswordHash: mock.fn(
+        async (email) => USERS.find((u) => u.email === email) ?? null,
+      ),
       findById: mock.fn(async (id) => userById(id)),
     },
     // One always-active session per user (session id = user id).
@@ -35,7 +37,13 @@ function createAuthMocks() {
       create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
       findById: mock.fn(async (id) =>
         userById(id)
-          ? { _id: id, userId: id, tokenVersion: 0, expiresAt: new Date(Date.now() + 3_600_000), revokedAt: null }
+          ? {
+              _id: id,
+              userId: id,
+              tokenVersion: 0,
+              expiresAt: new Date(Date.now() + 3_600_000),
+              revokedAt: null,
+            }
           : null,
       ),
     },
@@ -220,4 +228,33 @@ test('API /allergens returns a complete list of all active allergens', async (t)
   const hasPeanut = list.some((a) => a.name === 'Peanut');
   assert.equal(hasPeanut, true);
   assert.equal(allergenRepo.list.mock.callCount(), 1);
+});
+
+test('API /allergens reads are public (Guest); writes still require allergens:write', async (t) => {
+  const { server, port, allergenRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const stored = { _id: ALLERGEN_ID, name: 'Gluten', isActive: true };
+  allergenRepo.list.mock.mockImplementation(async () => [stored]);
+  allergenRepo.findById.mock.mockImplementation(async (id) => (id === ALLERGEN_ID ? stored : null));
+
+  const base = `http://127.0.0.1:${port}/api/v1/allergens`;
+
+  // Guest (no token): Table 1 allows product and allergen information
+  const list = await fetch(base);
+  assert.equal(list.status, 200);
+  assert.deepEqual(await list.json(), [{ id: ALLERGEN_ID, name: 'Gluten', isActive: true }]);
+  assert.equal((await fetch(`${base}/${ALLERGEN_ID}`)).status, 200);
+
+  // Writes are not public
+  const post = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Soja' }),
+  });
+  assert.equal(post.status, 401);
+  assert.equal(allergenRepo.create.mock.callCount(), 0);
 });

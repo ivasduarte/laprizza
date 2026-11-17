@@ -14,8 +14,9 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
+  { _id: 'abcdef000000000000000003', email: 'customer@laprizza.pt', roles: ['CUSTOMER'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -124,7 +125,7 @@ test('API /shared-resources requires authentication', async (t) => {
   assert.equal(storage.remove.mock.callCount(), 0);
 });
 
-test('API /shared-resources RBAC: any authenticated user reads, only MANAGER writes', async (t) => {
+test('API /shared-resources RBAC: staff and managers read, only MANAGER writes, customers are refused', async (t) => {
   const { server, port, storage } = await setupTestServer();
   t.after(() => {
     server.close();
@@ -137,6 +138,12 @@ test('API /shared-resources RBAC: any authenticated user reads, only MANAGER wri
 
   const empRequest = await loginAs(port, 'emp@laprizza.pt');
   const managerRequest = await loginAs(port, 'admin@laprizza.pt');
+
+  // Internal documents are not for customers (least privilege)
+  const customerRequest = await loginAs(port, 'customer@laprizza.pt');
+  assert.equal((await customerRequest('GET', '/shared-resources')).status, 403);
+  assert.equal((await customerRequest('GET', '/shared-resources/manual.pdf')).status, 403);
+  assert.equal(storage.list.mock.callCount(), 0);
 
   const listEmp = await empRequest('GET', '/shared-resources');
   assert.equal(listEmp.status, 200);
@@ -312,7 +319,9 @@ test('API /shared-resources records every access in the security log', async (t)
   assert.ok(
     securityLogger.log.mock.calls.some(
       (call) =>
-        call.arguments[0] === 'ACCESS_DENIED' && call.arguments[1].reason === 'INSUFFICIENT_ROLE',
+        call.arguments[0] === 'ACCESS_DENIED' &&
+        call.arguments[1].reason === 'MISSING_PERMISSION' &&
+        call.arguments[1].required === 'resources:write',
     ),
   );
 });

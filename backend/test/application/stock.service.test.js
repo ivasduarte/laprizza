@@ -1,7 +1,11 @@
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { AppError } from '../../src/application/app-error.js';
-import { getStockByProductId, adjustStock } from '../../src/application/stock/stock.service.js';
+import {
+  getStockByProductId,
+  adjustStock,
+  listStock,
+} from '../../src/application/stock/stock.service.js';
 
 const PRODUCT_WITH_STOCK_ID = 'e0e0e0000000000000000001';
 const PRODUCT_NO_STOCK_ID = 'e0e0e0000000000000000002';
@@ -24,8 +28,8 @@ const prodNoStock = {
 
 /** Products mock: resolves only the two known products. */
 const createProductsRepository = () => ({
-  findById: mock.fn(async (id) =>
-    [prodWithStock, prodNoStock].find((p) => String(p._id) === String(id)) ?? null,
+  findById: mock.fn(
+    async (id) => [prodWithStock, prodNoStock].find((p) => String(p._id) === String(id)) ?? null,
   ),
 });
 
@@ -144,4 +148,54 @@ test('adjustStock rejects invalid operations and non-stock controlled products',
       err instanceof AppError && err.status === 400 && err.message.includes('Invalid operation'),
   );
   assert.equal(repos.stockRepository.updateQuantity.mock.callCount(), 0);
+});
+
+/**
+ * Unit test (AA05): an inactive product is unavailable without includeInactive (stock:read:inactive).
+ */
+test('getStockByProductId hides inactive products unless includeInactive', async () => {
+  const retired = {
+    _id: 'e0e0e0000000000000000003',
+    name: 'Retired',
+    stockControlled: true,
+    isActive: false,
+  };
+  const repos = {
+    productsRepository: { findById: mock.fn(async () => retired) },
+    stockRepository: {
+      findByProductId: mock.fn(async () => null),
+      create: mock.fn(async (data) => ({ _id: STOCK_ID, ...data })),
+    },
+  };
+
+  await assert.rejects(getStockByProductId(retired._id, repos), (err) => err.status === 404);
+  assert.equal(repos.stockRepository.create.mock.callCount(), 0); // nothing created for a hidden product
+
+  const stock = await getStockByProductId(retired._id, repos, { includeInactive: true });
+  assert.equal(stock.quantity, 0);
+});
+
+/**
+ * Unit test (AA05): listStock asks the repository for inactive products only when allowed,
+ * and filters them again (defence in depth). Only a real boolean enables it.
+ */
+test('listStock filters inactive products unless includeInactive is true', async () => {
+  const retired = { ...prodWithStock, _id: 'e0e0e0000000000000000003', isActive: false };
+  const stockRepository = {
+    listStock: mock.fn(async () => [
+      { _id: 's1', productId: prodWithStock, quantity: 1 },
+      { _id: 's2', productId: retired, quantity: 2 },
+      { _id: 's3', productId: null, quantity: 9 }, // product did not match the search
+    ]),
+  };
+  const quantities = (list) => list.map((s) => s.quantity);
+
+  assert.deepEqual(quantities(await listStock({ search: 'com' }, { stockRepository })), [1]);
+  assert.deepEqual(stockRepository.listStock.mock.calls[0].arguments[0], {
+    search: 'com',
+    includeInactive: false,
+  });
+
+  assert.deepEqual(quantities(await listStock({ includeInactive: true }, { stockRepository })), [1, 2]);
+  assert.deepEqual(quantities(await listStock({ includeInactive: 'true' }, { stockRepository })), [1]);
 });

@@ -20,7 +20,14 @@ const userSchema = new mongoose.Schema(
     username: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
     email: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
     passwordHash: { type: String, select: false },
-    role: { type: String, enum: Object.values(Roles), required: true },
+    roles: {
+      type: [{ type: String, enum: Object.values(Roles) }],
+      default: [],
+      validate: {
+        validator: (roles) => new Set(roles).size === roles.length,
+        message: 'Duplicate roles are not allowed.',
+      },
+    },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customers', required: false },
     status: {
       type: String,
@@ -44,6 +51,8 @@ const userSchema = new mongoose.Schema(
 userSchema.pre('validate', function () {
   if (this.isNew && !this.email) throw new Error('A user must have an email.');
 });
+
+userSchema.index({ roles: 1 });
 
 /**
  * Compiled Mongoose model for the Users collection.

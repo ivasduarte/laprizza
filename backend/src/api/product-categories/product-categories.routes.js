@@ -4,8 +4,8 @@ import * as controller from './product-categories.controller.js';
 import { Router } from 'express';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 
 /**
  * Factory function that creates and configures the Express router for product categories endpoint.
@@ -21,6 +21,9 @@ export default function productCategoriesRouterFactory(
   productsRepository,
 ) {
   const router = Router();
+  
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.CATEGORIES_WRITE);
 
   // The name is only checked for presence and type here: normalization and blank-value rules belong to the domain.
   const nameSchema = Joi.string().trim().required().messages({
@@ -61,8 +64,7 @@ export default function productCategoriesRouterFactory(
   // List or search by exact name
   router.get(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canRead,
     async (req, res, next) => {
       try {
         const { error } = searchProductCategorySchema.validate(req.query, {
@@ -85,8 +87,7 @@ export default function productCategoriesRouterFactory(
   // Create a new product category
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     async (req, res, next) => {
       try {
         const { error, value } = productCategorySchema.validate(req.body, {
@@ -108,15 +109,14 @@ export default function productCategoriesRouterFactory(
   );
 
   // Get by ID
-  router.get('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, productCategoriesRepository),
   );
 
   // Update the descriptive name
   router.put(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     async (req, res, next) => {
       try {
@@ -139,7 +139,7 @@ export default function productCategoriesRouterFactory(
   );
 
   // Remove; blocked while products reference the category
-  router.delete('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.delete('/:id', canWrite, validateId, (req, res, next) =>
     controller.remove(req, res, next, productCategoriesRepository, productsRepository),
   );
 

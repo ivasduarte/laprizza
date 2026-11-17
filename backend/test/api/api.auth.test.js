@@ -25,8 +25,8 @@ const storedUser = (data) => ({
 });
 
 const SEEDED_USERS = [
-  storedUser({ _id: ADMIN_ID, email: 'admin@laprizza.pt', role: 'MANAGER' }),
-  storedUser({ _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' }),
+  storedUser({ _id: ADMIN_ID, email: 'admin@laprizza.pt', roles: ['MANAGER'] }),
+  storedUser({ _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] }),
 ];
 
 /**
@@ -44,6 +44,12 @@ function storeUsers({ usersRepository, sessionsRepository }, users) {
   usersRepository.update.mock.mockImplementation(async (id, data) =>
     byId(id) ? { ...byId(id), ...data } : null,
   );
+  usersRepository.addRole.mock.mockImplementation(async (id, role) =>
+    byId(id) ? { ...byId(id), roles: [...new Set([...(byId(id).roles ?? []), role])] } : null,
+  );
+  usersRepository.removeRole.mock.mockImplementation(async (id, role) =>
+    byId(id) ? { ...byId(id), roles: (byId(id).roles ?? []).filter((r) => r !== role) } : null,
+  );
   usersRepository.registerFailedLogin.mock.mockImplementation(async (id) => ({
     ...byId(id),
     failedLoginCount: byId(id).failedLoginCount + 1,
@@ -51,7 +57,13 @@ function storeUsers({ usersRepository, sessionsRepository }, users) {
   // One always-active session per user (session id = user id).
   sessionsRepository.findById.mock.mockImplementation(async (id) =>
     byId(id)
-      ? { _id: id, userId: id, tokenVersion: 0, expiresAt: new Date(Date.now() + 3_600_000), revokedAt: null }
+      ? {
+          _id: id,
+          userId: id,
+          tokenVersion: 0,
+          expiresAt: new Date(Date.now() + 3_600_000),
+          revokedAt: null,
+        }
       : null,
   );
 }
@@ -73,6 +85,8 @@ async function setupTestServer() {
       registerFailedLogin: mock.fn(),
       extendLockout: mock.fn(async () => {}),
       clearLoginFailures: mock.fn(async () => {}),
+      addRole: mock.fn(),
+      removeRole: mock.fn(),
     },
     sessionsRepository: {
       create: mock.fn(async (data) => ({ _id: String(data.userId), ...data })),
@@ -175,13 +189,17 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
     200,
   );
 
-  // 400 Bad Request (Missing role)
+  // 400 Bad Request (Unknown role)
   assert.equal(
     (
       await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'new@p.pt', password: 'StrongPassword123!' }),
+        body: JSON.stringify({
+          email: 'new@p.pt',
+          password: 'StrongPassword123!',
+          roles: ['ROOT'],
+        }),
       })
     ).status,
     400,
@@ -196,7 +214,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
         body: JSON.stringify({
           email: 'hacker@laprizza.pt',
           password: 'StrongPassword123!',
-          role: 'CUSTOMER',
+          roles: ['CUSTOMER'],
         }),
       })
     ).status,
@@ -217,7 +235,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
         body: JSON.stringify({
           email: 'emp@laprizza.pt',
           password: 'StrongPassword123!',
-          role: 'CUSTOMER',
+          roles: ['CUSTOMER'],
         }),
       })
     ).status,
@@ -231,7 +249,7 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
     body: JSON.stringify({
       email: 'new@laprizza.pt',
       password: 'StrongPassword123!',
-      role: 'CUSTOMER',
+      roles: ['CUSTOMER'],
     }),
   });
   assert.equal(postRes.status, 201);
@@ -242,6 +260,18 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   assert.equal(saved.email, 'new@laprizza.pt');
   assert.equal(saved.password, undefined); // only the hash reaches the repository
   assert.match(saved.passwordHash, /^\$argon2id\$/);
+
+  assert.deepEqual(saved.roles, ['CUSTOMER']);
+  assert.deepEqual(postBody.roles, ['CUSTOMER']);
+
+  // 201 Created - an account may be created without roles (Guest permissions only)
+  const noRoles = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'noroles@laprizza.pt', password: 'StrongPassword123!' }),
+  });
+  assert.equal(noRoles.status, 201);
+  assert.deepEqual(usersRepository.create.mock.calls.at(-1).arguments[0].roles, []);
 
   // 200 OK GET - Validates if the DTO omits the password in the list
   const listRes = await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
@@ -284,7 +314,7 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
     body: JSON.stringify({
       email: 'alvo@laprizza.pt',
       password: 'StrongPassword123!',
-      role: 'CUSTOMER',
+      roles: ['CUSTOMER'],
     }),
   });
   const targetUser = await createRes.json();
@@ -358,24 +388,22 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   const patchRes = await fetch(`http://127.0.0.1:${port}/api/v2/users/${targetId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isActive: false, role: 'EMPLOYEE' }),
+    body: JSON.stringify({ isActive: false, roles: ['EMPLOYEE'] }),
   });
 
   assert.equal(patchRes.status, 200);
   const patchBody = await patchRes.json();
   assert.equal(patchBody.isActive, false);
-  assert.equal(patchBody.role, 'EMPLOYEE');
+  assert.deepEqual(patchBody.roles, ['CUSTOMER']); // PATCH ignores roles
   assert.equal(patchBody.password, undefined);
   const [updatedId, patch] = usersRepository.update.mock.calls[0].arguments;
   assert.equal(updatedId, targetId);
   assert.equal(patch.status, 'disabled');
+  assert.equal(patch.roles, undefined);
   assert.equal(patch.tokenVersion, 1); // disabling revokes the sessions
 
   // Step: the target account is now disabled.
-  storeUsers({ usersRepository, sessionsRepository }, [
-    ...SEEDED_USERS,
-    { ...target, ...patch, role: 'EMPLOYEE' },
-  ]);
+  storeUsers({ usersRepository, sessionsRepository }, [...SEEDED_USERS, { ...target, ...patch }]);
 
   // 403 Forbidden - Login blocked for disabled account (AA01: correct password + disabled account -> ACCOUNT_DISABLED)
   const loginRes = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
@@ -440,5 +468,185 @@ test('API GET and PATCH /users/:id (Consult and Update)', async (t) => {
   );
   const [ownId, ownPatch] = usersRepository.update.mock.calls.at(-1).arguments;
   assert.equal(ownId, adminId);
-  assert.equal(await passwordHasher.verify(ownPatch.passwordHash, 'AnotherStrongPassword123!'), true);
+  assert.equal(
+    await passwordHasher.verify(ownPatch.passwordHash, 'AnotherStrongPassword123!'),
+    true,
+  );
+});
+
+/**
+ * Integration tests (AA05) for adding and removing roles.
+ * Covers authentication, validation, success, and the self-change refusal with its security log.
+ */
+test('API PUT and DELETE /users/:id/roles/:role', async (t) => {
+  const { server, port, usersRepository, securityLogger } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const EMP_ID = 'abcdef000000000000000002';
+  const login = async (email) =>
+    (
+      await (
+        await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: PASSWORD }),
+        })
+      ).json()
+    ).accessToken;
+  const call = (method, path, token) =>
+    fetch(`http://127.0.0.1:${port}/api/v1${path}`, {
+      method,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+  const adminToken = await login('admin@laprizza.pt');
+  const empToken = await login('emp@laprizza.pt');
+
+  // 401 without a session, 403 without the required role
+  assert.equal((await call('PUT', `/users/${EMP_ID}/roles/CUSTOMER`)).status, 401);
+  assert.equal((await call('PUT', `/users/${ADMIN_ID}/roles/EMPLOYEE`, empToken)).status, 403);
+
+  // 400 unknown role or invalid id; 404 unknown user
+  assert.equal((await call('PUT', `/users/${EMP_ID}/roles/ADMINISTRATOR`, adminToken)).status, 400);
+  assert.equal((await call('PUT', '/users/abc/roles/EMPLOYEE', adminToken)).status, 400);
+  assert.equal(
+    (await call('PUT', '/users/abcdef000000000000000999/roles/EMPLOYEE', adminToken)).status,
+    404,
+  );
+
+  // 200 add and remove
+  const added = await call('PUT', `/users/${EMP_ID}/roles/CUSTOMER`, adminToken);
+  assert.equal(added.status, 200);
+  assert.deepEqual((await added.json()).roles, ['EMPLOYEE', 'CUSTOMER']);
+  assert.deepEqual(usersRepository.addRole.mock.calls[0].arguments, [EMP_ID, 'CUSTOMER']);
+
+  const removed = await call('DELETE', `/users/${EMP_ID}/roles/EMPLOYEE`, adminToken);
+  assert.equal(removed.status, 200);
+  assert.deepEqual(usersRepository.removeRole.mock.calls[0].arguments, [
+    EMP_ID,
+    'EMPLOYEE',
+    { clearCustomerId: false },
+  ]);
+
+  // 403 nobody changes their own roles; the refusal is logged without secrets
+  const self = await call('PUT', `/users/${ADMIN_ID}/roles/EMPLOYEE`, adminToken);
+  assert.equal(self.status, 403);
+  const selfBody = await self.json();
+  assert.equal(selfBody.error.code, 'SELF_ROLE_CHANGE');
+  assert.deepEqual(selfBody.error.details, { roles: ['EMPLOYEE'] });
+  assert.equal(usersRepository.addRole.mock.callCount(), 1);
+
+  const denials = securityLogger.log.mock.calls
+    .map((c) => c.arguments)
+    .filter(
+      ([event, details]) => event === 'ACCESS_DENIED' && details.reason === 'SELF_ROLE_CHANGE',
+    );
+  assert.equal(denials.length, 1);
+  const [, details] = denials[0];
+  assert.equal(details.userId, ADMIN_ID);
+  assert.equal(details.targetUserId, ADMIN_ID);
+  assert.deepEqual(details.attemptedRoles, ['EMPLOYEE']);
+  assert.equal(JSON.stringify(details).includes(adminToken), false);
+});
+
+/**
+ * Integration test (AA05): session routes only need authentication, whatever the roles.
+ */
+test('API /auth session routes require authentication (requireAuthenticated)', async (t) => {
+  const { server, port, sessionsRepository, securityLogger } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  for (const path of ['/auth/logout', '/auth/logout-all', '/auth/password/change']) {
+    const res = await fetch(`http://127.0.0.1:${port}/api/v1${path}`, { method: 'POST' });
+    assert.equal(res.status, 401, path);
+    assert.equal((await res.json()).error.code, 'TOKEN_MISSING', path);
+  }
+
+  const denials = securityLogger.log.mock.calls
+    .map((c) => c.arguments)
+    .filter(
+      ([event, details]) => event === 'ACCESS_DENIED' && details.required === 'authenticated',
+    );
+  assert.equal(denials.length, 3);
+  assert.equal(sessionsRepository.create.mock.callCount(), 0);
+});
+
+/**
+ * Integration tests (AA05): GET /auth/me returns the current user, read from the database on
+ * every request, without secrets; failures are 401 (never 403).
+ */
+test('API GET /auth/me returns the current user without secrets', async (t) => {
+  const { server, port, usersRepository, sessionsRepository } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const login = await fetch(`http://127.0.0.1:${port}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@laprizza.pt', password: PASSWORD }),
+  });
+  const { accessToken } = await login.json();
+  const me = () =>
+    fetch(`http://127.0.0.1:${port}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+  const res = await me();
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  const body = await res.json();
+  assert.deepEqual(Object.keys(body).sort(), [
+    'customerId',
+    'email',
+    'id',
+    'permissions',
+    'roles',
+    'status',
+  ]);
+  assert.equal(body.id, ADMIN_ID);
+  assert.deepEqual(body.roles, ['MANAGER']);
+  assert.ok(body.permissions.includes('users:manage'));
+  assert.equal(body.customerId, null);
+
+  // A role change is visible on the next request, without a new login
+  storeUsers({ usersRepository, sessionsRepository }, [
+    { ...SEEDED_USERS[0], roles: ['MANAGER', 'EMPLOYEE'] },
+    SEEDED_USERS[1],
+  ]);
+  assert.deepEqual((await (await me()).json()).roles, ['MANAGER', 'EMPLOYEE']);
+
+  // A disabled account is no longer authenticated: 401, never 403
+  storeUsers({ usersRepository, sessionsRepository }, [
+    { ...SEEDED_USERS[0], status: 'disabled' },
+    SEEDED_USERS[1],
+  ]);
+  const disabled = await me();
+  assert.equal(disabled.status, 401);
+  assert.equal((await disabled.json()).error.code, 'SESSION_REVOKED');
+
+  // Without a session
+  const anonymous = await fetch(`http://127.0.0.1:${port}/api/v1/auth/me`);
+  assert.equal(anonymous.status, 401);
+  assert.equal((await anonymous.json()).error.code, 'TOKEN_MISSING');
+});
+
+test('API GET /auth/guest-permissions is public and returns the Guest permissions', async (t) => {
+  const { server, port } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const res = await fetch(`http://127.0.0.1:${port}/api/v1/auth/guest-permissions`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'public, max-age=300');
+  assert.deepEqual(await res.json(), { permissions: ['catalogue:read'] });
 });

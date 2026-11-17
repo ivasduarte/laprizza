@@ -68,7 +68,7 @@ Content-Type: application/json
 {
   "email": "{{dynamicEmail}}",
   "password": "StrongPassword123!",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201
@@ -130,7 +130,7 @@ Content-Type: application/json
 {
   "email": "{{createdEmail}}",
   "password": "StrongPassword123!",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 409
@@ -144,7 +144,7 @@ Content-Type: application/json
   "email": "outro_email_{{$timestamp}}@laprizza.pt",
   "username": "admin",
   "password": "StrongPassword123!",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 409
@@ -192,6 +192,33 @@ GET {{baseUrl}}/users/abc
 Authorization: Bearer {{token}}
 
 ?? status == 400
+
+### 5.3 PUT Adicionar role (200 OK)
+PUT {{baseUrl}}/users/{{userId}}/roles/CUSTOMER
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js response.parsedBody.roles.includes('CUSTOMER') == true
+
+### 5.4 PUT Role desconhecida (400 Bad Request)
+PUT {{baseUrl}}/users/{{userId}}/roles/ADMINISTRATOR
+Authorization: Bearer {{token}}
+
+?? status == 400
+
+### 5.5 DELETE Remover role (200 OK)
+DELETE {{baseUrl}}/users/{{userId}}/roles/CUSTOMER
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js response.parsedBody.roles.includes('CUSTOMER') == false
+
+### 5.6 PUT Alterar as próprias roles (403 Forbidden - AA05: SELF_ROLE_CHANGE)
+PUT {{baseUrl}}/users/{{adminId}}/roles/EMPLOYEE
+Authorization: Bearer {{token}}
+
+?? status == 403
+?? js response.parsedBody.error.code == SELF_ROLE_CHANGE
 
 
 ### ==========================================

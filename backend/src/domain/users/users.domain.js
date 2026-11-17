@@ -1,17 +1,18 @@
 /**
- * Enum-like object representing the available user roles in the system.
+ * Assignable base roles. A user may have several, or none.
+ * A user without roles only gets the Guest permissions.
  *
  * @constant
  * @type {Object}
- * @property {string} MANAGER - System administrator with full access, including user management.
+ * @property {string} MANAGER - LaPrizza Manager.
  * @property {string} EMPLOYEE - Internal staff member with operational access.
  * @property {string} CUSTOMER - External client associated with a customerId.
  */
-export const Roles = {
+export const Roles = Object.freeze({
   MANAGER: 'MANAGER',
   EMPLOYEE: 'EMPLOYEE',
   CUSTOMER: 'CUSTOMER',
-};
+});
 
 /**
  * Validates a plain text password against strict security requirements (NIST guidelines).

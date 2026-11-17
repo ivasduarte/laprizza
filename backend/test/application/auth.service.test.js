@@ -42,7 +42,7 @@ const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 const storedUser = (data = {}) => ({
   _id: USER_ID,
   email: 'user@laprizza.pt',
-  role: 'EMPLOYEE',
+  roles: ['EMPLOYEE'],
   status: 'active',
   passwordHash: PASSWORD_HASH,
   failedLoginCount: 0,
@@ -184,7 +184,10 @@ function tokenFromLastEmail(emailService) {
 test('registerUser rejects weak passwords without saving to the database', async () => {
   const { usersRepository } = createAuthTestContext();
   await rejectsWith(
-    registerUser({ email: 'teste@laprizza.pt', password: '123', role: 'EMPLOYEE' }, usersRepository),
+    registerUser(
+      { email: 'teste@laprizza.pt', password: '123', roles: ['EMPLOYEE'] },
+      usersRepository,
+    ),
     400,
     AuthErrorCode.PASSWORD_POLICY_VIOLATION,
   );
@@ -197,7 +200,10 @@ test('registerUser rejects weak passwords without saving to the database', async
 test('registerUser requires an email', async () => {
   const { usersRepository } = createAuthTestContext();
   await assert.rejects(
-    registerUser({ username: 'semEmail', password: PASSWORD, role: 'EMPLOYEE' }, usersRepository),
+    registerUser(
+      { username: 'semEmail', password: PASSWORD, roles: ['EMPLOYEE'] },
+      usersRepository,
+    ),
     (err) => err.status === 400,
   );
   assert.equal(usersRepository.create.mock.callCount(), 0);
@@ -209,7 +215,7 @@ test('registerUser requires an email', async () => {
 test('registerUser stores only an argon2id hash and creates an active account', async () => {
   const { usersRepository } = createAuthTestContext();
   const dto = await registerUser(
-    { email: '  Joao@LaPrizza.pt ', password: PASSWORD, role: 'EMPLOYEE' },
+    { email: '  Joao@LaPrizza.pt ', password: PASSWORD, roles: ['EMPLOYEE'] },
     usersRepository,
     passwordHasher,
   );
@@ -222,19 +228,21 @@ test('registerUser stores only an argon2id hash and creates an active account', 
   assert.equal(stored.status, 'active');
   assert.equal(stored.tokenVersion, 0);
   assert.equal(stored.failedLoginCount, 0);
+  assert.deepEqual(stored.roles, ['EMPLOYEE']);
 
   assert.equal(dto.status, 'active');
   assert.equal(dto.passwordHash, undefined);
+  assert.deepEqual(dto.roles, ['EMPLOYEE']);
 });
 
 /**
  * Unit test: only CUSTOMER can have a customerId.
  */
-test('registerUser fails if customerId is provided but role is not CUSTOMER', async () => {
+test('registerUser fails if customerId is provided without the CUSTOMER role', async () => {
   const { usersRepository } = createAuthTestContext();
   await assert.rejects(
     registerUser(
-      { email: 'x@x.pt', password: PASSWORD, role: 'EMPLOYEE', customerId: 'fakeid' },
+      { email: 'x@x.pt', password: PASSWORD, roles: ['EMPLOYEE'], customerId: 'fakeid' },
       usersRepository,
     ),
     (err) => err.status === 400,
@@ -250,9 +258,38 @@ test('registerUser returns 409 Conflict on duplicate email', async () => {
   usersRepository.create.mock.mockImplementation(async () => {
     throw Object.assign(new Error('Duplicate key'), { code: 11000 });
   });
-  const data = { email: 'duplicado@laprizza.pt', password: PASSWORD, role: 'EMPLOYEE' };
+  const data = { email: 'duplicado@laprizza.pt', password: PASSWORD, roles: ['EMPLOYEE'] };
 
-  await assert.rejects(registerUser(data, usersRepository, passwordHasher), (err) => err.status === 409);
+  await assert.rejects(
+    registerUser(data, usersRepository, passwordHasher),
+    (err) => err.status === 409,
+  );
+});
+
+test('registerUser accepts no roles and links customerId to CUSTOMER accounts', async () => {
+  const { usersRepository } = createAuthTestContext();
+
+  await registerUser(
+    { email: 'noroles@laprizza.pt', password: PASSWORD },
+    usersRepository,
+    passwordHasher,
+  );
+  assert.deepEqual(usersRepository.create.mock.calls[0].arguments[0].roles, []);
+
+  await registerUser(
+    {
+      email: 'c@laprizza.pt',
+      password: PASSWORD,
+      roles: ['CUSTOMER'],
+      customerId: '65231abcd345678901234567',
+    },
+    usersRepository,
+    passwordHasher,
+  );
+  assert.equal(
+    usersRepository.create.mock.calls[1].arguments[0].customerId,
+    '65231abcd345678901234567',
+  );
 });
 
 /* ===================================================================== */
@@ -276,9 +313,16 @@ test('login returns tokens and creates a session storing only the refresh token 
   assert.deepEqual(result.user, {
     id: USER_ID,
     email: user.email,
-    role: 'EMPLOYEE',
-    roles: ['EMPLOYEE'],
     status: 'active',
+    roles: ['EMPLOYEE'],
+    permissions: [
+      'catalogue:read',
+      'kitchen:read',
+      'products:read',
+      'resources:read',
+      'stock:read',
+    ],
+    customerId: null,
   });
 
   assert.equal(ctx.sessionsRepository.create.mock.callCount(), 1);
@@ -372,7 +416,11 @@ test('login logs failed attempts without the password', async () => {
   assert.equal(event.reason, 'INVALID_PASSWORD');
   assert.equal(event.email, user.email);
   assert.equal(event.ip, REQUEST.ip);
-  assert.ok(!JSON.stringify(ctx.securityLogger.log.mock.calls.map((c) => c.arguments)).includes(WRONG_PASSWORD));
+  assert.ok(
+    !JSON.stringify(ctx.securityLogger.log.mock.calls.map((c) => c.arguments)).includes(
+      WRONG_PASSWORD,
+    ),
+  );
 });
 
 /**
@@ -540,6 +588,7 @@ test('establishSession is reusable and loads roles through the extension point',
   const result = await ctx.service.establishSession(user, { method: 'oidc', ip: '10.0.0.1' });
 
   assert.deepEqual(result.user.roles, ['CUSTOMER', 'BETA']);
+  assert.deepEqual(result.user.permissions, ['catalogue:read', 'customers:read:own'])
   assert.equal(loadRoles.mock.calls[0].arguments[0], user);
   const [event] = loggedEvents(ctx, 'LOGIN_SUCCEEDED');
   assert.equal(event.method, 'oidc');
@@ -558,21 +607,33 @@ function loggedIn(options) {
 }
 
 /**
- * Unit test: a valid token returns the user with the role read from the database.
+ * Unit test (AA05): roles and permissions are read from the database on every request,
+ * so role changes apply to the next request without a new login.
  */
-test('authenticateAccessToken returns the current role from the database', async () => {
+test('authenticateAccessToken returns the current roles and permissions from the database', async () => {
   const ctx = loggedIn();
   const accessToken = ctx.accessToken();
 
   const auth = await ctx.service.authenticateAccessToken(accessToken);
   assert.equal(auth.userId, USER_ID);
-  assert.equal(auth.role, 'EMPLOYEE');
   assert.equal(auth.sessionId, SESSION_ID);
+  assert.deepEqual(auth.roles, ['EMPLOYEE']);
+  assert.ok(auth.permissions.includes('stock:read'));
+  assert.ok(!auth.permissions.includes('stock:write'));
+  assert.equal(auth.customerId, null);
+  assert.equal(auth.role, undefined);
   assert.equal(ctx.usersRepository.findById.mock.calls[0].arguments[0], USER_ID);
   assert.equal(ctx.sessionsRepository.findById.mock.calls[0].arguments[0], SESSION_ID);
 
-  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ role: 'MANAGER' }));
-  assert.equal((await ctx.service.authenticateAccessToken(accessToken)).role, 'MANAGER');
+  ctx.usersRepository.findById.mock.mockImplementation(async () =>
+    storedUser({ roles: ['MANAGER', 'EMPLOYEE'] }),
+  );
+  const promoted = await ctx.service.authenticateAccessToken(accessToken);
+  assert.deepEqual(promoted.roles, ['MANAGER', 'EMPLOYEE']);
+  assert.ok(promoted.permissions.includes('stock:write'));
+
+  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ roles: [] }));
+  assert.deepEqual((await ctx.service.authenticateAccessToken(accessToken)).permissions, ['catalogue:read']);
 });
 
 /**
@@ -580,8 +641,16 @@ test('authenticateAccessToken returns the current role from the database', async
  */
 test('authenticateAccessToken distinguishes expired and invalid tokens', async () => {
   const ctx = loggedIn({ accessTokenTtlSeconds: -1 });
-  await rejectsWith(ctx.service.authenticateAccessToken(ctx.accessToken()), 401, AuthErrorCode.TOKEN_EXPIRED);
-  await rejectsWith(ctx.service.authenticateAccessToken('abc.def.ghi'), 401, AuthErrorCode.TOKEN_INVALID);
+  await rejectsWith(
+    ctx.service.authenticateAccessToken(ctx.accessToken()),
+    401,
+    AuthErrorCode.TOKEN_EXPIRED,
+  );
+  await rejectsWith(
+    ctx.service.authenticateAccessToken('abc.def.ghi'),
+    401,
+    AuthErrorCode.TOKEN_INVALID,
+  );
   // Invalid tokens never reach the database.
   assert.equal(ctx.usersRepository.findById.mock.callCount(), 0);
 });
@@ -647,7 +716,8 @@ test('refresh rotates the refresh token and issues a working access token', asyn
   const refreshed = await ctx.service.refresh(refreshToken, REQUEST);
 
   assert.notEqual(refreshed.refreshToken, refreshToken);
-  const [currentHash, nextHash, now] = ctx.sessionsRepository.rotateRefreshToken.mock.calls[0].arguments;
+  const [currentHash, nextHash, now] =
+    ctx.sessionsRepository.rotateRefreshToken.mock.calls[0].arguments;
   assert.equal(currentHash, ctx.tokenService.hashOpaqueToken(refreshToken));
   assert.equal(nextHash, ctx.tokenService.hashOpaqueToken(refreshed.refreshToken));
   assert.equal(now.getTime(), START.getTime());
@@ -684,7 +754,11 @@ test('refresh revokes the session when a rotated token is reused', async () => {
   const revoked = storedSession({ revokedAt: START });
   ctx.sessionsRepository.findByRotatedHash.mock.mockImplementation(async () => revoked);
   programSessions(ctx, [revoked]);
-  await rejectsWith(ctx.service.refresh(refreshed.refreshToken), 401, AuthErrorCode.REFRESH_INVALID);
+  await rejectsWith(
+    ctx.service.refresh(refreshed.refreshToken),
+    401,
+    AuthErrorCode.REFRESH_INVALID,
+  );
   await rejectsWith(
     ctx.service.authenticateAccessToken(refreshed.accessToken),
     401,
@@ -728,7 +802,9 @@ test('refresh rejects missing, unknown and expired tokens', async () => {
 test('refresh rejects sessions of disabled users', async () => {
   const ctx = loggedIn();
   rotationSucceeds(ctx);
-  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ status: 'disabled' }));
+  ctx.usersRepository.findById.mock.mockImplementation(async () =>
+    storedUser({ status: 'disabled' }),
+  );
 
   await rejectsWith(
     ctx.service.refresh(ctx.tokenService.generateOpaqueToken()),
@@ -762,7 +838,11 @@ test('logout revokes only the current session', async () => {
     storedSession({ revokedAt: START }),
     storedSession({ _id: OTHER_SESSION_ID }),
   ]);
-  await rejectsWith(ctx.service.authenticateAccessToken(accessA), 401, AuthErrorCode.SESSION_REVOKED);
+  await rejectsWith(
+    ctx.service.authenticateAccessToken(accessA),
+    401,
+    AuthErrorCode.SESSION_REVOKED,
+  );
   await rejectsWith(
     ctx.service.refresh(ctx.tokenService.generateOpaqueToken()),
     401,
@@ -785,12 +865,19 @@ test('logoutAll revokes every session and increments tokenVersion', async () => 
   await ctx.service.logoutAll(await ctx.service.authenticateAccessToken(tokens[0]));
 
   assert.deepEqual(ctx.usersRepository.incrementTokenVersion.mock.calls[0].arguments, [USER_ID]);
-  assert.deepEqual(ctx.sessionsRepository.revokeAllForUser.mock.calls[0].arguments, [USER_ID, START]);
+  assert.deepEqual(ctx.sessionsRepository.revokeAllForUser.mock.calls[0].arguments, [
+    USER_ID,
+    START,
+  ]);
 
   // Next step: the user now has tokenVersion 1 and every session is revoked.
   ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ tokenVersion: 1 }));
   for (const accessToken of tokens) {
-    await rejectsWith(ctx.service.authenticateAccessToken(accessToken), 401, AuthErrorCode.SESSION_REVOKED);
+    await rejectsWith(
+      ctx.service.authenticateAccessToken(accessToken),
+      401,
+      AuthErrorCode.SESSION_REVOKED,
+    );
     await rejectsWith(
       ctx.service.refresh(ctx.tokenService.generateOpaqueToken()),
       401,
@@ -824,7 +911,9 @@ test('requestPasswordReset emails a single-use link and stores only the token ha
   assert.ok(!email.text.includes('${'));
 
   const token = tokenFromLastEmail(ctx.emailService);
-  assert.deepEqual(ctx.resetTokensRepository.invalidateActiveForUser.mock.calls[0].arguments, [USER_ID]);
+  assert.deepEqual(ctx.resetTokensRepository.invalidateActiveForUser.mock.calls[0].arguments, [
+    USER_ID,
+  ]);
   const record = ctx.resetTokensRepository.create.mock.calls[0].arguments[0];
   assert.equal(record.tokenHash, ctx.tokenService.hashOpaqueToken(token));
   assert.notEqual(record.tokenHash, token);
@@ -896,11 +985,18 @@ test('resetPassword changes the password and revokes every session', async () =>
   assert.deepEqual(options, { revokeTokens: true }); // tokenVersion is incremented
   assert.equal(await passwordHasher.verify(newHash, NEW_PASSWORD), true);
   assert.equal(await passwordHasher.verify(newHash, PASSWORD), false);
-  assert.deepEqual(ctx.sessionsRepository.revokeAllForUser.mock.calls[0].arguments, [USER_ID, START]);
+  assert.deepEqual(ctx.sessionsRepository.revokeAllForUser.mock.calls[0].arguments, [
+    USER_ID,
+    START,
+  ]);
 
   // Next step: the stored user has the new hash and tokenVersion 1.
   ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ tokenVersion: 1 }));
-  await rejectsWith(ctx.service.authenticateAccessToken(ctx.accessToken()), 401, AuthErrorCode.SESSION_REVOKED);
+  await rejectsWith(
+    ctx.service.authenticateAccessToken(ctx.accessToken()),
+    401,
+    AuthErrorCode.SESSION_REVOKED,
+  );
   ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () =>
     storedUser({ passwordHash: newHash, tokenVersion: 1 }),
   );
@@ -997,10 +1093,15 @@ test('resetPassword rejects tokens of accounts that are no longer active', async
     tokenHash,
     userId: USER_ID,
   }));
-  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ status: 'disabled' }));
+  ctx.usersRepository.findById.mock.mockImplementation(async () =>
+    storedUser({ status: 'disabled' }),
+  );
 
   await rejectsWith(
-    ctx.service.resetPassword({ token: ctx.tokenService.generateOpaqueToken(), newPassword: NEW_PASSWORD }),
+    ctx.service.resetPassword({
+      token: ctx.tokenService.generateOpaqueToken(),
+      newPassword: NEW_PASSWORD,
+    }),
     400,
     AuthErrorCode.RESET_TOKEN_INVALID,
   );
@@ -1021,7 +1122,11 @@ test('changePassword requires the current password and enforces the policy', asy
   const auth = await ctx.service.authenticateAccessToken(ctx.accessToken());
 
   await rejectsWith(
-    ctx.service.changePassword({ ...auth, currentPassword: WRONG_PASSWORD, newPassword: NEW_PASSWORD }),
+    ctx.service.changePassword({
+      ...auth,
+      currentPassword: WRONG_PASSWORD,
+      newPassword: NEW_PASSWORD,
+    }),
     400,
     AuthErrorCode.CURRENT_PASSWORD_INCORRECT,
   );
@@ -1046,7 +1151,11 @@ test('changePassword keeps the current session and revokes the others', async ()
   const other = ctx.accessToken({ sessionId: OTHER_SESSION_ID });
   const auth = await ctx.service.authenticateAccessToken(current);
 
-  await ctx.service.changePassword({ ...auth, currentPassword: PASSWORD, newPassword: NEW_PASSWORD });
+  await ctx.service.changePassword({
+    ...auth,
+    currentPassword: PASSWORD,
+    newPassword: NEW_PASSWORD,
+  });
 
   const [userId, newHash] = ctx.usersRepository.setPasswordHash.mock.calls[0].arguments;
   assert.equal(userId, USER_ID);
@@ -1058,11 +1167,51 @@ test('changePassword keeps the current session and revokes the others', async ()
   ]);
 
   // Next step: only the other session is revoked and the stored hash is the new one.
-  programSessions(ctx, [storedSession(), storedSession({ _id: OTHER_SESSION_ID, revokedAt: START })]);
+  programSessions(ctx, [
+    storedSession(),
+    storedSession({ _id: OTHER_SESSION_ID, revokedAt: START }),
+  ]);
   await ctx.service.authenticateAccessToken(current);
   await rejectsWith(ctx.service.authenticateAccessToken(other), 401, AuthErrorCode.SESSION_REVOKED);
   ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () =>
     storedUser({ passwordHash: newHash }),
   );
   await ctx.service.login({ email: 'user@laprizza.pt', password: NEW_PASSWORD });
+});
+
+/* ===================================================================== */
+/* getCurrentUser (GET /auth/me)                                         */
+/* ===================================================================== */
+
+/**
+ * Unit test (AA05): the current user is read from the database and returned without secrets.
+ */
+test('getCurrentUser returns the session DTO read from the database', async () => {
+  const ctx = createAuthTestContext();
+  ctx.usersRepository.findById.mock.mockImplementation(async () =>
+    storedUser({ roles: ['CUSTOMER'], customerId: '65231abcd345678901234567' }),
+  );
+
+  const me = await ctx.service.getCurrentUser(USER_ID);
+
+  assert.deepEqual(me, {
+    id: USER_ID,
+    email: 'user@laprizza.pt',
+    status: 'active',
+    roles: ['CUSTOMER'],
+    permissions: ['catalogue:read', 'customers:read:own'],
+    customerId: '65231abcd345678901234567',
+  });
+  assert.equal(ctx.usersRepository.findById.mock.calls[0].arguments[0], USER_ID);
+});
+
+/**
+ * Unit test (AA05): a missing, inactive or disabled account is no longer authenticated (401, never 403).
+ */
+test('getCurrentUser refuses missing, inactive or disabled accounts with 401 SESSION_REVOKED', async () => {
+  const ctx = createAuthTestContext();
+  for (const user of [null, storedUser({ status: 'inactive' }), storedUser({ status: 'disabled' })]) {
+    ctx.usersRepository.findById.mock.mockImplementation(async () => user);
+    await rejectsWith(ctx.service.getCurrentUser(USER_ID), 401, AuthErrorCode.SESSION_REVOKED);
+  }
 });

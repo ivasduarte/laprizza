@@ -7,6 +7,7 @@ import {
   getCustomerById,
   updateCustomer,
   listCustomers,
+  getOwnCustomer,
 } from '../../src/application/customers/customers.service.js';
 
 const CUSTOMER_ID = 'c0c0c0000000000000000001';
@@ -264,4 +265,45 @@ test('createCustomer and updateCustomer turn an address mismatch into a 400 AppE
     (err) => err instanceof AppError && err.status === 400,
   );
   assert.equal(customersRepository.update.mock.callCount(), 0);
+});
+
+/**
+ * Unit test (AA05): getOwnCustomer only reads the customer linked to the session.
+ */
+test('getOwnCustomer reads only the customer linked to the session', async () => {
+  const stored = { _id: CUSTOMER_ID, name: 'Own', email: 'o@o.pt', phoneNumber: '912345678', address: {} };
+  const customersRepository = {
+    findById: mock.fn(async (id) => (id === CUSTOMER_ID ? stored : undefined)),
+  };
+
+  const own = await getOwnCustomer(
+    { customerId: CUSTOMER_ID, permissions: ['catalogue:read', 'customers:read:own'] },
+    customersRepository,
+  );
+
+  assert.equal(own.name, 'Own');
+  assert.deepEqual(
+    customersRepository.findById.mock.calls.map((c) => c.arguments[0]),
+    [CUSTOMER_ID],
+  );
+});
+
+/**
+ * Unit test (AA05): without a linked customer (or without customers:read:own) -> 404, no query.
+ */
+test('getOwnCustomer answers 404 CUSTOMER_PROFILE_NOT_FOUND without a linked customer', async () => {
+  const customersRepository = { findById: mock.fn() };
+
+  for (const principal of [
+    { customerId: null, permissions: ['customers:read:own'] },
+    { customerId: CUSTOMER_ID, permissions: ['catalogue:read'] },
+    undefined,
+  ]) {
+    await assert.rejects(getOwnCustomer(principal, customersRepository), (err) => {
+      assert.equal(err.status, 404);
+      assert.equal(err.code, 'CUSTOMER_PROFILE_NOT_FOUND');
+      return true;
+    });
+  }
+  assert.equal(customersRepository.findById.mock.callCount(), 0);
 });

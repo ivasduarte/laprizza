@@ -2,10 +2,10 @@ import Joi from 'joi';
 import * as controller from './customers.controller.js';
 
 import { Router } from 'express';
-import { Roles } from '../../domain/users/users.domain.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
 
 /**
  * Factory function that creates and configures the Express router for customer management endpoints.
@@ -61,15 +61,17 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
     next();
   };
 
-  router.get('/', verifyToken, requireRole([Roles.MANAGER]), validateListQuery, (req, res, next) =>
-    controller.list(req, res, next, customersRepository),
+  router.get(
+    '/',
+    requirePermission(Permission.CUSTOMERS_READ),
+    validateListQuery,
+    (req, res, next) => controller.list(req, res, next, customersRepository),
   );
 
   // Create a new customer
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    requirePermission(Permission.CUSTOMERS_WRITE),
     async (req, res, next) => {
       try {
         const { error, value } = createCustomerSchema.validate(req.body, {
@@ -130,16 +132,19 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
     next();
   };
 
+  router.get('/me', requirePermission(Permission.CUSTOMERS_READ_OWN), (req, res, next) =>
+    controller.getMe(req, res, next, customersRepository),
+  );
+
   // Check by ID (Manager only)
-  router.get('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.get('/:id', requirePermission(Permission.CUSTOMERS_READ), validateId, (req, res, next) =>
     controller.getById(req, res, next, customersRepository),
   );
 
   // Change role, password, or disable (Manager only)
   router.patch(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    requirePermission(Permission.CUSTOMERS_WRITE),
     validateId,
     async (req, res, next) => {
       try {

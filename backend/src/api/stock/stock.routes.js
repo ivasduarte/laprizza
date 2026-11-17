@@ -1,14 +1,20 @@
 import { Router } from 'express';
 import * as controller from './stock.controller.js';
 import Joi from 'joi';
-import { Roles } from '../../domain/users/users.domain.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
 
 export default function stockRouterFactory(repos) {
   const router = Router();
-  const allowedRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+  
+  const canRead = requirePermission(Permission.STOCK_READ);
+  const canWrite = requirePermission(Permission.STOCK_WRITE);
+
+  const canReadInactive = requirePermission(Permission.STOCK_READ_INACTIVE);
+  const inactiveNeedsPermission = (req, res, next) =>
+    req.validatedQuery?.includeInactive ? canReadInactive(req, res, next) : next();
 
   const objectIdSchema = Joi.string().hex().length(24).message({
     'string.hex': 'Invalid ID format.',
@@ -36,31 +42,30 @@ export default function stockRouterFactory(repos) {
 
   const listStockQuerySchema = Joi.object({
     search: Joi.string().trim().max(100).allow('').optional(),
+    includeInactive: Joi.boolean().default(false),
   });
 
   const validateListQuery = (req, res, next) => {
     const { error, value } = listStockQuerySchema.validate(
       { ...req.query },
-      { allowUnknown: true, stripUnkown: true },
+      { allowUnknown: true, stripUnknown: true },
     );
     if (error) {
       return next(new AppError('Validation failed.', 400, joiDetails(error)));
     }
-    Object.keys(req.query).forEach((key) => delete req.query[key]);
-    Object.assign(req.query, value);
+    req.validatedQuery = value;
     next();
   };
 
-  router.get('/', verifyToken, requireRole(allowedRoles), validateListQuery, (req, res, next) =>
+  router.get('/', canRead, validateListQuery, inactiveNeedsPermission, (req, res, next) =>
     controller.list(req, res, next, repos),
   );
-  router.get('/:productId', verifyToken, requireRole(allowedRoles), validateId, (req, res, next) =>
+  router.get('/:productId', canRead, validateId, (req, res, next) =>
     controller.getByProductId(req, res, next, repos),
   );
   router.patch(
     '/:productId',
-    verifyToken,
-    requireRole(allowedRoles),
+    canWrite,
     validateId,
     async (req, res, next) => {
       try {

@@ -2,7 +2,15 @@ import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import * as argon2 from 'argon2';
 import { AuthErrorCode } from '../../src/application/auth/auth-errors.js';
-import { listUsers, getUserById, updateUser, toUserDto } from '../../src/application/users/users.service.js';
+import {
+  listUsers,
+  getUserById,
+  updateUser,
+  toUserDto,
+  addRole,
+  removeRole,
+} from '../../src/application/users/users.service.js';
+import { permissionsFor } from '../../src/domain/auth/permissions.domain.js';
 
 const PASSWORD = 'StrongPassword123!';
 const USER_ID = 'abcdef000000000000000001';
@@ -11,7 +19,7 @@ const USER_ID = 'abcdef000000000000000001';
 const storedUser = (data = {}) => ({
   _id: USER_ID,
   email: 'user@laprizza.pt',
-  role: 'EMPLOYEE',
+  roler: ['EMPLOYEE'],
   status: 'active',
   passwordHash: '$argon2id$stored',
   failedLoginCount: 0,
@@ -26,6 +34,15 @@ function createUsersRepository(user = storedUser()) {
     listUsers: mock.fn(async () => [user]),
     findById: mock.fn(async (id) => (String(id) === String(user._id) ? user : undefined)),
     update: mock.fn(async (_id, data) => ({ ...user, ...data })),
+    addRole: mock.fn(async (_id, role) => ({
+      ...user,
+      roles: [...new Set([...(user.roles ?? []), role])],
+    })),
+    removeRole: mock.fn(async (_id, role, { clearCustomerId = false } = {}) => ({
+      ...user,
+      roles: (user.roles ?? []).filter((r) => r !== role),
+      ...(clearCustomerId ? { customerId: null } : {}),
+    })),
   };
 }
 
@@ -40,7 +57,7 @@ test('toUserDto hides the password hash and derives isActive from status', () =>
   const dto = toUserDto({
     _id: 'u1',
     email: 'a@b.pt',
-    role: 'EMPLOYEE',
+    roles: ['EMPLOYEE'],
     status: 'disabled',
     passwordHash: '$argon2id$secret',
     tokenVersion: 3,
@@ -52,6 +69,9 @@ test('toUserDto hides the password hash and derives isActive from status', () =>
   assert.equal(dto.failedLoginCount, undefined);
   assert.equal(dto.status, 'disabled');
   assert.equal(dto.isActive, false);
+  assert.deepEqual(dto.roles, ['EMPLOYEE']);
+  assert.equal(dto.role, undefined);
+  assert.deepEqual(toUserDto({ _id: 'u3', status: 'active' }).roles, []);
   assert.equal(toUserDto({ _id: 'u2', status: 'active' }).isActive, true);
 });
 
@@ -60,7 +80,7 @@ test('toUserDto hides the password hash and derives isActive from status', () =>
  */
 test('listUsers returns array of user DTOs', async () => {
   const usersRepository = createUsersRepository(
-    storedUser({ email: 'list@laprizza.pt', role: 'CUSTOMER' }),
+    storedUser({ email: 'list@laprizza.pt', roles: ['CUSTOMER'] }),
   );
   const users = await listUsers(usersRepository);
   assert.equal(users.length, 1);
@@ -116,31 +136,119 @@ test('updateUser hashes a new password, resets lockout and revokes sessions', as
   assert.equal(patch.tokenVersion, 1);
 });
 
+const MANAGER_ACTOR = {
+  userId: 'abcdef000000000000000099',
+  permissions: permissionsFor(['MANAGER']),
+};
+const EMPLOYEE_ASSIGNER = {
+  userId: 'abcdef000000000000000098',
+  permissions: ['users:read', 'roles:assign:employee'],
+};
+
+const rejectsWithCode = (promise, status, code) =>
+  assert.rejects(promise, (err) => {
+    assert.equal(err.status, status);
+    assert.equal(err.code, code);
+    return true;
+  });
+
 /**
- * Unit test: a role change does not revoke sessions (the role is read from the database on each request).
+ * Unit test (AA05): roles no longer change through updateUser.
  */
-test('updateUser changes the role without revoking sessions', async () => {
+test('updateUser ignores role fields', async () => {
   const usersRepository = createUsersRepository();
-  const updated = await updateUser(USER_ID, { role: 'MANAGER' }, usersRepository);
-  assert.equal(updated.role, 'MANAGER');
-  assert.equal(savedPatch(usersRepository).tokenVersion, undefined);
+  await updateUser(
+    USER_ID,
+    { role: 'MANAGER', roles: ['MANAGER'], isActive: true },
+    usersRepository,
+  );
+  assert.deepEqual(savedPatch(usersRepository), { status: 'active' });
 });
 
 /**
- * Unit test: customerId is cleared when the role stops being CUSTOMER.
+ * Unit test (AA05): an actor adds a role it may assign; sessions are not revoked
+ * (roles are read from the database on every request).
  */
-test('updateUser clears customerId when role changes from CUSTOMER to another role', async () => {
+test('addRole adds an assignable role without revoking sessions', async () => {
+  const usersRepository = createUsersRepository(storedUser({ roles: [] }));
+
+  const updated = await addRole(EMPLOYEE_ASSIGNER, USER_ID, 'EMPLOYEE', usersRepository);
+
+  assert.deepEqual(updated.roles, ['EMPLOYEE']);
+  assert.deepEqual(usersRepository.addRole.mock.calls[0].arguments, [USER_ID, 'EMPLOYEE']);
+  assert.equal(usersRepository.update.mock.callCount(), 0);
+});
+
+test('addRole refuses roles the actor cannot assign', async () => {
+  const usersRepository = createUsersRepository(storedUser({ roles: ['EMPLOYEE'] }));
+
+  await assert.rejects(addRole(EMPLOYEE_ASSIGNER, USER_ID, 'MANAGER', usersRepository), (err) => {
+    assert.equal(err.status, 403);
+    assert.equal(err.code, 'ROLE_NOT_ASSIGNABLE');
+    assert.deepEqual(err.details, { roles: ['MANAGER'] });
+    return true;
+  });
+  assert.equal(usersRepository.addRole.mock.callCount(), 0);
+});
+
+test('nobody adds or removes their own roles', async () => {
+  const usersRepository = createUsersRepository(storedUser({ roles: ['MANAGER'] }));
+  const self = { ...MANAGER_ACTOR, userId: USER_ID };
+
+  await rejectsWithCode(
+    addRole(self, USER_ID, 'EMPLOYEE', usersRepository),
+    403,
+    'SELF_ROLE_CHANGE',
+  );
+  await rejectsWithCode(
+    removeRole(self, USER_ID, 'MANAGER', usersRepository),
+    403,
+    'SELF_ROLE_CHANGE',
+  );
+  assert.equal(usersRepository.addRole.mock.callCount(), 0);
+  assert.equal(usersRepository.removeRole.mock.callCount(), 0);
+});
+
+test('removeRole of CUSTOMER also clears customerId', async () => {
   const usersRepository = createUsersRepository(
-    storedUser({
-      email: 'cliente@laprizza.pt',
-      role: 'CUSTOMER',
-      customerId: '65231abcd345678901234567',
-    }),
+    storedUser({ roles: ['CUSTOMER'], customerId: '65231abcd345678901234567' }),
   );
 
-  const updated = await updateUser(USER_ID, { role: 'EMPLOYEE' }, usersRepository);
+  const updated = await removeRole(MANAGER_ACTOR, USER_ID, 'CUSTOMER', usersRepository);
+
+  assert.deepEqual(updated.roles, []);
   assert.equal(updated.customerId, null);
-  assert.deepEqual(savedPatch(usersRepository), { role: 'EMPLOYEE', customerId: null });
+  assert.deepEqual(usersRepository.removeRole.mock.calls[0].arguments, [
+    USER_ID,
+    'CUSTOMER',
+    { clearCustomerId: true },
+  ]);
+});
+
+test('removeRole of another role keeps customerId', async () => {
+  const usersRepository = createUsersRepository(
+    storedUser({ roles: ['CUSTOMER', 'EMPLOYEE'], customerId: '65231abcd345678901234567' }),
+  );
+
+  await removeRole(EMPLOYEE_ASSIGNER, USER_ID, 'EMPLOYEE', usersRepository);
+
+  assert.deepEqual(usersRepository.removeRole.mock.calls[0].arguments[2], {
+    clearCustomerId: false,
+  });
+});
+
+test('addRole and removeRole return 404 for unknown users', async () => {
+  const usersRepository = createUsersRepository();
+  const unknown = 'abcdef000000000000000999';
+
+  await assert.rejects(
+    addRole(MANAGER_ACTOR, unknown, 'EMPLOYEE', usersRepository),
+    (e) => e.status === 404,
+  );
+  await assert.rejects(
+    removeRole(MANAGER_ACTOR, unknown, 'EMPLOYEE', usersRepository),
+    (e) => e.status === 404,
+  );
 });
 
 /**
@@ -162,7 +270,7 @@ test('updateUser rejects weak passwords', async () => {
 test('updateUser throws 404 for unknown users', async () => {
   const usersRepository = { findById: mock.fn(async () => undefined), update: mock.fn() };
   await assert.rejects(
-    updateUser('abcdef000000000000000999', { role: 'MANAGER' }, usersRepository),
+    updateUser('abcdef000000000000000999', { isActive: false }, usersRepository),
     (err) => err.status === 404,
   );
   assert.equal(usersRepository.update.mock.callCount(), 0);

@@ -4,14 +4,17 @@ import * as controller from './pizza-component-type.controller.js';
 import { Router } from 'express';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 
 export default function pizzaComponentTypesRouterFactory(
   pizzaComponentTypesRepository,
   productsRepository,
 ) {
   const router = Router();
+
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.PIZZAS_WRITE);
 
   const nameSchema = Joi.string().trim().required().messages({
     'string.base': 'Name must be a text.',
@@ -76,8 +79,7 @@ export default function pizzaComponentTypesRouterFactory(
 
   router.get(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canRead,
     async (req, res, next) => {
       try {
         const { error } = searchPizzaComponentTypeSchema.validate(req.query, {
@@ -97,24 +99,23 @@ export default function pizzaComponentTypesRouterFactory(
     (req, res, next) => controller.list(req, res, next, pizzaComponentTypesRepository),
   );
 
-  router.post('/', verifyToken, requireRole([Roles.MANAGER]), validateBody, (req, res, next) =>
+  router.post('/', canWrite, validateBody, (req, res, next) =>
     controller.create(req, res, next, pizzaComponentTypesRepository),
   );
 
-  router.get('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, pizzaComponentTypesRepository),
   );
 
   router.put(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     validateBody,
     (req, res, next) => controller.update(req, res, next, pizzaComponentTypesRepository),
   );
 
-  router.delete('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.delete('/:id', canWrite, validateId, (req, res, next) =>
     controller.remove(req, res, next, pizzaComponentTypesRepository, productsRepository),
   );
 

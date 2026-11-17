@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import * as controller from './product-catalogue.controller.js';
 import Joi from 'joi';
-import { Roles } from '../../domain/users/users.domain.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
-import { requireRole, verifyToken } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
 
 export default function catalogueRouterFactory(repos) {
   const router = Router();
-  const allowedRoles = [Roles.CUSTOMER, Roles.MANAGER, Roles.EMPLOYEE];
+
+  const canRead = requirePermission(Permission.CATALOGUE_READ);
 
   const objectIdSchema = Joi.string().hex().length(24).messages({
     'string.hex': 'Invalid ID format.',
@@ -37,10 +38,10 @@ export default function catalogueRouterFactory(repos) {
     next();
   };
 
-  router.get('/', verifyToken, requireRole(allowedRoles), validateListQuery, (req, res, next) =>
+  router.get('/', canRead, validateListQuery, (req, res, next) =>
     controller.list(req, res, next, repos),
   );
-  router.get('/:id', verifyToken, requireRole(allowedRoles), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, repos),
   );
 

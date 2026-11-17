@@ -2,7 +2,8 @@ import Joi from 'joi';
 import * as controller from './users.controller.js';
 
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { Roles } from '../../domain/users/users.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
@@ -26,13 +27,17 @@ export default function usersRouterFactory(usersRepository) {
     password: Joi.string().required().messages({
       'any.required': 'Mandatory field.',
     }),
-    role: Joi.string()
-      .valid(...Object.values(Roles))
-      .required()
-      .messages({
-        'any.only': 'Invalid role. Must be Manager, Employee, or Customer',
-        'any.required': 'Mandatory field.',
-      }),
+    roles: Joi.array()
+      .items(
+        Joi.string()
+          .valid(...Object.values(Roles))
+          .messages({
+            'any.only': `Invalid role. Must be one of: ${Object.values(Roles).join(', ')}.`,
+          }),
+      )
+      .unique()
+      .default([])
+      .messages({ 'array.unique': 'Duplicate roles are not allowed.' }),
     customerId: Joi.string().hex().length(24).optional().messages({
       'string.hex': 'Invalid customerId format.',
     }),
@@ -43,15 +48,14 @@ export default function usersRouterFactory(usersRepository) {
     });
 
   // List user (Manager only)
-  router.get('/', verifyToken, requireRole([Roles.MANAGER]), (req, res, next) =>
+  router.get('/', requirePermission(Permission.USERS_READ), (req, res, next) =>
     controller.list(req, res, next, usersRepository),
   );
 
   // Create a new user (Manager only)
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    requirePermission(Permission.USERS_CREATE),
     async (req, res, next) => {
       try {
         const { error, value } = createUserSchema.validate(req.body, {
@@ -73,15 +77,12 @@ export default function usersRouterFactory(usersRepository) {
   );
 
   const updateUserSchema = Joi.object({
-    role: Joi.string()
-      .valid(...Object.values(Roles))
-      .optional(),
     password: Joi.string().optional(),
     isActive: Joi.boolean().optional(),
   })
     .min(1)
     .messages({
-      'object.min': 'You must provide at least one field to update (role, password, or isActive).',
+      'object.min': 'You must provide at least one field to update (password or isActive).',
     });
 
   const objectIdSchema = Joi.string().hex().length(24).required().messages({
@@ -103,16 +104,25 @@ export default function usersRouterFactory(usersRepository) {
     next();
   };
 
+  const roleParamSchema = Joi.string()
+    .valid(...Object.values(Roles))
+    .required();
+
+  const validateRoleParam = (req, _res, next) => {
+    const { error } = roleParamSchema.validate(req.params.role);
+    if (error) return next(new AppError('Invalid role.', 400));
+    next();
+  };
+
   // Check by ID (Manager only)
-  router.get('/:id', verifyToken, requireRole([Roles.MANAGER]), validateId, (req, res, next) =>
+  router.get('/:id', requirePermission(Permission.USERS_READ), validateId, (req, res, next) =>
     controller.getById(req, res, next, usersRepository),
   );
 
   // Change role, password, or disable (Manager only)
   router.patch(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    requirePermission(Permission.USERS_MANAGE),
     validateId,
     async (req, res, next) => {
       try {
@@ -127,6 +137,22 @@ export default function usersRouterFactory(usersRepository) {
       }
     },
     (req, res, next) => controller.update(req, res, next, usersRepository),
+  );
+
+  router.put(
+    '/:id/roles/:role',
+    requirePermission(Permission.USERS_READ),
+    validateId,
+    validateRoleParam,
+    (req, res, next) => controller.addRole(req, res, next, usersRepository),
+  );
+
+  router.delete(
+    '/:id/roles/:role',
+    requirePermission(Permission.USERS_READ),
+    validateId,
+    validateRoleParam,
+    (req, res, next) => controller.removeRole(req, res, next, usersRepository),
   );
 
   return router;

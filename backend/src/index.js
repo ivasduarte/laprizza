@@ -14,11 +14,12 @@ import { createAuthModule } from './api/auth/auth.module.js';
 import { passwordHasher } from './infrastructure/security/password-hasher.js';
 import { createMongooseHealthProbe } from './infrastructure/system/database-health.probe.js';
 import { loadVersionInfo } from './infrastructure/system/version-file.reader.js';
+import { createRateLimiter, passThrough } from './api/middleware/rate-limit.js';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import morgan from 'morgan';
+import { createRequestLogger } from './api/middleware/request-logger.js';
 import swaggerUi from 'swagger-ui-express';
 import pkg from '../package.json' with { type: 'json' };
 
@@ -91,6 +92,8 @@ export function loadConfig(env = process.env) {
       authMax: toInt(env.AUTH_RATE_LIMIT_MAX, 10),
       forgotWindowMs: toInt(env.FORGOT_RATE_LIMIT_WINDOW_MINUTES, 60) * 60_000,
       forgotMax: toInt(env.FORGOT_RATE_LIMIT_MAX, 3),
+      publicWindowMs: toInt(env.PUBLIC_RATE_LIMIT_WINDOW_MINUTES, 1) * 60_000,
+      publicMax: toInt(env.PUBLIC_RATE_LIMIT_MAX, 120),
     },
     cookie: {
       name: env.REFRESH_COOKIE_NAME ?? 'lp_rt',
@@ -155,14 +158,14 @@ export function createApp(config = loadConfig(), repos = {}) {
   app.set('trust proxy', config.trustProxy);
 
   if (config.nodeEnv !== 'test') {
-    app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
+    app.use(createRequestLogger(config.nodeEnv));
   }
   app.use(cors({ origin: config.corsOrigins, credentials: true, exposedHeaders: ['Retry-After'] }));
   app.use(express.json());
   app.use(cookieParser());
 
   const auth = createAuthModule(config, repos);
-  app.locals.authenticate = auth.authenticate; // used by verifyToken in every router
+  app.locals.authenticate = auth.authenticate; // used by requirePermission/requireAuthenticated
   app.locals.securityLogger = auth.securityLogger;
 
   const api = express.Router();
@@ -174,6 +177,17 @@ export function createApp(config = loadConfig(), repos = {}) {
       versionInfo: repos.versionInfo ?? loadVersionInfo(),
     }),
   );
+
+  const publicLimiter = config.rateLimit.enabled
+    ? createRateLimiter({
+        name: 'public',
+        windowMs: config.rateLimit.publicWindowMs,
+        limit: config.rateLimit.publicMax,
+        securityLogger: auth.securityLogger,
+        skip: (req) => Boolean(req.headers.authorization),
+      })
+    : passThrough;
+  api.use(['/catalogue', '/allergens'], publicLimiter);
 
   api.use('/auth', authRouterFactory(auth));
   api.use('/users', usersRouterFactory(repos.usersRepository));

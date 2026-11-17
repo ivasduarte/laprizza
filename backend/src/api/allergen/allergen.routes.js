@@ -2,15 +2,16 @@ import Joi from 'joi';
 import * as controller from './allergen.controller.js';
 
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 
 export default function allergenRouterFactory(allergenRepository) {
   const router = Router();
 
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+  const canRead = requirePermission(Permission.CATALOGUE_READ);
+  const canWrite = requirePermission(Permission.ALLERGENS_WRITE);
 
   const allergenSchema = Joi.object({
     name: Joi.string().trim().min(1).required().messages({
@@ -69,36 +70,32 @@ export default function allergenRouterFactory(allergenRepository) {
 
   router.get(
     '/',
-    verifyToken,
-    requireRole(readRoles),
+    canRead,
     validate(searchSchema, 'query'),
     (req, res, next) => controller.list(req, res, next, allergenRepository),
   );
 
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validate(allergenSchema),
     (req, res, next) => controller.create(req, res, next, allergenRepository),
   );
 
-  router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, allergenRepository),
   );
 
   router.get(
     '/name/:name',
-    verifyToken,
-    requireRole(readRoles),
+    canRead,
     validate(nameParamSchema, 'params'),
     (req, res, next) => controller.getByName(req, res, next, allergenRepository),
   );
 
   router.put(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     validate(deactivateSchema),
     (req, res, next) => controller.update(req, res, next, allergenRepository),

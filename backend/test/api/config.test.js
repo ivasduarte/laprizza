@@ -27,6 +27,8 @@ test('loadConfig applies the AA01 defaults', () => {
   assert.equal(config.rateLimit.authWindowMs, 15 * 60 * 1000);
   assert.equal(config.rateLimit.forgotMax, 3);
   assert.equal(config.rateLimit.forgotWindowMs, 60 * 60 * 1000);
+  assert.equal(config.rateLimit.publicMax, 120);
+  assert.equal(config.rateLimit.publicWindowMs, 60 * 1000);
 
   assert.deepEqual(config.cookie, {
     name: 'lp_rt',

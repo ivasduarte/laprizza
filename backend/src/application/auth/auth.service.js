@@ -12,6 +12,7 @@ import { AuthErrorCode, authError, tooManyAttempts } from './auth-errors.js';
 import { assertPasswordPolicy } from './password-policy.js';
 import { buildPasswordResetEmail } from './password-reset-email.js';
 import { toUserDto } from '../users/users.service.js';
+import { permissionsFor } from '../../domain/auth/permissions.domain.js';
 
 /**
  * Registers a user (Manager, Sprint 1). Email is mandatory: it is the login identifier.
@@ -24,11 +25,11 @@ import { toUserDto } from '../users/users.service.js';
  * @throws {AppError} 400 (invalid data/policy) or 409 (duplicate email/username).
  */
 export async function registerUser(
-  { username, email, password, role, customerId },
+  { username, email, password, roles = [], customerId },
   usersRepository = defaultUsersRepository,
   passwordHasher = defaultPasswordHasher,
 ) {
-  if (customerId && role !== Roles.CUSTOMER) {
+  if (customerId && !roles.includes(Roles.CUSTOMER)) {
     throw new AppError('Only users with the CUSTOMER role can have an associated customerId.', 400);
   }
   const normalizedEmail = normalizeEmail(email);
@@ -42,7 +43,7 @@ export async function registerUser(
       username: username?.trim().toLowerCase(),
       email: normalizedEmail,
       passwordHash,
-      role,
+      roles,
       customerId,
       status: AccountStatus.ACTIVE,
       failedLoginCount: 0,
@@ -57,13 +58,14 @@ export async function registerUser(
 }
 
 /** Data of the authenticated user returned to the SPA (no secrets). */
-function toAuthenticatedUserDto(user, roles) {
+function toSessionUserDto(user, roles) {
   return {
     id: String(user._id ?? user.id),
     email: user.email,
-    role: user.role,
-    roles,
     status: user.status,
+    roles,
+    permissions: permissionsFor(roles),
+    customerId: user.customerId ? String(user.customerId) : null,
   };
 }
 
@@ -95,7 +97,7 @@ export function createAuthService({
   securityLogger,
   clock,
   config,
-  loadRoles = async (user) => [user.role],
+  loadRoles = async (user) => (Array.isArray(user.roles) ? [...user.roles] : []),
   defer = (task) => setImmediate(task),
 }) {
   const lockoutPolicy = { threshold: config.lockoutThreshold, stepsMs: config.lockoutStepsMs };
@@ -178,7 +180,7 @@ export function createAuthService({
       expiresIn: tokenService.accessTokenTtlSeconds,
       refreshToken,
       refreshTokenExpiresAt: expiresAt,
-      user: toAuthenticatedUserDto(user, roles),
+      user: toSessionUserDto(user, roles),
     };
   }
 
@@ -280,7 +282,7 @@ export function createAuthService({
       expiresIn: tokenService.accessTokenTtlSeconds,
       refreshToken: nextToken,
       refreshTokenExpiresAt: session.expiresAt,
-      user: toAuthenticatedUserDto(user, roles),
+      user: toSessionUserDto(user, roles),
     };
   }
 
@@ -312,10 +314,12 @@ export function createAuthService({
       String(session.userId) === String(user._id);
     if (!valid) throw authError(AuthErrorCode.SESSION_REVOKED, 401);
 
+    const roles = await loadRoles(user);
     return {
       userId: String(user._id),
-      role: user.role, // from the database, never from the client
-      roles: await loadRoles(user),
+      roles,
+      permissions: permissionsFor(roles),
+      customerId: user.customerId ? String(user.customerId) : null,
       sessionId: String(session._id),
     };
   }
@@ -428,6 +432,14 @@ export function createAuthService({
     securityLogger.log('PASSWORD_CHANGED', { userId, sessionId, ip: context.ip });
   }
 
+  async function getCurrentUser(userId) {
+    const user = await usersRepository.findById(userId);
+    if (!user || !evaluateAuthentication(user).allowed) {
+      throw authError(AuthErrorCode.SESSION_REVOKED, 401);
+    }
+    return toSessionUserDto(user, await loadRoles(user));
+  }
+
   return {
     establishSession,
     login,
@@ -438,5 +450,6 @@ export function createAuthService({
     requestPasswordReset,
     resetPassword,
     changePassword,
+    getCurrentUser,
   };
 }

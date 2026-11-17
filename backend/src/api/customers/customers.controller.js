@@ -56,6 +56,15 @@ export const getById = async (req, res, next, customersRepository) => {
   }
 };
 
+export const getMe = async (req, res, next, customersRepository) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.status(200).json(await customersService.getOwnCustomer(req.user, customersRepository));
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * Handles the request to update an existing customer.
  *

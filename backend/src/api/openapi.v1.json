@@ -137,6 +137,68 @@
         "deprecated": true
       }
     },
+    "/auth/me": {
+      "get": {
+        "summary": "Current user (roles and permissions are read from the database on every request)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The authenticated user. Never cached (Cache-Control: no-store).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session: TOKEN_MISSING, TOKEN_INVALID, TOKEN_EXPIRED or SESSION_REVOKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/auth/guest-permissions": {
+      "get": {
+        "summary": "Permissions of a visitor without a session (public)",
+        "responses": {
+          "200": {
+            "description": "Guest permissions (may be cached for 5 minutes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "permissions"
+                  ],
+                  "properties": {
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
     "/users": {
       "post": {
         "summary": "Create user (MANAGER only)",
@@ -579,6 +641,59 @@
           },
           "409": {
             "description": "Email or phone number already in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/customers/me": {
+      "get": {
+        "summary": "The authenticated customer's own record (the id comes from the session only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own customer record. Never cached (Cache-Control: no-store).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission customers:read:own (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No customer linked to this account (CUSTOMER_PROFILE_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5382,6 +5497,55 @@
                 }
               }
             }
+          }
+        }
+      },
+      "SessionUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "status",
+          "roles",
+          "permissions",
+          "customerId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "disabled"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "MANAGER",
+                "EMPLOYEE",
+                "CUSTOMER"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customerId": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

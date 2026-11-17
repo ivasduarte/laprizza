@@ -1,13 +1,19 @@
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import * as argon2 from 'argon2';
-import { createAuthenticate, verifyToken, requireRole } from '../../src/api/middleware/auth.middleware.js';
+import { createAuthenticate } from '../../src/api/middleware/auth.middleware.js';
 import { AuthErrorCode, authError } from '../../src/application/auth/auth-errors.js';
 import { createAuthService } from '../../src/application/auth/auth.service.js';
 import { createPasswordHasher } from '../../src/infrastructure/security/password-hasher.js';
 import { createTokenService } from '../../src/infrastructure/security/token-service.js';
 
-const AUTHENTICATED = { userId: 'u1', role: 'MANAGER', roles: ['MANAGER'], sessionId: 's1' };
+const AUTHENTICATED = {
+  userId: 'u1',
+  roles: ['MANAGER'],
+  permissions: ['catalogue:read', 'users:manage'],
+  customerId: null,
+  sessionId: 's1',
+};
 
 /** Mocked authService: 'good' is valid, 'expired' has expired, anything else is invalid. */
 function createAuthServiceMock() {
@@ -125,7 +131,7 @@ test('authenticate works with the real auth service', async () => {
   const user = {
     _id: USER_ID,
     email: 'manager@laprizza.pt',
-    role: 'MANAGER',
+    roles: ['MANAGER'],
     status: 'active',
     passwordHash: await passwordHasher.hash(PASSWORD),
     failedLoginCount: 0,
@@ -170,82 +176,9 @@ test('authenticate works with the real auth service', async () => {
   await authenticate(req, {}, next);
 
   assertNextWithoutError(next);
-  assert.equal(req.user.role, 'MANAGER');
+  assert.deepEqual(req.user.roles, ['MANAGER']);
+  assert.ok(req.user.permissions.includes('users:manage'));
+  assert.equal(req.user.role, undefined);
   assert.equal(req.user.userId, USER_ID);
   assert.equal(usersRepository.findById.mock.calls[0].arguments[0], USER_ID);
-});
-
-/**
- * Unit test: verifyToken delegates to the middleware configured in app.locals.
- */
-test('verifyToken delegates to app.locals.authenticate', async () => {
-  const authenticate = mock.fn(
-    createAuthenticate({
-      authService: createAuthServiceMock(),
-      securityLogger: createSecurityLoggerMock(),
-    }),
-  );
-  const req = createRequest('Bearer good', { app: { locals: { authenticate } } });
-  const res = {};
-  const next = mock.fn();
-
-  await verifyToken(req, res, next);
-
-  assert.equal(authenticate.mock.callCount(), 1);
-  assert.deepEqual(authenticate.mock.calls[0].arguments, [req, res, next]);
-  assertNextWithoutError(next);
-  assert.deepEqual(req.user, AUTHENTICATED);
-});
-
-/**
- * Unit test: without configuration it fails closed (500 error, never lets the request through).
- */
-test('verifyToken fails closed when the middleware is not configured', () => {
-  const next = mock.fn();
-  verifyToken(createRequest('Bearer good'), {}, next);
-  assert.ok(lastError(next) instanceof Error);
-  assert.equal(lastError(next).status, undefined); // -> 500 in the errorHandler
-});
-
-/**
- * Unit test: requireRole lets authorized roles through.
- */
-test('requireRole allows authorized roles', () => {
-  const next = mock.fn();
-  requireRole(['MANAGER', 'EMPLOYEE'])({ user: { role: 'MANAGER' } }, {}, next);
-  assertNextWithoutError(next);
-});
-
-/**
- * Unit test (AA05): no permission -> 403 FORBIDDEN (distinct from 401) and logged.
- */
-test('requireRole blocks unauthorized roles with 403 and logs it', () => {
-  const logger = createSecurityLoggerMock();
-  const req = {
-    user: { userId: 'u9', role: 'CUSTOMER' },
-    ip: '127.0.0.1',
-    method: 'GET',
-    baseUrl: '/api/v2/users',
-    path: '/',
-    app: { locals: { securityLogger: logger } },
-  };
-  const next = mock.fn();
-
-  requireRole(['MANAGER', 'EMPLOYEE'])(req, {}, next);
-
-  assert.equal(lastError(next).status, 403);
-  assert.equal(lastError(next).code, AuthErrorCode.FORBIDDEN);
-  const [event, details] = loggedCalls(logger)[0];
-  assert.equal(event, 'ACCESS_DENIED');
-  assert.equal(details.reason, 'INSUFFICIENT_ROLE');
-  assert.equal(details.userId, 'u9');
-});
-
-/**
- * Unit test: without req.user (middleware order error) it is also 403.
- */
-test('requireRole blocks requests without an authenticated user', () => {
-  const next = mock.fn();
-  requireRole(['MANAGER'])({}, {}, next);
-  assert.equal(lastError(next).status, 403);
 });

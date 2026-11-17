@@ -1,3 +1,5 @@
+import { GUEST_PERMISSIONS } from "../../domain/auth/permissions.domain.js";
+
 /**
  * Auth controller: HTTP <-> use cases. Manages the refresh token cookie;
  * the refresh token never goes in the response body.
@@ -93,6 +95,19 @@ export function createAuthController({ authService, config }) {
       } catch (err) {
         next(err);
       }
+    },
+
+    async me(req, res, next) {
+      try {
+        res.status(200).json(await authService.getCurrentUser(req.user.userId));
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    guestPermissions(_req, res) {
+      res.set('Cache-Control', 'public, max-age=300');
+      res.status(200).json({ permissions: [...GUEST_PERMISSIONS] });
     },
   };
 }

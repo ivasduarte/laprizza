@@ -12,8 +12,8 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'customer@laprizza.pt', role: 'CUSTOMER' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'customer@laprizza.pt', roles: ['CUSTOMER'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -105,14 +105,21 @@ function request(port, method, path, { token, body } = {}) {
   });
 }
 
-test('API /catalogue RBAC: 401 without Token', async (t) => {
+test('API /catalogue is public: Guest browses it, an invalid token is still 401', async (t) => {
   const { server, port } = await setupTestServer();
   t.after(() => {
     server.close();
     server.closeAllConnections();
   });
 
-  assert.equal((await request(port, 'GET', '/catalogue')).status, 401);
+  // Guest (no Authorization header): Table 1 lets anyone browse the catalogue
+  assert.equal((await request(port, 'GET', '/catalogue')).status, 200);
+  assert.notEqual((await request(port, 'GET', `/catalogue/${'a'.repeat(24)}`)).status, 401);
+
+  // A token that is sent must be valid: it is never downgraded to Guest
+  const forged = await request(port, 'GET', '/catalogue', { token: 'not-a-jwt' });
+  assert.equal(forged.status, 401);
+  assert.equal((await forged.json()).error.code, 'TOKEN_INVALID');
 });
 
 test('API /catalogue accepts CUSTOMER and MANAGER roles', async (t) => {

@@ -12,13 +12,26 @@ const SESSION_RESULT = {
   expiresIn: 3600,
   refreshToken: 'opaque-refresh-token',
   refreshTokenExpiresAt: EXPIRES_AT,
-  user: { id: 'u1', email: 'a@b.pt', role: 'EMPLOYEE', roles: ['EMPLOYEE'], status: 'active' },
+  user: {
+    id: 'u1',
+    email: 'a@b.pt',
+    status: 'active',
+    roles: ['EMPLOYEE'],
+    permissions: [
+      'catalogue:read',
+      'kitchen:read',
+      'products:read',
+      'resources:read',
+      'stock:read',
+    ],
+    customerId: null,
+  },
 };
 
 /** Mocked Express response: every method is a chainable mock. */
 function createResponseMock() {
   const res = {};
-  for (const method of ['cookie', 'clearCookie', 'status', 'json', 'end']) {
+  for (const method of ['cookie', 'clearCookie', 'status', 'json', 'end', 'set']) {
     res[method] = mock.fn(() => res);
   }
   return res;
@@ -35,13 +48,23 @@ function sent(res) {
       value,
       options,
     })),
-    cleared: res.clearCookie.mock.calls.map(({ arguments: [name, options] }) => ({ name, options })),
+    cleared: res.clearCookie.mock.calls.map(({ arguments: [name, options] }) => ({
+      name,
+      options,
+    })),
   };
 }
 
 /** Minimal request. */
 function createRequest({ body = {}, cookies = {}, user, baseUrl } = {}) {
-  return { body, cookies, user, baseUrl, ip: '127.0.0.1', get: (h) => (h === 'user-agent' ? 'node-test' : undefined) };
+  return {
+    body,
+    cookies,
+    user,
+    baseUrl,
+    ip: '127.0.0.1',
+    get: (h) => (h === 'user-agent' ? 'node-test' : undefined),
+  };
 }
 
 /** Mocked authService: each use case resolves with a successful result by default. */
@@ -54,6 +77,7 @@ function createAuthServiceMock() {
     resetPassword: mock.fn(async () => {}),
     changePassword: mock.fn(async () => {}),
     requestPasswordReset: mock.fn(),
+    getCurrentUser: mock.fn(async () => SESSION_RESULT.user),
   };
 }
 
@@ -73,7 +97,10 @@ test('login returns the access token and sets the refresh cookie securely', asyn
   const authService = createAuthServiceMock();
   const controller = createAuthController({ authService, config: CONFIG });
 
-  const { res } = await run(controller.login, createRequest({ body: { email: 'a@b.pt', password: 'x' } }));
+  const { res } = await run(
+    controller.login,
+    createRequest({ body: { email: 'a@b.pt', password: 'x' } }),
+  );
 
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body, {
@@ -88,7 +115,13 @@ test('login returns the access token and sets the refresh cookie securely', asyn
     {
       name: 'lp_rt',
       value: 'opaque-refresh-token',
-      options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v2/auth', expires: EXPIRES_AT },
+      options: {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/api/v2/auth',
+        expires: EXPIRES_AT,
+      },
     },
   ]);
   assert.equal(authService.login.mock.callCount(), 1);
@@ -158,7 +191,10 @@ test('refresh clears the cookie when the session is invalid', async () => {
 
   assert.equal(error, failure);
   assert.deepEqual(res.cleared, [
-    { name: 'lp_rt', options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v2/auth' } },
+    {
+      name: 'lp_rt',
+      options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/api/v2/auth' },
+    },
   ]);
 });
 
@@ -187,12 +223,17 @@ test('forgotPassword always answers 202 with the same body', async () => {
   const authService = createAuthServiceMock();
   const controller = createAuthController({ authService, config: CONFIG });
 
-  const { res } = await run(controller.forgotPassword, createRequest({ body: { email: 'x@y.pt' } }));
+  const { res } = await run(
+    controller.forgotPassword,
+    createRequest({ body: { email: 'x@y.pt' } }),
+  );
 
   assert.equal(res.statusCode, 202);
   assert.deepEqual(res.body, { code: 'PASSWORD_RESET_REQUESTED' });
   assert.equal(authService.requestPasswordReset.mock.callCount(), 1);
-  assert.deepEqual(authService.requestPasswordReset.mock.calls[0].arguments[0], { email: 'x@y.pt' });
+  assert.deepEqual(authService.requestPasswordReset.mock.calls[0].arguments[0], {
+    email: 'x@y.pt',
+  });
 });
 
 /**
@@ -220,7 +261,54 @@ test('changePassword takes the user and session from req.user, not from the body
 test('resetPassword answers 204', async () => {
   const authService = createAuthServiceMock();
   const controller = createAuthController({ authService, config: CONFIG });
-  const { res } = await run(controller.resetPassword, createRequest({ body: { token: 't', newPassword: 'p' } }));
+  const { res } = await run(
+    controller.resetPassword,
+    createRequest({ body: { token: 't', newPassword: 'p' } }),
+  );
   assert.equal(res.statusCode, 204);
-  assert.deepEqual(authService.resetPassword.mock.calls[0].arguments[0], { token: 't', newPassword: 'p' });
+  assert.deepEqual(authService.resetPassword.mock.calls[0].arguments[0], {
+    token: 't',
+    newPassword: 'p',
+  });
+});
+
+/**
+ * Unit test (AA05): GET /auth/me answers 200 with the current user of the session.
+ */
+test('me answers 200 with the current user of the session', async () => {
+  const authService = createAuthServiceMock();
+  const controller = createAuthController({ authService, config: CONFIG });
+
+  const { res } = await run(
+    controller.me,
+    createRequest({ user: { userId: 'u1', sessionId: 's1' } }),
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, SESSION_RESULT.user);
+  assert.equal(authService.getCurrentUser.mock.calls[0].arguments[0], 'u1');
+});
+
+test('me forwards a revoked session as an error (401)', async () => {
+  const authService = createAuthServiceMock();
+  authService.getCurrentUser.mock.mockImplementation(async () => {
+    throw authError(AuthErrorCode.SESSION_REVOKED, 401);
+  });
+  const controller = createAuthController({ authService, config: CONFIG });
+
+  const { error } = await run(controller.me, createRequest({ user: { userId: 'u1' } }));
+
+  assert.equal(error.status, 401);
+  assert.equal(error.code, AuthErrorCode.SESSION_REVOKED);
+});
+
+test('guestPermissions answers the Guest permissions and may be cached', async () => {
+  const controller = createAuthController({ authService: createAuthServiceMock(), config: CONFIG });
+  const res = createResponseMock();
+
+  controller.guestPermissions(createRequest(), res);
+
+  assert.deepEqual(res.set.mock.calls[0].arguments, ['Cache-Control', 'public, max-age=300']);
+  assert.equal(res.status.mock.calls[0].arguments[0], 200);
+  assert.deepEqual(res.json.mock.calls[0].arguments[0], { permissions: ['catalogue:read'] });
 });

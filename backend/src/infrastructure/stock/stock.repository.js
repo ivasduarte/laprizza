@@ -21,9 +21,9 @@ export async function findByProductId(productId) {
   return Stock.findOne({ productId }).populate('productId');
 }
 
-export async function listStock(query = {}) {
-  return Stock.find().populate({
-    path: 'productId',
-    match: query.search ? { name: { $regex: escapeRegex(query.search), $options: 'i' } } : {},
-  });
+export async function listStock({ search, includeInactive = false } = {}) {
+  const match = {};
+  if (search) match.name = { $regex: escapeRegex(search), $options: 'i' };
+  if (!includeInactive) match.isActive = { $ne: false };
+  return Stock.find().populate({ path: 'productId', match });
 }

@@ -17,8 +17,8 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', role: 'MANAGER' },
-  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', role: 'EMPLOYEE' },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -106,7 +106,7 @@ function storeCategories(categoriesRepo, categories) {
   );
 }
 
-test('API /product-categories (401 and 403)', async (t) => {
+test('API /product-categories (401, 403 and Employee read access)', async (t) => {
   const { server, port, employeeToken, categoriesRepo } = await setupTestServer();
 
   t.after(() => {
@@ -114,28 +114,35 @@ test('API /product-categories (401 and 403)', async (t) => {
     server.closeAllConnections();
   });
 
+  // [method, path, may the Employee use it? (products:read)]
   const endpoints = [
-    ['GET', '/product-categories'],
-    ['POST', '/product-categories'],
-    ['GET', `/product-categories/${NON_EXISTENT_ID}`],
-    ['PUT', `/product-categories/${NON_EXISTENT_ID}`],
-    ['DELETE', `/product-categories/${NON_EXISTENT_ID}`],
+    ['GET', '/product-categories', true],
+    ['POST', '/product-categories', false],
+    ['GET', `/product-categories/${NON_EXISTENT_ID}`, true],
+    ['PUT', `/product-categories/${NON_EXISTENT_ID}`, false],
+    ['DELETE', `/product-categories/${NON_EXISTENT_ID}`, false],
   ];
 
-  for (const [method, path] of endpoints) {
+  for (const [method, path, employeeAllowed] of endpoints) {
     const body = method === 'POST' || method === 'PUT' ? { name: 'Pizzas' } : undefined;
+    const label = `${method} ${path}`;
 
-    assert.equal((await request(port, method, path, { body })).status, 401, `${method} ${path}`);
-    assert.equal(
-      (await request(port, method, path, { token: employeeToken, body })).status,
-      403,
-      `${method} ${path}`,
-    );
+    assert.equal((await request(port, method, path, { body })).status, 401, label);
+
+    const employeeStatus = (await request(port, method, path, { token: employeeToken, body }))
+      .status;
+    if (employeeAllowed) {
+      assert.ok(![401, 403].includes(employeeStatus), `${label} -> ${employeeStatus}`);
+    } else {
+      assert.equal(employeeStatus, 403, label);
+    }
   }
 
-  // The repository is never reached
-  for (const method of Object.values(categoriesRepo)) assert.equal(method.mock.callCount(), 0);
+  // Refused writes never reach the repository
+  assert.equal(categoriesRepo.create.mock.callCount(), 0);
+  assert.equal(categoriesRepo.update.mock.callCount(), 0);
 });
+
 
 test('API POST /product-categories (201, 400, 409)', async (t) => {
   const { server, port, managerToken, categoriesRepo } = await setupTestServer();

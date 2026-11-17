@@ -2,6 +2,7 @@ import * as defaultCustomerRepo from '../../infrastructure/customers/customers.r
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { validateAddress, normalizePhoneNumber } from '../../domain/customers/customers.domain.js';
+import { canReadCustomer } from '../../domain/auth/ownership.domain.js';
 
 /**
  * Converts a raw database customer document into a safe Data Transfer Object (DTO).
@@ -105,6 +106,19 @@ export async function getCustomerById(id, customersRepository = defaultCustomerR
   const customer = await customersRepository.findById(id);
   if (!customer) throw new AppError('Customer not found.', 404);
   return toCustomerDto(customer);
+}
+
+export async function getOwnCustomer(principal, customersRepository = defaultCustomerRepo) {
+  const customerId = principal?.customerId;
+  if (!customerId || !canReadCustomer(principal, customerId)) {
+    throw new AppError(
+      'No customer profile is linked to this account.',
+      404,
+      null,
+      'CUSTOMER_PROFILE_NOT_FOUND',
+    );
+  }
+  return getCustomerById(customerId, customersRepository);
 }
 
 /**

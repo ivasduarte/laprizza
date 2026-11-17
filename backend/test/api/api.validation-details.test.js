@@ -12,7 +12,7 @@ const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 const MANAGER = {
   _id: 'abcdef000000000000000001',
   email: 'admin@laprizza.pt',
-  role: 'MANAGER',
+  roles: ['MANAGER'],
   status: 'active',
   passwordHash: PASSWORD_HASH,
   failedLoginCount: 0,

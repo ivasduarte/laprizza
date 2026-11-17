@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import Joi from 'joi';
 import * as controller from './assembly-line-configuration.controller.js';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 
 const objectIdSchema = Joi.string().hex().length(24);
@@ -47,34 +47,32 @@ function validateBody(schema) {
  */
 export default function assemblyLineConfigurationRouterFactory(assemblyLineRepo) {
   const router = Router();
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
-  const writeRoles = [Roles.MANAGER];
+  const canRead = requirePermission(Permission.KITCHEN_READ);
+  const canWrite = requirePermission(Permission.KITCHEN_WRITE);
 
-  router.get('/', verifyToken, requireRole(readRoles), (req, res, next) =>
+  router.get('/', canRead, (req, res, next) =>
     controller.list(req, res, next, assemblyLineRepo),
   );
   router.post(
     '/',
-    verifyToken,
-    requireRole(writeRoles),
+    canWrite,
     validateBody(createConfigSchema),
     (req, res, next) => controller.create(req, res, next, assemblyLineRepo),
   );
-  router.post('/validate', verifyToken, requireRole(writeRoles), (req, res, next) =>
+  router.post('/validate', canWrite, (req, res, next) =>
     controller.validate(req, res, next),
   );
-  router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, assemblyLineRepo),
   );
   router.patch(
     '/:id',
-    verifyToken,
-    requireRole(writeRoles),
+    canWrite,
     validateId,
     validateBody(updateConfigSchema),
     (req, res, next) => controller.update(req, res, next, assemblyLineRepo),
   );
-  router.delete('/:id', verifyToken, requireRole(writeRoles), validateId, (req, res, next) =>
+  router.delete('/:id', canWrite, validateId, (req, res, next) =>
     controller.remove(req, res, next, assemblyLineRepo),
   );
 

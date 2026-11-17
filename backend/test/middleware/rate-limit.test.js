@@ -59,3 +59,37 @@ test('passThrough calls next without an error', () => {
   assert.equal(next.mock.callCount(), 1);
   assert.deepEqual(next.mock.calls[0].arguments, []);
 });
+
+/**
+ * Unit test (AA05): requests for which `skip` returns true are not counted.
+ */
+test('createRateLimiter does not count skipped requests', async (t) => {
+  const logger = { log: mock.fn() };
+  const app = express();
+  app.use(
+    createRateLimiter({
+      name: 'public',
+      windowMs: 60_000,
+      limit: 1,
+      securityLogger: logger,
+      skip: (req) => Boolean(req.headers.authorization),
+    }),
+  );
+  app.get('/catalogue', (_req, res) => res.status(204).end());
+  app.use(errorHandler);
+
+  const server = app.listen(0);
+  await once(server, 'listening');
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+  const url = `http://127.0.0.1:${server.address().port}/catalogue`;
+  const withToken = { headers: { Authorization: 'Bearer anything' } };
+
+  assert.equal((await fetch(url)).status, 204);
+  assert.equal((await fetch(url)).status, 429); // anonymous: limit reached
+  assert.equal((await fetch(url, withToken)).status, 204); // skipped, never limited
+  assert.equal((await fetch(url, withToken)).status, 204);
+  assert.equal(logger.log.mock.callCount(), 1);
+});

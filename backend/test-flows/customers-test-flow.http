@@ -236,3 +236,62 @@ Content-Type: application/json
 }
 
 ?? status == 200
+
+### ==========================================
+### 6: PROPRIEDADE DOS DADOS (AA05)
+### ==========================================
+
+### 6. POST Conta de cliente ligada ao cliente criado (201 Created)
+# @name createCustomerAccount
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "conta_{{$timestamp}}@laprizza.pt",
+  "password": "StrongPassword123!",
+  "roles": ["CUSTOMER"],
+  "customerId": "{{customerId}}"
+}
+
+?? status == 201
+
+### 6.1 Login da conta de cliente (200 OK)
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{createCustomerAccount.email}}",
+  "password": "StrongPassword123!"
+}
+
+?? status == 200
+
+### Token do cliente
+@customerToken = {{loginCustomer.accessToken}}
+
+### 6.2 GET Os próprios dados (200 OK - o id vem da sessão)
+GET {{baseUrl}}/customers/me
+Authorization: Bearer {{customerToken}}
+
+?? status == 200
+?? js response.parsedBody.id == {{customerId}}
+
+### 6.3 GET Cliente por id, mesmo o próprio (403 Forbidden - só pela /me)
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{customerToken}}
+
+?? status == 403
+
+### 6.4 GET Lista de clientes (403 Forbidden)
+GET {{baseUrl}}/customers
+Authorization: Bearer {{customerToken}}
+
+?? status == 403
+
+### 6.5 GET /me como Manager (403 Forbidden - o Manager não é cliente)
+GET {{baseUrl}}/customers/me
+Authorization: Bearer {{adminToken}}
+
+?? status == 403

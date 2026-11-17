@@ -5,10 +5,11 @@ import { AuthErrorCode, tooManyAttempts } from '../../application/auth/auth-erro
  * Per-IP limit. In-memory store (one instance); with several instances, use a shared store.
  * The IP comes from req.ip, which respects app.set('trust proxy').
  */
-export function createRateLimiter({ name, windowMs, limit, securityLogger }) {
+export function createRateLimiter({ name, windowMs, limit, securityLogger, skip }) {
   return rateLimit({
     windowMs,
     limit,
+    skip,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     handler: (req, _res, next) => {

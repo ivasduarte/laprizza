@@ -75,3 +75,17 @@ export async function setPasswordHash(id, passwordHash, { revokeTokens = false }
 export async function incrementTokenVersion(id) {
   return Users.findByIdAndUpdate(id, { $inc: { tokenVersion: 1 } }, { returnDocument: 'after' });
 }
+
+export async function addRole(id, role) {
+  return Users.findByIdAndUpdate(
+    id, 
+    { $addToSet: { roles: role } },
+    { returnDocument: 'after', runValidators: true },
+  );
+}
+
+export async function removeRole(id, role, { clearCustomerId = false } = {}) {
+  const update = { $pull: { roles: role } };
+  if (clearCustomerId) update.$set = { customerId: null };
+  return Users.findByIdAndUpdate(id, update, { returnDocument: 'after' });
+}

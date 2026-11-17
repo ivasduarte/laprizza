@@ -2,8 +2,8 @@ import Joi from 'joi';
 import * as controller from './predefined-pizza.controller.js';
 
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middleware/auth.middleware.js';
-import { Roles } from '../../domain/users/users.domain.js';
+import { requirePermission } from '../middleware/authorization.middleware.js';
+import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 
@@ -15,7 +15,8 @@ export default function predefinedPizzaRouterFactory(repositories) {
       ? repositories.predefinedPizzaRepository
       : repositories;
 
-  const readRoles = [Roles.MANAGER, Roles.EMPLOYEE];
+  const canRead = requirePermission(Permission.PRODUCTS_READ);
+  const canWrite = requirePermission(Permission.PIZZAS_WRITE);
 
   const objectId = Joi.string().hex().length(24).messages({
     'string.hex': 'Invalid ID format',
@@ -99,36 +100,32 @@ export default function predefinedPizzaRouterFactory(repositories) {
 
   router.get(
     '/',
-    verifyToken,
-    requireRole(readRoles),
+    canRead,
     validate(searchSchema, 'query'),
     (req, res, next) => controller.list(req, res, next, pizzaRepository),
   );
 
   router.post(
     '/',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validate(createSchema),
     (req, res, next) => controller.create(req, res, next, pizzaRepository),
   );
 
-  router.get('/:id', verifyToken, requireRole(readRoles), validateId, (req, res, next) =>
+  router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, pizzaRepository),
   );
 
   router.get(
     '/name/:name',
-    verifyToken,
-    requireRole(readRoles),
+    canRead,
     validate(nameParamSchema, 'params'),
     (req, res, next) => controller.getByName(req, res, next, pizzaRepository),
   );
 
   router.put(
     '/:id',
-    verifyToken,
-    requireRole([Roles.MANAGER]),
+    canWrite,
     validateId,
     validate(updateSchema),
     (req, res, next) => controller.update(req, res, next, pizzaRepository),

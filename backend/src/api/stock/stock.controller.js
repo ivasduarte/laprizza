@@ -1,8 +1,12 @@
 import * as stockService from '../../application/stock/stock.service.js';
+import { Permission, hasPermission } from '../../domain/auth/permissions.domain.js';
+
+const canSeeInactive = (req) =>
+  hasPermission(req.user?.permissions, Permission.STOCK_READ_INACTIVE);
 
 export const list = async (req, res, next, repos) => {
   try {
-    const stockList = await stockService.listStock(req.query, repos);
+    const stockList = await stockService.listStock(req.validatedQuery ?? req.query, repos);
     res.status(200).json(stockList);
   } catch (error) {
     next(error);
@@ -11,7 +15,9 @@ export const list = async (req, res, next, repos) => {
 
 export const getByProductId = async (req, res, next, repos) => {
   try {
-    const stock = await stockService.getStockByProductId(req.params.productId, repos);
+    const stock = await stockService.getStockByProductId(req.params.productId, repos, {
+      includeInactive: canSeeInactive(req),
+    });
     res.status(200).json(stock);
   } catch (error) {
     next(error);

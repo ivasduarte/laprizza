@@ -21,7 +21,16 @@ const DUPLICATE_KEY_ERROR_CODE = 11000;
  * @throws {Error} Throws a fatal error if the SEED_MANAGER_PASSWORD environment variable is missing or fails strength validation.
  */
 export async function seedInitialManager() {
-  const managerExists = await Users.findOne({ role: Roles.MANAGER });
+  const legacy = await Users.collection.findOne(
+    { role: { $exists: true } },
+    { projection: { _id: 1 } },
+  );
+
+  if (legacy) {
+    throw new Error('Fatal: users still have the legacy "role" field. Run "npm run migrate:up" (AA05).');
+  }
+
+  const managerExists = await Users.exists({ roles: Roles.MANAGER });
 
   if (!managerExists) {
     console.log('No manager found. Creating initial account...');
@@ -35,7 +44,7 @@ export async function seedInitialManager() {
       username: 'admin',
       email: 'admin@laprizza.pt',
       passwordHash: await passwordHasher.hash(pw),
-      role: Roles.MANAGER,
+      roles: [Roles.MANAGER],
       status: AccountStatus.ACTIVE,
     });
     console.log('Initial Manager account created successfully.');

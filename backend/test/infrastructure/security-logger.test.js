@@ -66,3 +66,53 @@ test('disabled logger writes nothing', () => {
   logger.log('TEST', { ip: '::1' });
   assert.equal(lines.length, 0);
 });
+
+/**
+ * Unit test (AA05): values that look like credentials are redacted, whatever the field name,
+ * also inside arrays and nested objects.
+ */
+test('log redacts credential-like values in any field', () => {
+  const { logger, lines } = createCapturingLogger();
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1MSJ9.c2lnbmF0dXJlLXZhbHVl';
+
+  logger.log('ACCESS_DENIED', {
+    reason: `Bearer ${jwt}`,
+    detail: jwt,
+    previous: '$argon2id$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA',
+    attemptedRoles: ['EMPLOYEE', jwt],
+    nested: { header: 'Bearer abc.def.ghi' },
+    path: '/api/v1/stock/',
+    userId: 'u1',
+  });
+
+  const [entry] = lines;
+  assert.ok(!JSON.stringify(entry).includes(jwt));
+  assert.ok(!JSON.stringify(entry).includes('argon2'));
+  assert.equal(entry.reason, '[REDACTED]');
+  assert.equal(entry.detail, '[REDACTED]');
+  assert.equal(entry.previous, '[REDACTED]');
+  assert.deepEqual(entry.attemptedRoles, ['EMPLOYEE', '[REDACTED]']);
+  assert.deepEqual(entry.nested, { header: '[REDACTED]' });
+  assert.equal(entry.path, '/api/v1/stock/');
+  assert.equal(entry.userId, 'u1');
+});
+
+/**
+ * Unit test: ordinary investigation data is kept as is.
+ */
+test('log keeps ids, paths, routes, emails and user agents', () => {
+  const { logger, lines } = createCapturingLogger();
+  const details = {
+    userId: '65231abcd345678901234567',
+    sessionId: 'bbbbbb000000000000000001',
+    path: '/api/v1/customers/65231abcd345678901234999',
+    route: '/api/v1/customers/:id',
+    email: 'maria@laprizza.pt',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    roles: ['CUSTOMER'],
+  };
+
+  logger.log('ACCESS_DENIED', details);
+
+  for (const [key, value] of Object.entries(details)) assert.deepEqual(lines[0][key], value, key);
+});
