@@ -60,7 +60,12 @@ export default function PlanningPanel() {
   const change = (field) => (event) => {
     const value = field === 'scenarioId' ? event.target.value.toUpperCase() : event.target.value;
     setValues((v) => ({ ...v, [field]: value }));
-    setFieldErrors(({ [field]: _removed, ...rest }) => rest);
+    setFieldErrors((errors) => {
+      if (!(field in errors)) return errors;
+      const next = { ...errors };
+      delete next[field];
+      return next;
+    });
   };
 
   async function run(event) {
