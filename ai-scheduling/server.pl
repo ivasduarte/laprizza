@@ -3,6 +3,8 @@
 %   GET  /health   {status: "ok", backend: <AI_BACKEND_URL>}; never calls the back end
 %   POST /bom      {scenarioId, stockMode} with "Authorization: Bearer <token of a MANAGER>"
 %   POST /requirements   same request; requirements planning of the forecast (AI02)
+%   POST /service/bom, POST /service/requirements  (AI05) called by the back end only:
+%        "X-Api-Key: <AI_SERVICE_KEY>" and body {request: {scenarioId, stockMode}, snapshot}
 %
 % Start:  swipl ai-scheduling/server.pl      (or ./ai-scheduling/start-server.sh)
 % Configuration (environment, or ai-scheduling/.env for the variables not yet set):
@@ -41,8 +43,17 @@ main :-
     backend_base_url(Backend),
     format("LaPrizza AI service listening on http://127.0.0.1:~w (back end: ~w)~n",
            [Port, Backend]),
+    warn_service_key,
     flush_output,
     thread_get_message(stop_server).              % runs until the process is stopped
+
+%  AI05: without AI_SERVICE_KEY the /service/* routes always answer 401.
+warn_service_key :-
+    (   getenv('AI_SERVICE_KEY', Key), atom_length(Key, L), L >= 32
+    ->  true
+    ;   format(user_error,
+               "Warning: AI_SERVICE_KEY is not set (or has fewer than 32 characters); the back end cannot call /service/bom nor /service/requirements.~n", [])
+    ).
 
 %! start_server(+Port) is det.
 %  Starts the HTTP server on 127.0.0.1:Port only. Ends the process if the port is busy.
@@ -135,11 +146,16 @@ check_config(Port) :-
 :- http_handler('/health', route(health), []).
 :- http_handler('/bom', route(bom), []).
 :- http_handler('/requirements', route(requirements), []).
+% AI05: called only by the back end, with the snapshot in the body (no call back to the back end)
+:- http_handler('/service/bom', route(service_bom), []).
+:- http_handler('/service/requirements', route(service_requirements), []).
 :- http_handler(/, route(not_found), [prefix]).
 
 route_method(health, get).
 route_method(bom, post).
 route_method(requirements, post).
+route_method(service_bom, post).
+route_method(service_requirements, post).
 
 %  Runs the route, sends the JSON reply and writes one line to the console (no headers).
 route(Route, Request) :-
@@ -175,6 +191,10 @@ handle_route(bom, Request, Status, Body) :-
     authenticated(bom_calculate, Request, Status, Body).
 handle_route(requirements, Request, Status, Body) :-
     authenticated(requirements_calculate, Request, Status, Body).
+handle_route(service_bom, Request, Status, Body) :-
+    service_authenticated(bom_calculate, Request, Status, Body).
+handle_route(service_requirements, Request, Status, Body) :-
+    service_authenticated(requirements_calculate, Request, Status, Body).
 
 %  Calc is called as call(Calc, Params, Result) inside with_snapshot/2.
 authenticated(Calc, Request, Status, Body) :-
@@ -201,6 +221,68 @@ plan_request(Calc, Request, Token, Status, Body) :-
         fetch_with_deadline(Params, Token, Snapshot),
         calculate(Calc, Snapshot, Params, Status, Body)
     ).
+
+% ---------------------------------------------------------------------------------------------
+% POST /service/bom and POST /service/requirements (AI05)
+%   Header: X-Api-Key: <AI_SERVICE_KEY>   (service identity of the back end)
+%   Body:   {request: {scenarioId, stockMode}, snapshot: <GET /ai-data/snapshot of the back end>}
+% The user (JWT + role) is authorized by the back end; this service never sees the user token.
+% ---------------------------------------------------------------------------------------------
+
+service_authenticated(Calc, Request, Status, Body) :-
+    (   service_key_ok(Request)
+    ->  service_plan_request(Calc, Request, Status, Body)
+    ;   Status = 401,
+        error_body(401, "SERVICE_UNAUTHORIZED", "Service authentication required.", Body)
+    ).
+
+%! service_key_ok(+Request) is semidet.
+%  Fails when AI_SERVICE_KEY is not configured, so the service routes are closed by default.
+service_key_ok(Request) :-
+    getenv('AI_SERVICE_KEY', Expected0), Expected0 \== '',
+    memberchk(x_api_key(Key0), Request),
+    text_to_string(Expected0, Expected),
+    text_to_string(Key0, Key),
+    Key == Expected.
+
+service_plan_request(Calc, Request, Status, Body) :-
+    read_body(Request, Input),
+    service_input(Input, ReqInput, Snapshot, SnapshotDetails),
+    validate_input(ReqInput, ReqDetails, Params),
+    (   Input == invalid_body
+    ->  Details = ReqDetails                      % the body itself is not a JSON object
+    ;   maplist(prefix_detail, ReqDetails, ReqDetails1),
+        append(ReqDetails1, SnapshotDetails, Details)
+    ),
+    (   Details \== []
+    ->  Status = 400,
+        error_body(400, "VALIDATION_ERROR", "Validation failed.", Details, Body)
+    ;   get_dict(scenarioId, Params, Id),
+        get_dict(stockMode, Params, Mode),
+        format(string(Label), "~w ~w", [Id, Mode]),
+        nb_setval(ai_request_label, Label),
+        calculate(Calc, Snapshot, Params, Status, Body)
+    ).
+
+%  Splits the body; a missing or non-object part is reported in the joiDetails format.
+service_input(invalid_body, invalid_body, none, []) :- !.
+service_input(Input, ReqInput, Snapshot, Details) :-
+    (   get_dict(request, Input, R), is_dict(R) -> ReqInput = R ; ReqInput = invalid_body ),
+    (   get_dict(snapshot, Input, S), is_dict(S)
+    ->  Snapshot = S, Details = []
+    ;   Snapshot = none,
+        (   get_dict(snapshot, Input, _)
+        ->  detail("snapshot", "object.base", "\"snapshot\" must be of type object", D)
+        ;   detail("snapshot", "any.required", "\"snapshot\" is required", D)
+        ),
+        Details = [D]
+    ).
+
+%  "scenarioId" -> "request.scenarioId"; "" (request is not an object) -> "request".
+prefix_detail(D0, D) :-
+    get_dict(field, D0, F0),
+    (   F0 == "" -> F = "request" ; string_concat("request.", F0, F) ),
+    put_dict(field, D0, F, D).
 
 %  The timeout of http_open only covers reading: connecting to an address that does not answer
 %  takes ~20 s on Windows and cannot be interrupted. So the request runs in its own thread and

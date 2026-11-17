@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import PlanningPanel from './planning/planning-panel.jsx';
 import './ai-page.css';
 
 export default function AiPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState('forecasts');
   const [showForm, setShowForm] = useState(false);
-  const [executed, setExecuted] = useState(false);
   const [inspected, setInspected] = useState(false);
 
   const tabs = [
@@ -195,151 +195,14 @@ export default function AiPage() {
         </section>
       )}
 
-      {/* EXECUÇÃO E RESULTADOS */}
+      {/* EXECUÇÃO E RESULTADOS (AI05: BOM e planeamento de necessidades via back end) */}
       {tab === 'results' && (
         <section
           role="tabpanel"
           id="panel-results"
           aria-labelledby="tab-results"
         >
-          <div className="ai-card">
-            <div className="ai-grid">
-              <div>
-                <label htmlFor="xf">{t('ai.r.forecast')}</label>
-                <select id="xf">
-                  <option>—</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="xd">{t('ai.r.referenceDate')}</label>
-                <input id="xd" type="date" />
-              </div>
-            </div>
-            <div className="ai-row" style={{ marginTop: '1rem' }}>
-              <button type="button" onClick={() => setExecuted(true)}>
-                {t('ai.r.execute')}
-              </button>
-              <progress aria-label={t('ai.r.executing')} />
-            </div>
-            {executed && (
-              <div className="message message-error" role="alert">
-                <strong>{t('ai.r.errorTitle')}</strong> {t('ai.r.errorText')}{' '}
-                <button type="button" className="secondary">
-                  {t('ai.r.retry')}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {executed && (
-            <article className="ai-card">
-              <div className="ai-row">
-                <h2>{t('ai.r.resultOf')}</h2>
-                <span className="ai-tag">{t('ai.r.simulation')}</span>
-              </div>
-              <p className="message message-warning">
-                {t('ai.r.noStockChange')}
-              </p>
-              <dl className="ai-meta">
-                <div>
-                  <dt>{t('ai.r.forecastVersion')}</dt>
-                  <dd>—</dd>
-                </div>
-                <div>
-                  <dt>{t('ai.r.stockSnapshot')}</dt>
-                  <dd>—</dd>
-                </div>
-                <div>
-                  <dt>{t('ai.r.bom')}</dt>
-                  <dd>—</dd>
-                </div>
-                <div>
-                  <dt>{t('ai.r.scenario')}</dt>
-                  <dd>—</dd>
-                </div>
-                <div>
-                  <dt>{t('ai.r.referenceDate')}</dt>
-                  <dd>—</dd>
-                </div>
-                <div>
-                  <dt>{t('ai.r.executedAt')}</dt>
-                  <dd>—</dd>
-                </div>
-              </dl>
-
-              <h3>{t('ai.r.dailyPlan')}</h3>
-              <div className="ai-scroll">
-                <table className="ai-table">
-                  <thead>
-                    <tr>
-                      <th>{t('ai.r.col.day')}</th>
-                      <th>{t('ai.r.col.item')}</th>
-                      <th>{t('ai.r.col.required')}</th>
-                      <th>{t('ai.r.col.inStock')}</th>
-                      <th>{t('ai.r.col.remaining')}</th>
-                      <th>{t('ai.r.col.replenish')}</th>
-                      <th>{t('ai.r.col.supplier')}</th>
-                      <th>{t('ai.r.col.orderOn')}</th>
-                      <th>{t('ai.r.col.delivery')}</th>
-                      <th>{t('ai.r.col.unmet')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>
-                        <span className="ai-tag">{t('ai.noSupplier')}</span>
-                      </td>
-                      <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <h3>{t('ai.r.selectionTitle')}</h3>
-              <p className="message">{t('ai.r.selectionHint')}</p>
-
-              <div className="message message-warning">
-                <strong>{t('ai.r.warnings')}</strong>
-                <ul>
-                  <li>{t('ai.r.warningSample')}</li>
-                </ul>
-              </div>
-            </article>
-          )}
-
-          <div className="ai-card">
-            <h2>{t('ai.r.previous')}</h2>
-            <table className="ai-table">
-              <thead>
-                <tr>
-                  <th>{t('ai.r.executedAt')}</th>
-                  <th>{t('ai.r.forecastVersion')}</th>
-                  <th>{t('ai.r.scenario')}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>—</td>
-                  <td>v1</td>
-                  <td>—</td>
-                  <td>
-                    <button type="button" className="secondary">
-                      {t('ai.view')}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <PlanningPanel />
         </section>
       )}
 
