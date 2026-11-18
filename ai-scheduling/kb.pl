@@ -416,7 +416,7 @@ meta_fact(M) -->
 sources_items(M) -->
     (   { get_dict(sources, M, Sources), Sources \== null }
     ->  (   { is_dict(Sources) }
-        ->  source_kinds(Sources, [catalogue, stock, orders])
+        ->  source_kinds(Sources, [catalogue, stock, orders, forecast, supplierScenario])
         ;   invalid("meta.sources", "not_an_object")
         )
     ;   []
