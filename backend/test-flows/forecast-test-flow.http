@@ -4,6 +4,14 @@
 @dynamicName = Forecast_{{$timestamp}}
 @missingId = 507f1f77bcf86cd799439011
 
+# WEB07 - Forecasts imutáveis e versionados:
+# - guardar um nome que já existe cria a versão seguinte (v1, v2, ...); a "version" enviada é ignorada;
+# - o PUT só desativa ({ "isActive": false }): é o "apagar" do SPA;
+# - regras de negócio (400, error.details[].type): productUnknown, sizeRequired, sizeIncompatible,
+#   dateInvalid, dateOutside, periodInvalid, duplicate, noEntries;
+# - entradas omitidas (data/produto/tamanho) significam consumo zero.
+# Pré-requisito: o seed tem pelo menos uma pizza pré-definida ativa com tamanhos.
+
 ### ==========================================
 ### 1: AUTENTICAÇÃO
 ### ==========================================
@@ -23,10 +31,21 @@ Content-Type: application/json
 @adminToken = {{loginAdmin.accessToken}}
 
 ### ==========================================
-### 2: DADOS DE SUPORTE (produto usado nas entradas)
+### 2: DADOS DE SUPORTE
 ### ==========================================
 
-### 2. POST Categoria de suporte (201 Created)
+### 2. GET Pizzas pré-definidas do seed (200 OK, pelo menos uma)
+# @name listPizzas
+GET {{baseUrl}}/predefined-pizzas
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.length > 0 == true
+
+### Variáveis (pizza vendável e um tamanho aplicável a essa pizza)
+@pizzaId = {{listPizzas[0].productId}}
+@pizzaSizeId = {{listPizzas[0].sizeIds[0]}}
+
+### 2.1 POST Categoria de suporte (201 Created)
 # @name createCategoryRef
 POST {{baseUrl}}/product-categories
 Authorization: Bearer {{adminToken}}
@@ -40,29 +59,48 @@ Content-Type: application/json
 ### Variáveis
 @categoryId = {{createCategoryRef.id}}
 
-### 2.1 POST Produto de suporte (201 Created)
-# @name createProductRef
+### 2.2 POST Produto vendável sem tamanhos, ex.: bebida (201 Created)
+# @name createDrinkRef
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "name": "Produto Forecast {{$timestamp}}",
-  "description": "Produto para entradas de forecast",
-  "sellable": false,
+  "name": "Bebida Forecast {{$timestamp}}",
+  "description": "Produto vendável sem tamanhos (sizeId null)",
+  "sellable": true,
+  "price": 1.5,
   "stockControlled": false,
   "categoryId": "{{categoryId}}"
 }
 ?? status == 201
 
 ### Variáveis
-@productId = {{createProductRef.id}}
+@drinkId = {{createDrinkRef.id}}
+
+### 2.3 POST Produto não vendável (201 Created)
+# @name createRawRef
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Materia Prima Forecast {{$timestamp}}",
+  "description": "Não vendável: não pode entrar num forecast",
+  "sellable": false,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+### Variáveis
+@rawId = {{createRawRef.id}}
 
 ### ==========================================
-### 3: CRIAÇÃO E VALIDAÇÕES (POST)
+### 3: CRIAÇÃO E VERSÕES (POST)
 ### ==========================================
 
-### 3. POST Forecast Novo - com espaços à volta para provar o trim (201 Created)
+### 3. POST Forecast A - pizza com consumo variável em 2 dias + bebida; nome com espaços (201, v1)
 # @name createForecast
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
@@ -70,71 +108,109 @@ Content-Type: application/json
 
 {
   "name": "   {{dynamicName}}   ",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": [
-    {
-      "date": "2026-11-01",
-      "productId": "{{productId}}",
-      "sizeId": null,
-      "quantity": 10
-    },
-    {
-      "date": "2026-11-02",
-      "productId": "{{productId}}",
-      "quantity": 0
-    }
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 20 },
+    { "date": "2026-11-24", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 35 },
+    { "date": "2026-11-24", "productId": "{{drinkId}}", "sizeId": null, "quantity": 10 },
+    { "date": "2026-11-25", "productId": "{{drinkId}}", "quantity": 0 }
   ]
 }
 ?? status == 201
+?? js response.parsedBody.name === response.parsedBody.name.trim() == true
+?? js response.parsedBody.version == 1
+?? js response.parsedBody.isActive == true
 
 ### Variáveis
 @forecastId = {{createForecast.id}}
 @createdName = {{createForecast.name}}
 
-### 3.1 POST Nome Duplicado (mesma versão) (409 Conflict)
+### 3.1 POST Mesmo nome - cria a versão seguinte, a v1 mantém-se (201, v2)
+# @name createForecastV2
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "{{createdName}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": []
-}
-?? status == 409
-
-### 3.2 POST Nome Duplicado com outras maiúsculas (409 Conflict)
-# Altera manualmente o nome abaixo para MAIÚSCULAS (ex.: FORECAST_1760000000)
-# para validar que a unicidade ignora maiúsculas/minúsculas.
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "{{createdName}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": []
-}
-?? status == 409
-
-### 3.3 POST Mesmo nome com outra versão (201 Created - versões diferentes são permitidas)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "{{createdName}}",
-  "version": 2,
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": []
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 25 },
+    { "date": "2026-11-24", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 30 }
+  ]
 }
 ?? status == 201
+?? js response.parsedBody.version == 2
+?? js response.parsedBody.id !== forecastId == true
 
-### 3.4 POST Sem body - Joi (400 Bad Request)
+### 3.2 POST Mesmo nome em MAIÚSCULAS - a versão ignora maiúsculas/minúsculas (201, v3)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName.toUpperCase()}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 5 }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.version == 3
+
+### 3.3 POST version enviada é ignorada - o back end atribui a seguinte (201, v4)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "version": 99,
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 5 }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.version == 4
+
+### 3.4 GET A v1 continua igual depois das novas versões (200 OK)
+GET {{baseUrl}}/forecasts/{{forecastId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.version == 1
+?? js response.parsedBody.entries.length == 4
+
+### 3.5 POST Forecast B - outro forecast com consumo de pizza variável em 2 dias (201, v1)
+# @name createForecastB
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Forecast_B_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 8 },
+    { "date": "2026-11-25", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 40 }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.version == 1
+
+### Variáveis
+@forecastBId = {{createForecastB.id}}
+
+### ==========================================
+### 3A: VALIDAÇÕES DE ESTRUTURA (Joi)
+### ==========================================
+
+### 3A.1 POST Sem body (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -142,95 +218,95 @@ Content-Type: application/json
 {}
 ?? status == 400
 
-### 3.5 POST name vazio - Joi (400 Bad Request)
+### 3A.2 POST name vazio (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.6 POST name só com espaços - Joi (400 Bad Request)
+### 3A.3 POST name só com espaços (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "     ",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.7 POST name não-string - Joi (400 Bad Request)
+### 3A.4 POST name não-string (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": 123,
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.8 POST Sem startDate - Joi (400 Bad Request)
+### 3A.5 POST Sem startDate (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Sem_StartDate_{{$timestamp}}",
-  "endDate": "2026-11-30",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.9 POST Sem endDate - Joi (400 Bad Request)
+### 3A.6 POST Sem endDate (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Sem_EndDate_{{$timestamp}}",
-  "startDate": "2026-11-01",
+  "startDate": "2026-11-23",
   "entries": []
 }
 ?? status == 400
 
-### 3.10 POST Sem entries - Joi (400 Bad Request)
+### 3A.7 POST Sem entries (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Sem_Entries_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30"
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29"
 }
 ?? status == 400
 
-### 3.11 POST entries não é array - Joi (400 Bad Request)
+### 3A.8 POST entries não é array (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Entries_Invalido_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": "abc"
 }
 ?? status == 400
 
-### 3.12 POST version inválida (0) - Joi (400 Bad Request)
+### 3A.9 POST version inválida (0) (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -238,120 +314,13 @@ Content-Type: application/json
 {
   "name": "Versao_Invalida_{{$timestamp}}",
   "version": 0,
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.13 POST Entrada sem date - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_SemData_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "productId": "{{productId}}", "quantity": 5 }
-  ]
-}
-?? status == 400
-
-### 3.14 POST Entrada sem productId - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_SemProduto_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "quantity": 5 }
-  ]
-}
-?? status == 400
-
-### 3.15 POST Entrada com productId de formato inválido - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_ProdutoInvalido_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "productId": "abc", "quantity": 5 }
-  ]
-}
-?? status == 400
-
-### 3.16 POST Entrada com sizeId de formato inválido - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_SizeInvalido_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "productId": "{{productId}}", "sizeId": "abc", "quantity": 5 }
-  ]
-}
-?? status == 400
-
-### 3.17 POST Entrada sem quantity - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_SemQuantidade_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "productId": "{{productId}}" }
-  ]
-}
-?? status == 400
-
-### 3.18 POST Entrada com quantity negativa - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_QtdNegativa_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "productId": "{{productId}}", "quantity": -1 }
-  ]
-}
-?? status == 400
-
-### 3.19 POST Entrada com quantity decimal - Joi (400 Bad Request)
-POST {{baseUrl}}/forecasts
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Entrada_QtdDecimal_{{$timestamp}}",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
-  "entries": [
-    { "date": "2026-11-01", "productId": "{{productId}}", "quantity": 1.5 }
-  ]
-}
-?? status == 400
-
-### 3.20 POST Data que não é uma data válida (400 Bad Request)
-# O Joi só valida que é string; quem rejeita é o Mongoose (cast para Date).
-# Se este pedido devolver 500, falta mapear o erro de cast para 400.
+### 3A.10 POST Data fora do formato YYYY-MM-DD (400 Bad Request)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -359,40 +328,311 @@ Content-Type: application/json
 {
   "name": "Data_Invalida_{{$timestamp}}",
   "startDate": "isto-nao-e-uma-data",
-  "endDate": "2026-11-30",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 400
 
-### 3.21 POST Segundo Forecast, com campos extra ignorados (201 Created, isActive = true)
+### 3A.11 POST Entrada sem date (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemData_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "productId": "{{drinkId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3A.12 POST Entrada sem productId (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemProduto_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3A.13 POST Entrada com productId de formato inválido (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_ProdutoInvalido_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "abc", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3A.14 POST Entrada com sizeId de formato inválido (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SizeInvalido_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "abc", "quantity": 5 }
+  ]
+}
+?? status == 400
+
+### 3A.15 POST Entrada sem quantity (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_SemQuantidade_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{drinkId}}" }
+  ]
+}
+?? status == 400
+
+### 3A.16 POST Entrada com quantity negativa (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_QtdNegativa_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{drinkId}}", "quantity": -1 }
+  ]
+}
+?? status == 400
+
+### 3A.17 POST Entrada com quantity decimal (400 Bad Request)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Entrada_QtdDecimal_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{drinkId}}", "quantity": 1.5 }
+  ]
+}
+?? status == 400
+
+### ==========================================
+### 3B: REGRAS DE NEGÓCIO (400, error.details[].type)
+### ==========================================
+
+### 3B.1 POST Produto desconhecido (400 productUnknown)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_ProdutoDesconhecido_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{missingId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'productUnknown') == true
+
+### 3B.2 POST Produto não vendável (400 productUnknown)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_NaoVendavel_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{rawId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'productUnknown') == true
+
+### 3B.3 POST Pizza sem tamanho (400 sizeRequired)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_PizzaSemTamanho_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": null, "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'sizeRequired') == true
+
+### 3B.4 POST Pizza com tamanho que não lhe é aplicável (400 sizeIncompatible)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_TamanhoIncompativel_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{missingId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'sizeIncompatible') == true
+
+### 3B.5 POST Produto sem tamanhos com sizeId (400 sizeIncompatible)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_BebidaComTamanho_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{drinkId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'sizeIncompatible') == true
+
+### 3B.6 POST Data fora do período (400 dateOutside)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_ForaDoPeriodo_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-12-01", "productId": "{{drinkId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'dateOutside') == true
+
+### 3B.7 POST Data inexistente no calendário (400 dateInvalid)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_DataInexistente_{{$timestamp}}",
+  "startDate": "2026-02-01",
+  "endDate": "2026-02-30",
+  "entries": [
+    { "date": "2026-02-02", "productId": "{{drinkId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'dateInvalid') == true
+
+### 3B.8 POST Fim antes do início (400 periodInvalid)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_PeriodoInvalido_{{$timestamp}}",
+  "startDate": "2026-11-29",
+  "endDate": "2026-11-23",
+  "entries": [
+    { "date": "2026-11-25", "productId": "{{drinkId}}", "quantity": 5 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'periodInvalid') == true
+
+### 3B.9 POST Entrada data/produto/tamanho duplicada (400 duplicate)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_Duplicada_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 5 },
+    { "date": "2026-11-23", "productId": "{{pizzaId}}", "sizeId": "{{pizzaSizeId}}", "quantity": 7 }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'duplicate') == true
+
+### 3B.10 POST Sem entradas (400 noEntries)
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_SemEntradas_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": []
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'noEntries') == true
+
+### 3B.11 POST Forecast com campos extra ignorados (201 Created, isActive = true)
 # @name createSecondForecast
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "name": "Forecast_Extra_{{$randomInt 1000 9999}}",
+  "name": "Forecast_Extra_{{$timestamp}}",
   "startDate": "2026-12-01",
   "endDate": "2026-12-31",
-  "entries": [],
+  "entries": [
+    { "date": "2026-12-01", "productId": "{{drinkId}}", "quantity": 3 }
+  ],
   "isActive": false,
   "role": "MANAGER"
 }
 ?? status == 201
+?? js response.parsedBody.isActive == true
 
 ### Variáveis
 @secondId = {{createSecondForecast.id}}
 @secondName = {{createSecondForecast.name}}
 
-
 ### ==========================================
 ### 4: PESQUISA E CONSULTAS (GET)
 ### ==========================================
 
-### 4. GET Listar Todos (200 OK)
+### 4. GET Listar todos (200 OK, inclui as 4 versões do forecast A)
 GET {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.filter((f) => f.name.toLowerCase() === createdName.toLowerCase()).length == 4
 
 ### 4.1 GET Pesquisa parcial por nome (200 OK)
 GET {{baseUrl}}/forecasts?name=Forecast
@@ -403,26 +643,29 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/forecasts?name=zzz_inexistente
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
 ### 4.3 GET Pesquisa com caracteres de regex tratados como texto (200 OK, [])
 GET {{baseUrl}}/forecasts?name=.*
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
-### 4.4 GET name vazio - Joi (400 Bad Request)
+### 4.4 GET name vazio (400 Bad Request)
 GET {{baseUrl}}/forecasts?name=
 Authorization: Bearer {{adminToken}}
 ?? status == 400
 
-### 4.5 GET name enviado duas vezes - Joi (400 Bad Request)
+### 4.5 GET name enviado duas vezes (400 Bad Request)
 GET {{baseUrl}}/forecasts?name=a&name=b
 Authorization: Bearer {{adminToken}}
 ?? status == 400
 
-### 4.6 GET Por ID (200 OK, com as 2 entradas)
-GET {{baseUrl}}/forecasts/{{forecastId}}
+### 4.6 GET Por ID do forecast B (200 OK, com as 2 entradas)
+GET {{baseUrl}}/forecasts/{{forecastBId}}
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.entries.length == 2
 
 ### 4.7 GET Por ID com formato inválido (400 Bad Request)
 GET {{baseUrl}}/forecasts/abc123
@@ -434,13 +677,12 @@ GET {{baseUrl}}/forecasts/{{missingId}}
 Authorization: Bearer {{adminToken}}
 ?? status == 404
 
-
 ### ==========================================
 ### 5: DESATIVAR (PUT com isActive:false)
 ### ==========================================
 # O PUT só aceita { "isActive": false } - não renomeia nem altera entradas.
 
-### 5. PUT Body vazio - Joi (400 Bad Request)
+### 5. PUT Body vazio (400 Bad Request)
 PUT {{baseUrl}}/forecasts/{{forecastId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -448,7 +690,7 @@ Content-Type: application/json
 {}
 ?? status == 400
 
-### 5.1 PUT Só com name - Joi (400 Bad Request - não é possível renomear)
+### 5.1 PUT Só com name (400 Bad Request - não é possível renomear)
 PUT {{baseUrl}}/forecasts/{{forecastId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -458,7 +700,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 5.2 PUT isActive:true - Joi (400 Bad Request)
+### 5.2 PUT isActive:true (400 Bad Request)
 PUT {{baseUrl}}/forecasts/{{forecastId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -468,7 +710,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 5.3 PUT isActive inválido - Joi (400 Bad Request)
+### 5.3 PUT isActive inválido (400 Bad Request)
 PUT {{baseUrl}}/forecasts/{{forecastId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -508,7 +750,8 @@ Content-Type: application/json
   "isActive": false
 }
 ?? status == 200
-
+?? js response.parsedBody.isActive == false
+?? js response.parsedBody.name === secondName == true
 
 ### ==========================================
 ### 6: CONSISTÊNCIA APÓS DESATIVAR
@@ -523,11 +766,13 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.some((f) => f.id === secondId) == false
 
 ### 6.2 GET Pesquisa por nome - o desativado já não aparece (200 OK, [])
 GET {{baseUrl}}/forecasts?name={{secondName}}
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
 ### 6.3 PUT Desativar outra vez (404 Not Found)
 PUT {{baseUrl}}/forecasts/{{secondId}}
@@ -539,7 +784,7 @@ Content-Type: application/json
 }
 ?? status == 404
 
-### 6.4 POST Mesmo nome do desativado (409 Conflict - o nome continua reservado)
+### 6.4 POST Mesmo nome do desativado (201, v2 - o número de versão nunca é reutilizado)
 POST {{baseUrl}}/forecasts
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -548,10 +793,12 @@ Content-Type: application/json
   "name": "{{secondName}}",
   "startDate": "2026-12-01",
   "endDate": "2026-12-31",
-  "entries": []
+  "entries": [
+    { "date": "2026-12-02", "productId": "{{drinkId}}", "quantity": 4 }
+  ]
 }
-?? status == 409
-
+?? status == 201
+?? js response.parsedBody.version == 2
 
 ### ==========================================
 ### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
@@ -567,8 +814,8 @@ Content-Type: application/json
 
 {
   "name": "Sem_Token",
-  "startDate": "2026-11-01",
-  "endDate": "2026-11-30",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
   "entries": []
 }
 ?? status == 401

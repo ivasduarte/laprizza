@@ -1,5 +1,10 @@
 import pkg from '../../package.json' with { type: 'json' };
-import { API_VERSIONS, CURRENT_API_VERSION, SUPPORTED_API_VERSIONS, apiPrefix } from './api-versions.js';
+import {
+  API_VERSIONS,
+  CURRENT_API_VERSION,
+  SUPPORTED_API_VERSIONS,
+  apiPrefix,
+} from './api-versions.js';
 import { planningPaths } from './planning/planning.openapi.js';
 
 const errorResponse = (description) => ({
@@ -627,7 +632,7 @@ const baseSpec = {
     },
     '/allergens': {
       get: {
-        summary: 'List allergens (MANAGER and EMPLOYEE)',
+        summary: 'List allergens (MANAGER only)',
         security: [{ BearerAuth: [] }],
         parameters: [
           {
@@ -683,7 +688,7 @@ const baseSpec = {
     },
     '/allergens/name/{name}': {
       get: {
-        summary: 'Get allergen by exact name, case-insensitive (MANAGER and EMPLOYEE)',
+        summary: 'Get allergen by exact name, case-insensitive (MANAGER only)',
         security: [{ BearerAuth: [] }],
         parameters: [{ name: 'name', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
@@ -702,7 +707,7 @@ const baseSpec = {
     },
     '/allergens/{id}': {
       get: {
-        summary: 'Get allergen by ID (MANAGER and EMPLOYEE)',
+        summary: 'Get allergen by ID (MANAGER only)',
         security: [{ BearerAuth: [] }],
         parameters: [
           {
@@ -1582,6 +1587,32 @@ const baseSpec = {
           'Devolve o estado atual do catálogo (produtos, stock, pizzas predefinidas e tamanhos) unificado para alimentar o motor Prolog de escalonamento.',
         tags: ['AI Scheduling'], // Isto cria uma secção dedicada no Swagger UI
         security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            schema: { type: 'string', pattern: '^[A-Z0-9-]{1,64}$' },
+            description: 'AI scenario code; requires stockMode.',
+          },
+          {
+            name: 'stockMode',
+            in: 'query',
+            schema: { type: 'string', enum: ['live', 'scenario'] },
+          },
+          {
+            name: 'forecastId',
+            in: 'query',
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+            description: 'Saved forecast version to include. Default: the most recent active one.',
+          },
+          {
+            name: 'supplierScenarioId',
+            in: 'query',
+            schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+            description:
+              'Saved supplier scenario version to include. Default: the most recent active one.',
+          },
+        ],
         responses: {
           200: {
             description: 'Success',
@@ -1596,6 +1627,56 @@ const baseSpec = {
                     predefinedPizzas: {
                       type: 'array',
                       items: { $ref: '#/components/schemas/PredefinedPizza' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: errorResponse(
+            'Invalid query, or scenario without its own stock (SCENARIO_WITHOUT_STOCK)',
+          ),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden'),
+          404: errorResponse(
+            'AI scenario, forecast or supplier scenario not found (AI_SCENARIO_NOT_FOUND, FORECAST_NOT_FOUND, SUPPLIER_SCENARIO_NOT_FOUND)',
+          ),
+        },
+      },
+    },
+    '/ai-data/products/export': {
+      get: {
+        summary: 'Export the products needed for supplier planning as JSON (MANAGER only)',
+        description:
+          'Raw materials, purchased aggregates and directly sold stock-controlled products, with identifiers, names and the abstract stock unit. Produced aggregates are not exported. sellingPriceEur is optional and its absence never excludes a product.',
+        tags: ['AI Scheduling'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    exportedAt: { type: 'string', format: 'date-time' },
+                    products: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: ['id', 'name', 'kind', 'stockUnit'],
+                        properties: {
+                          id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                          name: { type: 'string' },
+                          kind: {
+                            type: 'string',
+                            enum: ['rawMaterial', 'purchasedAggregate', 'directSale'],
+                          },
+                          stockUnit: { type: 'string', example: 'abstract stock unit' },
+                          sellable: { type: 'boolean' },
+                          sellingPriceEur: { type: 'number', minimum: 0 },
+                        },
+                      },
                     },
                   },
                 },
@@ -1951,7 +2032,7 @@ const baseSpec = {
     },
     '/forecasts': {
       get: {
-        summary: 'List daily forecasts (MANAGER and EMPLOYEE)',
+        summary: 'List daily forecasts (MANAGER only)',
         security: [{ BearerAuth: [] }],
         responses: {
           200: {
@@ -1963,10 +2044,13 @@ const baseSpec = {
             },
           },
           401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden (only MANAGER)'),
         },
       },
       post: {
         summary: 'Create daily forecast (MANAGER only)',
+        description:
+          'Forecasts are immutable. Saving a name that already exists creates its next version (version is assigned by the back end), so earlier results keep their meaning. Rejects (400, details[].type): dateOutside, dateInvalid, periodInvalid, productUnknown, sizeRequired, sizeIncompatible, duplicate, noEntries. Omitted date/product/size entries mean zero consumption.',
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1981,13 +2065,58 @@ const baseSpec = {
           },
           400: errorResponse('Validation error'),
           401: errorResponse('Unauthorized'),
-          409: errorResponse('Name already in use'),
+          409: errorResponse('Version already exists (concurrent save): retry'),
+        },
+      },
+    },
+    '/forecasts/{id}': {
+      get: {
+        summary: 'Get a forecast (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        responses: {
+          200: {
+            description: 'Success',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Forecast' } } },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden (only MANAGER)'),
+          404: errorResponse('Forecast not found'),
+        },
+      },
+      put: {
+        summary: 'Deactivate a forecast (MANAGER only): the "delete" of the SPA',
+        description:
+          'Only {"isActive": false} is accepted. Results already calculated keep the version they used.',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['isActive'],
+                properties: { isActive: { type: 'boolean', enum: [false] } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Deactivated',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Forecast' } } },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          404: errorResponse('Forecast not found'),
         },
       },
     },
     '/supplier-scenarios': {
       get: {
-        summary: 'List supplier scenarios (MANAGER and EMPLOYEE)',
+        summary: 'List supplier scenarios (MANAGER only)',
         security: [{ BearerAuth: [] }],
         responses: {
           200: {
@@ -1999,10 +2128,13 @@ const baseSpec = {
             },
           },
           401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden (only MANAGER)'),
         },
       },
       post: {
         summary: 'Create supplier scenario (MANAGER only)',
+        description:
+          'Immutable and versioned like forecasts. Offers are always stored as simulated (manual or LLM-prepared). A supplier without name uses its id. Rejects (400, details[].type): productUnknown, productDuplicate, supplierIdDuplicate, offerSupplierUnknown, offerDuplicate, and missing or invalid priceEur, stockUnits (positive integer) or leadTimeDays. The previous scenario is kept untouched.',
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2019,6 +2151,55 @@ const baseSpec = {
           },
           400: errorResponse('Validation error'),
           401: errorResponse('Unauthorized'),
+          409: errorResponse('Version already exists (concurrent save): retry'),
+        },
+      },
+    },
+    '/supplier-scenarios/{id}': {
+      get: {
+        summary: 'Get a supplier scenario (MANAGER only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        responses: {
+          200: {
+            description: 'Success',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SupplierScenario' } },
+            },
+          },
+          400: errorResponse('Invalid ID'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden (only MANAGER)'),
+          404: errorResponse('Supplier scenario not found'),
+        },
+      },
+      put: {
+        summary: 'Deactivate a supplier scenario (MANAGER only)',
+        description: 'Only {"isActive": false} is accepted.',
+        security: [{ BearerAuth: [] }],
+        parameters: [idParam],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['isActive'],
+                properties: { isActive: { type: 'boolean', enum: [false] } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Deactivated',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SupplierScenario' } },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          404: errorResponse('Supplier scenario not found'),
         },
       },
     },
@@ -2473,7 +2654,6 @@ const baseSpec = {
         required: ['name', 'startDate', 'endDate', 'entries'],
         properties: {
           name: { type: 'string' },
-          version: { type: 'integer', default: 1 },
           startDate: { type: 'string', format: 'date' },
           endDate: { type: 'string', format: 'date' },
           entries: {
@@ -2498,6 +2678,7 @@ const baseSpec = {
             type: 'object',
             properties: {
               id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              version: { type: 'integer', minimum: 1, readOnly: true },
               isActive: { type: 'boolean' },
             },
           },
@@ -2508,8 +2689,6 @@ const baseSpec = {
         required: ['name', 'suppliers', 'products'],
         properties: {
           name: { type: 'string' },
-          version: { type: 'integer', default: 1 },
-          simulated: { type: 'boolean', default: true },
           suppliers: {
             type: 'array',
             items: {
@@ -2551,6 +2730,12 @@ const baseSpec = {
             type: 'object',
             properties: {
               id: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+              version: { type: 'integer', minimum: 1, readOnly: true },
+              simulated: {
+                type: 'boolean',
+                readOnly: true,
+                description: 'Always true: offers are manual or LLM-prepared.',
+              },
               isActive: { type: 'boolean' },
             },
           },

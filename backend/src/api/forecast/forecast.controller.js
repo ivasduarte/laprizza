@@ -9,9 +9,13 @@ export const list = async (req, res, next, forecastRepository) => {
   }
 };
 
-export const create = async (req, res, next, forecastRepository) => {
+export const create = async (req, res, next, forecastRepository, catalogueReader) => {
   try {
-    const forecast = await forecastService.createForecast(req.body, forecastRepository);
+    const forecast = await forecastService.createForecast(
+      req.body,
+      forecastRepository,
+      catalogueReader,
+    );
     res.status(201).json(forecast);
   } catch (error) {
     next(error);

@@ -1,0 +1,249 @@
+@baseUrl = http://localhost:3000/api/v2
+@managerEmail = admin@laprizza.pt
+@managerPassword = LaPrizzaAdmin_013DI!
+@missingId = 507f1f77bcf86cd799439011
+
+# WEB07 - Execução de forecasts pelo serviço de IA e consulta dos resultados.
+# Pré-requisitos:
+#   - seed AI01 (npm run seed:ai01 ou equivalente): pizzas, tamanhos e cenário DEMO-PARTIAL [Demo];
+#   - serviço Prolog (ai-scheduling) a correr e AI_SERVICE_KEY igual nos dois lados.
+# O cenário AI01 só fornece o contexto (catálogo; com stockMode=live o stock é o real):
+# a procura do Requirements Planning é o forecast.
+
+@margherita = de01b000000000000000000b
+@prosciutto = de01b000000000000000000c
+@molho = de01b0000000000000000002
+@mozzarella = de01b0000000000000000003
+@sizeM = de01a0000000000000000002
+
+### ==========================================
+### 1: AUTENTICAÇÃO
+### ==========================================
+
+### 1.1 Login do Manager (Seeder)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Manager
+@adminToken = {{loginAdmin.accessToken}}
+
+### ==========================================
+### 2: DADOS DE ENTRADA (2 forecasts e 1 cenário de fornecedores)
+### ==========================================
+
+### 2. GET Stock real antes das execuções (200 OK)
+# @name stockBefore
+GET {{baseUrl}}/stock
+Authorization: Bearer {{adminToken}}
+?? status == 200
+
+### 2.1 POST Forecast A - Margherita M com consumo diferente em 2 dias + Prosciutto M (201, v1)
+# @name forecastA
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Planning_A_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{margherita}}", "sizeId": "{{sizeM}}", "quantity": 3 },
+    { "date": "2026-11-24", "productId": "{{margherita}}", "sizeId": "{{sizeM}}", "quantity": 6 },
+    { "date": "2026-11-24", "productId": "{{prosciutto}}", "sizeId": "{{sizeM}}", "quantity": 2 }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.version == 1
+
+### Variáveis
+@forecastAId = {{forecastA.id}}
+@forecastAName = {{forecastA.name}}
+
+### 2.2 POST Forecast B - outro perfil de consumo de pizzas em 2 dias (201, v1)
+# @name forecastB
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Planning_B_{{$timestamp}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{margherita}}", "sizeId": "{{sizeM}}", "quantity": 1 },
+    { "date": "2026-11-26", "productId": "{{margherita}}", "sizeId": "{{sizeM}}", "quantity": 4 }
+  ]
+}
+?? status == 201
+
+### Variáveis
+@forecastBId = {{forecastB.id}}
+
+### 2.3 POST Cenário de fornecedores - 2 ofertas para a mozzarella (201, simulated)
+# @name suppliers
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Planning_Fornecedores_{{$timestamp}}",
+  "suppliers": [
+    { "id": "SUP-A", "name": "Fornecedor A" },
+    { "id": "SUP-B", "name": "Fornecedor B" }
+  ],
+  "products": [
+    {
+      "productId": "{{mozzarella}}",
+      "offers": [
+        { "supplierId": "SUP-A", "priceEur": 2.5, "stockUnits": 100, "leadTimeDays": 1 },
+        { "supplierId": "SUP-B", "priceEur": 1.9, "stockUnits": 20, "leadTimeDays": 3, "supplyLimit": 10 }
+      ]
+    },
+    {
+      "productId": "{{molho}}",
+      "offers": [
+        { "supplierId": "SUP-A", "priceEur": 1.2, "stockUnits": 50, "leadTimeDays": 0 }
+      ]
+    }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.simulated == true
+
+### Variáveis
+@suppliersId = {{suppliers.id}}
+
+### ==========================================
+### 3: EXECUÇÃO (POST /planning/requirements)
+### ==========================================
+
+### 3. POST Executar o forecast A com o cenário de fornecedores (200, resultado gravado)
+# @name runA
+POST {{baseUrl}}/planning/requirements
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "scenarioId": "DEMO-PARTIAL",
+  "stockMode": "live",
+  "forecastId": "{{forecastAId}}",
+  "supplierScenarioId": "{{suppliersId}}"
+}
+?? status == 200
+?? js response.parsedBody.simulation == true
+?? js response.parsedBody.runId isString
+?? js response.parsedBody.plan.forecastId === forecastAId == true
+?? js response.parsedBody.plan.version == 1
+
+### Variáveis
+@runAId = {{runA.runId}}
+
+### 3.1 POST Executar o forecast B (200, outro resultado gravado)
+# @name runB
+POST {{baseUrl}}/planning/requirements
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "scenarioId": "DEMO-PARTIAL",
+  "stockMode": "live",
+  "forecastId": "{{forecastBId}}",
+  "supplierScenarioId": "{{suppliersId}}"
+}
+?? status == 200
+?? js response.parsedBody.runId !== runA.runId == true
+?? js response.parsedBody.plan.forecastId === forecastBId == true
+
+### 3.2 GET O stock real não mudou com as execuções (200 OK, igual ao passo 2)
+GET {{baseUrl}}/stock
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js JSON.stringify(response.parsedBody.map((s) => [String(s.productId), s.quantity]).sort()) === JSON.stringify(stockBefore.map((s) => [String(s.productId), s.quantity]).sort()) == true
+
+### 3.3 POST Forecast inexistente (404 FORECAST_NOT_FOUND, nada é gravado)
+POST {{baseUrl}}/planning/requirements
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "scenarioId": "DEMO-PARTIAL",
+  "stockMode": "live",
+  "forecastId": "{{missingId}}"
+}
+?? status == 404
+?? js response.parsedBody.error.code == FORECAST_NOT_FOUND
+
+### ==========================================
+### 4: CONSULTA DOS RESULTADOS (GET /planning/runs)
+### ==========================================
+
+### 4. GET Execuções do forecast A, com as versões usadas e sem o plano completo (200 OK)
+GET {{baseUrl}}/planning/runs?kind=requirements&forecastId={{forecastAId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.length == 1
+?? js response.parsedBody[0].id === runA.runId == true
+?? js response.parsedBody[0].forecast.version == 1
+?? js response.parsedBody[0].supplierScenario.id === suppliersId == true
+?? js response.parsedBody[0].stockSource.source == backend-live
+?? js response.parsedBody[0].snapshotId isString
+?? js response.parsedBody[0].bomVersion isString
+?? js response.parsedBody[0].result === undefined == true
+
+### 4.1 GET Execução do forecast A com o resultado completo (200 OK)
+GET {{baseUrl}}/planning/runs/{{runAId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.result.status == ok
+?? js response.parsedBody.result.plan.forecastId === forecastAId == true
+
+### 4.2 POST Editar o forecast A cria a v2 (201) - a execução anterior mantém a v1
+POST {{baseUrl}}/forecasts
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{forecastAName}}",
+  "startDate": "2026-11-23",
+  "endDate": "2026-11-29",
+  "entries": [
+    { "date": "2026-11-23", "productId": "{{margherita}}", "sizeId": "{{sizeM}}", "quantity": 30 }
+  ]
+}
+?? status == 201
+?? js response.parsedBody.version == 2
+
+### 4.3 GET A execução do forecast A continua associada à v1 (200 OK)
+GET {{baseUrl}}/planning/runs/{{runAId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.forecast.version == 1
+?? js response.parsedBody.result.plan.version == 1
+
+### 4.4 GET Filtro inválido (400 Bad Request)
+GET {{baseUrl}}/planning/runs?kind=outro
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.5 GET ID com formato inválido (400 Bad Request)
+GET {{baseUrl}}/planning/runs/abc
+Authorization: Bearer {{adminToken}}
+?? status == 400
+
+### 4.6 GET Execução inexistente (404 PLANNING_RUN_NOT_FOUND)
+GET {{baseUrl}}/planning/runs/{{missingId}}
+Authorization: Bearer {{adminToken}}
+?? status == 404
+?? js response.parsedBody.error.code == PLANNING_RUN_NOT_FOUND
+
+### 4.7 GET Sem token (401 Unauthorized)
+GET {{baseUrl}}/planning/runs
+?? status == 401

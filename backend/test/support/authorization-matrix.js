@@ -26,12 +26,13 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['POST', '/auth/logout-all', AUTHENTICATED],
   ['POST', '/auth/password/change', AUTHENTICATED],
 
-  // Public catalogue and allergen information (Table 1: Guest)
+  // Public catalogue, with the allergens of each product (Table 1: Guest)
   ['GET', '/catalogue', PUBLIC],
   ['GET', '/catalogue/:id', PUBLIC],
-  ['GET', '/allergens', PUBLIC],
-  ['GET', '/allergens/:id', PUBLIC],
-  ['GET', '/allergens/name/:name', PUBLIC],
+  // Allergen management: MANAGER only (Table 1: "Manage ... allergens")
+  ['GET', '/allergens', MANAGER_ONLY],
+  ['GET', '/allergens/:id', MANAGER_ONLY],
+  ['GET', '/allergens/name/:name', MANAGER_ONLY],
   ['POST', '/allergens', MANAGER_ONLY],
   ['PUT', '/allergens/:id', MANAGER_ONLY],
 
@@ -98,13 +99,16 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['GET', '/forecasts/:id', MANAGER_ONLY],
   ['POST', '/forecasts', MANAGER_ONLY],
   ['PUT', '/forecasts/:id', MANAGER_ONLY],
+  ['POST', '/planning/bom', MANAGER_ONLY],
+  ['POST', '/planning/requirements', MANAGER_ONLY],
+  ['GET', '/planning/runs', MANAGER_ONLY],
+  ['GET', '/planning/runs/:id', MANAGER_ONLY],
   ['GET', '/supplier-scenarios', MANAGER_ONLY],
   ['GET', '/supplier-scenarios/:id', MANAGER_ONLY],
   ['POST', '/supplier-scenarios', MANAGER_ONLY],
   ['PUT', '/supplier-scenarios/:id', MANAGER_ONLY],
   ['GET', '/ai-data/snapshot', MANAGER_ONLY],
-  ['POST', '/planning/bom', MANAGER_ONLY],
-  ['POST', '/planning/requirements', MANAGER_ONLY],
+  ['GET', '/ai-data/products/export', MANAGER_ONLY],
 
   // Internal shared documents: staff read, manager manages
   ['GET', '/shared-resources', STAFF],

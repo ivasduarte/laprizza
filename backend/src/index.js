@@ -195,7 +195,8 @@ export function createApp(config = loadConfig(), repos = {}) {
         skip: (req) => Boolean(req.headers.authorization),
       })
     : passThrough;
-  api.use(['/catalogue', '/allergens'], publicLimiter);
+  // Only the public catalogue is open to Guests (allergen management is MANAGER only).
+  api.use('/catalogue', publicLimiter);
 
   api.use('/auth', authRouterFactory(auth));
   api.use('/users', usersRouterFactory(repos.usersRepository));
@@ -284,9 +285,12 @@ export function createApp(config = loadConfig(), repos = {}) {
       repos.assemblyLineConfigurationRepository || repos.assemblyLineRepository,
     ),
   );
-  api.use('/forecasts', forecastRouterFactory(repos.forecastRepository));
+  api.use('/forecasts', forecastRouterFactory(repos.forecastRepository, repos.aiDataRepository));
 
-  api.use('/supplier-scenarios', supplierScenarioRouterFactory(repos.supplierScenarioRepository));
+  api.use(
+    '/supplier-scenarios',
+    supplierScenarioRouterFactory(repos.supplierScenarioRepository, repos.aiDataRepository),
+  );
   api.use('/shared-resources', sharedResourcesRouterFactory(repos.sharedResourcesStorage));
   api.use(
     '/planning',
@@ -294,6 +298,7 @@ export function createApp(config = loadConfig(), repos = {}) {
       planningService: repos.planningService,
       aiServiceClient: repos.aiServiceClient,
       aiDataRepository: repos.aiDataRepository,
+      planningRunRepository: repos.planningRunRepository,
       aiServiceConfig: config.aiService,
     }),
   );

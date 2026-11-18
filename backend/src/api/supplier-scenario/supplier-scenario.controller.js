@@ -12,11 +12,12 @@ export const list = async (req, res, next, scenarioRepository) => {
   }
 };
 
-export const create = async (req, res, next, scenarioRepository) => {
+export const create = async (req, res, next, scenarioRepository, catalogueReader) => {
   try {
     const scenario = await supplierScenarioService.createSupplierScenario(
       req.body,
       scenarioRepository,
+      catalogueReader,
     );
     res.status(201).json(scenario);
   } catch (error) {

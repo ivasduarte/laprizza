@@ -4,6 +4,14 @@
 @dynamicName = Cenario_{{$timestamp}}
 @missingId = 507f1f77bcf86cd799439011
 
+# WEB07 - Cenários de fornecedores (JSON manual ou preparado com LLM):
+# - imutáveis e versionados como os forecasts: o mesmo nome cria a versão seguinte; a "version"
+#   enviada é ignorada e as ofertas ficam sempre simulated = true;
+# - um fornecedor sem name usa o id como nome;
+# - regras de negócio (400, error.details[].type): productUnknown, productDuplicate,
+#   supplierIdDuplicate, offerSupplierUnknown, offerDuplicate;
+# - um pedido rejeitado não grava nada: o cenário anterior fica intacto.
+
 ### ==========================================
 ### 1: AUTENTICAÇÃO
 ### ==========================================
@@ -23,7 +31,7 @@ Content-Type: application/json
 @adminToken = {{loginAdmin.accessToken}}
 
 ### ==========================================
-### 2: DADOS DE SUPORTE (produto usado nas ofertas)
+### 2: DADOS DE SUPORTE (produtos usados nas ofertas)
 ### ==========================================
 
 ### 2. POST Categoria de suporte (201 Created)
@@ -40,17 +48,17 @@ Content-Type: application/json
 ### Variáveis
 @categoryId = {{createCategoryRef.id}}
 
-### 2.1 POST Produto de suporte (201 Created)
+### 2.1 POST Matéria-prima com controlo de stock (201 Created)
 # @name createProductRef
 POST {{baseUrl}}/products
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "name": "Produto Cenario {{$timestamp}}",
-  "description": "Produto para ofertas de fornecedores",
+  "name": "Materia Prima Cenario {{$timestamp}}",
+  "description": "Produto com duas ofertas de fornecedores",
   "sellable": false,
-  "stockControlled": false,
+  "stockControlled": true,
   "categoryId": "{{categoryId}}"
 }
 ?? status == 201
@@ -58,11 +66,35 @@ Content-Type: application/json
 ### Variáveis
 @productId = {{createProductRef.id}}
 
+### 2.2 POST Segunda matéria-prima, sem ofertas (201 Created)
+# @name createProductNoOffersRef
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Materia Prima Sem Fornecedor {{$timestamp}}",
+  "description": "Produto sem fornecedor configurado",
+  "sellable": false,
+  "stockControlled": true,
+  "categoryId": "{{categoryId}}"
+}
+?? status == 201
+
+### Variáveis
+@productNoOffersId = {{createProductNoOffersRef.id}}
+
+### 2.3 GET Export de produtos para o ficheiro de fornecedores (200 OK, inclui as matérias-primas)
+GET {{baseUrl}}/ai-data/products/export
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.products.some((p) => p.id === productId && p.kind === 'rawMaterial') == true
+
 ### ==========================================
-### 3: CRIAÇÃO E VALIDAÇÕES (POST)
+### 3: CRIAÇÃO E VERSÕES (POST)
 ### ==========================================
 
-### 3. POST Cenário Novo - com espaços à volta para provar o trim (201 Created)
+### 3. POST Cenário novo - 2 ofertas para o mesmo produto + produto sem ofertas (201, v1)
 # @name createScenario
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
@@ -70,7 +102,6 @@ Content-Type: application/json
 
 {
   "name": "   {{dynamicName}}   ",
-  "simulated": true,
   "suppliers": [
     { "id": "SUP-1", "name": "Fornecedor A" },
     { "id": "SUP-2", "name": "Fornecedor B" }
@@ -79,69 +110,93 @@ Content-Type: application/json
     {
       "productId": "{{productId}}",
       "offers": [
-        {
-          "supplierId": "SUP-1",
-          "priceEur": 1.5,
-          "stockUnits": 100,
-          "leadTimeDays": 2,
-          "supplyLimit": 50
-        },
-        {
-          "supplierId": "SUP-2",
-          "priceEur": 0,
-          "stockUnits": 1,
-          "leadTimeDays": 0
-        }
+        { "supplierId": "SUP-1", "priceEur": 1.5, "stockUnits": 100, "leadTimeDays": 2, "supplyLimit": 50 },
+        { "supplierId": "SUP-2", "priceEur": 0, "stockUnits": 1, "leadTimeDays": 0 }
       ]
-    }
+    },
+    { "productId": "{{productNoOffersId}}", "offers": [] }
   ]
 }
 ?? status == 201
+?? js response.parsedBody.name === response.parsedBody.name.trim() == true
+?? js response.parsedBody.version == 1
+?? js response.parsedBody.simulated == true
+?? js response.parsedBody.products[0].offers.length == 2
+?? js response.parsedBody.products[1].offers.length == 0
 
 ### Variáveis
 @scenarioId = {{createScenario.id}}
 @createdName = {{createScenario.name}}
 
-### 3.1 POST Nome Duplicado (mesma versão) (409 Conflict)
+### 3.1 POST Mesmo nome - cria a versão seguinte, a v1 mantém-se (201, v2)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "{{createdName}}",
-  "suppliers": [],
-  "products": []
-}
-?? status == 409
-
-### 3.2 POST Nome Duplicado com outras maiúsculas (409 Conflict)
-# Altera manualmente o nome abaixo para MAIÚSCULAS (ex.: CENARIO_1760000000)
-# para validar que a unicidade ignora maiúsculas/minúsculas.
-POST {{baseUrl}}/supplier-scenarios
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "{{createdName}}",
-  "suppliers": [],
-  "products": []
-}
-?? status == 409
-
-### 3.3 POST Mesmo nome com outra versão (201 Created - versões diferentes são permitidas)
-POST {{baseUrl}}/supplier-scenarios
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "{{createdName}}",
-  "version": 2,
   "suppliers": [],
   "products": []
 }
 ?? status == 201
+?? js response.parsedBody.version == 2
 
-### 3.4 POST Sem body - Joi (400 Bad Request)
+### 3.2 POST Mesmo nome em MAIÚSCULAS - a versão ignora maiúsculas/minúsculas (201, v3)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName.toUpperCase()}}",
+  "suppliers": [],
+  "products": []
+}
+?? status == 201
+?? js response.parsedBody.version == 3
+
+### 3.3 POST version e simulated:false enviados são ignorados (201, v4, simulated = true)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "version": 99,
+  "simulated": false,
+  "suppliers": [],
+  "products": []
+}
+?? status == 201
+?? js response.parsedBody.version == 4
+?? js response.parsedBody.simulated == true
+
+### 3.4 GET A v1 continua igual depois das novas versões (200 OK)
+GET {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.version == 1
+?? js response.parsedBody.products[0].offers.length == 2
+
+### 3.5 POST Fornecedor sem name - usa o id como nome (201 Created)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Supplier_SemNome_{{$timestamp}}",
+  "suppliers": [
+    { "id": "SUP-9" }
+  ],
+  "products": []
+}
+?? status == 201
+?? js response.parsedBody.suppliers[0].name == SUP-9
+
+### ==========================================
+### 3A: VALIDAÇÕES DE ESTRUTURA (Joi)
+### ==========================================
+
+### 3A.1 POST Sem body (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -149,7 +204,7 @@ Content-Type: application/json
 {}
 ?? status == 400
 
-### 3.5 POST name vazio - Joi (400 Bad Request)
+### 3A.2 POST name vazio (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -161,7 +216,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.6 POST name só com espaços - Joi (400 Bad Request)
+### 3A.3 POST name só com espaços (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -173,7 +228,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.7 POST name não-string - Joi (400 Bad Request)
+### 3A.4 POST name não-string (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -185,7 +240,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.8 POST Sem suppliers - Joi (400 Bad Request)
+### 3A.5 POST Sem suppliers (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -196,7 +251,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.9 POST Sem products - Joi (400 Bad Request)
+### 3A.6 POST Sem products (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -207,7 +262,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.10 POST version inválida (0) - Joi (400 Bad Request)
+### 3A.7 POST version inválida (0) (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -220,7 +275,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.11 POST simulated não-booleano - Joi (400 Bad Request)
+### 3A.8 POST simulated não-booleano (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -233,7 +288,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.12 POST Supplier sem id - Joi (400 Bad Request)
+### 3A.9 POST Supplier sem id (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -247,24 +302,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.13 POST Supplier sem name (400 Bad Request)
-# No Joi o name do supplier é opcional, mas no modelo Mongoose é obrigatório.
-# Se este pedido devolver 500 (ou 201), o Joi e o modelo estão desalinhados:
-# ou o name passa a obrigatório no Joi, ou deixa de ser obrigatório no modelo.
-POST {{baseUrl}}/supplier-scenarios
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "name": "Supplier_SemNome_{{$timestamp}}",
-  "suppliers": [
-    { "id": "SUP-9" }
-  ],
-  "products": []
-}
-?? status == 400
-
-### 3.14 POST Produto sem productId - Joi (400 Bad Request)
+### 3A.10 POST Produto sem productId (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -278,7 +316,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.15 POST Produto com productId de formato inválido - Joi (400 Bad Request)
+### 3A.11 POST Produto com productId de formato inválido (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -292,7 +330,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.16 POST Produto sem offers - Joi (400 Bad Request)
+### 3A.12 POST Produto sem a lista offers (400 Bad Request; sem ofertas é "offers": [])
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -306,14 +344,14 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.17 POST Oferta sem supplierId - Joi (400 Bad Request)
+### 3A.13 POST Oferta sem supplierId (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Oferta_SemSupplier_{{$timestamp}}",
-  "suppliers": [],
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -325,14 +363,73 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.18 POST Oferta com priceEur negativo - Joi (400 Bad Request)
+### 3A.14 POST Oferta sem priceEur (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_SemPreco_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "stockUnits": 10, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.field.endsWith('priceEur')) == true
+
+### 3A.15 POST Oferta sem leadTimeDays (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_SemPrazo_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10 }
+      ]
+    }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.field.endsWith('leadTimeDays')) == true
+
+### 3A.16 POST Oferta sem stockUnits (400 Bad Request)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Oferta_SemUnidades_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+
+### 3A.17 POST Oferta com priceEur negativo (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Oferta_PrecoNegativo_{{$timestamp}}",
-  "suppliers": [],
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -344,14 +441,14 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.19 POST Oferta com stockUnits 0 - Joi (400 Bad Request)
+### 3A.18 POST Oferta com stockUnits 0 (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Oferta_StockZero_{{$timestamp}}",
-  "suppliers": [],
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -363,14 +460,14 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.20 POST Oferta com stockUnits decimal - Joi (400 Bad Request)
+### 3A.19 POST Oferta com stockUnits decimal (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Oferta_StockDecimal_{{$timestamp}}",
-  "suppliers": [],
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -382,14 +479,14 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.21 POST Oferta com leadTimeDays negativo - Joi (400 Bad Request)
+### 3A.20 POST Oferta com leadTimeDays negativo (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "name": "Oferta_LeadNegativo_{{$timestamp}}",
-  "suppliers": [],
+  "name": "Oferta_PrazoNegativo_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -401,14 +498,14 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.22 POST Oferta com supplyLimit negativo - Joi (400 Bad Request)
+### 3A.21 POST Oferta com supplyLimit negativo (400 Bad Request)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "name": "Oferta_LimiteNegativo_{{$timestamp}}",
-  "suppliers": [],
+  "suppliers": [{ "id": "SUP-1" }],
   "products": [
     {
       "productId": "{{productId}}",
@@ -420,34 +517,136 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 3.23 POST Segundo Cenário, com campos extra ignorados (201 Created, isActive = true)
+### ==========================================
+### 3B: REGRAS DE NEGÓCIO (400, error.details[].type)
+### ==========================================
+
+### 3B.1 POST Produto desconhecido (400 productUnknown)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_ProdutoDesconhecido_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{missingId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'productUnknown') == true
+
+### 3B.2 POST Oferta de um fornecedor não listado (400 offerSupplierUnknown)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_FornecedorDesconhecido_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-X", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 }
+      ]
+    }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'offerSupplierUnknown') == true
+
+### 3B.3 POST Id de fornecedor duplicado (400 supplierIdDuplicate)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_FornecedorDuplicado_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1", "name": "A" }, { "id": "SUP-1", "name": "B" }],
+  "products": []
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'supplierIdDuplicate') == true
+
+### 3B.4 POST Produto duplicado (400 productDuplicate)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_ProdutoDuplicado_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    { "productId": "{{productId}}", "offers": [] },
+    { "productId": "{{productId}}", "offers": [] }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'productDuplicate') == true
+
+### 3B.5 POST Duas ofertas do mesmo fornecedor para o mesmo produto (400 offerDuplicate)
+POST {{baseUrl}}/supplier-scenarios
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Regra_OfertaDuplicada_{{$timestamp}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    {
+      "productId": "{{productId}}",
+      "offers": [
+        { "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 },
+        { "supplierId": "SUP-1", "priceEur": 2, "stockUnits": 20, "leadTimeDays": 3 }
+      ]
+    }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.some((d) => d.type === 'offerDuplicate') == true
+
+### 3B.6 GET O cenário válido anterior ficou intacto depois das rejeições (200 OK)
+GET {{baseUrl}}/supplier-scenarios/{{scenarioId}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.version == 1
+?? js response.parsedBody.products[0].offers.length == 2
+
+### 3B.7 POST Cenário com campos extra ignorados (201 Created, isActive = true)
 # @name createSecondScenario
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "name": "Cenario_Extra_{{$randomInt 1000 9999}}",
+  "name": "Cenario_Extra_{{$timestamp}}",
   "suppliers": [],
   "products": [],
   "isActive": false,
   "role": "MANAGER"
 }
 ?? status == 201
+?? js response.parsedBody.isActive == true
 
 ### Variáveis
 @secondId = {{createSecondScenario.id}}
 @secondName = {{createSecondScenario.name}}
 
-
 ### ==========================================
 ### 4: PESQUISA E CONSULTAS (GET)
 ### ==========================================
 
-### 4. GET Listar Todos (200 OK)
+### 4. GET Listar todos (200 OK, inclui as 4 versões do cenário)
 GET {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.filter((s) => s.name.toLowerCase() === createdName.toLowerCase()).length == 4
 
 ### 4.1 GET Pesquisa parcial por nome (200 OK)
 GET {{baseUrl}}/supplier-scenarios?name=Cenario
@@ -458,18 +657,20 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/supplier-scenarios?name=zzz_inexistente
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
 ### 4.3 GET Pesquisa com caracteres de regex tratados como texto (200 OK, [])
 GET {{baseUrl}}/supplier-scenarios?name=.*
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
-### 4.4 GET name vazio - Joi (400 Bad Request)
+### 4.4 GET name vazio (400 Bad Request)
 GET {{baseUrl}}/supplier-scenarios?name=
 Authorization: Bearer {{adminToken}}
 ?? status == 400
 
-### 4.5 GET name enviado duas vezes - Joi (400 Bad Request)
+### 4.5 GET name enviado duas vezes (400 Bad Request)
 GET {{baseUrl}}/supplier-scenarios?name=a&name=b
 Authorization: Bearer {{adminToken}}
 ?? status == 400
@@ -478,6 +679,7 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/supplier-scenarios/{{scenarioId}}
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.suppliers.length == 2
 
 ### 4.7 GET Por ID com formato inválido (400 Bad Request)
 GET {{baseUrl}}/supplier-scenarios/abc123
@@ -489,13 +691,12 @@ GET {{baseUrl}}/supplier-scenarios/{{missingId}}
 Authorization: Bearer {{adminToken}}
 ?? status == 404
 
-
 ### ==========================================
 ### 5: DESATIVAR (PUT com isActive:false)
 ### ==========================================
 # O PUT só aceita { "isActive": false } - não renomeia nem altera ofertas.
 
-### 5. PUT Body vazio - Joi (400 Bad Request)
+### 5. PUT Body vazio (400 Bad Request)
 PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -503,7 +704,7 @@ Content-Type: application/json
 {}
 ?? status == 400
 
-### 5.1 PUT Só com name - Joi (400 Bad Request - não é possível renomear)
+### 5.1 PUT Só com name (400 Bad Request - não é possível renomear)
 PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -513,7 +714,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 5.2 PUT isActive:true - Joi (400 Bad Request)
+### 5.2 PUT isActive:true (400 Bad Request)
 PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -523,7 +724,7 @@ Content-Type: application/json
 }
 ?? status == 400
 
-### 5.3 PUT isActive inválido - Joi (400 Bad Request)
+### 5.3 PUT isActive inválido (400 Bad Request)
 PUT {{baseUrl}}/supplier-scenarios/{{scenarioId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -563,7 +764,8 @@ Content-Type: application/json
   "isActive": false
 }
 ?? status == 200
-
+?? js response.parsedBody.isActive == false
+?? js response.parsedBody.name === secondName == true
 
 ### ==========================================
 ### 6: CONSISTÊNCIA APÓS DESATIVAR
@@ -578,11 +780,13 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.some((s) => s.id === secondId) == false
 
 ### 6.2 GET Pesquisa por nome - o desativado já não aparece (200 OK, [])
 GET {{baseUrl}}/supplier-scenarios?name={{secondName}}
 Authorization: Bearer {{adminToken}}
 ?? status == 200
+?? js response.parsedBody.length == 0
 
 ### 6.3 PUT Desativar outra vez (404 Not Found)
 PUT {{baseUrl}}/supplier-scenarios/{{secondId}}
@@ -594,7 +798,7 @@ Content-Type: application/json
 }
 ?? status == 404
 
-### 6.4 POST Mesmo nome do desativado (409 Conflict - o nome continua reservado)
+### 6.4 POST Mesmo nome do desativado (201, v2 - o número de versão nunca é reutilizado)
 POST {{baseUrl}}/supplier-scenarios
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -604,8 +808,8 @@ Content-Type: application/json
   "suppliers": [],
   "products": []
 }
-?? status == 409
-
+?? status == 201
+?? js response.parsedBody.version == 2
 
 ### ==========================================
 ### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)

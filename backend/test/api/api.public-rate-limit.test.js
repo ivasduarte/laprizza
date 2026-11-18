@@ -5,7 +5,7 @@ import { createApp, loadConfig } from '../../src/index.js';
 
 /**
  * Integration test (AA05): public routes are open to Guests but anonymous requests are limited per IP.
- * The limit is shared by /catalogue and /allergens; other routes and requests with a token are not affected.
+ * The limit applies to /catalogue; other routes and requests with a token are not affected.
  */
 test('anonymous requests to public routes are rate limited; requests with a token are not', async (t) => {
   const config = loadConfig({
@@ -24,7 +24,7 @@ test('anonymous requests to public routes are rate limited; requests with a toke
   const api = `http://127.0.0.1:${server.address().port}/api/v1`;
 
   assert.equal((await fetch(`${api}/catalogue`)).status, 200);
-  assert.equal((await fetch(`${api}/allergens/abc`)).status, 400); // counted by the same limiter
+  assert.equal((await fetch(`${api}/catalogue`)).status, 200);
 
   const blocked = await fetch(`${api}/catalogue`);
   assert.equal(blocked.status, 429);
@@ -37,8 +37,9 @@ test('anonymous requests to public routes are rate limited; requests with a toke
   });
   assert.equal(withToken.status, 401);
 
-  // Routes outside the public ones are not affected
+  // Routes outside the public ones are not affected (allergens are MANAGER only, not public)
   assert.equal((await fetch(`${api}/products`)).status, 401);
+  assert.equal((await fetch(`${api}/allergens`)).status, 401);
 });
 
 /**

@@ -94,18 +94,28 @@ async function setupTestServer() {
     list: mock.fn(async () => []),
     search: mock.fn(async () => []),
     findById: mock.fn(async () => null),
+    // Scenarios are versioned: no previous version of the name, so the next one is v1.
+    getLatestVersion: mock.fn(async () => 0),
     create: mock.fn(async (data) => ({ _id: SCENARIO_ID, ...data })),
     update: mock.fn(async (id, data) => ({ _id: id, ...validScenario(), isActive: true, ...data })),
+  };
+  // Read-only catalogue checked by findSupplierScenarioProblems: the product of validScenario().
+  const aiDataRepository = {
+    listProducts: mock.fn(async () => [
+      { _id: PRODUCT_ID, name: 'Mozzarella', stockControlled: true },
+    ]),
+    listPredefinedPizzas: mock.fn(async () => []),
   };
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     ...createAuthMocks(),
     supplierScenarioRepository: scenarioRepo,
+    aiDataRepository,
   }).listen(0);
 
   await once(server, 'listening');
   const port = server.address().port;
 
-  return { server, port, scenarioRepo };
+  return { server, port, scenarioRepo, aiDataRepository };
 }
 
 test('API /supplier-scenarios RBAC: Only MANAGER can create and update', async (t) => {
@@ -186,8 +196,10 @@ test('API /supplier-scenarios lifecycle and validations', async (t) => {
   const stored = scenarioRepo.create.mock.calls[1].arguments[0];
   assert.equal(stored.hacker, undefined);
   assert.equal(stored.isActive, true);
+  assert.equal(stored.version, 1);
+  assert.equal(stored.simulated, true);
 
-  // Step: the name is now taken.
+  // Step: a concurrent create already stored the same version.
   scenarioRepo.create.mock.mockImplementationOnce(async () => {
     throw duplicateKeyError();
   });

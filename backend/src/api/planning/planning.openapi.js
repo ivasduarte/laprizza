@@ -22,7 +22,20 @@ const requestBody = {
           stockMode: {
             type: 'string',
             enum: ['live', 'scenario'],
-            description: '"live": current stock of the back end; "scenario": stock of the scenario.',
+            description:
+              '"live": current stock of the back end; "scenario": stock of the scenario.',
+          },
+          forecastId: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$',
+            description:
+              'Saved forecast version to execute (GET /forecasts). Default: the most recent active one.',
+          },
+          supplierScenarioId: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$',
+            description:
+              'Saved supplier scenario version (GET /supplier-scenarios). Default: the most recent active one.',
           },
         },
       },
@@ -43,7 +56,11 @@ const commonErrors = {
         schema: errorRef,
         examples: {
           validation: errorExample(400, 'VALIDATION_ERROR', 'Validation failed.', [
-            { field: 'stockMode', type: 'any.only', message: '"stockMode" must be one of [live, scenario]' },
+            {
+              field: 'stockMode',
+              type: 'any.only',
+              message: '"stockMode" must be one of [live, scenario]',
+            },
           ]),
           scenarioWithoutStock: errorExample(
             400,
@@ -73,11 +90,19 @@ const commonErrors = {
     },
   },
   404: {
-    description: 'AI scenario not found or not active.',
+    description: 'AI scenario, forecast or supplier scenario not found (or not active).',
     content: {
       'application/json': {
         schema: errorRef,
-        examples: { notFound: errorExample(404, 'AI_SCENARIO_NOT_FOUND', 'AI scenario not found.') },
+        examples: {
+          notFound: errorExample(404, 'AI_SCENARIO_NOT_FOUND', 'AI scenario not found.'),
+          forecastNotFound: errorExample(404, 'FORECAST_NOT_FOUND', 'Forecast not found.'),
+          supplierScenarioNotFound: errorExample(
+            404,
+            'SUPPLIER_SCENARIO_NOT_FOUND',
+            'Supplier scenario not found.',
+          ),
+        },
       },
     },
   },
@@ -95,7 +120,9 @@ const commonErrors = {
             {
               scenario: { id: 'DEMO-PARTIAL', name: 'Demo', version: 1, stockMode: 'scenario' },
               inputs: { snapshotId: '39f659e4dbf709b3', sources: {} },
-              problems: [{ code: 'MISSING_SCENARIO_STOCK', productId: 'c-mozzarella', required: 4 }],
+              problems: [
+                { code: 'MISSING_SCENARIO_STOCK', productId: 'c-mozzarella', required: 4 },
+              ],
             },
           ),
         },
@@ -131,7 +158,69 @@ const commonErrors = {
 
 const readOnlyNote =
   'Simulation only (simulation: true): the calculation never changes stock nor registers purchase orders. ' +
-  'The back end builds the snapshot (same as GET /ai-data/snapshot) and sends it to the Prolog AI service, authenticated with a service key.';
+  'The back end builds the snapshot (same as GET /ai-data/snapshot) and sends it to the Prolog AI service, authenticated with a service key. ' +
+  'Each successful calculation is recorded as a planning run (runId in the answer) with the forecast version, supplier scenario version, snapshot and BOM version it used: see GET /planning/runs.';
+
+const runIdProperty = {
+  runId: {
+    type: 'string',
+    pattern: '^[0-9a-fA-F]{24}$',
+    description: 'Id of the recorded planning run (GET /planning/runs/{id}).',
+  },
+};
+
+const inputVersion = {
+  type: 'object',
+  nullable: true,
+  properties: { id: { type: 'string' }, name: { type: 'string' }, version: { type: 'integer' } },
+};
+
+const planningRunBase = {
+  id: { type: 'string' },
+  kind: { type: 'string', enum: ['bom', 'requirements'] },
+  createdAt: { type: 'string', format: 'date-time' },
+  requestedBy: { type: 'string', nullable: true, description: 'User id of the MANAGER.' },
+  request: {
+    type: 'object',
+    properties: {
+      scenarioId: { type: 'string' },
+      stockMode: { type: 'string', enum: ['live', 'scenario'] },
+      forecastId: { type: 'string', nullable: true },
+      supplierScenarioId: { type: 'string', nullable: true },
+    },
+  },
+  snapshotId: { type: 'string', nullable: true, description: 'Stock snapshot used.' },
+  scenario: { type: 'object', nullable: true, additionalProperties: true },
+  forecast: { ...inputVersion, description: 'Forecast version used.' },
+  supplierScenario: { ...inputVersion, description: 'Supplier scenario version used.' },
+  bomVersion: {
+    type: 'string',
+    nullable: true,
+    description: 'Version (hash) of the catalogue and pizza BOM used.',
+  },
+  stockSource: {
+    type: 'object',
+    nullable: true,
+    additionalProperties: true,
+    description: 'Origin of the stock: backend-live or the scenario.',
+  },
+  status: { type: 'string' },
+};
+
+const runIdParam = {
+  name: 'id',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+};
+
+const objectIdQuery = (name, description) => ({
+  name,
+  in: 'query',
+  required: false,
+  schema: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+  description,
+});
 
 export const planningPaths = {
   '/planning/bom': {
@@ -146,8 +235,9 @@ export const planningPaths = {
           description: 'Calculation done. warnings never block the calculation.',
           content: {
             'application/json': {
-              schema: { type: 'object', additionalProperties: true },
+              schema: { type: 'object', additionalProperties: true, properties: runIdProperty },
               example: {
+                runId: '6afdb2ce653532f5e331aa01',
                 status: 'ok',
                 simulation: true,
                 feasible: false,
@@ -180,7 +270,12 @@ export const planningPaths = {
                   },
                 ],
                 shortages: [
-                  { productId: 'c-mozzarella', name: 'Mozzarella', kind: 'simple', replenishmentNeeded: 2 },
+                  {
+                    productId: 'c-mozzarella',
+                    name: 'Mozzarella',
+                    kind: 'simple',
+                    replenishmentNeeded: 2,
+                  },
                 ],
                 production: [],
                 warnings: [{ code: 'PIZZA_STOCK_IGNORED', pizzaId: 'p-margherita' }],
@@ -203,9 +298,100 @@ export const planningPaths = {
         200: {
           description:
             'Calculation done: required quantities, purchases per supplier (suggestions only) and warnings.',
-          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          content: {
+            'application/json': {
+              schema: { type: 'object', additionalProperties: true, properties: runIdProperty },
+            },
+          },
         },
         ...commonErrors,
+      },
+    },
+  },
+  '/planning/runs': {
+    get: {
+      summary: 'List planning runs, most recent first (MANAGER only)',
+      description:
+        'Results already calculated (at most 100), each with the inputs it used. The full plan is only in GET /planning/runs/{id}.',
+      tags: ['AI Planning'],
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          name: 'kind',
+          in: 'query',
+          required: false,
+          schema: { type: 'string', enum: ['bom', 'requirements'] },
+        },
+        objectIdQuery('forecastId', 'Only runs of this forecast version.'),
+        objectIdQuery('supplierScenarioId', 'Only runs of this supplier scenario version.'),
+      ],
+      responses: {
+        200: {
+          description: 'Success',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    ...planningRunBase,
+                    summary: { type: 'object', nullable: true, additionalProperties: true },
+                    feasible: { type: 'boolean', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: commonErrors[400],
+        401: commonErrors[401],
+        403: commonErrors[403],
+      },
+    },
+  },
+  '/planning/runs/{id}': {
+    get: {
+      summary: 'Get a planning run with its full result (MANAGER only)',
+      tags: ['AI Planning'],
+      security: [{ BearerAuth: [] }],
+      parameters: [runIdParam],
+      responses: {
+        200: {
+          description: 'Success',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ...planningRunBase,
+                  result: {
+                    type: 'object',
+                    additionalProperties: true,
+                    description: 'Answer of the AI service, as returned by POST /planning/*.',
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: {
+          description: 'Invalid ID format.',
+          content: { 'application/json': { schema: errorRef } },
+        },
+        401: commonErrors[401],
+        403: commonErrors[403],
+        404: {
+          description: 'Planning run not found (PLANNING_RUN_NOT_FOUND).',
+          content: {
+            'application/json': {
+              schema: errorRef,
+              examples: {
+                notFound: errorExample(404, 'PLANNING_RUN_NOT_FOUND', 'Planning run not found.'),
+              },
+            },
+          },
+        },
       },
     },
   },

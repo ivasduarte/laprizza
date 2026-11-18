@@ -10,7 +10,8 @@ import { joiDetails } from '../middleware/joi-details.js';
 export default function allergenRouterFactory(allergenRepository) {
   const router = Router();
 
-  const canRead = requirePermission(Permission.CATALOGUE_READ);
+  // Allergen management is MANAGER only; other roles see allergens through the catalogue.
+  const canRead = requirePermission(Permission.ALLERGENS_READ);
   const canWrite = requirePermission(Permission.ALLERGENS_WRITE);
 
   const allergenSchema = Joi.object({

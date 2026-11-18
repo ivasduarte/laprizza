@@ -70,6 +70,7 @@ test('base roles follow Table 1', () => {
   ]);
 
   assert.deepEqual(permissionsFor([Roles.MANAGER]), [
+    'allergens:read',
     'allergens:write',
     'catalogue:read',
     'categories:write',

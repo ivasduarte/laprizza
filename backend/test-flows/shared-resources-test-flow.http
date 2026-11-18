@@ -1,8 +1,11 @@
 @baseUrl = http://localhost:3000/api/v2
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
-@customerPassword = StrongPassword123!
+@userPassword = StrongPassword123!
 @fileName = manual.txt
+
+# Documentos internos partilhados (matriz AA05): MANAGER e EMPLOYEE leem; só o MANAGER grava e
+# remove; o CUSTOMER não tem acesso.
 
 ### ==========================================
 ### 1: AUTENTICAÇÃO E PREPARAÇÃO
@@ -22,8 +25,39 @@ Content-Type: application/json
 ### Extração do Token do Manager
 @adminToken = {{loginAdmin.accessToken}}
 
-### 1.2 POST Criar Customer (201 Created)
+### 1.2 POST Criar Employee (201 Created)
 # O email é aleatório para o flow poder correr mais do que uma vez.
+# @name createEmployee
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "employee{{$randomInt 100000 999999}}@laprizza.pt",
+  "password": "{{userPassword}}",
+  "roles": ["EMPLOYEE"]
+}
+?? status == 201
+?? js response.parsedBody.roles.includes('EMPLOYEE') == true
+
+### Variáveis
+@employeeEmail = {{createEmployee.email}}
+
+### 1.3 Login do Employee (200 OK)
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{userPassword}}"
+}
+?? status == 200
+
+### Extração do Token do Employee
+@employeeToken = {{loginEmployee.accessToken}}
+
+### 1.4 POST Criar Customer (201 Created)
 # @name createCustomer
 POST {{baseUrl}}/users
 Authorization: Bearer {{adminToken}}
@@ -31,29 +65,30 @@ Content-Type: application/json
 
 {
   "email": "customer{{$randomInt 100000 999999}}@laprizza.pt",
-  "password": "{{customerPassword}}",
-  "role": "CUSTOMER"
+  "password": "{{userPassword}}",
+  "roles": ["CUSTOMER"]
 }
 ?? status == 201
+?? js response.parsedBody.roles.includes('CUSTOMER') == true
 
 ### Variáveis
 @customerEmail = {{createCustomer.email}}
 
-### 1.3 Login do Customer (200 OK)
+### 1.5 Login do Customer (200 OK)
 # @name loginCustomer
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
   "email": "{{customerEmail}}",
-  "password": "{{customerPassword}}"
+  "password": "{{userPassword}}"
 }
 ?? status == 200
 
 ### Extração do Token do Customer
 @customerToken = {{loginCustomer.accessToken}}
 
-### 1.4 DELETE Limpeza preventiva do ficheiro (204 ou 404 - sem asserção)
+### 1.6 DELETE Limpeza preventiva do ficheiro (204 ou 404 - sem asserção)
 # Garante que o 2. cria um ficheiro novo (201) mesmo que uma execução anterior tenha parado a meio.
 DELETE {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{adminToken}}
@@ -87,9 +122,9 @@ Content-Type: application/octet-stream
 x
 ?? status == 400
 
-### 2.3 PUT Upload como Customer (403 Forbidden - apenas Manager)
+### 2.3 PUT Upload como Employee (403 Forbidden - apenas Manager)
 PUT {{baseUrl}}/shared-resources/{{fileName}}
-Authorization: Bearer {{customerToken}}
+Authorization: Bearer {{employeeToken}}
 Content-Type: application/octet-stream
 
 Conteudo de teste
@@ -100,9 +135,9 @@ Conteudo de teste
 ### 3: LISTAGEM E DOWNLOAD (GET)
 ### ==========================================
 
-### 3. GET Listar como Customer (200 OK)
+### 3. GET Listar como Employee (200 OK)
 GET {{baseUrl}}/shared-resources
-Authorization: Bearer {{customerToken}}
+Authorization: Bearer {{employeeToken}}
 ?? status == 200
 
 ### 3.1 GET Listar como Manager (200 OK)
@@ -110,24 +145,34 @@ GET {{baseUrl}}/shared-resources
 Authorization: Bearer {{adminToken}}
 ?? status == 200
 
-### 4. GET Download como Customer (200 OK - devolve o conteúdo atualizado no 2.1)
-GET {{baseUrl}}/shared-resources/{{fileName}}
+### 3.2 GET Listar como Customer (403 Forbidden - documentos internos)
+GET {{baseUrl}}/shared-resources
 Authorization: Bearer {{customerToken}}
+?? status == 403
+
+### 4. GET Download como Employee (200 OK - devolve o conteúdo atualizado no 2.1)
+GET {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{employeeToken}}
 ?? status == 200
 
 ### 4.1 GET Path traversal (400 Bad Request)
 GET {{baseUrl}}/shared-resources/..%2F..%2Fetc%2Fpasswd
-Authorization: Bearer {{customerToken}}
+Authorization: Bearer {{employeeToken}}
 ?? status == 400
+
+### 4.2 GET Download como Customer (403 Forbidden - documentos internos)
+GET {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{customerToken}}
+?? status == 403
 
 
 ### ==========================================
 ### 5: REMOÇÃO (DELETE)
 ### ==========================================
 
-### 5. DELETE Como Customer (403 Forbidden - apenas Manager)
+### 5. DELETE Como Employee (403 Forbidden - apenas Manager)
 DELETE {{baseUrl}}/shared-resources/{{fileName}}
-Authorization: Bearer {{customerToken}}
+Authorization: Bearer {{employeeToken}}
 ?? status == 403
 
 ### 5.1 DELETE Como Manager (204 No Content)
@@ -142,7 +187,7 @@ Authorization: Bearer {{adminToken}}
 
 ### 6. GET Download do ficheiro removido (404 Not Found)
 GET {{baseUrl}}/shared-resources/{{fileName}}
-Authorization: Bearer {{customerToken}}
+Authorization: Bearer {{employeeToken}}
 ?? status == 404
 
 

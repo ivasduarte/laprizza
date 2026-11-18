@@ -6,8 +6,16 @@ import { requirePermission } from '../middleware/authorization.middleware.js';
 import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
+import { createDefaultAiDataRepository } from '../ai-data/ai-data.routes.js';
 
-export default function supplierScenarioRouterFactory(scenarioRepository) {
+/**
+ * @param {object} [scenarioRepository]
+ * @param {object} [catalogueReader] read-only catalogue (ai-data repository) used to check product references
+ */
+export default function supplierScenarioRouterFactory(
+  scenarioRepository,
+  catalogueReader = createDefaultAiDataRepository(),
+) {
   const router = Router();
 
   const canRead = requirePermission(Permission.SUPPLIERS_READ);
@@ -18,10 +26,8 @@ export default function supplierScenarioRouterFactory(scenarioRepository) {
       'any.required': 'Mandatory field',
       'string.empty': 'Supplier id is mandatory',
     }),
-    name: Joi.string().trim().required().messages({
-      'any.required': 'Mandatory field',
-      'string.empty': 'Supplier name is mandatory',
-    }),
+    // Optional: the supplier id is used as name when it is missing.
+    name: Joi.string().trim().allow('').optional(),
   });
 
   const supplierOfferSchema = Joi.object({
@@ -68,6 +74,8 @@ export default function supplierScenarioRouterFactory(scenarioRepository) {
       'any.required': 'Mandatory field',
       'string.empty': 'Scenario name is mandatory',
     }),
+    // `version` and `simulated` are still validated when sent (old contract) but ignored:
+    // the back end assigns the next version and always stores the offers as simulated.
     version: Joi.number().integer().min(1).optional(),
     simulated: Joi.boolean().optional(),
     suppliers: Joi.array().items(supplierSchema).required().messages({
@@ -119,30 +127,20 @@ export default function supplierScenarioRouterFactory(scenarioRepository) {
       }
     };
 
-  router.get(
-    '/',
-    canRead,
-    validate(searchSchema, 'query'),
-    (req, res, next) => controller.list(req, res, next, scenarioRepository),
+  router.get('/', canRead, validate(searchSchema, 'query'), (req, res, next) =>
+    controller.list(req, res, next, scenarioRepository),
   );
 
-  router.post(
-    '/',
-    canWrite,
-    validate(supplierScenarioSchema),
-    (req, res, next) => controller.create(req, res, next, scenarioRepository),
+  router.post('/', canWrite, validate(supplierScenarioSchema), (req, res, next) =>
+    controller.create(req, res, next, scenarioRepository, catalogueReader),
   );
 
   router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, scenarioRepository),
   );
 
-  router.put(
-    '/:id',
-    canWrite,
-    validateId,
-    validate(deactivateSchema),
-    (req, res, next) => controller.update(req, res, next, scenarioRepository),
+  router.put('/:id', canWrite, validateId, validate(deactivateSchema), (req, res, next) =>
+    controller.update(req, res, next, scenarioRepository),
   );
 
   return router;
