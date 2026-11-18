@@ -33,67 +33,41 @@ export async function remove(id) {
   return KitchenConfiguration.findByIdAndDelete(id);
 }
 
-// MongoDB answers "IllegalOperation" (code 20) when transactions are used on a standalone server
-// (e.g. the DEI cloud MongoDB container, which cannot run as a replica set).
-const ILLEGAL_OPERATION = 20;
-const TRANSACTIONS_UNSUPPORTED_MESSAGE =
-  /Transaction numbers are only allowed on a replica set member or mongos/i;
-
-export function isTransactionUnsupported(err) {
-  return (
-    err?.code === ILLEGAL_OPERATION || TRANSACTIONS_UNSUPPORTED_MESSAGE.test(err?.message ?? '')
-  );
-}
-
 function activationTargetNotFound() {
   const notFound = new Error('Configuration not found during activation');
   notFound.code = ACTIVATION_TARGET_NOT_FOUND;
   return notFound;
 }
 
-let warnedAboutFallback = false;
-
-/** Test helper: the fallback warning is logged once per process. */
-export function resetActivationFallbackWarning() {
-  warnedAboutFallback = false;
-}
-
-/**
- * Deactivates the active configuration and activates the given one in a transaction
- * (replica set / Atlas). Nothing is written when the transaction cannot start.
- */
-async function activateInTransaction(id, model, startSession) {
-  const session = await startSession();
-  let activatedConfig = null;
-
+async function restorePrevious(previous, id, model, logger) {
+  if (!previous || String(previous._id) === String(id)) return;
   try {
-    await session.withTransaction(async () => {
-      // 1. Disable any currently active settings
-      await model.updateMany({ isActive: true }, { $set: { isActive: false } }, { session });
-
-      // 2. Activate the new setting
-      activatedConfig = await model.findByIdAndUpdate(
-        id,
-        { $set: { isActive: true } },
-        { returnDocument: 'after', session },
+    await model.updateOne({ _id: previous._id }, { $set: { isActive: true } });
+  } catch (err) {
+    // A concurrent activation already made another configuration active: nothing to restore.
+    if (err?.code !== 11000) {
+      logger.error(
+        `Kitchen configuration activation: could not restore the previous active configuration ${previous._id}.`,
+        err,
       );
-
-      // Aborts the transaction, so the previously active configuration is kept.
-      if (!activatedConfig) throw activationTargetNotFound();
-    });
-  } finally {
-    await session.endSession();
+    }
   }
-
-  return activatedConfig;
 }
 
 /**
- * Fallback for servers without transactions. The partial unique index still guarantees that at
- * most one configuration is active; between steps 2 and 3 there is briefly none. If step 3 fails
- * (target deleted, or another activation won: duplicate key), the previous one is restored.
+ * Activates a configuration and deactivates the current one, with plain sequential updates
+ * (no transactions, like the other repositories; the MongoDB server is standalone).
+ *
+ * The partial unique index guarantees that at most one configuration is active. Between steps 2
+ * and 3 there is briefly none; if step 3 fails (target deleted, or a concurrent activation won:
+ * duplicate key 11000, answered 409 by the service) the previous one is restored.
+ *
+ * @param {string} id
+ * @param {{model?: object, logger?: Pick<Console, 'error'>}} [deps] Injected in unit tests.
  */
-async function activateSequentially(id, model, logger) {
+export async function activateAtomic(id, { model = KitchenConfiguration, logger = console } = {}) {
+  if (!mongoose.isValidObjectId(id)) return null;
+
   // 1. Remember the configuration that is active now (to restore it on failure)
   const previous = await model.findOne({ isActive: true }, { _id: 1 });
 
@@ -118,51 +92,4 @@ async function activateSequentially(id, model, logger) {
     throw activationTargetNotFound();
   }
   return activatedConfig;
-}
-
-async function restorePrevious(previous, id, model, logger) {
-  if (!previous || String(previous._id) === String(id)) return;
-  try {
-    await model.updateOne({ _id: previous._id }, { $set: { isActive: true } });
-  } catch (err) {
-    // A concurrent activation already made another configuration active: nothing to restore.
-    if (err?.code !== 11000) {
-      logger.error(
-        `Kitchen configuration activation: could not restore the previous active configuration ${previous._id}.`,
-        err,
-      );
-    }
-  }
-}
-
-/**
- * Activates a configuration and deactivates the current one. Uses a transaction when the server
- * supports it; otherwise falls back to a sequential update with compensation (see above).
- *
- * @param {string} id
- * @param {{model?: object, startSession?: () => Promise<object>, logger?: Pick<Console, 'warn'|'error'>}} [deps]
- *   Injected in unit tests; production uses the Mongoose model.
- */
-export async function activateAtomic(
-  id,
-  {
-    model = KitchenConfiguration,
-    startSession = () => mongoose.startSession(),
-    logger = console,
-  } = {},
-) {
-  if (!mongoose.isValidObjectId(id)) return null;
-
-  try {
-    return await activateInTransaction(id, model, startSession);
-  } catch (err) {
-    if (!isTransactionUnsupported(err)) throw err;
-    if (!warnedAboutFallback) {
-      warnedAboutFallback = true;
-      logger.warn(
-        'MongoDB does not support transactions (standalone server): kitchen configurations are activated without a transaction.',
-      );
-    }
-    return activateSequentially(id, model, logger);
-  }
 }
