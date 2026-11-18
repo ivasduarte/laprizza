@@ -103,6 +103,8 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['POST', '/supplier-scenarios', MANAGER_ONLY],
   ['PUT', '/supplier-scenarios/:id', MANAGER_ONLY],
   ['GET', '/ai-data/snapshot', MANAGER_ONLY],
+  ['POST', '/planning/bom', MANAGER_ONLY],
+  ['POST', '/planning/requirements', MANAGER_ONLY],
 
   // Internal shared documents: staff read, manager manages
   ['GET', '/shared-resources', STAFF],
