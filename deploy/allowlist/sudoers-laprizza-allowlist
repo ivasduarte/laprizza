@@ -1,0 +1,7 @@
+# /etc/sudoers.d/laprizza-allowlist  (instalar com: visudo -cf este-ficheiro; chmod 440)
+# SYS03: só os administradores (grupo ssh-admins, o mesmo da SYS05) podem alterar a lista de
+# clientes autorizados, e apenas através de laprizza-allowlist-edit: o editor corre com a conta
+# do administrador numa cópia temporária (nunca como root), a cópia é validada antes de ser
+# gravada e o autor ($SUDO_USER, definido pelo sudo) fica registado.
+%ssh-admins ALL=(root) /usr/local/sbin/laprizza-allowlist-edit
+%ssh-admins ALL=(root) /opt/laprizza/bin/laprizza-allowlist-apply.sh status

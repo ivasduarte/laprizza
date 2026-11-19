@@ -1,0 +1,4 @@
+# /etc/audit/rules.d/laprizza-allowlist.rules  (carregar com: augenrules --load)
+# SYS03: regista quem escreve ou muda os atributos do ficheiro de clientes autorizados.
+# O campo auid identifica o utilizador que iniciou sessão, mesmo quando usa sudoedit.
+-w /etc/laprizza/allowed-clients.conf -p wa -k laprizza-allowlist
