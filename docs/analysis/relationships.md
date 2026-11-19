@@ -10,6 +10,13 @@ All information was extracted from the business rules present in **PART II - SYS
 - **Justification:** A user may have more than one role, and the same role can be applied to different users.
 - **Multiplicity:** `1..*` from `Role` guarantees a `User` has at least one role, making it consistent with the official document.
 
+
+### 1.2. `User` *(signs in with, 0..\*)* `ExternalIdentity`
+> **PART IV, AA02:** "External authentication must establish a verified identity before protected application functionality becomes available."
+> **PART IV, AA03:** "Every newly created internal account must automatically receive the Customer role, whether created for local authentication or for a verified external identity."
+- **Justification:** A user may sign in with a local password, with one or more external providers, or with both. `ExternalIdentity` has no meaning without its `User` (Composition) and is identified by the pair `(issuer, subject)` issued by the provider, not by the e-mail.
+- **Multiplicity:** `0..*`, because a local-only user has none. A user has at most one identity per provider, and an identity belongs to exactly one user.
+
 ## 2. Customers
 ### 2.1. `Customer` *(places, 0..\*)* `Order`
 > **PART II, II.3.1.5:** "Customers interact with LaPrizza primarily by placing orders."
