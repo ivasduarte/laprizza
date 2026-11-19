@@ -1,0 +1,53 @@
+@baseUrl = http://localhost:3000/api/v2
+
+### ==========================================
+### AA02: AUTENTICACAO EXTERNA
+### O login completo requer um browser (ecra de consentimento no IdP):
+### abrir {{baseUrl}}/auth/external/google/login no browser.
+### Os pedidos abaixo cobrem apenas o que pode ser verificado sem um IdP.
+### ==========================================
+
+### 1.1 Fornecedores ativos (200 OK, sem segredos expostos)
+GET {{baseUrl}}/auth/external/providers
+
+?? status == 200
+?? header cache-control == no-store
+?? js response.parsedBody[0].name exists
+?? js response.parsedBody[0].clientSecret isUndefined
+
+### 1.2 Fornecedor desconhecido (404 PROVIDER_NOT_FOUND)
+GET {{baseUrl}}/auth/external/facebook/login
+
+?? status == 404
+?? js response.parsedBody.error.code == PROVIDER_NOT_FOUND
+
+### 1.3 Nome de fornecedor mal formatado (404)
+GET {{baseUrl}}/auth/external/GOOGLE-1/login
+
+?? status == 404
+
+### 1.4 Inicio de login: redirecionamento para o IdP + cookie de transacao (requer Google configurado)
+# @no-redirect
+GET {{baseUrl}}/auth/external/google/login
+
+?? status == 302
+?? header location includes accounts.google.com
+?? js String(response.headers['set-cookie'] ?? '').includes('lp_oidc') == true
+?? js String(response.headers['set-cookie'] ?? '').includes('HttpOnly') == true
+
+### 1.5 Callback apos cancelamento do utilizador no IdP: sem sessao (302 para a SPA)
+# @no-redirect
+GET {{baseUrl}}/auth/external/google/callback?error=access_denied&state=x
+
+?? status == 302
+?? header location includes status=error
+?? header location includes code=ACCESS_DENIED
+?? js !String(response.headers['set-cookie'] ?? '').includes('lp_rt')
+
+### 1.6 Callback sem cookie de transacao: sem sessao
+# @no-redirect
+GET {{baseUrl}}/auth/external/google/callback?code=abc&state=x
+
+?? status == 302
+?? header location includes code=AUTH_FAILED
+?? js !String(response.headers['set-cookie'] ?? '').includes('lp_rt')
