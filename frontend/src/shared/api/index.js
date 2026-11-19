@@ -15,11 +15,21 @@ export function fetchRefreshedSession() {
   });
 }
 
+export function fetchCurrentUser() {
+  return api.get('/auth/me', { feedback: 'silent' });
+}
+
+export async function fetchGuestPermissions() {
+  const body = await api.get('/auth/guest-permissions', { auth: false, feedback: 'silent' });
+  return Array.isArray(body?.permissions) ? body.permissions : [];
+}
+
 export const api = createHttpClient({
   baseUrl: getApiBaseUrl(),
   getToken: () => sessionStore.getAccessToken(),
   refreshAccessToken: () => sessionStore.refresh(fetchRefreshedSession),
   onSessionExpired: () => sessionStore.end({ expired: true }),
+  onForbidden: () => sessionStore.reloadUser(fetchCurrentUser),
   ...getHttpTimeouts(),
   // Single gateway (WEB04): every request feeds the loading indicator and the global error toasts.
   onRequestStart: () => feedbackStore.beginRequest(),

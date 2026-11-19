@@ -13,6 +13,7 @@ import {
   reloadOnPageRestore,
 } from './shared/auth/session-sync.js';
 import { themeStore } from './shared/theme/theme-store.js';
+import { authApi } from './shared/auth/auth-api.js';
 
 // Before the first render (index.html already applies it to avoid a flash).
 themeStore.init();
@@ -22,6 +23,15 @@ connectSessionSync(sessionStore);
 reloadOnPageRestore();
 // AA04: cached responses never outlive the session that fetched them.
 clearCacheWhenSessionEnds(sessionStore, queryClient);
+
+// WEB03: the session and the Guest permissions are loaded once, before the first page.
+authApi.restoreSession();
+authApi.loadGuestPermissions();
+
+// WEB03: role or account changes made on the backend show up when the user returns to the tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') authApi.reloadUser();
+});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

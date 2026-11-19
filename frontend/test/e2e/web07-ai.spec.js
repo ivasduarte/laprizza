@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test.js';
 
 /**
  * WEB07 AI configuration and execution (mocked API). Covers: forecast validation and

@@ -88,6 +88,7 @@ export function createHttpClient({
   fetchFn = (...args) => globalThis.fetch(...args),
   refreshAccessToken = null,
   onSessionExpired = null,
+  onForbidden = null,
   timeoutMs = DEFAULT_READ_TIMEOUT_MS,
   mutationTimeoutMs = DEFAULT_WRITE_TIMEOUT_MS,
   onRequestStart = null,
@@ -203,6 +204,8 @@ export function createHttpClient({
           }
           onSessionExpired?.();
         }
+        if (response.status === 403 && token) safely(onForbidden, error);
+        
         throw error;
       }
 

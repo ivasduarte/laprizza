@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../auth/auth-api.js';
@@ -20,10 +20,6 @@ export default function AuthButton() {
   const buttonRef = useRef(null);
   const menuId = useId();
   const close = useCallback(() => setOpen(false), []);
-
-  useEffect(() => {
-    authApi.restoreSession();
-  }, []);
 
   useDismiss({ open, onClose: close, containerRef: rootRef, returnFocusRef: buttonRef });
 

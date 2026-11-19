@@ -73,12 +73,14 @@ export default function authRouterFactory({ authService, config, securityLogger 
   const controller = createAuthController({ authService, config });
   const { rateLimit } = config;
 
-  const authLimiter = rateLimit.enabled
+  const loginLimiter = rateLimit.enabled
     ? createRateLimiter({
-        name: 'auth',
+        name: 'login',
         windowMs: rateLimit.authWindowMs,
         limit: rateLimit.authMax,
         securityLogger,
+        countOnlyFailures: true,
+        resetOnSuccess: true,
       })
     : passThrough;
   const forgotLimiter = rateLimit.enabled
@@ -93,9 +95,9 @@ export default function authRouterFactory({ authService, config, securityLogger 
   router.get('/me', noStore, requireAuthenticated, controller.me);
   router.get('/guest-permissions', controller.guestPermissions);
 
-  router.use(noStore, authLimiter);
+  router.use(noStore);
 
-  router.post('/login', validateBody(schemas.login), controller.login);
+  router.post('/login', loginLimiter, validateBody(schemas.login), controller.login);
   router.post('/refresh', requireAllowedOrigin(config.corsOrigins), controller.refresh);
   router.post('/logout', requireAllowedOrigin(config.corsOrigins), requireAuthenticated, controller.logout);
   router.post('/logout-all', requireAuthenticated, controller.logoutAll);
@@ -108,6 +110,7 @@ export default function authRouterFactory({ authService, config, securityLogger 
   router.post('/password/reset', validateBody(schemas.reset), controller.resetPassword);
   router.post(
     '/password/change',
+    loginLimiter, // Limita tentativas de login em massa com token válido
     requireAuthenticated,
     validateBody(schemas.change),
     controller.changePassword,

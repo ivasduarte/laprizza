@@ -5,10 +5,15 @@
  * (login or refresh). Nothing readable from the browser storage can grant access.
  *
  * @param {'unknown'|'loading'|'authenticated'|'anonymous'} status
- * @returns {'allow'|'login'|'wait'}
+ * @param {{requiresAuth?: boolean, allowed?: boolean}} - requiresAuth: the page needs a session; allowed: the visitor has the page's permission.
+ * @returns {'allow'|'login'|'denied'|'wait'}
  */
-export function resolveGuard(status) {
-  if (status === 'authenticated') return 'allow';
-  if (status === 'anonymous') return 'login';
-  return 'wait';
+export function resolveGuard(
+  status,
+  { requiresAuth = true, allowed = true } = {}
+) {
+  if (status !== 'authenticated' && status !== 'anonymous') return 'wait';
+  if (status === 'anonymous')
+    return requiresAuth || !allowed ? 'login' : 'allow';
+  return allowed ? 'allow' : 'denied';
 }

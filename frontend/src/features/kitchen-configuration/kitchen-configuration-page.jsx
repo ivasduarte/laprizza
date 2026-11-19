@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSession } from '../../shared/auth/use-session.js';
+import { useCan } from '../../shared/auth/use-can.js';
 import { useConfirm } from '../../shared/feedback/use-feedback.js';
 import { useSubmit } from '../../shared/forms/use-submit.js';
 import { errorMessage } from '../../shared/api/error-text.js';
@@ -19,10 +19,8 @@ import './kitchen-configuration.css';
 
 export default function KitchenConfigurationPage() {
   const { t } = useTranslation();
-  const { status, user } = useSession();
-  const roles = user?.roles ?? [];
-  const isManager = roles.includes('MANAGER');
-  const canView = isManager || roles.includes('EMPLOYEE');
+  const canView = useCan('kitchen:read');
+  const canManage = useCan('kitchen:write');
 
   const confirm = useConfirm();
   const { submit, submitting, error } = useSubmit();
@@ -51,12 +49,12 @@ export default function KitchenConfigurationPage() {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated' && canView) {
+    if (canView) {
       fetchConfigs();
     }
-  }, [status, canView, fetchConfigs]);
+  }, [canView, fetchConfigs]);
 
-  if (status !== 'authenticated' || !canView) {
+  if (!canView) {
     return (
       <main className="kitchen-config-page">
         <p className="message message-error" role="alert">
@@ -112,7 +110,7 @@ export default function KitchenConfigurationPage() {
     <div className="kitchen-config-page">
       <header className="kitchen-config-header">
         <h1>{t('kitchenConfig.title')}</h1>
-        {isManager && !isFormOpen && !viewingJson && (
+        {canManage && !isFormOpen && !viewingJson && (
           <button type="button" onClick={() => setIsFormOpen(true)}>
             {t('kitchenConfig.createNew')}
           </button>
@@ -134,7 +132,7 @@ export default function KitchenConfigurationPage() {
         </p>
       )}
 
-      {isManager && isFormOpen && (
+      {canManage && isFormOpen && (
         <KitchenConfigurationForm
           initialData={editingConfig}
           onSuccess={handleFormSuccess}
@@ -190,7 +188,7 @@ export default function KitchenConfigurationPage() {
                     >
                       {t('kitchenConfig.viewBtn')}
                     </button>
-                    {isManager && (
+                    {canManage && (
                       <button
                         className="secondary"
                         onClick={() => {
@@ -201,7 +199,7 @@ export default function KitchenConfigurationPage() {
                         {t('kitchenConfig.editBtn')}
                       </button>
                     )}
-                    {isManager && !config.isActive && (
+                    {canManage && !config.isActive && (
                       <>
                         <button
                           type="button"
@@ -228,7 +226,7 @@ export default function KitchenConfigurationPage() {
 
           {/* VIS03: library of assembly lines placed by the kitchen configurations */}
           <AssemblyLineConfigurationSection
-            isManager={isManager}
+            isManager={canManage}
             onChanged={() => setViewerKey(Date.now())}
           />
 

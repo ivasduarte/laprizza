@@ -1,15 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test.js';
+import { SESSIONS } from './support/sessions.js';
 
 // Dados simulados para os testes
-const mockManagerSession = {
-  accessToken: 'fake-jwt-token',
-  user: { id: '1', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
-};
+// Login responses with roles and permissions, as the back end returns them (AA05/WEB03).
+const mockManagerSession = SESSIONS.MANAGER;
 
-const mockEmployeeSession = {
-  accessToken: 'fake-jwt-token',
-  user: { id: '2', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
-};
+const mockEmployeeSession = SESSIONS.EMPLOYEE;
 
 const mockConfigs = [
   {

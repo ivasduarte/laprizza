@@ -20,13 +20,9 @@ import {
   validatePlanningInput,
 } from './planning-errors.js';
 import { BomResult, CodeList, RequirementsResult } from './planning-result.jsx';
+import { useCan } from '../../../shared/auth/use-can.js';
 
 const idFor = makeIdFor('planning');
-// Same permission as the back end (planning:execute); the role is a fallback for older sessions.
-const canPlan = (user) =>
-  Array.isArray(user?.permissions)
-    ? user.permissions.includes('planning:execute')
-    : user?.role === 'MANAGER' || (user?.roles ?? []).includes('MANAGER');
 
 /**
  * AI05 + WEB07: runs the BOM / requirements calculation through the back end and shows one of
@@ -39,7 +35,9 @@ const canPlan = (user) =>
  */
 export default function PlanningPanel({ preset = null, onOpenRun }) {
   const { t } = useTranslation();
-  const { status, user } = useSession();
+  const { status } = useSession();
+
+  const canExecute = useCan('planning:execute');
   const queryClient = useQueryClient();
 
   const [values, setValues] = useState(() => ({
@@ -57,7 +55,7 @@ export default function PlanningPanel({ preset = null, onOpenRun }) {
   // Synchronous lock: two clicks in the same tick can not both start a calculation.
   const busy = useRef(false);
 
-  const allowed = status === 'authenticated' && canPlan(user);
+  const allowed = status === 'authenticated' && canExecute;
   const isRequirements = values.kind === PlanningKind.REQUIREMENTS;
   const forecasts = useQuery({
     queryKey: aiKeys.forecasts,

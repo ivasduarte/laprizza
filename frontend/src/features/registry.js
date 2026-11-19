@@ -1,3 +1,9 @@
+/**
+ * requiresAuth: needs a session (any user)
+ * permission: needs this permission, granted by backend
+ * Pages without either of the above are public.
+ */
+
 export const features = [
   {
     id: 'home',
@@ -10,6 +16,7 @@ export const features = [
     path: '/visualization3d',
     labelKey: 'nav.visualization3d',
     requiresAuth: true,
+    permission: 'kitchen:read',
     load: () => import('./visualization3d/visualization3d-page.jsx'),
   },
   {
@@ -17,6 +24,7 @@ export const features = [
     path: '/ai',
     labelKey: 'nav.ai',
     requiresAuth: true,
+    permission: 'planning:execute',
     load: () => import('./ai/ai-page.jsx'),
   },
   {
@@ -53,6 +61,7 @@ export const features = [
     path: '/kitchen-configurations',
     labelKey: 'nav.kitchenConfig',
     requiresAuth: true,
+    permission: 'kitchen:read',
     load: () =>
       import('./kitchen-configuration/kitchen-configuration-page.jsx'),
   },
@@ -61,6 +70,7 @@ export const features = [
     path: '/shared-resources',
     labelKey: 'nav.sharedResources',
     requiresAuth: true,
+    permission: 'resources:read',
     load: () => import('./shared-resources/shared-resources-page.jsx'),
   },
 ];

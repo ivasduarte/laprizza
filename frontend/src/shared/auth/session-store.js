@@ -8,6 +8,7 @@ export function createSessionStore({ runExclusive = (task) => task() } = {}) {
   let state = { status: 'unknown', user: null, expired: false };
   let accessToken = null;
   let refreshInFlight = null;
+  let reloadInFlight = null;
   const listeners = new Set();
 
   function setState(patch) {
@@ -23,6 +24,34 @@ export function createSessionStore({ runExclusive = (task) => task() } = {}) {
   function end({ expired = false } = {}) {
     accessToken = null;
     setState({ status: 'anonymous', user: null, expired });
+  }
+
+  function updateUser(user) {
+    if (state.status !== 'authenticated' || !user) return;
+    setState({ user });
+  }
+
+  /**
+   * Reloads the user of the current session, so role/status changes are shown without the need of a new login.
+   * 
+   * @param {*} fetchUser 
+   * @returns 
+   */
+  function reloadUser(fetchUser) {
+    if (state.status !== 'authenticated') return Promise.resolve(false);
+    if (!reloadInFlight) {
+      reloadInFlight = (async () => {
+        try {
+          updateUser(await fetchUser());
+          return true;
+        } catch {
+          return false;
+        } finally {
+          reloadInFlight = null;
+        }
+      })();
+    }
+    return reloadInFlight;
   }
 
   function refresh(fetchSession) {
@@ -51,6 +80,8 @@ export function createSessionStore({ runExclusive = (task) => task() } = {}) {
     start,
     end,
     refresh,
+    updateUser,
+    reloadUser,
     beginCheck() {
       if (state.status !== 'unknown') return false;
       setState({ status: 'loading' });

@@ -93,3 +93,93 @@ test('createRateLimiter does not count skipped requests', async (t) => {
   assert.equal((await fetch(url, withToken)).status, 204);
   assert.equal(logger.log.mock.callCount(), 1);
 });
+
+/**
+ * Starts an app whose /attempt answers 204 or 401 (?ok=1 succeeds), behind a limiter of 2.
+ * @param {object} options - Extra createRateLimiter options.
+ */
+async function startAttemptServer(options) {
+  const app = express();
+  app.use(
+    createRateLimiter({
+      name: 'login',
+      windowMs: 60_000,
+      limit: 2,
+      securityLogger: { log: mock.fn() },
+      ...options,
+    }),
+  );
+  app.post('/attempt', (req, res) => res.status(req.query.ok ? 204 : 401).end());
+  app.use(errorHandler);
+
+  const server = app.listen(0);
+  await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}/attempt`;
+  return {
+    ok: async () => (await fetch(`${base}?ok=1`, { method: 'POST' })).status,
+    fail: async () => (await fetch(base, { method: 'POST' })).status,
+    close: () => {
+      server.close();
+      server.closeAllConnections();
+    },
+  };
+}
+
+/**
+ * Unit test (login limiter): successful requests never count; only failures are limited.
+ */
+test('countOnlyFailures: successful requests are never limited', async (t) => {
+  const { ok, fail, close } = await startAttemptServer({ countOnlyFailures: true });
+  t.after(close);
+
+  for (let i = 0; i < 5; i += 1) assert.equal(await ok(), 204);
+  assert.equal(await fail(), 401);
+  assert.equal(await fail(), 401);
+  assert.equal(await fail(), 429); // third failure in the window
+});
+
+/**
+ * Unit test (login limiter): without resetOnSuccess a success does not forgive earlier failures.
+ */
+test('countOnlyFailures without resetOnSuccess keeps earlier failures', async (t) => {
+  const { ok, fail, close } = await startAttemptServer({ countOnlyFailures: true });
+  t.after(close);
+
+  assert.equal(await fail(), 401);
+  assert.equal(await ok(), 204);
+  assert.equal(await fail(), 401);
+  assert.equal(await fail(), 429);
+});
+
+/**
+ * Unit test (login limiter): a success resets the counter of that client to 0.
+ */
+test('resetOnSuccess: a success forgives the previous failures', async (t) => {
+  const { ok, fail, close } = await startAttemptServer({
+    countOnlyFailures: true,
+    resetOnSuccess: true,
+  });
+  t.after(close);
+
+  assert.equal(await fail(), 401);
+  assert.equal(await ok(), 204); // counter back to 0
+  assert.equal(await fail(), 401);
+  assert.equal(await fail(), 401);
+  assert.equal(await fail(), 429); // only now two failures in a row were exceeded
+});
+
+/**
+ * Unit test: once blocked, a request is refused before the route runs (no reset by a 429).
+ */
+test('resetOnSuccess: a blocked client stays blocked', async (t) => {
+  const { ok, fail, close } = await startAttemptServer({
+    countOnlyFailures: true,
+    resetOnSuccess: true,
+  });
+  t.after(close);
+
+  await fail();
+  await fail();
+  assert.equal(await fail(), 429);
+  assert.equal(await ok(), 429); // the right password does not bypass the IP block
+});

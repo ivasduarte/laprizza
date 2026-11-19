@@ -1,4 +1,10 @@
-import { api, fetchRefreshedSession } from '../api/index.js';
+import {
+  api,
+  fetchCurrentUser,
+  fetchGuestPermissions,
+  fetchRefreshedSession,
+} from '../api/index.js';
+import { guestPermissionStore } from './guest-permissions.js';
 import { sessionStore } from './session-store.js';
 
 export const authApi = {
@@ -6,6 +12,18 @@ export const authApi = {
     if (!sessionStore.beginCheck()) return;
     const restored = await sessionStore.refresh(fetchRefreshedSession);
     if (!restored) sessionStore.end();
+  },
+
+  async loadGuestPermissions() {
+    try {
+      guestPermissionStore.set(await fetchGuestPermissions());
+    } catch {
+      guestPermissionStore.set([]);
+    }
+  },
+
+  reloadUser() {
+    return sessionStore.reloadUser(fetchCurrentUser);
   },
 
   async login(email, password) {

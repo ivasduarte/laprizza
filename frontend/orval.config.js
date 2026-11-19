@@ -3,7 +3,7 @@ import { defineConfig } from 'orval';
 export default defineConfig({
   laprizza: {
     input: {
-      target: '../backend/src/api/openapi.json',
+      target: '../backend/src/api/openapi.v2.json',
     },
     output: {
       mode: 'tags-split',

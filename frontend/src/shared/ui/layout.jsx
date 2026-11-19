@@ -11,11 +11,20 @@ import GlobalProgress from './feedback/global-progress.jsx';
 import ToastRegion from './feedback/toast-region.jsx';
 import ConfirmDialogHost from './feedback/confirm-dialog-host.jsx';
 import { useDismiss } from './use-dismiss.js';
-
-const navFeatures = features.filter((feature) => feature.showInNav !== false);
+import { visibleFeatures } from '../../features/navigation.js';
+import { usePermissions } from '../auth/use-can.js';
+import { useSession } from '../auth/use-session.js';
 
 export default function Layout() {
   const { t } = useTranslation();
+
+  const permissions = usePermissions();
+  const { status } = useSession();
+  const navFeatures = visibleFeatures(features, {
+    permissions,
+    authenticated: status === 'authenticated',
+  });
+
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef(null);
   const toggleRef = useRef(null);

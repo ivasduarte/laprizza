@@ -1,9 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test.js';
+import { SESSIONS } from './support/sessions.js';
 
-const managerSession = {
-  accessToken: 'fake-jwt-token',
-  user: { id: '1', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
-};
+// Login responses with roles and permissions, as the back end returns them (AA05/WEB03).
+const managerSession = SESSIONS.MANAGER;
 
 const configs = [
   {

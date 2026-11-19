@@ -141,9 +141,12 @@ const baseMessages = {
         array_max: 'Select at most {{limit}} item(s).',
         array_unique: 'Duplicate entries are not allowed.',
         any_only: 'Choose one of the available options.',
-        planning_scenarioIdPattern: 'Use only capital letters, digits and hyphens (up to 64).',
-        planning_scenarioNotFound: 'There is no active scenario with this code.',
-        planning_scenarioWithoutStock: 'This scenario has no stock of its own: use the current stock.',
+        planning_scenarioIdPattern:
+          'Use only capital letters, digits and hyphens (up to 64).',
+        planning_scenarioNotFound:
+          'There is no active scenario with this code.',
+        planning_scenarioWithoutStock:
+          'This scenario has no stock of its own: use the current stock.',
         any_invalid: 'This value is not allowed.',
         object_unknown: 'This field is not allowed.',
         boolean_base: 'Choose yes or no.',
@@ -213,7 +216,10 @@ const baseMessages = {
         },
         scenarioId: 'Scenario code',
         stockMode: 'Stock to use',
-        stockModes: { scenario: 'Stock of the scenario', live: 'Current stock' },
+        stockModes: {
+          scenario: 'Stock of the scenario',
+          live: 'Current stock',
+        },
         scenario: 'Scenario',
         bomTitle: 'Bill of Materials',
         requirementsTitle: 'Requirements planning',
@@ -241,15 +247,18 @@ const baseMessages = {
         },
         state: {
           invalidInput: 'Check the highlighted fields.',
-          missingInformation: 'The calculation could not be done: information is missing.',
-          missingHint: 'Complete the data below in the back office and run it again.',
+          missingInformation:
+            'The calculation could not be done: information is missing.',
+          missingHint:
+            'Complete the data below in the back office and run it again.',
           unavailable: 'The planning service is unavailable.',
           unavailableHint: 'Nothing was calculated nor changed.',
         },
         codes: {
           INVALID_REQUEST: 'Invalid request',
           INVALID_SNAPSHOT: 'The data received is not valid',
-          SCENARIO_MISMATCH: 'The data does not belong to the requested scenario',
+          SCENARIO_MISMATCH:
+            'The data does not belong to the requested scenario',
           NOT_PREDEFINED_PIZZA: 'Pizza is not in the catalogue',
           INVALID_SIZE: 'Size not available for the pizza',
           INCOMPLETE_RECIPE: 'Incomplete recipe',
@@ -337,7 +346,12 @@ const baseMessages = {
     },
     kitchenConfig: {
       title: 'Kitchen Configurations',
-      unauthorized: 'Access denied. Only Managers can access this page.',
+      unauthorized:
+        'Access denied. You do not have permission to view the kitchen configurations.',
+      viewer: {
+        empty: 'No active kitchen configuration to display.',
+        showing: 'Showing',
+      },
       list: 'Configurations List',
       createNew: 'Create New',
       importFile: 'Import .json',
@@ -464,6 +478,13 @@ const baseMessages = {
         personalData:
           'The file suggests customer data, credentials or backups. These cannot be shared.',
       },
+    },
+    access: {
+      deniedTitle: 'Access Denied',
+      deniedMessage: 'You do not have permission to open this page.',
+      notFoundTitle: 'Page not found',
+      notFoundMessage: 'The page you are looking for does not exist.',
+      goHome: 'Go to the home page',
     },
   },
   pt: {
@@ -609,9 +630,12 @@ const baseMessages = {
         array_max: 'Selecione no máximo {{limit}} item(ns).',
         array_unique: 'Não são permitidas entradas repetidas.',
         any_only: 'Escolha uma das opções disponíveis.',
-        planning_scenarioIdPattern: 'Use apenas maiúsculas, dígitos e hífenes (até 64).',
-        planning_scenarioNotFound: 'Não existe um cenário ativo com este código.',
-        planning_scenarioWithoutStock: 'Este cenário não tem stock próprio: use o stock atual.',
+        planning_scenarioIdPattern:
+          'Use apenas maiúsculas, dígitos e hífenes (até 64).',
+        planning_scenarioNotFound:
+          'Não existe um cenário ativo com este código.',
+        planning_scenarioWithoutStock:
+          'Este cenário não tem stock próprio: use o stock atual.',
         any_invalid: 'Este valor não é permitido.',
         object_unknown: 'Este campo não é permitido.',
         boolean_base: 'Escolha sim ou não.',
@@ -710,7 +734,8 @@ const baseMessages = {
         state: {
           invalidInput: 'Verifique os campos assinalados.',
           missingInformation: 'Não foi possível calcular: falta informação.',
-          missingHint: 'Complete os dados abaixo no back office e execute novamente.',
+          missingHint:
+            'Complete os dados abaixo no back office e execute novamente.',
           unavailable: 'O serviço de planeamento está indisponível.',
           unavailableHint: 'Nada foi calculado nem alterado.',
         },
@@ -726,7 +751,8 @@ const baseMessages = {
           MISSING_FORECAST: 'Não existe nenhuma previsão ativa',
           NO_SUPPLIER_SCENARIO: 'Não existe cenário de fornecedores',
           PIZZA_STOCK_IGNORED: 'O stock da própria pizza é ignorado',
-          UNMEASURED_NON_STOCK_COMPONENT: 'Componente sem quantidade por tamanho',
+          UNMEASURED_NON_STOCK_COMPONENT:
+            'Componente sem quantidade por tamanho',
           NO_SUPPLIER_OFFER: 'Sem oferta de fornecedor',
           INSUFFICIENT_SUPPLY: 'Fornecimento insuficiente',
         },
@@ -806,7 +832,11 @@ const baseMessages = {
     kitchenConfig: {
       title: 'Configurações da Cozinha',
       unauthorized:
-        'Acesso negado. Apenas os Gerentes (Managers) podem aceder a esta página.',
+        'Acesso negado. Não tem permissão para ver as configurações de cozinha.',
+      viewer: {
+        empty: 'Não há nenhuma configuração de cozinha ativa para mostrar.',
+        showing: 'A mostrar',
+      },
       list: 'Lista de Configurações',
       createNew: 'Criar Nova',
       importFile: 'Importar .json',
@@ -933,6 +963,13 @@ const baseMessages = {
         personalData:
           'O ficheiro indica dados de clientes, credenciais ou backups. Estes ficheiros não podem ser partilhados.',
       },
+    },
+    access: {
+      deniedTitle: 'Acesso Negado',
+      deniedMessage: 'Não tem permissão para abrir esta página.',
+      notFoundTitle: 'Página não encontrada',
+      notFoundMessage: 'A página que procura não existe.',
+      goHome: 'Ir para a página inicial',
     },
   },
 };

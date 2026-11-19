@@ -3,14 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { features } from '../registry.js';
 import BrandLogoLarge from '../../shared/ui/brand-logo-large.jsx';
 import { useSession } from '../../shared/auth/use-session.js';
-
-const quickLinks = features.filter(
-  (feature) => feature.showInNav !== false && feature.path !== '/'
-);
+import { visibleFeatures } from '../navigation.js';
+import { usePermissions } from '../../shared/auth/use-can.js';
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { status } = useSession();
+
+  const permissions = usePermissions();
+  const quickLinks = visibleFeatures(features, {
+    permissions,
+    authenticated: status === 'authenticated',
+  }).filter((feature) => feature.path !== '/');
 
   return (
     <>
@@ -48,4 +52,4 @@ export default function HomePage() {
       )}
     </>
   );
-}
+}
