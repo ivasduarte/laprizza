@@ -30,6 +30,7 @@ export const messages = {
       resetPassword: 'Reset password',
       kitchenConfig: 'Kitchen Configuration',
       sharedResources: 'Shared resources',
+      authCallback: 'External sign-in',
     },
     home: {
       welcome: 'Welcome to LaPrizza',
@@ -91,6 +92,28 @@ export const messages = {
         REFRESH_INVALID: 'Your session has ended. Please log in again.',
         NETWORK_ERROR: 'Could not reach the server. Check your connection.',
         UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
+      },
+      external: {
+        title: 'External sign-in',
+        or: 'or',
+        continueWith: 'Continue with {{provider}}',
+        completing: 'Completing sign-in...',
+        errors: {
+          ACCESS_DENIED: 'Sign-in was cancelled.',
+          AUTH_FAILED: 'External sign-in failed. Please try again.',
+          EMAIL_MISSING:
+            'The provider did not share an email address, which is required.',
+          EMAIL_NOT_VERIFIED:
+            'Your email address is not verified at the provider.',
+          ACCOUNT_LINK_REQUIRED:
+            'An account with this email already exists. Contact the restaurant manager.',
+          ACCOUNT_PENDING_ACTIVATION:
+            'Your account was created but must be activated before you can use it. Contact the restaurant manager.',
+          ACCOUNT_INACTIVE:
+            'The account is not active yet. Contact the restaurant manager.',
+          ACCOUNT_DISABLED:
+            'The account is disabled. Contact the restaurant manager.',
+        },
       },
     },
     feedback: {
@@ -495,6 +518,7 @@ export const messages = {
       resetPassword: 'Redefinir palavra-passe',
       kitchenConfig: 'Configuração da Cozinha',
       sharedResources: 'Recursos partilhados',
+      authCallback: 'Início de sessão externo',
     },
     home: {
       welcome: 'Bem-vindo à LaPrizza',
@@ -560,6 +584,28 @@ export const messages = {
         NETWORK_ERROR:
           'Não foi possível contactar o servidor. Verifique a ligação.',
         UNKNOWN_ERROR: 'Ocorreu um erro inesperado. Tente novamente.',
+      },
+      external: {
+        title: 'Início de sessão externo',
+        or: 'ou',
+        continueWith: 'Continuar com {{provider}}',
+        completing: 'A concluir o início de sessão...',
+        errors: {
+          ACCESS_DENIED: 'O início de sessão foi cancelado.',
+          AUTH_FAILED: 'O início de sessão externo falhou. Tente novamente.',
+          EMAIL_MISSING:
+            'O fornecedor não partilhou um endereço de email, que é obrigatório.',
+          EMAIL_NOT_VERIFIED:
+            'O seu endereço de email não está verificado no fornecedor.',
+          ACCOUNT_LINK_REQUIRED:
+            'Já existe uma conta com este email. Contacte o gestor do restaurante.',
+          ACCOUNT_PENDING_ACTIVATION:
+            'A sua conta foi criada, mas tem de ser ativada antes de a poder usar. Contacte o gestor do restaurante.',
+          ACCOUNT_INACTIVE:
+            'A conta ainda não está ativa. Contacte o gestor do restaurante.',
+          ACCOUNT_DISABLED:
+            'A conta está desativada. Contacte o gestor do restaurante.',
+        },
       },
     },
     feedback: {

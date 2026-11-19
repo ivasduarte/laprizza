@@ -17,6 +17,7 @@ import FieldError from '../../shared/ui/feedback/field-error.jsx';
 import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
 import Spinner from '../../shared/ui/feedback/spinner.jsx';
 import BrandLogoLarge from '../../shared/ui/brand-logo-large.jsx';
+import ExternalLoginButtons from './external-login-buttons.jsx';
 
 const IDS = { email: 'login-email', password: 'login-password' };
 const idFor = (field) => IDS[field] ?? field;
@@ -130,6 +131,8 @@ export default function LoginPage() {
             {t('auth.loginSubmit')}
           </button>
         </form>
+
+        <ExternalLoginButtons disabled={submitting} />
 
         <p>
           <Link to="/forgot-password">{t('auth.forgotLink')}</Link>

@@ -63,4 +63,11 @@ export const features = [
     requiresAuth: true,
     load: () => import('./shared-resources/shared-resources-page.jsx'),
   },
+  {
+    id: 'auth-callback',
+    path: '/auth/callback',
+    labelKey: 'nav.authCallback',
+    showInNav: false,
+    load: () => import('./auth-callback/auth-callback-page.jsx'),
+  },
 ];
