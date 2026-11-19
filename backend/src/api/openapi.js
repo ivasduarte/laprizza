@@ -2155,6 +2155,40 @@ const baseSpec = {
         },
       },
     },
+    '/supplier-scenarios/validate': {
+      post: {
+        summary: 'Validate a supplier scenario without saving it (MANAGER only)',
+        description:
+          'Dry-run of POST /supplier-scenarios (WEB07 inspect before confirming): same Joi and business rules, nothing is stored. 200 returns the version the scenario would get if confirmed now.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/SupplierScenarioInput' } },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Valid',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['valid', 'nextVersion'],
+                  properties: {
+                    valid: { type: 'boolean', enum: [true] },
+                    nextVersion: { type: 'integer', minimum: 1 },
+                  },
+                },
+              },
+            },
+          },
+          400: errorResponse('Validation error'),
+          401: errorResponse('Unauthorized'),
+          403: errorResponse('Forbidden (only MANAGER)'),
+        },
+      },
+    },
     '/supplier-scenarios/{id}': {
       get: {
         summary: 'Get a supplier scenario (MANAGER only)',

@@ -193,6 +193,63 @@ Content-Type: application/json
 ?? js response.parsedBody.suppliers[0].name == SUP-9
 
 ### ==========================================
+### 3V: VALIDAR SEM GRAVAR (dry-run, POST /validate)
+### ==========================================
+
+### 3V.1 POST /validate - cenário válido devolve a versão seguinte e não grava (200, nextVersion 5)
+POST {{baseUrl}}/supplier-scenarios/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    { "productId": "{{productId}}", "offers": [{ "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 }] }
+  ]
+}
+?? status == 200
+?? js response.parsedBody.valid == true
+?? js response.parsedBody.nextVersion == 5
+
+### 3V.2 POST /validate - produto desconhecido (400, productUnknown)
+POST {{baseUrl}}/supplier-scenarios/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    { "productId": "{{missingId}}", "offers": [{ "supplierId": "SUP-1", "priceEur": 1, "stockUnits": 10, "leadTimeDays": 1 }] }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.code == VALIDATION_ERROR
+?? js response.parsedBody.error.details[0].type == productUnknown
+
+### 3V.3 POST /validate - preço e prazo em falta (400, Joi)
+POST {{baseUrl}}/supplier-scenarios/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{createdName}}",
+  "suppliers": [{ "id": "SUP-1" }],
+  "products": [
+    { "productId": "{{productId}}", "offers": [{ "supplierId": "SUP-1", "stockUnits": 10 }] }
+  ]
+}
+?? status == 400
+?? js response.parsedBody.error.details.length == 2
+
+### 3V.4 GET A versão continua a ser a 4: o /validate não gravou nada (200 OK)
+GET {{baseUrl}}/supplier-scenarios?name={{createdName}}
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js Math.max(...response.parsedBody.map((s) => s.version)) == 4
+
+### ==========================================
 ### 3A: VALIDAÇÕES DE ESTRUTURA (Joi)
 ### ==========================================
 

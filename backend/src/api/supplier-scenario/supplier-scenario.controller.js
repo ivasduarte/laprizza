@@ -25,6 +25,19 @@ export const create = async (req, res, next, scenarioRepository, catalogueReader
   }
 };
 
+export const validate = async (req, res, next, scenarioRepository, catalogueReader) => {
+  try {
+    const result = await supplierScenarioService.validateSupplierScenario(
+      req.body,
+      scenarioRepository,
+      catalogueReader,
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getById = async (req, res, next, scenarioRepository) => {
   try {
     const scenario = await supplierScenarioService.getSupplierScenarioById(

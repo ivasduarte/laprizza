@@ -50,6 +50,30 @@ export async function getSupplierScenarioById(
   return toSupplierScenarioDto(scenario);
 }
 
+/** Business rules shared by create and the dry-run validation (400 VALIDATION_ERROR). */
+async function assertValidScenario(scenarioData, catalogueReader) {
+  if (!catalogueReader) throw new Error('catalogueReader is required.');
+  const products = await catalogueReader.listProducts();
+  const problems = findSupplierScenarioProblems(scenarioData, { products });
+  if (problems.length > 0) {
+    throw new AppError('Validation failed.', 400, problems, 'VALIDATION_ERROR');
+  }
+}
+
+/**
+ * Dry-run of createSupplierScenario (WEB07 "inspect before saving"): same rules, nothing is
+ * stored. Returns the version the scenario would get if it were confirmed now.
+ */
+export async function validateSupplierScenario(
+  scenarioData,
+  scenarioRepository = defaultSupplierScenarioRepository,
+  catalogueReader,
+) {
+  await assertValidScenario(scenarioData, catalogueReader);
+  const nextVersion = (await scenarioRepository.getLatestVersion(scenarioData.name)) + 1;
+  return { valid: true, nextVersion };
+}
+
 /**
  * Creates a supplier scenario. Immutable and versioned like forecasts: an existing name creates
  * the next version. Offers come from manual or LLM-prepared JSON, so they are always simulated.
@@ -60,12 +84,7 @@ export async function createSupplierScenario(
   scenarioRepository = defaultSupplierScenarioRepository,
   catalogueReader,
 ) {
-  if (!catalogueReader) throw new Error('catalogueReader is required.');
-  const products = await catalogueReader.listProducts();
-  const problems = findSupplierScenarioProblems(scenarioData, { products });
-  if (problems.length > 0) {
-    throw new AppError('Validation failed.', 400, problems, 'VALIDATION_ERROR');
-  }
+  await assertValidScenario(scenarioData, catalogueReader);
 
   const { name, suppliers, products: offersByProduct } = scenarioData;
   const version = (await scenarioRepository.getLatestVersion(name)) + 1;

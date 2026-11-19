@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSupplierScenario } from '../../src/application/supplier-scenario/supplier-scenario.service.js';
+import {
+  createSupplierScenario,
+  validateSupplierScenario,
+} from '../../src/application/supplier-scenario/supplier-scenario.service.js';
 
 const MOZZARELLA = 'aaaaaaaaaaaaaaaaaaaaaaa1';
 const FLOUR = 'aaaaaaaaaaaaaaaaaaaaaaa2';
@@ -81,5 +84,32 @@ describe('createSupplierScenario', () => {
       await problemsOf(valid({ products: [{ productId: FLOUR, offers: [] }, { productId: FLOUR, offers: [] }] })),
       ['productDuplicate'],
     );
+  });
+});
+
+describe('validateSupplierScenario (dry-run)', () => {
+  it('returns the next version and stores nothing', async () => {
+    const repo = fakeRepository({ latestVersion: 2 });
+    const result = await validateSupplierScenario(valid(), repo, catalogue());
+    assert.deepEqual(result, { valid: true, nextVersion: 3 });
+    assert.equal(repo.created.length, 0);
+  });
+
+  it('rejects with the same business rules as create', async () => {
+    const repo = fakeRepository();
+    const data = valid({ products: [{ productId: UNKNOWN, offers: [offer('S-01')] }] });
+    await assert.rejects(
+      () => validateSupplierScenario(data, repo, catalogue()),
+      (err) => {
+        assert.equal(err.status, 400);
+        assert.equal(err.code, 'VALIDATION_ERROR');
+        assert.deepEqual(
+          err.details.map((d) => d.type),
+          ['productUnknown'],
+        );
+        return true;
+      },
+    );
+    assert.equal(repo.created.length, 0);
   });
 });

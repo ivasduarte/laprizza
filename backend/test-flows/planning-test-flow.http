@@ -121,6 +121,13 @@ Content-Type: application/json
 ### Variáveis
 @suppliersId = {{suppliers.id}}
 
+### 2.4 GET Stock do cenário DEMO-PARTIAL antes das execuções (200 OK, input simulado)
+# @name scenarioStockBefore
+GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-PARTIAL&stockMode=scenario
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js response.parsedBody.stock.length > 0 == true
+
 ### ==========================================
 ### 3: EXECUÇÃO (POST /planning/requirements)
 ### ==========================================
@@ -168,6 +175,33 @@ Authorization: Bearer {{adminToken}}
 ?? status == 200
 ?? js JSON.stringify(response.parsedBody.map((s) => [String(s.productId), s.quantity]).sort()) === JSON.stringify(stockBefore.map((s) => [String(s.productId), s.quantity]).sort()) == true
 
+### 3.2a POST Executar o forecast A com o stock do cenário (200, stockMode scenario)
+POST {{baseUrl}}/planning/requirements
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "scenarioId": "DEMO-PARTIAL",
+  "stockMode": "scenario",
+  "forecastId": "{{forecastAId}}",
+  "supplierScenarioId": "{{suppliersId}}"
+}
+?? status == 200
+?? js response.parsedBody.simulation == true
+?? js response.parsedBody.scenario.stockMode == scenario
+
+### 3.2b GET O stock do cenário (input simulado) também não mudou (200 OK, igual ao passo 2.4)
+GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-PARTIAL&stockMode=scenario
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js JSON.stringify(response.parsedBody.stock) === JSON.stringify(scenarioStockBefore.stock) == true
+
+### 3.2c GET O stock real continua igual depois da execução em modo cenário (200 OK)
+GET {{baseUrl}}/stock
+Authorization: Bearer {{adminToken}}
+?? status == 200
+?? js JSON.stringify(response.parsedBody.map((s) => [String(s.productId), s.quantity]).sort()) === JSON.stringify(stockBefore.map((s) => [String(s.productId), s.quantity]).sort()) == true
+
 ### 3.3 POST Forecast inexistente (404 FORECAST_NOT_FOUND, nada é gravado)
 POST {{baseUrl}}/planning/requirements
 Authorization: Bearer {{adminToken}}
@@ -185,18 +219,19 @@ Content-Type: application/json
 ### 4: CONSULTA DOS RESULTADOS (GET /planning/runs)
 ### ==========================================
 
-### 4. GET Execuções do forecast A, com as versões usadas e sem o plano completo (200 OK)
+### 4. GET Execuções do forecast A (live e cenário), com as versões usadas e sem o plano completo (200 OK)
 GET {{baseUrl}}/planning/runs?kind=requirements&forecastId={{forecastAId}}
 Authorization: Bearer {{adminToken}}
 ?? status == 200
-?? js response.parsedBody.length == 1
-?? js response.parsedBody[0].id === runA.runId == true
-?? js response.parsedBody[0].forecast.version == 1
-?? js response.parsedBody[0].supplierScenario.id === suppliersId == true
-?? js response.parsedBody[0].stockSource.source == backend-live
-?? js response.parsedBody[0].snapshotId isString
-?? js response.parsedBody[0].bomVersion isString
-?? js response.parsedBody[0].result === undefined == true
+?? js response.parsedBody.length == 2
+?? js response.parsedBody[0].stockSource.source == scenario
+?? js response.parsedBody[1].id === runA.runId == true
+?? js response.parsedBody[1].forecast.version == 1
+?? js response.parsedBody[1].supplierScenario.id === suppliersId == true
+?? js response.parsedBody[1].stockSource.source == backend-live
+?? js response.parsedBody[1].snapshotId isString
+?? js response.parsedBody[1].bomVersion isString
+?? js response.parsedBody.every((r) => r.result === undefined) == true
 
 ### 4.1 GET Execução do forecast A com o resultado completo (200 OK)
 GET {{baseUrl}}/planning/runs/{{runAId}}

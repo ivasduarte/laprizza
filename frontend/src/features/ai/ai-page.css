@@ -196,3 +196,70 @@ summary {
   font-size: 0.8rem;
   opacity: 0.8;
 }
+
+/* WEB07 */
+.ai-row-between {
+  justify-content: space-between;
+}
+.ai-version {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.ai-table tbody th {
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  white-space: normal;
+}
+.ai-table tbody + tbody tr:first-child > * {
+  border-top: 2px solid var(--color-border);
+}
+.ai-older > * {
+  color: var(--color-muted);
+}
+.ai-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ai-entries {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.ai-entries .ai-entry {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--color-border);
+}
+.ai-entry > .field-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.ai-entry-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.7rem;
+}
+.ai-form-actions {
+  margin-top: 1rem;
+}
+.ai-json {
+  width: 100%;
+  font-family: monospace;
+}
+.ai-prompt {
+  white-space: pre-wrap;
+}
+.field-hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+@media (max-width: 760px) {
+  .ai-entry {
+    grid-template-columns: 1fr;
+  }
+  .ai-entry-actions {
+    margin-top: 0;
+  }
+}

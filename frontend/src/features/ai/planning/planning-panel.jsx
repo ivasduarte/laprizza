@@ -1,12 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../../shared/auth/use-session.js';
 import { isAbortError } from '../../../shared/api/error-normalizer.js';
 import { fieldProps, makeIdFor } from '../../../shared/forms/field-props.js';
 import FieldError from '../../../shared/ui/feedback/field-error.jsx';
+import {
+  aiKeys,
+  forecastsApi,
+  supplierScenariosApi,
+} from '../shared/ai-api.js';
+import { groupForecasts, toDay } from '../forecasts/forecast-model.js';
 import { calculatePlanning, PlanningKind } from './planning-api.js';
-import { classifyPlanningError, STOCK_MODES, validatePlanningInput } from './planning-errors.js';
+import {
+  classifyPlanningError,
+  STOCK_MODES,
+  toPlanningRequest,
+  validatePlanningInput,
+} from './planning-errors.js';
 import { BomResult, CodeList, RequirementsResult } from './planning-result.jsx';
 
 const idFor = makeIdFor('planning');
@@ -17,24 +29,50 @@ const canPlan = (user) =>
     : user?.role === 'MANAGER' || (user?.roles ?? []).includes('MANAGER');
 
 /**
- * AI05: runs the BOM / requirements calculation through the back end and shows one of four
- * outcomes: result, invalid input (inline, per field), missing information (problems of the
- * data) or service unavailable (with retry). Nothing is changed: the result is a simulation.
+ * AI05 + WEB07: runs the BOM / requirements calculation through the back end and shows one of
+ * four outcomes: result, invalid input (inline, per field), missing information (problems of
+ * the data) or service unavailable (with retry). Nothing is changed: the result is a simulation.
+ * For the requirements planning the manager chooses the forecast version and the supplier
+ * scenario; every successful calculation is saved as a run (history).
+ *
+ * @param {{preset?: {forecastId?: string}, onOpenRun?: (runId: string) => void}} props
  */
-export default function PlanningPanel() {
+export default function PlanningPanel({ preset = null, onOpenRun }) {
   const { t } = useTranslation();
   const { status, user } = useSession();
+  const queryClient = useQueryClient();
 
-  const [values, setValues] = useState({
-    kind: PlanningKind.BOM,
+  const [values, setValues] = useState(() => ({
+    kind: preset ? PlanningKind.REQUIREMENTS : PlanningKind.BOM,
     scenarioId: '',
-    stockMode: 'scenario',
-  });
+    stockMode: preset ? 'live' : 'scenario',
+    forecastId: preset?.forecastId ?? '',
+    supplierScenarioId: '',
+  }));
   const [fieldErrors, setFieldErrors] = useState({});
   const [running, setRunning] = useState(false);
   const [failure, setFailure] = useState(null);
   const [outcome, setOutcome] = useState(null); // { kind, result }
   const controller = useRef(null);
+  // Synchronous lock: two clicks in the same tick can not both start a calculation.
+  const busy = useRef(false);
+
+  const allowed = status === 'authenticated' && canPlan(user);
+  const isRequirements = values.kind === PlanningKind.REQUIREMENTS;
+  const forecasts = useQuery({
+    queryKey: aiKeys.forecasts,
+    queryFn: ({ signal }) => forecastsApi.list(signal),
+    enabled: allowed && isRequirements,
+  });
+  const suppliers = useQuery({
+    queryKey: aiKeys.suppliers,
+    queryFn: ({ signal }) => supplierScenariosApi.list(signal),
+    enabled: allowed && isRequirements,
+  });
+  const forecastGroups = useMemo(
+    () => groupForecasts(forecasts.data ?? []),
+    [forecasts.data]
+  );
 
   useEffect(() => () => controller.current?.abort(), []);
 
@@ -47,7 +85,7 @@ export default function PlanningPanel() {
       </div>
     );
   }
-  if (!canPlan(user)) {
+  if (!allowed) {
     return (
       <div className="ai-card">
         <p className="message message-error" role="alert">
@@ -58,7 +96,10 @@ export default function PlanningPanel() {
   }
 
   const change = (field) => (event) => {
-    const value = field === 'scenarioId' ? event.target.value.toUpperCase() : event.target.value;
+    const value =
+      field === 'scenarioId'
+        ? event.target.value.toUpperCase()
+        : event.target.value;
     setValues((v) => ({ ...v, [field]: value }));
     setFieldErrors((errors) => {
       if (!(field in errors)) return errors;
@@ -70,22 +111,28 @@ export default function PlanningPanel() {
 
   async function run(event) {
     event?.preventDefault();
-    if (running) return;
-    const request = { scenarioId: values.scenarioId.trim(), stockMode: values.stockMode };
-    const errors = validatePlanningInput(request);
+    if (busy.current) return;
+    const errors = validatePlanningInput(values);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       document.getElementById(idFor(Object.keys(errors)[0]))?.focus();
       return;
     }
 
+    busy.current = true;
     controller.current?.abort();
     controller.current = new AbortController();
     setRunning(true);
     setFailure(null);
     try {
-      const result = await calculatePlanning(values.kind, request, controller.current.signal);
-      setOutcome({ kind: values.kind, result });
+      const kind = values.kind;
+      const result = await calculatePlanning(
+        kind,
+        toPlanningRequest(kind, values),
+        controller.current.signal
+      );
+      setOutcome({ kind, result });
+      queryClient.invalidateQueries({ queryKey: ['ai', 'runs'] });
     } catch (error) {
       if (isAbortError(error)) return;
       const classified = classifyPlanningError(error);
@@ -93,6 +140,7 @@ export default function PlanningPanel() {
       setFieldErrors(classified.fieldErrors);
       setOutcome(null);
     } finally {
+      busy.current = false;
       setRunning(false);
     }
   }
@@ -100,6 +148,8 @@ export default function PlanningPanel() {
   const labels = {
     scenarioId: t('ai.p.scenarioId'),
     stockMode: t('ai.p.stockMode'),
+    forecastId: t('ai.r.forecast'),
+    supplierScenarioId: t('ai.r.scenario'),
   };
 
   return (
@@ -139,7 +189,10 @@ export default function PlanningPanel() {
               disabled={running}
               required
             />
-            <FieldError id={`${idFor('scenarioId')}-error`} error={fieldErrors.scenarioId} />
+            <FieldError
+              id={`${idFor('scenarioId')}-error`}
+              error={fieldErrors.scenarioId}
+            />
           </div>
           <div>
             <label htmlFor={idFor('stockMode')}>{labels.stockMode}</label>
@@ -155,22 +208,100 @@ export default function PlanningPanel() {
                 </option>
               ))}
             </select>
-            <FieldError id={`${idFor('stockMode')}-error`} error={fieldErrors.stockMode} />
+            <FieldError
+              id={`${idFor('stockMode')}-error`}
+              error={fieldErrors.stockMode}
+            />
           </div>
+
+          {isRequirements && (
+            <>
+              <div>
+                <label htmlFor={idFor('forecastId')}>{labels.forecastId}</label>
+                <select
+                  {...fieldProps('forecastId', fieldErrors, idFor)}
+                  value={values.forecastId}
+                  onChange={change('forecastId')}
+                  disabled={running}
+                >
+                  <option value="">{t('ai.run.latestForecast')}</option>
+                  {forecastGroups.map((group) => (
+                    <optgroup key={group.key} label={group.name}>
+                      {group.versions.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {`${f.name} · v${f.version} (${toDay(f.startDate)} → ${toDay(f.endDate)})`}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <FieldError
+                  id={`${idFor('forecastId')}-error`}
+                  error={fieldErrors.forecastId}
+                />
+              </div>
+              <div>
+                <label htmlFor={idFor('supplierScenarioId')}>
+                  {labels.supplierScenarioId}
+                </label>
+                <select
+                  {...fieldProps('supplierScenarioId', fieldErrors, idFor)}
+                  value={values.supplierScenarioId}
+                  onChange={change('supplierScenarioId')}
+                  disabled={running}
+                >
+                  <option value="">{t('ai.run.latestSuppliers')}</option>
+                  {(suppliers.data ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {`${s.name} · v${s.version}`}
+                    </option>
+                  ))}
+                </select>
+                <FieldError
+                  id={`${idFor('supplierScenarioId')}-error`}
+                  error={fieldErrors.supplierScenarioId}
+                />
+              </div>
+            </>
+          )}
         </div>
+        {isRequirements && (forecasts.error || suppliers.error) && (
+          <p className="message message-warning">
+            {t('ai.run.listsUnavailable')}
+          </p>
+        )}
 
         <div className="ai-row" style={{ marginTop: '1rem' }}>
           <button type="submit" disabled={running}>
-            {t('ai.r.execute')}
+            {running ? t('ai.r.executing') : t('ai.r.execute')}
           </button>
           {running && <progress aria-label={t('ai.r.executing')} />}
+          {running && <span role="status">{t('ai.run.pending')}</span>}
         </div>
 
         <FailureMessage failure={failure} onRetry={run} running={running} />
       </form>
 
-      {outcome?.kind === PlanningKind.BOM && <BomResult result={outcome.result} />}
-      {outcome?.kind === PlanningKind.REQUIREMENTS && <RequirementsResult result={outcome.result} />}
+      {outcome?.result?.runId && (
+        <p className="message message-success" role="status">
+          {t('ai.run.saved')}{' '}
+          {onOpenRun && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onOpenRun(outcome.result.runId)}
+            >
+              {t('ai.run.openInHistory')}
+            </button>
+          )}
+        </p>
+      )}
+      {outcome?.kind === PlanningKind.BOM && (
+        <BomResult result={outcome.result} />
+      )}
+      {outcome?.kind === PlanningKind.REQUIREMENTS && (
+        <RequirementsResult result={outcome.result} />
+      )}
     </>
   );
 }
@@ -191,19 +322,30 @@ function FailureMessage({ failure, onRetry, running }) {
       return (
         <>
           <p className="message message-error" role="alert">
-            <strong>{t('ai.p.state.missingInformation')}</strong> {t('ai.p.state.missingHint')}
+            <strong>{t('ai.p.state.missingInformation')}</strong>{' '}
+            {t('ai.p.state.missingHint')}
           </p>
-          <CodeList items={failure.problems} titleKey="ai.p.problems" variant="error" />
+          <CodeList
+            items={failure.problems}
+            titleKey="ai.p.problems"
+            variant="error"
+          />
         </>
       );
     case 'unavailable':
       return (
         <div className="message message-error" role="alert">
-          <strong>{t('ai.p.state.unavailable')}</strong> {t('ai.p.state.unavailableHint')}
+          <strong>{t('ai.p.state.unavailable')}</strong>{' '}
+          {t('ai.p.state.unavailableHint')}
           {failure.retryAfterSeconds && (
             <> {t('ai.p.retryAfter', { seconds: failure.retryAfterSeconds })}</>
           )}{' '}
-          <button type="button" className="secondary" onClick={onRetry} disabled={running}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={onRetry}
+            disabled={running}
+          >
             {t('ai.r.retry')}
           </button>
         </div>

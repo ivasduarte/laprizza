@@ -106,6 +106,7 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['GET', '/supplier-scenarios', MANAGER_ONLY],
   ['GET', '/supplier-scenarios/:id', MANAGER_ONLY],
   ['POST', '/supplier-scenarios', MANAGER_ONLY],
+  ['POST', '/supplier-scenarios/validate', MANAGER_ONLY],
   ['PUT', '/supplier-scenarios/:id', MANAGER_ONLY],
   ['GET', '/ai-data/snapshot', MANAGER_ONLY],
   ['GET', '/ai-data/products/export', MANAGER_ONLY],

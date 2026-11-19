@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   classifyPlanningError,
+  toPlanningRequest,
   validatePlanningInput,
 } from '../../src/features/ai/planning/planning-errors.js';
 
@@ -71,5 +72,39 @@ describe('AI05 planning: outcome of a failed calculation', () => {
   it('403 -> forbidden, 401 -> unauthenticated', () => {
     assert.equal(classifyPlanningError(apiError(403, 'FORBIDDEN')).state, 'forbidden');
     assert.equal(classifyPlanningError(apiError(401, 'TOKEN_MISSING')).state, 'unauthenticated');
+  });
+});
+
+describe('WEB07 planning request (forecast + supplier scenario)', () => {
+  const FORECAST = 'de01f0000000000000000001';
+  const SUPPLIERS = 'de01c0000000000000000001';
+
+  it('sends the chosen versions only to the requirements calculation', () => {
+    const values = { scenarioId: ' DEMO-PARTIAL ', stockMode: 'live', forecastId: FORECAST, supplierScenarioId: SUPPLIERS };
+    assert.deepEqual(toPlanningRequest('requirements', values), {
+      scenarioId: 'DEMO-PARTIAL',
+      stockMode: 'live',
+      forecastId: FORECAST,
+      supplierScenarioId: SUPPLIERS,
+    });
+    assert.deepEqual(toPlanningRequest('bom', values), { scenarioId: 'DEMO-PARTIAL', stockMode: 'live' });
+    assert.deepEqual(
+      toPlanningRequest('requirements', { ...values, forecastId: '', supplierScenarioId: '' }),
+      { scenarioId: 'DEMO-PARTIAL', stockMode: 'live' }
+    );
+  });
+
+  it('rejects malformed ids before the request', () => {
+    const errors = validatePlanningInput({ scenarioId: 'DEMO', stockMode: 'live', forecastId: 'x', supplierScenarioId: SUPPLIERS });
+    assert.deepEqual(errors, { forecastId: { type: 'string.hex' } });
+  });
+
+  it('maps a missing forecast or supplier scenario to its field', () => {
+    assert.deepEqual(classifyPlanningError(apiError(404, 'FORECAST_NOT_FOUND')).fieldErrors, {
+      forecastId: { type: 'planning.forecastNotFound' },
+    });
+    assert.deepEqual(classifyPlanningError(apiError(404, 'SUPPLIER_SCENARIO_NOT_FOUND')).fieldErrors, {
+      supplierScenarioId: { type: 'planning.supplierScenarioNotFound' },
+    });
   });
 });

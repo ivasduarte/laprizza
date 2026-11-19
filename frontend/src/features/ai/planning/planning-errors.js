@@ -2,19 +2,40 @@ import { normalizeDetails, kindOf } from '../../../shared/api/error-normalizer.j
 
 export const SCENARIO_ID_PATTERN = /^[A-Z0-9-]{1,64}$/;
 export const STOCK_MODES = ['scenario', 'live'];
+const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 /**
  * Client-side validation, same rules as the back end (Joi) so most input errors never leave
  * the browser. Returns a map field -> {type} in the format used by FieldError.
  */
-export function validatePlanningInput({ scenarioId, stockMode }) {
+export function validatePlanningInput({ scenarioId, stockMode, forecastId, supplierScenarioId }) {
   const errors = {};
   if (!scenarioId) errors.scenarioId = { type: 'any.required' };
   else if (!SCENARIO_ID_PATTERN.test(scenarioId))
     errors.scenarioId = { type: 'planning.scenarioIdPattern' };
   if (!STOCK_MODES.includes(stockMode)) errors.stockMode = { type: 'any.only' };
+  // WEB07: optional; without them the back end uses the latest active versions.
+  if (forecastId && !OBJECT_ID.test(forecastId)) errors.forecastId = { type: 'string.hex' };
+  if (supplierScenarioId && !OBJECT_ID.test(supplierScenarioId))
+    errors.supplierScenarioId = { type: 'string.hex' };
   return errors;
 }
+
+/** Request body: the WEB07 ids only go to the requirements calculation, and only when chosen. */
+export function toPlanningRequest(kind, { scenarioId, stockMode, forecastId, supplierScenarioId }) {
+  const body = { scenarioId: scenarioId.trim(), stockMode };
+  if (kind === 'requirements') {
+    if (forecastId) body.forecastId = forecastId;
+    if (supplierScenarioId) body.supplierScenarioId = supplierScenarioId;
+  }
+  return body;
+}
+
+const NOT_FOUND_FIELDS = Object.freeze({
+  AI_SCENARIO_NOT_FOUND: ['scenarioId', 'planning.scenarioNotFound'],
+  FORECAST_NOT_FOUND: ['forecastId', 'planning.forecastNotFound'],
+  SUPPLIER_SCENARIO_NOT_FOUND: ['supplierScenarioId', 'planning.supplierScenarioNotFound'],
+});
 
 /**
  * @typedef {Object} PlanningFailure
@@ -45,12 +66,9 @@ export function classifyPlanningError(error) {
     const problems = Array.isArray(error?.details?.problems) ? error.details.problems : [];
     return { ...base, state: 'missingInformation', problems };
   }
-  if (status === 404 && code === 'AI_SCENARIO_NOT_FOUND') {
-    return {
-      ...base,
-      state: 'invalidInput',
-      fieldErrors: { scenarioId: { type: 'planning.scenarioNotFound' } },
-    };
+  if (status === 404 && NOT_FOUND_FIELDS[code]) {
+    const [field, type] = NOT_FOUND_FIELDS[code];
+    return { ...base, state: 'invalidInput', fieldErrors: { [field]: { type } } };
   }
   if (status === 400) {
     if (code === 'SCENARIO_WITHOUT_STOCK') {

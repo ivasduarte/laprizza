@@ -6577,6 +6577,85 @@
         }
       }
     },
+    "/supplier-scenarios/validate": {
+      "post": {
+        "summary": "Validate a supplier scenario without saving it (MANAGER only)",
+        "description": "Dry-run of POST /supplier-scenarios (WEB07 inspect before confirming): same Joi and business rules, nothing is stored. 200 returns the version the scenario would get if confirmed now.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierScenarioInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "valid",
+                    "nextVersion"
+                  ],
+                  "properties": {
+                    "valid": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "nextVersion": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (only MANAGER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/supplier-scenarios/{id}": {
       "get": {
         "summary": "Get a supplier scenario (MANAGER only)",

@@ -135,6 +135,11 @@ export default function supplierScenarioRouterFactory(
     controller.create(req, res, next, scenarioRepository, catalogueReader),
   );
 
+  // Dry-run (WEB07): same validation as POST /, nothing is stored. Before /:id on purpose.
+  router.post('/validate', canWrite, validate(supplierScenarioSchema), (req, res, next) =>
+    controller.validate(req, res, next, scenarioRepository, catalogueReader),
+  );
+
   router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, scenarioRepository),
   );
