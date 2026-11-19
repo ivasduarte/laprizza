@@ -1,0 +1,10 @@
+[Unit]
+Description=LaPrizza – valida e aplica os clientes autorizados no nginx (SYS03)
+After=nginx.service auditd.service
+# Várias gravações seguidas (editores) não devem bloquear o serviço
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/opt/laprizza/bin/laprizza-allowlist-apply.sh apply
+# Também aplica no arranque da máquina, caso o ficheiro tenha mudado com o sistema desligado

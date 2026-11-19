@@ -1,0 +1,9 @@
+[Unit]
+Description=LaPrizza – vigia /etc/laprizza/allowed-clients.conf (SYS03)
+
+[Path]
+PathChanged=/etc/laprizza/allowed-clients.conf
+Unit=laprizza-allowlist.service
+
+[Install]
+WantedBy=multi-user.target

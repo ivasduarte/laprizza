@@ -1,0 +1,20 @@
+# =============================================================================
+# LaPrizza – clientes autorizados a aceder à aplicação (SYS03)
+# Ficheiro ativo: /etc/laprizza/allowed-clients.conf
+#
+# Formato
+#   - Uma entrada por linha: endereço IPv4/IPv6 (10.8.0.25) ou rede CIDR (10.8.0.0/16).
+#   - "#" inicia um comentário até ao fim da linha; linhas vazias são ignoradas.
+#   - Redes CIDR têm de estar alinhadas (10.8.0.0/16, não 10.8.3.1/16).
+#   - 0.0.0.0/0 e ::/0 não são aceites (permitiriam todos os clientes).
+#   - Tem de existir pelo menos uma entrada.
+#   - 127.0.0.1 e ::1 são sempre permitidos (deploy e health check locais).
+#
+# Alterar (só membros do grupo ssh-admins):   sudo laprizza-allowlist-edit
+# Validar antes de gravar uma cópia:          laprizza-allowlist-apply.sh check <ficheiro>
+# A alteração é aplicada automaticamente ao gravar, sem reiniciar o sistema.
+# Uma alteração inválida é registada e a última configuração válida continua ativa.
+# =============================================================================
+
+10.8.0.0/16      # VPN do ISEP
+10.9.0.0/16      # VNET1 – VMs do DEI
