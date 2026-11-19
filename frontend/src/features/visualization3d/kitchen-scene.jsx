@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import { Object3D } from 'three';
 import {
   CounterModel,
@@ -13,6 +14,8 @@ import {
 import { Surface, WithMaterial } from './scene-materials.jsx';
 import LightingControls from './lighting-controls.jsx';
 import { DEFAULT_LIGHTING } from './lighting-defaults.js';
+import CameraControls from './camera-controls.jsx';
+import { CAMERA_FOV, computeCameraSetup } from './camera-view.js';
 
 function Model({ url, position, rotation, scale }) {
   const { scene } = useGLTF(url);
@@ -275,27 +278,38 @@ function AssemblyLine({ line }) {
 }
 
 export default function KitchenScene({ config, assemblyLine }) {
+  const { t } = useTranslation();
+
   // VIS06: light settings edited through the lil-gui panel.
   const [lighting, setLighting] = useState(DEFAULT_LIGHTING);
 
-  if (!config || !config.content || !config.content.dimensions) return null;
+  // VIS07: exposes reset() of the camera controls to the "Reset View" button.
+  const cameraControlsRef = useRef(null);
 
-  const dimensions = config.content.dimensions;
+  const dimensions = config?.content?.dimensions;
+
+  const safeWidth = Number(dimensions?.width) || 10;
+  const safeLength = Number(dimensions?.length) || 10;
+  const safeHeight = Number(dimensions?.height) || 5;
+
+  const cameraSetup = useMemo(
+    () =>
+      computeCameraSetup({
+        width: safeWidth,
+        length: safeLength,
+        height: safeHeight,
+      }),
+    [safeWidth, safeLength, safeHeight]
+  );
+
+  if (!dimensions) return null;
+
   const elements = config.content.elements || [];
-
-  const safeWidth = Number(dimensions.width) || 10;
-  const safeLength = Number(dimensions.length) || 10;
-  const safeHeight = Number(dimensions.height) || 5;
 
   // Fixed focus of the line spotlight: the assembly line placement (room center if none).
   const lineFocus = toPosition(assemblyLine?.placement?.position);
 
-  // The initial camera must always be inside the zoom limits.
-  const initialDistance = Math.hypot(safeHeight * 2, safeLength);
-  const maxDistance = Math.max(
-    initialDistance * 1.5,
-    Math.max(safeWidth, safeLength) * 2
-  );
+  const { position, near, far } = cameraSetup;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -304,8 +318,10 @@ export default function KitchenScene({ config, assemblyLine }) {
         shadows
         dpr={[1, 2]}
         camera={{
-          position: [0, safeHeight * 2, safeLength],
-          fov: 50,
+          position: [position.x, position.y, position.z],
+          fov: CAMERA_FOV,
+          near,
+          far,
         }}
       >
         {/* Base background color */}
@@ -320,14 +336,8 @@ export default function KitchenScene({ config, assemblyLine }) {
           lighting={lighting}
         />
 
-        {/* Mouse controls: orbit around the center of the ground, camera kept above the floor */}
-        <OrbitControls
-          target={[0, 0, 0]}
-          makeDefault
-          minDistance={2}
-          maxDistance={maxDistance}
-          maxPolarAngle={Math.PI / 2 - 0.05}
-        />
+        {/* VIS07: left drag pans, right drag orbits, wheel dollies (limited to the kitchen) */}
+        <CameraControls ref={cameraControlsRef} setup={cameraSetup} />
 
         {/* Kitchen floor (VIS04: optional material in content.floor) */}
         <WithMaterial
@@ -366,6 +376,15 @@ export default function KitchenScene({ config, assemblyLine }) {
           </ShadowGroup>
         </Suspense>
       </Canvas>
+
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => cameraControlsRef.current?.reset()}
+        style={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}
+      >
+        {t('kitchenConfig.viewer.resetView')}
+      </button>
 
       {/* VIS06: lighting controls (lil-gui, open by default) */}
       <LightingControls onChange={setLighting} />

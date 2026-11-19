@@ -351,6 +351,7 @@ const baseMessages = {
       viewer: {
         empty: 'No active kitchen configuration to display.',
         showing: 'Showing',
+        resetView: 'Reset view',
       },
       list: 'Configurations List',
       createNew: 'Create New',
@@ -836,6 +837,7 @@ const baseMessages = {
       viewer: {
         empty: 'Não há nenhuma configuração de cozinha ativa para mostrar.',
         showing: 'A mostrar',
+        resetView: 'Repor vista',
       },
       list: 'Lista de Configurações',
       createNew: 'Criar Nova',
