@@ -2,6 +2,7 @@ import * as defaultUsersRepository from '../../infrastructure/users/users.reposi
 import * as defaultSessionsRepository from '../../infrastructure/auth/auth-sessions.repository.js';
 import * as defaultResetTokensRepository from '../../infrastructure/auth/password-reset-tokens.repository.js';
 import * as defaultLoginThrottleRepository from '../../infrastructure/auth/login-throttle.repository.js';
+import * as defaultExternalIdentitiesRepository from '../../infrastructure/auth/external-identities.repository.js';
 import { passwordHasher as defaultPasswordHasher } from '../../infrastructure/security/password-hasher.js';
 import { createTokenService } from '../../infrastructure/security/token-service.js';
 import { createEmailService } from '../../infrastructure/email/email.service.js';
@@ -9,6 +10,8 @@ import { createSecurityLogger } from '../../infrastructure/logging/security-logg
 import { systemClock } from '../../infrastructure/clock.js';
 import { createAuthService } from '../../application/auth/auth.service.js';
 import { createAuthenticate } from '../middleware/auth.middleware.js';
+import { createOidcClient } from '../../infrastructure/oidc/oidc-client.js';
+import { createExternalAuthService } from '../../application/auth/external-auth.service.js';
 
 export function createAuthModule(config, repos = {}) {
   const securityLogger =
@@ -30,8 +33,19 @@ export function createAuthModule(config, repos = {}) {
     config: config.auth,
   });
 
+    const externalAuthService = config.external.enabled
+    ? createExternalAuthService({
+        usersRepository: repos.usersRepository ?? defaultUsersRepository,
+        externalIdentitiesRepository: repos.externalIdentitiesRepository ?? defaultExternalIdentitiesRepository,
+        oidcClient: repos.oidcClient ?? createOidcClient(),
+        authService,
+        securityLogger,
+        config: config.external,
+      })
+    : null;
   return {
     authService,
+    externalAuthService,
     securityLogger,
     config,
     authenticate: createAuthenticate({ authService, securityLogger }),

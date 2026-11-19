@@ -1,6 +1,7 @@
 import pkg from '../../package.json' with { type: 'json' };
 import { API_VERSIONS, CURRENT_API_VERSION, SUPPORTED_API_VERSIONS, apiPrefix } from './api-versions.js';
 import { planningPaths } from './planning/planning.openapi.js';
+import { externalAuthPaths } from './auth/external-auth.openapi.js';
 
 const errorResponse = (description) => ({
   description,
@@ -156,6 +157,7 @@ const baseSpec = {
         },
       },
     },
+    ...externalAuthPaths,
     '/users': {
       post: {
         summary: 'Create user (MANAGER only)',
