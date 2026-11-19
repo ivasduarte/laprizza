@@ -1,4 +1,5 @@
 const active = { isActive: { $ne: false } };
+const isObjectId = (id) => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
 
 export const toStockEntry = (row) => ({
   productId: String(row.productId),
@@ -19,7 +20,7 @@ export function createAiDataRepository({
       productModel
         .find(
           active,
-          'name sellable stockControlled pizzaComponentTypeId sizeConfigurations aggregate',
+          'name price sellable stockControlled pizzaComponentTypeId sizeConfigurations aggregate',
         )
         .lean(),
     findActiveScenarioByCode: (code) => aiScenarioRepository.findActiveByCode(code),
@@ -31,5 +32,9 @@ export function createAiDataRepository({
     getActiveForecast: () => forecastModel.findOne(active).sort({ createdAt: -1 }).lean(),
     getActiveSupplierScenario: () =>
       supplierScenarioModel.findOne(active).sort({ createdAt: -1 }).lean(),
+    findForecastById: async (id) =>
+      isObjectId(id) ? forecastModel.findOne({ _id: id, ...active }).lean() : null,
+    findSupplierScenarioById: async (id) =>
+      isObjectId(id) ? supplierScenarioModel.findOne({ _id: id, ...active }).lean() : null,
   };
 }

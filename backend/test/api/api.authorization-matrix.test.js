@@ -39,6 +39,7 @@ async function startServer() {
     assemblyLineConfigurationRepository: stub(),
     forecastRepository: stub(),
     supplierScenarioRepository: stub(),
+    planningRunRepository: stub(),
     sharedResourcesStorage: stub(),
     databaseHealthProbe: stub(),
     versionInfo: {},

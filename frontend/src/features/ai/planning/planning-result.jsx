@@ -7,8 +7,14 @@ function useFormatters() {
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const number = new Intl.NumberFormat(locale);
-  const money = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' });
-  const dateTime = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'medium' });
+  const money = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'EUR',
+  });
+  const dateTime = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  });
   return {
     n: (v) => (typeof v === 'number' ? number.format(v) : dash(v)),
     eur: (v) => (typeof v === 'number' ? money.format(v) : '—'),
@@ -24,7 +30,10 @@ export function CodeList({ items, titleKey, variant }) {
   const { t } = useTranslation();
   if (!items?.length) return null;
   return (
-    <div className={`message message-${variant}`} role={variant === 'error' ? 'alert' : undefined}>
+    <div
+      className={`message message-${variant}`}
+      role={variant === 'error' ? 'alert' : undefined}
+    >
       <strong>{t(titleKey)}</strong>
       <ul>
         {items.map((item, index) => {
@@ -32,7 +41,9 @@ export function CodeList({ items, titleKey, variant }) {
           return (
             <li key={`${item.code}-${index}`}>
               {t(`ai.p.codes.${item.code}`, { defaultValue: item.code })}
-              {subjects.length > 0 && <code className="ai-subject"> {subjects.join(' · ')}</code>}
+              {subjects.length > 0 && (
+                <code className="ai-subject"> {subjects.join(' · ')}</code>
+              )}
             </li>
           );
         })}
@@ -67,7 +78,11 @@ function ResultHeader({ result, title }) {
         </div>
         <div>
           <dt>{t('ai.p.stockMode')}</dt>
-          <dd>{t(`ai.p.stockModes.${result.scenario?.stockMode}`, { defaultValue: '—' })}</dd>
+          <dd>
+            {t(`ai.p.stockModes.${result.scenario?.stockMode}`, {
+              defaultValue: '—',
+            })}
+          </dd>
         </div>
         <div>
           <dt>{t('ai.r.stockSnapshot')}</dt>
@@ -89,7 +104,10 @@ export function BomResult({ result }) {
   const f = useFormatters();
   return (
     <article className="ai-card" aria-labelledby="planning-result-title">
-      <ResultHeader result={result} title={<span id="planning-result-title">{t('ai.p.bomTitle')}</span>} />
+      <ResultHeader
+        result={result}
+        title={<span id="planning-result-title">{t('ai.p.bomTitle')}</span>}
+      />
 
       <h3>{t('ai.p.items')}</h3>
       <div className="ai-scroll">
@@ -109,12 +127,20 @@ export function BomResult({ result }) {
             {(result.items ?? []).map((item) => (
               <tr key={item.productId}>
                 <td>{item.name}</td>
-                <td>{t(`ai.p.kinds.${item.kind}`, { defaultValue: item.kind })}</td>
+                <td>
+                  {t(`ai.p.kinds.${item.kind}`, { defaultValue: item.kind })}
+                </td>
                 <td>{f.n(item.required)}</td>
-                <td>{item.stockControlled ? f.n(item.available) : t('ai.p.notControlled')}</td>
+                <td>
+                  {item.stockControlled
+                    ? f.n(item.available)
+                    : t('ai.p.notControlled')}
+                </td>
                 <td>{f.n(item.used)}</td>
                 <td>{f.n(item.remaining)}</td>
-                <td className={item.shortage > 0 ? 'ai-shortage' : undefined}>{f.n(item.shortage)}</td>
+                <td className={item.shortage > 0 ? 'ai-shortage' : undefined}>
+                  {f.n(item.shortage)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -129,7 +155,9 @@ export function BomResult({ result }) {
               <li key={p.productId}>
                 {p.name}: {f.n(p.toProduce)}{' '}
                 {p.canProduce ? (
-                  <span className="ai-tag ai-tag-ok">{t('ai.p.canProduce')}</span>
+                  <span className="ai-tag ai-tag-ok">
+                    {t('ai.p.canProduce')}
+                  </span>
                 ) : (
                   <span className="ai-tag ai-tag-warn">
                     {t('ai.p.missingIngredients', {
@@ -156,8 +184,61 @@ export function BomResult({ result }) {
         </>
       )}
 
-      <CodeList items={result.warnings} titleKey="ai.r.warnings" variant="warning" />
+      <CodeList
+        items={result.warnings}
+        titleKey="ai.r.warnings"
+        variant="warning"
+      />
     </article>
+  );
+}
+
+/** Net need of every item per day (`requirements[].needs`), ordered by date. */
+function DailyNeeds({ requirements = [] }) {
+  const { t } = useTranslation();
+  const f = useFormatters();
+  const rows = requirements
+    .flatMap((r) =>
+      (r.needs ?? []).map((n) => ({
+        ...n,
+        productId: r.productId,
+        name: r.name,
+      }))
+    )
+    .filter((n) => n.quantity > 0)
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        String(a.name).localeCompare(String(b.name))
+    );
+  return (
+    <>
+      <h3>{t('ai.run.dailyNeeds')}</h3>
+      {rows.length === 0 ? (
+        <p className="message">{t('ai.run.noDailyNeeds')}</p>
+      ) : (
+        <div className="ai-scroll">
+          <table className="ai-table">
+            <thead>
+              <tr>
+                <th>{t('ai.r.col.day')}</th>
+                <th>{t('ai.r.col.item')}</th>
+                <th>{t('ai.run.need')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((n) => (
+                <tr key={`${n.date}-${n.productId}`}>
+                  <td>{n.date}</td>
+                  <td>{n.name}</td>
+                  <td>{f.n(n.quantity)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -166,15 +247,25 @@ export function RequirementsResult({ result }) {
   const f = useFormatters();
   const plan = result.plan ?? {};
   const rows = (result.purchases ?? []).flatMap((purchase) => [
-    ...(purchase.allocations ?? []).map((a, i) => ({ key: `${purchase.productId}-a${i}`, purchase, a })),
-    ...(purchase.unmet ?? []).map((u, i) => ({ key: `${purchase.productId}-u${i}`, purchase, u })),
+    ...(purchase.allocations ?? []).map((a, i) => ({
+      key: `${purchase.productId}-a${i}`,
+      purchase,
+      a,
+    })),
+    ...(purchase.unmet ?? []).map((u, i) => ({
+      key: `${purchase.productId}-u${i}`,
+      purchase,
+      u,
+    })),
   ]);
 
   return (
     <article className="ai-card" aria-labelledby="planning-result-title">
       <ResultHeader
         result={result}
-        title={<span id="planning-result-title">{t('ai.p.requirementsTitle')}</span>}
+        title={
+          <span id="planning-result-title">{t('ai.p.requirementsTitle')}</span>
+        }
       />
       <dl className="ai-meta">
         <div>
@@ -215,13 +306,85 @@ export function RequirementsResult({ result }) {
               <tr key={r.productId}>
                 <td>{r.name}</td>
                 <td>{f.n(r.required)}</td>
-                <td>{r.stockControlled ? f.n(r.available) : t('ai.p.notControlled')}</td>
-                <td className={r.shortage > 0 ? 'ai-shortage' : undefined}>{f.n(r.shortage)}</td>
+                <td>
+                  {r.stockControlled
+                    ? f.n(r.available)
+                    : t('ai.p.notControlled')}
+                </td>
+                <td className={r.shortage > 0 ? 'ai-shortage' : undefined}>
+                  {f.n(r.shortage)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <DailyNeeds requirements={result.requirements} />
+
+      {result.production?.length > 0 && (
+        <>
+          <h3>{t('ai.p.production')}</h3>
+          <ul>
+            {result.production.map((p) => (
+              <li key={p.productId}>
+                {p.name}: {f.n(p.toProduce)}{' '}
+                {(p.schedule ?? []).length > 0 && (
+                  <span className="ai-subject">
+                    (
+                    {p.schedule
+                      .map((s) => `${s.date}: ${f.n(s.quantity)}`)
+                      .join(' · ')}
+                    )
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {result.purchases?.length > 0 && (
+        <>
+          <h3>{t('ai.run.purchases')}</h3>
+          <div className="ai-scroll">
+            <table className="ai-table">
+              <thead>
+                <tr>
+                  <th>{t('ai.r.col.item')}</th>
+                  <th>{t('ai.p.col.shortage')}</th>
+                  <th>{t('ai.run.covered')}</th>
+                  <th>{t('ai.r.col.unmet')}</th>
+                  <th>{t('ai.p.col.cost')}</th>
+                  <th>{t('ai.run.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.purchases.map((p) => (
+                  <tr key={p.productId}>
+                    <th scope="row">{p.name}</th>
+                    <td>{f.n(p.shortage)}</td>
+                    <td>{f.n(p.covered)}</td>
+                    <td className={p.uncovered > 0 ? 'ai-shortage' : undefined}>
+                      {f.n(p.uncovered)}
+                    </td>
+                    <td>{f.eur(p.costEur)}</td>
+                    <td>
+                      <span
+                        className={`ai-tag ${p.status === 'on_time' ? 'ai-tag-ok' : 'ai-tag-warn'}`}
+                      >
+                        {t(`ai.run.statuses.${p.status}`, {
+                          defaultValue: p.status,
+                        })}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <h3>{t('ai.r.dailyPlan')}</h3>
       {rows.length === 0 ? (
@@ -253,7 +416,11 @@ export function RequirementsResult({ result }) {
                     <td>{f.eur(a.costEur)}</td>
                     <td>
                       {a.arrivalDate}{' '}
-                      {!a.onTime && <span className="ai-tag ai-tag-warn">{t('ai.p.late')}</span>}
+                      {!a.onTime && (
+                        <span className="ai-tag ai-tag-warn">
+                          {t('ai.p.late')}
+                        </span>
+                      )}
                     </td>
                     <td>—</td>
                   </tr>
@@ -264,7 +431,9 @@ export function RequirementsResult({ result }) {
                     <td>—</td>
                     <td>
                       <span className="ai-tag">
-                        {t(`ai.p.codes.${u.reason}`, { defaultValue: t('ai.noSupplier') })}
+                        {t(`ai.p.codes.${u.reason}`, {
+                          defaultValue: t('ai.noSupplier'),
+                        })}
                       </span>
                     </td>
                     <td>—</td>
@@ -272,14 +441,18 @@ export function RequirementsResult({ result }) {
                     <td>—</td>
                     <td className="ai-shortage">{f.n(u.quantity)}</td>
                   </tr>
-                ),
+                )
               )}
             </tbody>
           </table>
         </div>
       )}
 
-      <CodeList items={result.warnings} titleKey="ai.r.warnings" variant="warning" />
+      <CodeList
+        items={result.warnings}
+        titleKey="ai.r.warnings"
+        variant="warning"
+      />
     </article>
   );
 }

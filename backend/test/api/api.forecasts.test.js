@@ -70,6 +70,8 @@ const FORECAST_ID = 'f0ca57000000000000000001';
 const OTHER_FORECAST_ID = 'f0ca57000000000000000002';
 const PRODUCT_ID = 'd0d0c7000000000000000001';
 const SIZE_ID = '512e00000000000000000001';
+// Sellable product without sizes (e.g. a drink): the only kind that accepts sizeId null.
+const DRINK_ID = 'd0d0c7000000000000000002';
 
 const duplicateKeyError = () =>
   Object.assign(new Error('Duplicate key'), { code: 11000, keyPattern: { name: 1 } });
@@ -87,18 +89,29 @@ async function setupTestServer() {
     list: mock.fn(async () => []),
     search: mock.fn(async () => []),
     findById: mock.fn(async () => null),
+    // Forecasts are versioned: no previous version of the name, so the next one is v1.
+    getLatestVersion: mock.fn(async () => 0),
     create: mock.fn(async (data) => ({ _id: FORECAST_ID, ...data })),
     update: mock.fn(async (id, data) => ({ _id: id, ...validForecast(), isActive: true, ...data })),
+  };
+  // Read-only catalogue checked by findForecastProblems: the product and size of validForecast().
+  const aiDataRepository = {
+    listProducts: mock.fn(async () => [
+      { _id: PRODUCT_ID, name: 'Margherita', sellable: true },
+      { _id: DRINK_ID, name: 'Água', sellable: true },
+    ]),
+    listPredefinedPizzas: mock.fn(async () => [{ productId: PRODUCT_ID, sizeIds: [SIZE_ID] }]),
   };
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     ...createAuthMocks(),
     forecastRepository: forecastRepo,
+    aiDataRepository,
   }).listen(0);
 
   await once(server, 'listening');
   const port = server.address().port;
 
-  return { server, port, forecastRepo };
+  return { server, port, forecastRepo, aiDataRepository };
 }
 
 test('API /forecasts RBAC: Only MANAGER can create and update', async (t) => {
@@ -174,8 +187,9 @@ test('API /forecasts lifecycle and validations', async (t) => {
   const stored = forecastRepo.create.mock.calls[1].arguments[0];
   assert.equal(stored.hacker, undefined);
   assert.equal(stored.isActive, true);
+  assert.equal(stored.version, 1);
 
-  // Step: the name is now taken.
+  // Step: a concurrent create already stored the same version.
   forecastRepo.create.mock.mockImplementationOnce(async () => {
     throw duplicateKeyError();
   });
@@ -246,13 +260,13 @@ test('API /forecasts validates body fields', async (t) => {
   }
   assert.equal(forecastRepo.create.mock.callCount(), 0);
 
-  // sizeId is optional and may be null.
+  // sizeId may be null for a product without sizes (a pizza requires one: sizeRequired).
   const nullSize = {
     ...validForecast(),
-    entries: [{ date: '2026-11-01', productId: PRODUCT_ID, sizeId: null, quantity: 0 }],
+    entries: [{ date: '2026-11-01', productId: DRINK_ID, sizeId: null, quantity: 0 }],
   };
   const okRes = await request('POST', '/forecasts', nullSize);
-  assert.equal(okRes.status, 201);
+  assert.equal(okRes.status, 201, await okRes.clone().text());
   assert.equal(forecastRepo.create.mock.callCount(), 1);
 });
 

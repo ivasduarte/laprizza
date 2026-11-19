@@ -39,10 +39,11 @@ Content-Type: application/json
 {
   "email": "emp{{$randomInt 100000 999999}}@laprizza.pt",
   "password": "{{employeePassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201
+?? js response.parsedBody.roles.includes('EMPLOYEE') == true
 
 ### Variáveis
 @employeeEmail = {{createEmployee.email}}

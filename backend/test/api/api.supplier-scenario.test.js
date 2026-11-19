@@ -94,18 +94,28 @@ async function setupTestServer() {
     list: mock.fn(async () => []),
     search: mock.fn(async () => []),
     findById: mock.fn(async () => null),
+    // Scenarios are versioned: no previous version of the name, so the next one is v1.
+    getLatestVersion: mock.fn(async () => 0),
     create: mock.fn(async (data) => ({ _id: SCENARIO_ID, ...data })),
     update: mock.fn(async (id, data) => ({ _id: id, ...validScenario(), isActive: true, ...data })),
+  };
+  // Read-only catalogue checked by findSupplierScenarioProblems: the product of validScenario().
+  const aiDataRepository = {
+    listProducts: mock.fn(async () => [
+      { _id: PRODUCT_ID, name: 'Mozzarella', stockControlled: true },
+    ]),
+    listPredefinedPizzas: mock.fn(async () => []),
   };
   const server = createApp(loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test' }), {
     ...createAuthMocks(),
     supplierScenarioRepository: scenarioRepo,
+    aiDataRepository,
   }).listen(0);
 
   await once(server, 'listening');
   const port = server.address().port;
 
-  return { server, port, scenarioRepo };
+  return { server, port, scenarioRepo, aiDataRepository };
 }
 
 test('API /supplier-scenarios RBAC: Only MANAGER can create and update', async (t) => {
@@ -186,8 +196,10 @@ test('API /supplier-scenarios lifecycle and validations', async (t) => {
   const stored = scenarioRepo.create.mock.calls[1].arguments[0];
   assert.equal(stored.hacker, undefined);
   assert.equal(stored.isActive, true);
+  assert.equal(stored.version, 1);
+  assert.equal(stored.simulated, true);
 
-  // Step: the name is now taken.
+  // Step: a concurrent create already stored the same version.
   scenarioRepo.create.mock.mockImplementationOnce(async () => {
     throw duplicateKeyError();
   });
@@ -331,4 +343,42 @@ test('API /supplier-scenarios filters by name', async (t) => {
   assert.equal((await res.json()).length, 1);
   assert.equal(scenarioRepo.search.mock.calls[0].arguments[0], 'base');
   assert.equal(scenarioRepo.list.mock.callCount(), 0);
+});
+
+test('API /supplier-scenarios/validate is a dry-run with the POST rules', async (t) => {
+  const { server, port, scenarioRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const empRequest = await loginAs(port, 'emp@laprizza.pt');
+  assert.equal((await empRequest('POST', '/supplier-scenarios/validate', validScenario())).status, 403);
+
+  const request = await loginAs(port, 'admin@laprizza.pt');
+  scenarioRepo.getLatestVersion.mock.mockImplementation(async () => 4);
+
+  const ok = await request('POST', '/supplier-scenarios/validate', validScenario());
+  assert.equal(ok.status, 200);
+  assert.deepEqual(await ok.json(), { valid: true, nextVersion: 5 });
+
+  const joi = await request('POST', '/supplier-scenarios/validate', {
+    ...validScenario(),
+    products: [{ productId: PRODUCT_ID, offers: [{ supplierId: 'SUP-1', stockUnits: 1 }] }],
+  });
+  assert.equal(joi.status, 400);
+  const joiFields = (await joi.json()).error.details.map((d) => d.field);
+  assert.ok(joiFields.includes('products.0.offers.0.priceEur'), joiFields.join());
+  assert.ok(joiFields.includes('products.0.offers.0.leadTimeDays'), joiFields.join());
+
+  const unknown = await request('POST', '/supplier-scenarios/validate', {
+    ...validScenario(),
+    products: [{ productId: 'ffffffffffffffffffffffff', offers: [validOffer()] }],
+  });
+  assert.equal(unknown.status, 400);
+  const body = await unknown.json();
+  assert.equal(body.error.code, 'VALIDATION_ERROR');
+  assert.equal(body.error.details[0].type, 'productUnknown');
+
+  assert.equal(scenarioRepo.create.mock.callCount(), 0);
 });

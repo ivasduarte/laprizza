@@ -14,6 +14,103 @@ const cmp =
 
 const isUnits = (n) => Number.isInteger(n) && n >= 0;
 
+const toDay = (value) =>
+  value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+
+/** Forecast as the Prolog knowledge base reads it: plain ids and "YYYY-MM-DD" dates, stable order. */
+export function toSnapshotForecast(doc) {
+  if (!doc) return null;
+  return {
+    id: String(doc._id ?? doc.id),
+    name: doc.name,
+    version: doc.version,
+    startDate: toDay(doc.startDate),
+    endDate: toDay(doc.endDate),
+    entries: (doc.entries ?? [])
+      .map((e) => ({
+        date: toDay(e.date),
+        productId: String(e.productId),
+        ...(e.sizeId ? { sizeId: String(e.sizeId) } : {}),
+        quantity: e.quantity,
+      }))
+      .sort(cmp('date', 'productId', 'sizeId')),
+  };
+}
+
+/** Supplier scenario as the Prolog knowledge base reads it (always simulated). */
+export function toSnapshotSupplierScenario(doc) {
+  if (!doc) return null;
+  return {
+    id: String(doc._id ?? doc.id),
+    name: doc.name,
+    version: doc.version,
+    simulated: doc.simulated !== false,
+    suppliers: (doc.suppliers ?? []).map((s) => ({ id: s.id, name: s.name })).sort(cmp('id')),
+    products: (doc.products ?? [])
+      .map((p) => ({
+        productId: String(p.productId),
+        offers: (p.offers ?? [])
+          .map((o) => ({
+            supplierId: o.supplierId,
+            priceEur: o.priceEur,
+            stockUnits: o.stockUnits,
+            leadTimeDays: o.leadTimeDays,
+            ...(o.supplyLimit === undefined || o.supplyLimit === null
+              ? {}
+              : { supplyLimit: o.supplyLimit }),
+          }))
+          .sort(cmp('supplierId')),
+      }))
+      .sort(cmp('productId')),
+  };
+}
+
+/** Origin and version of a planning input, recorded in meta.sources (AI06). */
+const inputSource = (mapped, retrievedAt) =>
+  mapped
+    ? { source: 'backend', id: mapped.id, name: mapped.name, version: mapped.version, retrievedAt }
+    : null;
+
+const withSources = (sources, retrievedAt, forecast, supplierScenario) => ({
+  ...sources,
+  ...(forecast ? { forecast: inputSource(forecast, retrievedAt) } : {}),
+  ...(supplierScenario ? { supplierScenario: inputSource(supplierScenario, retrievedAt) } : {}),
+});
+
+const STOCK_UNIT = 'abstract stock unit';
+
+/**
+ * Products to export as JSON for the supplier file (WEB07): raw materials, purchased aggregates
+ * and directly sold stock-controlled products. Produced aggregates are made in-house, so they
+ * are not bought. The selling price is optional and never excludes a product.
+ */
+export function buildProductsExport(products, now = new Date()) {
+  const rows = [];
+  for (const p of products) {
+    const classification = p.aggregate?.classification;
+    let kind = null;
+    if (classification === 'PURCHASED') kind = 'purchasedAggregate';
+    else if (classification === 'PRODUCED') kind = null;
+    else if (p.stockControlled === true) kind = p.sellable === true ? 'directSale' : 'rawMaterial';
+    if (!kind) continue;
+    rows.push({
+      id: String(p._id),
+      name: p.name,
+      kind,
+      stockUnit: STOCK_UNIT,
+      sellable: p.sellable === true,
+      ...(p.sellable === true && typeof p.price === 'number' && p.price > 0
+        ? { sellingPriceEur: p.price }
+        : {}),
+    });
+  }
+  return { exportedAt: now.toISOString(), products: rows.sort(cmp('name', 'id')) };
+}
+
+export async function getProductsExport(aiDataRepository, clock = () => new Date()) {
+  return buildProductsExport(await aiDataRepository.listProducts(), clock());
+}
+
 export function toPlanningProduct(doc) {
   return {
     id: String(doc._id),
@@ -100,15 +197,19 @@ export function buildSnapshot(
     .digest('hex')
     .slice(0, 16);
 
-  const mappedForecast = forecast
-    ? { id: String(forecast._id), ...forecast, _id: undefined }
-    : null;
-  const mappedScenario = scenario
-    ? { id: String(scenario._id), ...scenario, _id: undefined }
-    : null;
+  const mappedForecast = toSnapshotForecast(forecast);
+  const mappedScenario = toSnapshotSupplierScenario(scenario);
+  const retrievedAt = now.toISOString();
+  const sources = withSources({}, retrievedAt, mappedForecast, mappedScenario);
 
   return {
-    meta: { snapshotId, retrievedAt: now.toISOString(), source: 'backend', simulated: false },
+    meta: {
+      snapshotId,
+      retrievedAt,
+      source: 'backend',
+      simulated: false,
+      ...(Object.keys(sources).length > 0 ? { sources } : {}),
+    },
     ...content,
     forecast: mappedForecast,
     supplierScenario: mappedScenario,
@@ -170,7 +271,7 @@ export function buildScenarioStock(scenario) {
 }
 
 export function buildScenarioSnapshot(
-  { products, sizes, pizzas, stock, scenario },
+  { products, sizes, pizzas, stock, scenario, forecast = null, supplierScenario = null },
   stockMode,
   now = new Date(),
 ) {
@@ -208,7 +309,16 @@ export function buildScenarioSnapshot(
     },
   ];
 
-  const content = { ...catalogue, stock: stockEntries, scenario: scenarioInfo, orders };
+  const mappedForecast = toSnapshotForecast(forecast);
+  const mappedSupplierScenario = toSnapshotSupplierScenario(supplierScenario);
+  const content = {
+    ...catalogue,
+    stock: stockEntries,
+    scenario: scenarioInfo,
+    orders,
+    forecast: mappedForecast,
+    supplierScenario: mappedSupplierScenario,
+  };
   const fromScenario = {
     source: 'scenario',
     scenarioId: scenario.code,
@@ -222,23 +332,48 @@ export function buildScenarioSnapshot(
       retrievedAt,
       source: 'backend',
       simulated: true,
-      sources: {
-        catalogue: { source: 'backend', retrievedAt, version: hashOf(catalogue) },
-        stock: stockMode === 'live' ? { source: 'backend-live', retrievedAt } : fromScenario,
-        orders: fromScenario,
-      },
+      sources: withSources(
+        {
+          catalogue: { source: 'backend', retrievedAt, version: hashOf(catalogue) },
+          stock: stockMode === 'live' ? { source: 'backend-live', retrievedAt } : fromScenario,
+          orders: fromScenario,
+        },
+        retrievedAt,
+        mappedForecast,
+        mappedSupplierScenario,
+      ),
     },
     scenario: scenarioInfo,
     ...catalogue,
     stock: stockEntries,
     orders,
-    forecast: null,
-    supplierScenario: null,
+    forecast: mappedForecast,
+    supplierScenario: mappedSupplierScenario,
     issues,
   };
 }
 
-async function getScenarioSnapshot(aiDataRepository, clock, { scenarioId, stockMode }) {
+async function loadForecast(aiDataRepository, forecastId) {
+  if (!forecastId) return aiDataRepository.getActiveForecast();
+  const forecast = await aiDataRepository.findForecastById(forecastId);
+  if (!forecast) throw new AppError('Forecast not found.', 404, null, 'FORECAST_NOT_FOUND');
+  return forecast;
+}
+
+async function loadSupplierScenario(aiDataRepository, supplierScenarioId) {
+  if (!supplierScenarioId) return aiDataRepository.getActiveSupplierScenario();
+  const scenario = await aiDataRepository.findSupplierScenarioById(supplierScenarioId);
+  if (!scenario) {
+    throw new AppError('Supplier scenario not found.', 404, null, 'SUPPLIER_SCENARIO_NOT_FOUND');
+  }
+  return scenario;
+}
+
+async function getScenarioSnapshot(
+  aiDataRepository,
+  clock,
+  { scenarioId, stockMode, forecastId, supplierScenarioId },
+) {
   const scenario = await aiDataRepository.findActiveScenarioByCode(scenarioId);
   if (!scenario) {
     throw new AppError('AI scenario not found.', 404, null, 'AI_SCENARIO_NOT_FOUND');
@@ -251,26 +386,38 @@ async function getScenarioSnapshot(aiDataRepository, clock, { scenarioId, stockM
       'SCENARIO_WITHOUT_STOCK',
     );
   }
-  const [products, sizes, pizzas, stock] = await Promise.all([
+  const [products, sizes, pizzas, stock, forecast, supplierScenario] = await Promise.all([
     aiDataRepository.listProducts(),
     aiDataRepository.listSizes(),
     aiDataRepository.listPredefinedPizzas(),
     stockMode === 'live' ? aiDataRepository.listStock() : [],
+    loadForecast(aiDataRepository, forecastId),
+    loadSupplierScenario(aiDataRepository, supplierScenarioId),
   ]);
-  return buildScenarioSnapshot({ products, sizes, pizzas, stock, scenario }, stockMode, clock());
+  return buildScenarioSnapshot(
+    { products, sizes, pizzas, stock, scenario, forecast, supplierScenario },
+    stockMode,
+    clock(),
+  );
 }
 
 export async function getSnapshot(aiDataRepository, clock = () => new Date(), params = {}) {
   if (params.scenarioId) return getScenarioSnapshot(aiDataRepository, clock, params);
 
-  return cached('ai-data', ['snapshot'], 60, async () => {
+  const { forecastId, supplierScenarioId } = params;
+  const cacheKey =
+    forecastId || supplierScenarioId
+      ? ['snapshot', forecastId ?? '', supplierScenarioId ?? '']
+      : ['snapshot'];
+
+  return cached('ai-data', cacheKey, 60, async () => {
     const [products, sizes, pizzas, stock, forecast, scenario] = await Promise.all([
       aiDataRepository.listProducts(),
       aiDataRepository.listSizes(),
       aiDataRepository.listPredefinedPizzas(),
       aiDataRepository.listStock(),
-      aiDataRepository.getActiveForecast(),
-      aiDataRepository.getActiveSupplierScenario(),
+      loadForecast(aiDataRepository, forecastId),
+      loadSupplierScenario(aiDataRepository, supplierScenarioId),
     ]);
     return buildSnapshot({ products, sizes, pizzas, stock, forecast, scenario }, clock());
   });

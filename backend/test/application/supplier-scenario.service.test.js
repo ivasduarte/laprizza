@@ -1,178 +1,115 @@
-import test, { mock } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createSupplierScenario,
-  getSupplierScenarioById,
-  listSupplierScenarios,
-  updateSupplierScenario,
+  validateSupplierScenario,
 } from '../../src/application/supplier-scenario/supplier-scenario.service.js';
 
-const SCENARIO_ID = '5ce4a0000000000000000001';
-const PRODUCT_ID = 'd0d0c7000000000000000001';
+const MOZZARELLA = 'aaaaaaaaaaaaaaaaaaaaaaa1';
+const FLOUR = 'aaaaaaaaaaaaaaaaaaaaaaa2';
+const UNKNOWN = 'cccccccccccccccccccccccc';
 
-const duplicateKeyError = () => Object.assign(new Error('Duplicate key'), { code: 11000 });
+const catalogue = () => ({
+  listProducts: async () => [{ _id: MOZZARELLA }, { _id: FLOUR }],
+});
 
-const scenarioData = () => ({
-  name: 'Cenário Base',
-  version: 1,
-  simulated: true,
-  suppliers: [{ id: 'SUP-1', name: 'Fornecedor A' }],
-  products: [
-    {
-      productId: PRODUCT_ID,
-      offers: [
-        { supplierId: 'SUP-1', priceEur: 1.5, stockUnits: 100, leadTimeDays: 2, supplyLimit: 50 },
-      ],
+function fakeRepository({ latestVersion = 0 } = {}) {
+  const created = [];
+  return {
+    created,
+    getLatestVersion: async () => latestVersion,
+    create: async (data) => {
+      created.push(data);
+      return { _id: 's1', ...data };
     },
-  ],
+  };
+}
+
+const offer = (supplierId, over = {}) => ({ supplierId, priceEur: 10, stockUnits: 100, leadTimeDays: 2, ...over });
+const valid = (over = {}) => ({
+  name: 'Demo suppliers',
+  suppliers: [{ id: 'S-01', name: 'One' }, { id: 'S-02' }],
+  products: [{ productId: MOZZARELLA, offers: [offer('S-01'), offer('S-02', { priceEur: 9.5, stockUnits: 50 })] }],
+  ...over,
 });
 
-test('createSupplierScenario stores as active and maps DTO', async () => {
-  const scenarioRepository = {
-    create: mock.fn(async (data) => ({ _id: SCENARIO_ID, ...data })),
-  };
+const problemsOf = async (data) => {
+  let details;
+  await assert.rejects(
+    () => createSupplierScenario(data, fakeRepository(), catalogue()),
+    (err) => {
+      assert.equal(err.status, 400);
+      details = err.details;
+      return true;
+    },
+  );
+  return details.map((d) => d.type);
+};
 
-  const scenario = await createSupplierScenario(scenarioData(), scenarioRepository);
-
-  assert.equal(scenarioRepository.create.mock.callCount(), 1);
-  assert.deepEqual(scenarioRepository.create.mock.calls[0].arguments[0], {
-    ...scenarioData(),
-    isActive: true,
+describe('createSupplierScenario', () => {
+  it('accepts two offers for one product and stores them as simulated', async () => {
+    const repo = fakeRepository();
+    const dto = await createSupplierScenario(valid({ simulated: false }), repo, catalogue());
+    assert.equal(repo.created[0].simulated, true);
+    assert.equal(dto.products[0].offers.length, 2);
+    assert.equal(dto.simulated, true);
   });
-  assert.ok(scenario.id);
-  assert.equal(scenario.name, 'Cenário Base');
-  assert.equal(scenario.version, 1);
-  assert.equal(scenario.simulated, true);
-  assert.equal(scenario.suppliers.length, 1);
-  assert.equal(scenario.products.length, 1);
-  assert.equal(scenario.isActive, true);
-  assert.equal(scenario._id, undefined);
+
+  it('uses the supplier id as name when the name is missing', async () => {
+    const repo = fakeRepository();
+    await createSupplierScenario(valid(), repo, catalogue());
+    assert.equal(repo.created[0].suppliers[1].name, 'S-02');
+  });
+
+  it('creates the next version of an existing name', async () => {
+    const repo = fakeRepository({ latestVersion: 4 });
+    const dto = await createSupplierScenario(valid(), repo, catalogue());
+    assert.equal(dto.version, 5);
+  });
+
+  it('keeps a product without offers (no configured supplier is not an error)', async () => {
+    const data = valid({ products: [{ productId: FLOUR, offers: [] }] });
+    await createSupplierScenario(data, fakeRepository(), catalogue());
+  });
+
+  it('rejects unknown products, suppliers and duplicates', async () => {
+    assert.deepEqual(await problemsOf(valid({ products: [{ productId: UNKNOWN, offers: [offer('S-01')] }] })), ['productUnknown']);
+    assert.deepEqual(await problemsOf(valid({ products: [{ productId: FLOUR, offers: [offer('S-99')] }] })), ['offerSupplierUnknown']);
+    assert.deepEqual(
+      await problemsOf(valid({ suppliers: [{ id: 'S-01' }, { id: 'S-01' }], products: [{ productId: FLOUR, offers: [offer('S-01')] }] })),
+      ['supplierIdDuplicate'],
+    );
+    assert.deepEqual(await problemsOf(valid({ products: [{ productId: FLOUR, offers: [offer('S-01'), offer('S-01')] }] })), ['offerDuplicate']);
+    assert.deepEqual(
+      await problemsOf(valid({ products: [{ productId: FLOUR, offers: [] }, { productId: FLOUR, offers: [] }] })),
+      ['productDuplicate'],
+    );
+  });
 });
 
-test('createSupplierScenario rejects duplicate names', async () => {
-  const scenarioRepository = {
-    create: mock.fn(async () => {
-      throw duplicateKeyError();
-    }),
-  };
+describe('validateSupplierScenario (dry-run)', () => {
+  it('returns the next version and stores nothing', async () => {
+    const repo = fakeRepository({ latestVersion: 2 });
+    const result = await validateSupplierScenario(valid(), repo, catalogue());
+    assert.deepEqual(result, { valid: true, nextVersion: 3 });
+    assert.equal(repo.created.length, 0);
+  });
 
-  await assert.rejects(
-    async () => await createSupplierScenario(scenarioData(), scenarioRepository),
-    (err) => err.status === 409 && err.message.includes('already in use'),
-  );
-  assert.equal(scenarioRepository.create.mock.callCount(), 1);
-});
-
-test('createSupplierScenario rethrows unexpected repository errors', async () => {
-  const scenarioRepository = {
-    create: mock.fn(async () => {
-      throw new Error('Connection lost');
-    }),
-  };
-
-  await assert.rejects(
-    async () => await createSupplierScenario(scenarioData(), scenarioRepository),
-    (err) => err.message === 'Connection lost',
-  );
-});
-
-test('getSupplierScenarioById and listSupplierScenarios filter inactives and map DTO', async () => {
-  const inactive = { _id: SCENARIO_ID, ...scenarioData(), isActive: false };
-  const scenarioRepository = {
-    findById: mock.fn(async () => inactive),
-    list: mock.fn(async () => [inactive]),
-    search: mock.fn(async () => []),
-  };
-
-  await assert.rejects(
-    async () => await getSupplierScenarioById(SCENARIO_ID, scenarioRepository),
-    (err) => err.status === 404,
-  );
-  assert.equal(scenarioRepository.findById.mock.calls[0].arguments[0], SCENARIO_ID);
-
-  const list = await listSupplierScenarios({}, scenarioRepository);
-  assert.equal(list.length, 0);
-  assert.equal(scenarioRepository.list.mock.callCount(), 1);
-  assert.equal(scenarioRepository.search.mock.callCount(), 0);
-});
-
-test('getSupplierScenarioById rejects missing scenarios and maps active ones', async () => {
-  const stored = { _id: SCENARIO_ID, ...scenarioData(), isActive: true };
-  const scenarioRepository = {
-    findById: mock.fn(async (id) => (id === SCENARIO_ID ? stored : null)),
-  };
-
-  await assert.rejects(
-    async () => await getSupplierScenarioById('5ce4a0000000000000000099', scenarioRepository),
-    (err) => err.status === 404,
-  );
-
-  const scenario = await getSupplierScenarioById(SCENARIO_ID, scenarioRepository);
-  assert.equal(scenario.id, SCENARIO_ID);
-  assert.equal(scenario.name, 'Cenário Base');
-  assert.equal(scenario._id, undefined);
-});
-
-test('listSupplierScenarios uses search when a name filter is given', async () => {
-  const active = { _id: SCENARIO_ID, ...scenarioData(), isActive: true };
-  const scenarioRepository = {
-    list: mock.fn(async () => []),
-    search: mock.fn(async () => [active]),
-  };
-
-  const list = await listSupplierScenarios({ name: 'base' }, scenarioRepository);
-
-  assert.equal(list.length, 1);
-  assert.equal(list[0].name, 'Cenário Base');
-  assert.equal(scenarioRepository.search.mock.calls[0].arguments[0], 'base');
-  assert.equal(scenarioRepository.list.mock.callCount(), 0);
-});
-
-test('updateSupplierScenario allows only deactivation', async () => {
-  const active = { _id: SCENARIO_ID, ...scenarioData(), isActive: true };
-  const scenarioRepository = {
-    findById: mock.fn(async () => active),
-    update: mock.fn(async (_id, data) => ({ ...active, ...data })),
-  };
-
-  await assert.rejects(
-    async () => await updateSupplierScenario(SCENARIO_ID, { name: 'Outro' }, scenarioRepository),
-    (err) => err.status === 400 && err.message.includes('Only deactivation is supported'),
-  );
-  assert.equal(scenarioRepository.findById.mock.callCount(), 0);
-  assert.equal(scenarioRepository.update.mock.callCount(), 0);
-
-  const deactivated = await updateSupplierScenario(
-    SCENARIO_ID,
-    { isActive: false },
-    scenarioRepository,
-  );
-  assert.equal(deactivated.isActive, false);
-  assert.deepEqual(scenarioRepository.update.mock.calls[0].arguments, [
-    SCENARIO_ID,
-    { isActive: false },
-  ]);
-});
-
-test('updateSupplierScenario rejects missing or already inactive scenarios', async () => {
-  const scenarioRepository = {
-    findById: mock.fn(async () => null),
-    update: mock.fn(async () => null),
-  };
-
-  await assert.rejects(
-    async () => await updateSupplierScenario(SCENARIO_ID, { isActive: false }, scenarioRepository),
-    (err) => err.status === 404,
-  );
-
-  scenarioRepository.findById.mock.mockImplementation(async () => ({
-    _id: SCENARIO_ID,
-    ...scenarioData(),
-    isActive: false,
-  }));
-  await assert.rejects(
-    async () => await updateSupplierScenario(SCENARIO_ID, { isActive: false }, scenarioRepository),
-    (err) => err.status === 404,
-  );
-  assert.equal(scenarioRepository.update.mock.callCount(), 0);
+  it('rejects with the same business rules as create', async () => {
+    const repo = fakeRepository();
+    const data = valid({ products: [{ productId: UNKNOWN, offers: [offer('S-01')] }] });
+    await assert.rejects(
+      () => validateSupplierScenario(data, repo, catalogue()),
+      (err) => {
+        assert.equal(err.status, 400);
+        assert.equal(err.code, 'VALIDATION_ERROR');
+        assert.deepEqual(
+          err.details.map((d) => d.type),
+          ['productUnknown'],
+        );
+        return true;
+      },
+    );
+    assert.equal(repo.created.length, 0);
+  });
 });

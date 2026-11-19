@@ -369,8 +369,9 @@ test('getSnapshot with scenarioId: reads the current data every time (no cache)'
   assert.equal(first.stock.find((s) => s.productId === 'dough').quantity, 10);
   assert.equal(second.stock.find((s) => s.productId === 'dough').quantity, 7);
   assert.equal(repo.calls.listStock, 2);
-  assert.equal(repo.calls.forecast, 0);
-  assert.equal(repo.calls.supplierScenario, 0);
+  // AI06: with no forecastId/supplierScenarioId the active ones are read, also on every call.
+  assert.equal(repo.calls.forecast, 2);
+  assert.equal(repo.calls.supplierScenario, 2);
 });
 
 test('getSnapshot with scenarioId: scenario mode does not read the real stock', async () => {

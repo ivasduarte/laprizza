@@ -6,17 +6,28 @@ import { requirePermission } from '../middleware/authorization.middleware.js';
 import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
+import { createDefaultAiDataRepository } from '../ai-data/ai-data.routes.js';
 
-export default function forecastRouterFactory(forecastRepository) {
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * @param {object} [forecastRepository]
+ * @param {object} [catalogueReader] read-only catalogue (ai-data repository) used to validate products and sizes
+ */
+export default function forecastRouterFactory(
+  forecastRepository,
+  catalogueReader = createDefaultAiDataRepository(),
+) {
   const router = Router();
 
   const canRead = requirePermission(Permission.FORECASTS_READ);
   const canWrite = requirePermission(Permission.FORECASTS_WRITE);
 
   const forecastEntrySchema = Joi.object({
-    date: Joi.string().trim().required().messages({
+    date: Joi.string().trim().pattern(DAY).required().messages({
       'any.required': 'Mandatory field',
       'string.empty': 'Entry date is mandatory',
+      'string.pattern.base': 'Date must be YYYY-MM-DD',
     }),
     productId: Joi.string().hex().length(24).required().messages({
       'any.required': 'Mandatory field',
@@ -35,19 +46,22 @@ export default function forecastRouterFactory(forecastRepository) {
     }),
   });
 
+  // `version` is still validated when sent (old contract) but ignored: the back end assigns the next version.
   const forecastSchema = Joi.object({
     name: Joi.string().trim().min(1).required().messages({
       'any.required': 'Mandatory field',
       'string.empty': 'Forecast name is mandatory',
     }),
     version: Joi.number().integer().min(1).optional(),
-    startDate: Joi.string().trim().required().messages({
+    startDate: Joi.string().trim().pattern(DAY).required().messages({
       'any.required': 'Mandatory field',
       'string.empty': 'Start date is mandatory',
+      'string.pattern.base': 'Date must be YYYY-MM-DD',
     }),
-    endDate: Joi.string().trim().required().messages({
+    endDate: Joi.string().trim().pattern(DAY).required().messages({
       'any.required': 'Mandatory field',
       'string.empty': 'End date is mandatory',
+      'string.pattern.base': 'Date must be YYYY-MM-DD',
     }),
     entries: Joi.array().items(forecastEntrySchema).required().messages({
       'any.required': 'Mandatory field',
@@ -95,30 +109,20 @@ export default function forecastRouterFactory(forecastRepository) {
       }
     };
 
-  router.get(
-    '/',
-    canRead,
-    validate(searchSchema, 'query'),
-    (req, res, next) => controller.list(req, res, next, forecastRepository),
+  router.get('/', canRead, validate(searchSchema, 'query'), (req, res, next) =>
+    controller.list(req, res, next, forecastRepository),
   );
 
-  router.post(
-    '/',
-    canWrite,
-    validate(forecastSchema),
-    (req, res, next) => controller.create(req, res, next, forecastRepository),
+  router.post('/', canWrite, validate(forecastSchema), (req, res, next) =>
+    controller.create(req, res, next, forecastRepository, catalogueReader),
   );
 
   router.get('/:id', canRead, validateId, (req, res, next) =>
     controller.getById(req, res, next, forecastRepository),
   );
 
-  router.put(
-    '/:id',
-    canWrite,
-    validateId,
-    validate(deactivateSchema),
-    (req, res, next) => controller.update(req, res, next, forecastRepository),
+  router.put('/:id', canWrite, validateId, validate(deactivateSchema), (req, res, next) =>
+    controller.update(req, res, next, forecastRepository),
   );
 
   return router;

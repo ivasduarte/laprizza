@@ -1,4 +1,6 @@
-export const messages = {
+import { mergeMessages, web07Messages } from './web07-messages.js';
+
+const baseMessages = {
   en: {
     layout: {
       skipToContent: 'Skip to main content',
@@ -308,7 +310,7 @@ export const messages = {
         title: 'Supplier scenario',
         format: 'JSON format',
         formatHelp:
-          'Required: supplier id; an existing product id; for each offer, a listed supplier, price in EUR, a positive whole number of stock units covered and lead time in days (zero or more). Supplier names and supply limits are optional. Duplicates are rejected.',
+          'Required: scenario name (here or in the file); supplier id; an existing product id; for each offer, a listed supplier, price in EUR, a positive whole number of stock units covered and lead time in days (zero or more). Supplier names and supply limits are optional. Duplicates are rejected. Products without offers ("offers": []) have no supplier. The example below uses real product ids of the export.',
         downloadExample: 'Download example',
         step1: 'Step 1 · Import',
         json: 'Supplier JSON',
@@ -776,7 +778,7 @@ export const messages = {
         title: 'Cenário de fornecedores',
         format: 'Formato JSON',
         formatHelp:
-          'Obrigatório: id do fornecedor; id de um produto existente; por oferta, um fornecedor listado, preço em EUR, número inteiro positivo de unidades de stock cobertas e prazo em dias (zero ou mais). Nomes de fornecedores e limites de fornecimento são opcionais. Duplicados são rejeitados.',
+          'Obrigatório: nome do cenário (aqui ou no ficheiro); id do fornecedor; id de um produto existente; por oferta, um fornecedor listado, preço em EUR, número inteiro positivo de unidades de stock cobertas e prazo em dias (zero ou mais). Nomes de fornecedores e limites de fornecimento são opcionais. Duplicados são rejeitados. Produtos sem ofertas ("offers": []) ficam sem fornecedor. O exemplo abaixo usa ids reais de produtos do export.',
         downloadExample: 'Descarregar exemplo',
         step1: 'Passo 1 · Importar',
         json: 'JSON de fornecedores',
@@ -934,3 +936,10 @@ export const messages = {
     },
   },
 };
+
+export const messages = Object.fromEntries(
+  Object.entries(baseMessages).map(([language, dictionary]) => [
+    language,
+    mergeMessages(dictionary, web07Messages[language] ?? {}),
+  ])
+);

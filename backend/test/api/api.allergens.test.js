@@ -230,7 +230,7 @@ test('API /allergens returns a complete list of all active allergens', async (t)
   assert.equal(allergenRepo.list.mock.callCount(), 1);
 });
 
-test('API /allergens reads are public (Guest); writes still require allergens:write', async (t) => {
+test('API /allergens is MANAGER only: 401 for Guest, 403 for EMPLOYEE, 200 for MANAGER', async (t) => {
   const { server, port, allergenRepo } = await setupTestServer();
   t.after(() => {
     server.close();
@@ -241,20 +241,24 @@ test('API /allergens reads are public (Guest); writes still require allergens:wr
   allergenRepo.list.mock.mockImplementation(async () => [stored]);
   allergenRepo.findById.mock.mockImplementation(async (id) => (id === ALLERGEN_ID ? stored : null));
 
+  // Guest (no token): allergens are only shown through the catalogue (Table 1)
   const base = `http://127.0.0.1:${port}/api/v1/allergens`;
+  assert.equal((await fetch(base)).status, 401);
+  assert.equal((await fetch(`${base}/${ALLERGEN_ID}`)).status, 401);
+  assert.equal((await fetch(`${base}/name/Gluten`)).status, 401);
 
-  // Guest (no token): Table 1 allows product and allergen information
-  const list = await fetch(base);
+  // EMPLOYEE: authenticated but without allergens:read
+  const empRequest = await loginAs(port, 'emp@laprizza.pt');
+  assert.equal((await empRequest('GET', '/allergens')).status, 403);
+  assert.equal((await empRequest('GET', `/allergens/${ALLERGEN_ID}`)).status, 403);
+  assert.equal((await empRequest('GET', '/allergens/name/Gluten')).status, 403);
+  assert.equal(allergenRepo.list.mock.callCount(), 0);
+  assert.equal(allergenRepo.findById.mock.callCount(), 0);
+
+  // MANAGER
+  const managerRequest = await loginAs(port, 'admin@laprizza.pt');
+  const list = await managerRequest('GET', '/allergens');
   assert.equal(list.status, 200);
   assert.deepEqual(await list.json(), [{ id: ALLERGEN_ID, name: 'Gluten', isActive: true }]);
-  assert.equal((await fetch(`${base}/${ALLERGEN_ID}`)).status, 200);
-
-  // Writes are not public
-  const post = await fetch(base, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Soja' }),
-  });
-  assert.equal(post.status, 401);
-  assert.equal(allergenRepo.create.mock.callCount(), 0);
+  assert.equal((await managerRequest('GET', `/allergens/${ALLERGEN_ID}`)).status, 200);
 });

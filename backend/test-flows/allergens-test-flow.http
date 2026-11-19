@@ -367,7 +367,7 @@ Content-Type: application/json
 ### 7: AUTENTICAÇÃO (TOKEN EM FALTA OU INVÁLIDO)
 ### ==========================================
 
-### 7. GET Sem token (401 Unauthorized)
+### 7. GET Sem token (401 Unauthorized - a gestão de alergénios é só do Manager)
 GET {{baseUrl}}/allergens
 ?? status == 401
 
