@@ -8,6 +8,8 @@ import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 import { AuthErrorCode, authError } from '../../application/auth/auth-errors.js';
 
+import externalAuthRouterFactory from './external-auth.routes.js';
+
 const email = Joi.string().trim().lowercase().email().max(254).required();
 // The maximum only protects against huge inputs; the real policy is applied in the service.
 const password = Joi.string().max(256).required();
@@ -68,7 +70,7 @@ function noStore(_req, res, next) {
  * @param {Object} [usersRepository] - The injected repository for user-related database operations.
  * @returns {import('express').Router} The configured Express router.
  */
-export default function authRouterFactory({ authService, config, securityLogger }) {
+export default function authRouterFactory({ authService, externalAuthService, config, securityLogger }) {
   const router = Router();
   const controller = createAuthController({ authService, config });
   const { rateLimit } = config;
@@ -95,7 +97,8 @@ export default function authRouterFactory({ authService, config, securityLogger 
   router.get('/me', noStore, requireAuthenticated, controller.me);
   router.get('/guest-permissions', controller.guestPermissions);
 
-  router.use(noStore);
+  router.use(noStore, authLimiter);
+  if (externalAuthService) router.use('/external', externalAuthRouterFactory({ externalAuthService, config }));
 
   router.post('/login', loginLimiter, validateBody(schemas.login), controller.login);
   router.post('/refresh', requireAllowedOrigin(config.corsOrigins), controller.refresh);

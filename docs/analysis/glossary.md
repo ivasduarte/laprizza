@@ -9,6 +9,8 @@
 | **Component Size Configuration** | **Configuração de Tamanho do Componente** | Specific pricing and stock consumption information for a pizza component when used in a particular pizza size. |
 | **Customer** | **Cliente** | A registered customer who interacts with the system. |
 | **Dietary Restriction** | **Restrição Alimentar** | A known dietary restriction or food intolerance registered for a customer. |
+| **External Identity** | **Identidade Externa** | The identity of a user at an external identity provider, identified by the provider's issuer and the user's subject identifier. |
+| **Identity Provider** | **Fornecedor de Identidade** | A third-party system (here Google or Microsoft) that authenticates the user through OpenID Connect and vouches for the identity. |
 | **Kitchen Resource** | **Recurso de Cozinha** | A physical asset or limited resource in the kitchen, such as a preparation station or an oven, with a specific capacity. |
 | **Manager / Employee** | **Gestor / Funcionário** | Roles of users who operate the system (the client mentioned Customer, Manager and Employee as example roles). |
 | **Marketing Consent** | **Consentimento de Marketing** | The explicit permission given by a customer to receive marketing and promotional communications. |

@@ -31,6 +31,7 @@ These views are:
       - [Interfaces](#interfaces-3)
     - [Level 3 Process View](#level-3-process-view)
       - [Kitchen Configuration Flows](#kitchen-configuration-flows)
+      - [Authentication Flows](#authentication-flows)
   - [Non-Functional View](#non-functional-view)
 
 ## Level 1
@@ -134,6 +135,7 @@ flowchart TB
 | 3D Visualization to Asset Host           | HTTPS               | Loads the models and textures referenced by the kitchen configuration |
 | Back-End Application to AI Scheduling    | JSON/HTTPS          | Requests planning (BOM and requirements) calculations   |
 | Back-End Application to Database         | Mongoose / TCP      | Reads and writes                                        |
+| Back-End Application to External Identity Provider | HTTPS (OIDC)     | Authenticates external users (Authorization Code with PKCE) and validates the ID token |
 
 ### Level 2 Process View
 
@@ -580,6 +582,14 @@ This view shows how the components of the containers interact in each use case. 
 | [UC3 - Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md) | The viewer fetches the active layout and loads its assets by URL/URI; 404 when none is active, with no fallback | Web Application, 3D Visualization, Back-End Application, Database, Asset Host | [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
 
 The context, container and component views of the feature, for the Back-End Application module and for the Web Application page, are in the [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).
+
+
+#### Authentication Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :--- | :--- | :--- | :--- |
+| [UC3 - External Login (AA02)](../flows/authentication/external-authentication.md) | The back end runs the OpenID Connect flow with PKCE, resolves the user by `(issuer, sub)` and creates the same session as the local login; a new user gets an inactive `CUSTOMER` account | Web Application, Back-End Application, Database, External Identity Provider | [ADR-0033](../adr/0033-external-authentication-with-openid-connect.md), [ADR-0034](../adr/0034-external-identity-model-and-account-resolution.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| [Session Handling (AA04)](../flows/authentication/session-handling.md) | Access token in memory and rotating refresh cookie, shared by local and external login | Web Application, Back-End Application, Database | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Non-Functional View
 

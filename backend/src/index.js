@@ -16,6 +16,7 @@ import { createMongooseHealthProbe } from './infrastructure/system/database-heal
 import { loadVersionInfo } from './infrastructure/system/version-file.reader.js';
 import { noStore } from './api/middleware/no-store.js';
 import { createRateLimiter, passThrough } from './api/middleware/rate-limit.js';
+import { loadOidcConfig } from './infrastructure/oidc/oidc.config.js';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -127,6 +128,7 @@ export function loadConfig(env = process.env) {
       pass: env.SMTP_PASSWORD || undefined,
       from: env.MAIL_FROM ?? 'LaPrizza <no-reply@laprizza.local>',
     },
+    external: loadOidcConfig(env, { apiPrefix: API_PREFIX }),
   };
 }
 

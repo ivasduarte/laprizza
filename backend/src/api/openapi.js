@@ -6,6 +6,7 @@ import {
   apiPrefix,
 } from './api-versions.js';
 import { planningPaths } from './planning/planning.openapi.js';
+import { externalAuthPaths } from './auth/external-auth.openapi.js';
 
 const errorResponse = (description) => ({
   description,
@@ -161,6 +162,7 @@ const baseSpec = {
         },
       },
     },
+    ...externalAuthPaths,
     '/users': {
       post: {
         summary: 'Create user (MANAGER only)',

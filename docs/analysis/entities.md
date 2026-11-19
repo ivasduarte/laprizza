@@ -43,3 +43,5 @@ This document justifies the classification of domain concepts within the **LaPri
     * It is classified as a **ValueObject** because it contains no unique identity and purely encapsulates the data that maps a component to a specific size.
 * **PizzaConfiguration**
     * It functions as a **ValueObject** because it represents a specific group of selected components and sizes at a given moment in time.
+* **ExternalIdentity**
+    * It is a **ValueObject** of the `User` aggregate because it is defined by its `issuer` and `subject` (the identity at an external provider) and has no lifecycle of its own. It is persisted in its own collection only to enforce, in the database, that the same external identity cannot belong to two users.

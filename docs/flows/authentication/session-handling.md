@@ -17,7 +17,7 @@ A session is one `AuthSession` document in MongoDB. The browser holds two creden
 | Access token | Signed JWT (HS256, issuer `laprizza-api`) with `sub` (user), `sid` (session) and `tv` (token version) | SPA memory only, sent as `Authorization: Bearer` | `ACCESS_TOKEN_TTL_MINUTES` (60) | On every protected request, together with the user and the session in the database |
 | Refresh token | 256 random bits (`randomBytes(32)`), only its SHA-256 is stored | `HttpOnly` cookie `lp_rt`, path `/api/v1/auth` | `REFRESH_TOKEN_TTL_DAYS` (7), absolute | Only by `POST /auth/refresh`, rotated on every use |
 
-The role used for authorization always comes from the database (`req.user.role`), never from the token or the client. Local login and the future external login (AA02) both end in `establishSession`, so they create the same kind of session.
+The role used for authorization always comes from the database (`req.user.role`), never from the token or the client. Local login and the external login ([AA02](./external-authentication.md)) both end in `establishSession`, so they create the same kind of session.
 
 ## Diagrams
 
@@ -217,7 +217,7 @@ The guard only avoids rendering protected screens. The back end still authorizes
 | `CORS_ORIGIN` | `http://localhost:4200` | Comma-separated SPA origins. Used by CORS (with credentials) and as the allow-list of `POST /auth/refresh` | Exact origin of the SPA |
 | `TRUST_PROXY` | `false` | Express `trust proxy`. Needed so `req.ip` is the client when a reverse proxy is in front | Number of proxies, for example `1` |
 | `RATE_LIMIT_ENABLED` | `true` (`false` when `NODE_ENV=test`) | Enables the per-IP limiters | `true` |
-| `AUTH_RATE_LIMIT_WINDOW_MINUTES` | `15` | Window of the limiter applied to every `/auth/*` route | `15` |
+| `AUTH_RATE_LIMIT_WINDOW_MINUTES` | `15` | Window of the limiter applied to every `/auth/*` route, except `GET /auth/external/providers` | `15` |
 | `AUTH_RATE_LIMIT_MAX` | `10` | Requests per IP in that window | `10` (see limitations) |
 | `FORGOT_RATE_LIMIT_WINDOW_MINUTES` | `60` | Window of the password recovery limiter | `60` |
 | `FORGOT_RATE_LIMIT_MAX` | `3` | Recovery requests per IP in that window | `3` |
@@ -281,7 +281,7 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 | Protected operations verify a valid session of an active, authorized user | `authenticate` and `requireRole` on every protected route | `auth.middleware.test.js` |
 | Expired or invalid sessions require renewal or a new login | `TOKEN_EXPIRED` triggers one refresh and a retry, any other session failure ends the session and the guard redirects to login | `http-client-auth.test.js`, `guard.test.js` |
 | Logout prevents reuse of the ended session | Session revoked and cookie cleared. The old access token gets `401 SESSION_REVOKED` | flows 6.1 and 6.2 in `auth-test-flow.http` |
-| Local and external authentication behave the same | Both call `establishSession`. The external flow itself belongs to AA02 | `auth.service.test.js` |
+| Local and external authentication behave the same | Both call `establishSession` ([External Authentication](./external-authentication.md)) | `auth.service.test.js`, `external-auth.service.test.js` |
 | Session information is not exposed in URLs, messages or logs | See T3, T8 and T12 | `security-logger.test.js` |
 | Going back after logout shows nothing protected | See T9 | `session-cache.test.js`, `session-sync.test.js` |
 
@@ -292,6 +292,6 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 | `/auth/refresh` and `/auth/logout` share the login rate limiter (10 requests per 15 minutes per IP) | Many reloads can block refresh and look like a logout | Use a separate, more permissive limiter for refresh and logout |
 | A network error during refresh ends the session in the SPA | An offline user is logged out | Only end the session on a `401` from the refresh endpoint |
 | No idle timeout | Abandoned sessions live up to 7 days | Decide with the risk assessment (SYS06) |
-| External authentication (AA02) is not implemented | Equivalence is by design, not yet demonstrable end to end | Add the flow test when AA02 lands |
+| External authentication (AA02) uses the same session, but only the cases that need no provider account are in `external-auth-test-flow.http` | The full login is validated by hand | See the manual validation table in [External Authentication](./external-authentication.md) |
 | In-memory rate limiter | Not shared between instances | Redis store if the API is replicated |
 | No Content-Security-Policy | Weaker XSS containment | Add the header at the web server or with `helmet` |
