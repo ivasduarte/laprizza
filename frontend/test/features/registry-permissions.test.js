@@ -15,7 +15,8 @@ const EXPECTED_PERMISSIONS = {
   'shared-resources': 'resources:read',
 };
 const SESSION_ONLY = ['change-password'];
-const PUBLIC = ['home', 'login', 'forgot-password', 'reset-password'];
+// auth-callback (AA02): landing page of the external login; the session does not exist yet.
+const PUBLIC = ['home', 'login', 'forgot-password', 'reset-password', 'auth-callback'];
 
 describe('Registry permissions (WEB03)', () => {
   it('each protected page requires the permission of its API routes', () => {
