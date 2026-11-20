@@ -264,14 +264,14 @@ test('API GET and POST /users (Roles and validations)', async (t) => {
   assert.deepEqual(saved.roles, ['CUSTOMER']);
   assert.deepEqual(postBody.roles, ['CUSTOMER']);
 
-  // 201 Created - an account may be created without roles (Guest permissions only)
+  // 201 Created - no roles requested: the back end still assigns Customer (AA03)
   const noRoles = await fetch(`http://127.0.0.1:${port}/api/v1/users`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'noroles@laprizza.pt', password: 'StrongPassword123!' }),
   });
   assert.equal(noRoles.status, 201);
-  assert.deepEqual(usersRepository.create.mock.calls.at(-1).arguments[0].roles, []);
+  assert.deepEqual(usersRepository.create.mock.calls.at(-1).arguments[0].roles, ['CUSTOMER']);
 
   // 200 OK GET - Validates if the DTO omits the password in the list
   const listRes = await fetch(`http://127.0.0.1:${port}/api/v2/users`, {
