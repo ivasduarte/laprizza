@@ -28,6 +28,8 @@ function build({ claims = CLAIMS, linked = null, user = null, emailOwner = null,
       completeAuthorization: mock.fn(exchange ?? (async () => claims)),
     },
     authService: { establishSession: mock.fn(async () => ({ refreshToken: 'rt', accessToken: 'at' })) },
+    roleChangeRecorder: { recordInitialRoles: mock.fn(async () => {}) },
+    invitationService: { issue: mock.fn(async () => ({ expiresAt: new Date(), sent: true })) },
     securityLogger: { log: mock.fn() },
     config: { providers: { google: PROVIDER } },
   };
@@ -136,4 +138,44 @@ test('AA03: a linked account without active roles is denied by establishSession 
   deps.authService.establishSession.mock.mockImplementation(async () => { throw denial; });
   await assert.rejects(service.completeLogin(input, CTX), { code: 'NO_ACTIVE_ROLE' });
   assert.equal(deps.usersRepository.create.mock.callCount(), 0); // never recreated
+});
+
+test('AA06: first external login records CUSTOMER as a system process and sends the activation invitation', async () => {
+  const { service, deps } = build();
+  await service.completeLogin(input, CTX);
+
+  const [user, actor] = deps.roleChangeRecorder.recordInitialRoles.mock.calls[0].arguments;
+  assert.deepEqual(user.roles, ['CUSTOMER']);
+  assert.deepEqual(actor, { kind: 'SYSTEM', process: 'external-first-login' });
+  const [invited, { issuedBy }] = deps.invitationService.issue.mock.calls[0].arguments;
+  assert.equal(invited.email, 'ana@example.pt');
+  assert.equal(invited.status, 'inactive');
+  assert.deepEqual(issuedBy, { kind: 'SYSTEM', process: 'external-first-login' });
+});
+
+test('AA06: a failed record or invitation never blocks the answer; it is logged for the Administrator', async () => {
+  const { service, deps } = build();
+  deps.roleChangeRecorder.recordInitialRoles.mock.mockImplementation(async () => { throw new Error('db'); });
+  deps.invitationService.issue.mock.mockImplementation(async () => { throw new Error('smtp'); });
+
+  const out = await service.completeLogin(input, CTX);
+  assert.equal(out.outcome, ExternalLoginOutcome.PENDING_ACTIVATION);
+  const events = deps.securityLogger.log.mock.calls.map((c) => c.arguments[0]);
+  assert.ok(events.includes('ROLE_CHANGE_RECORD_FAILED'));
+  assert.ok(events.includes('ACTIVATION_INVITATION_FAILED'));
+});
+
+test('AA06: selecting an authentication method never grants an administrative role', async () => {
+  const claims = { ...CLAIMS, roles: ['ADMINISTRATOR'], groups: ['ADMINISTRATOR', 'MANAGER'] };
+  const { service, deps } = build({ claims });
+  await service.completeLogin(input, CTX);
+  assert.deepEqual(deps.usersRepository.create.mock.calls[0].arguments[0].roles, ['CUSTOMER']);
+  assert.equal(deps.invitationService.issue.mock.callCount(), 1);
+});
+
+test('AA06: a returning external user gets no new invitation and no role record', async () => {
+  const { service, deps } = build({ linked: { userId: 'u1' }, user: { _id: 'u1', status: 'active' } });
+  await service.completeLogin(input, CTX);
+  assert.equal(deps.invitationService.issue.mock.callCount(), 0);
+  assert.equal(deps.roleChangeRecorder.recordInitialRoles.mock.callCount(), 0);
 });

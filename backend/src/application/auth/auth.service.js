@@ -1,12 +1,4 @@
-import * as defaultUsersRepository from '../../infrastructure/users/users.repository.js';
-import { passwordHasher as defaultPasswordHasher } from '../../infrastructure/security/password-hasher.js';
-import {
-  Roles,
-  AccountStatus,
-  normalizeEmail,
-  withInitialCustomerRole,
-  activeRoles,
-} from '../../domain/users/users.domain.js';
+import { AccountStatus, normalizeEmail, activeRoles } from '../../domain/users/users.domain.js';
 import {
   evaluateAuthentication,
   computeLockoutDelayMs,
@@ -14,58 +6,10 @@ import {
   isSessionUsable,
   evaluateRoleAuthorization,
 } from '../../domain/auth/auth.domain.js';
-import { AppError } from '../app-error.js';
 import { AuthErrorCode, authError, tooManyAttempts } from './auth-errors.js';
 import { assertPasswordPolicy } from './password-policy.js';
 import { buildPasswordResetEmail } from './password-reset-email.js';
-import { toUserDto } from '../users/users.service.js';
 import { permissionsFor } from '../../domain/auth/permissions.domain.js';
-
-/**
- * Registers a user (Manager, Sprint 1). Email is mandatory: it is the login identifier.
- * Accounts created this way are ACTIVE; AA06 will create INACTIVE accounts with an invitation.
- * AA03: the Customer role is always added by the back end (the requested roles are kept).
- * It does not change the status: activation rules are not affected.
- *
- * @param {Object} userData
- * @param {Object} [usersRepository=defaultUsersRepository]
- * @param {Object} [passwordHasher=defaultPasswordHasher]
- * @returns {Promise<Object>} The created user DTO.
- * @throws {AppError} 400 (invalid data/policy) or 409 (duplicate email/username).
- */
-export async function registerUser(
-  { username, email, password, roles = [], customerId },
-  usersRepository = defaultUsersRepository,
-  passwordHasher = defaultPasswordHasher,
-) {
-  if (customerId && !roles.includes(Roles.CUSTOMER)) {
-    throw new AppError('Only users with the CUSTOMER role can have an associated customerId.', 400);
-  }
-  const initialRoles = withInitialCustomerRole(roles);
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) throw new AppError('Email is mandatory.', 400);
-
-  assertPasswordPolicy(password);
-  const passwordHash = await passwordHasher.hash(password);
-
-  try {
-    const savedUser = await usersRepository.create({
-      username: username?.trim().toLowerCase(),
-      email: normalizedEmail,
-      passwordHash,
-      roles: initialRoles,
-      customerId,
-      status: AccountStatus.ACTIVE,
-      failedLoginCount: 0,
-      lockedUntil: null,
-      tokenVersion: 0,
-    });
-    return toUserDto(savedUser);
-  } catch (err) {
-    if (err.code === 11000) throw new AppError('Email or username already in use.', 409);
-    throw err;
-  }
-}
 
 /** Data of the authenticated user returned to the SPA (no secrets). */
 function toSessionUserDto(user, roles) {

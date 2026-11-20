@@ -7,6 +7,7 @@ import {
 } from './api-versions.js';
 import { planningPaths } from './planning/planning.openapi.js';
 import { externalAuthPaths } from './auth/external-auth.openapi.js';
+import { usersPaths, adminUserSchema } from './users/users.openapi.js';
 
 const errorResponse = (description) => ({
   description,
@@ -163,46 +164,7 @@ const baseSpec = {
       },
     },
     ...externalAuthPaths,
-    '/users': {
-      post: {
-        summary: 'Create user (MANAGER only)',
-        security: [{ BearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['password', 'role'],
-                properties: {
-                  username: { type: 'string', minLength: 3 },
-                  email: { type: 'string', format: 'email' },
-                  password: { type: 'string' },
-                  role: { type: 'string', enum: ['MANAGER', 'EMPLOYEE', 'CUSTOMER'] },
-                  customerId: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          201: { description: 'Created' },
-          400: { description: 'Validation' },
-          401: { description: 'Unauthorized' },
-          403: { description: 'Forbidden' },
-          409: { description: 'Conflict' },
-        },
-      },
-      get: {
-        summary: 'List users',
-        security: [{ BearerAuth: [] }],
-        responses: {
-          200: { description: 'Success' },
-          401: { description: 'Unauthorized' },
-          403: { description: 'Forbidden' },
-        },
-      },
-    },
+    ...usersPaths,
     '/customers': {
       get: {
         summary: 'List customers (MANAGER only)',
@@ -2323,6 +2285,7 @@ const baseSpec = {
       BearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
     },
     schemas: {
+      AdminUser: adminUserSchema,
       Error: {
         type: 'object',
         properties: {

@@ -6,6 +6,7 @@ import {
   resolveExternalLogin,
   ExternalLoginDecision,
 } from '../../domain/auth/external-identity.domain.js';
+import { SystemProcess, systemActor } from '../../domain/users/role-changes.domain.js';
 
 export const ExternalAuthCode = Object.freeze({
   PROVIDER_NOT_FOUND: 'PROVIDER_NOT_FOUND',
@@ -28,6 +29,8 @@ const externalError = (code, status, message) =>
  * @param {object} deps.externalIdentitiesRepository - findByIssuerAndSubject, create.
  * @param {object} deps.oidcClient - createAuthorizationRequest, completeAuthorization.
  * @param {{establishSession: Function}} deps.authService - shared session creation (AA01/AA04).
+ * @param {{recordInitialRoles: Function}} deps.roleChangeRecorder - AA06 role change records.
+ * @param {{issue: Function}} deps.invitationService - AA06 activation invitations.
  * @param {{log: Function}} deps.securityLogger
  * @param {{providers: Record<string, object>}} deps.config - config.external.
  */
@@ -36,9 +39,38 @@ export function createExternalAuthService({
   externalIdentitiesRepository,
   oidcClient,
   authService,
+  roleChangeRecorder,
+  invitationService,
   securityLogger,
   config,
 }) {
+  /**
+   * AA06: the automatic CUSTOMER role is recorded and the new inactive account receives its
+   * activation invitation. A failure here never blocks the login answer: it is logged, and an
+   * Administrator can issue a replacement invitation.
+   */
+  async function recordAndInvite(user) {
+    const actor = systemActor(SystemProcess.EXTERNAL_FIRST_LOGIN);
+    try {
+      await roleChangeRecorder.recordInitialRoles(user, actor);
+    } catch (err) {
+      securityLogger.log('ROLE_CHANGE_RECORD_FAILED', {
+        userId: String(user._id),
+        operation: 'external-first-login',
+        roles: user.roles,
+        reason: err?.name ?? 'Error',
+      });
+    }
+    try {
+      await invitationService.issue(user, { issuedBy: actor });
+    } catch (err) {
+      securityLogger.log('ACTIVATION_INVITATION_FAILED', {
+        userId: String(user._id),
+        reason: err?.code ?? err?.name ?? 'Error',
+      });
+    }
+  }
+
   function providerOf(name) {
     const provider = Object.hasOwn(config.providers, name) ? config.providers[name] : undefined;
     if (!provider) {
@@ -140,6 +172,7 @@ export function createExternalAuthService({
         userId: String(user._id),
         ip: context.ip,
       });
+      await recordAndInvite(user);
       return { outcome: ExternalLoginOutcome.PENDING_ACTIVATION };
     },
   };

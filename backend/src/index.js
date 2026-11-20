@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { connectDB } from './infrastructure/database.js';
 import { errorHandler } from './api/middleware/error-handler.js';
 import {
-  seedInitialManager,
+  seedInitialAccount,
   seedInitialPizzaComponentTypes,
   seedInitialKitchenConfigurations,
 } from './infrastructure/seeder.js';
@@ -115,6 +115,10 @@ export function loadConfig(env = process.env) {
       passwordResetTtlMs: toInt(env.PASSWORD_RESET_TTL_MINUTES, 30) * 60_000,
       passwordResetUrl: `${appBaseUrl}/reset-password`,
     },
+    invitations: {
+      ttlMs: Math.max(1, toInt(env.INVITATION_TTL_HOURS, 72)) * 3_600_000,
+      activationUrl: `${appBaseUrl}/activate`,
+    },
     aiService: {
       url: env.AI_SERVICE_URL ?? 'http://127.0.0.1:5000',
       apiKey: env.AI_SERVICE_KEY || undefined,
@@ -201,7 +205,7 @@ export function createApp(config = loadConfig(), repos = {}) {
   api.use('/catalogue', publicLimiter);
 
   api.use('/auth', authRouterFactory(auth));
-  api.use('/users', usersRouterFactory(repos.usersRepository));
+  api.use('/users', usersRouterFactory({ usersService: auth.usersService }));
   api.use(
     '/products/:productId/size-configurations',
     componentSizeConfigurationRouterFactory({
@@ -330,7 +334,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     }
     await connectDB(config.mongoUri);
     await passwordHasher.warmUp();
-    await seedInitialManager();
+    await seedInitialAccount();
     await seedInitialPizzaComponentTypes();
     await seedInitialKitchenConfigurations();
 

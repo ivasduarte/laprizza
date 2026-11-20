@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 
-import { createAuthService, registerUser } from '../../src/application/auth/auth.service.js';
+import { createAuthService } from '../../src/application/auth/auth.service.js';
 import { AuthErrorCode } from '../../src/application/auth/auth-errors.js';
 import { createPasswordHasher } from '../../src/infrastructure/security/password-hasher.js';
 import { createTokenService } from '../../src/infrastructure/security/token-service.js';
@@ -173,124 +173,6 @@ function tokenFromLastEmail(emailService) {
   const { text } = emailService.send.mock.calls.at(-1).arguments[0];
   return text.match(/#token=([A-Za-z0-9_-]{43})/)[1];
 }
-
-/* ===================================================================== */
-/* registerUser                                                          */
-/* ===================================================================== */
-
-/**
- * Unit test: registerUser rejects weak passwords without touching the database.
- */
-test('registerUser rejects weak passwords without saving to the database', async () => {
-  const { usersRepository } = createAuthTestContext();
-  await rejectsWith(
-    registerUser(
-      { email: 'teste@laprizza.pt', password: '123', roles: ['EMPLOYEE'] },
-      usersRepository,
-    ),
-    400,
-    AuthErrorCode.PASSWORD_POLICY_VIOLATION,
-  );
-  assert.equal(usersRepository.create.mock.callCount(), 0);
-});
-
-/**
- * Unit test: email is mandatory (it is the login identifier).
- */
-test('registerUser requires an email', async () => {
-  const { usersRepository } = createAuthTestContext();
-  await assert.rejects(
-    registerUser(
-      { username: 'semEmail', password: PASSWORD, roles: ['EMPLOYEE'] },
-      usersRepository,
-    ),
-    (err) => err.status === 400,
-  );
-  assert.equal(usersRepository.create.mock.callCount(), 0);
-});
-
-/**
- * Unit test: stores only the Argon2id hash, normalizes the email and creates an ACTIVE account.
- */
-test('registerUser stores only an argon2id hash and creates an active account', async () => {
-  const { usersRepository } = createAuthTestContext();
-  const dto = await registerUser(
-    { email: '  Joao@LaPrizza.pt ', password: PASSWORD, roles: ['EMPLOYEE'] },
-    usersRepository,
-    passwordHasher,
-  );
-
-  const stored = usersRepository.create.mock.calls[0].arguments[0];
-  assert.equal(stored.email, 'joao@laprizza.pt');
-  assert.equal(stored.password, undefined);
-  assert.match(stored.passwordHash, /^\$argon2id\$/);
-  assert.notEqual(stored.passwordHash, PASSWORD);
-  assert.equal(stored.status, 'active');
-  assert.equal(stored.tokenVersion, 0);
-  assert.equal(stored.failedLoginCount, 0);
-  assert.deepEqual(stored.roles, ['CUSTOMER', 'EMPLOYEE']); // AA03: Customer is automatic
-
-  assert.equal(dto.status, 'active');
-  assert.equal(dto.passwordHash, undefined);
-  assert.deepEqual(dto.roles, ['CUSTOMER', 'EMPLOYEE']);
-});
-
-/**
- * Unit test: only CUSTOMER can have a customerId.
- */
-test('registerUser fails if customerId is provided without the CUSTOMER role', async () => {
-  const { usersRepository } = createAuthTestContext();
-  await assert.rejects(
-    registerUser(
-      { email: 'x@x.pt', password: PASSWORD, roles: ['EMPLOYEE'], customerId: 'fakeid' },
-      usersRepository,
-    ),
-    (err) => err.status === 400,
-  );
-  assert.equal(usersRepository.create.mock.callCount(), 0);
-});
-
-/**
- * Unit test: duplicate email -> 409.
- */
-test('registerUser returns 409 Conflict on duplicate email', async () => {
-  const { usersRepository } = createAuthTestContext();
-  usersRepository.create.mock.mockImplementation(async () => {
-    throw Object.assign(new Error('Duplicate key'), { code: 11000 });
-  });
-  const data = { email: 'duplicado@laprizza.pt', password: PASSWORD, roles: ['EMPLOYEE'] };
-
-  await assert.rejects(
-    registerUser(data, usersRepository, passwordHasher),
-    (err) => err.status === 409,
-  );
-});
-
-test('registerUser without roles creates a Customer account and links customerId to CUSTOMER accounts', async () => {
-  const { usersRepository } = createAuthTestContext();
-
-  await registerUser(
-    { email: 'noroles@laprizza.pt', password: PASSWORD },
-    usersRepository,
-    passwordHasher,
-  );
-  assert.deepEqual(usersRepository.create.mock.calls[0].arguments[0].roles, ['CUSTOMER']);
-
-  await registerUser(
-    {
-      email: 'c@laprizza.pt',
-      password: PASSWORD,
-      roles: ['CUSTOMER'],
-      customerId: '65231abcd345678901234567',
-    },
-    usersRepository,
-    passwordHasher,
-  );
-  assert.equal(
-    usersRepository.create.mock.calls[1].arguments[0].customerId,
-    '65231abcd345678901234567',
-  );
-});
 
 /* ===================================================================== */
 /* login + establishSession                                              */
@@ -1225,18 +1107,6 @@ test('getCurrentUser refuses missing, inactive or disabled accounts with 401 SES
 /* ===================================================================== */
 /* AA03 - Internal Role Resolution                                       */
 /* ===================================================================== */
-
-test('AA03: registerUser always adds Customer without changing the requested roles or the status', async () => {
-  const { usersRepository } = createAuthTestContext();
-  await registerUser(
-    { email: 'staff@laprizza.pt', password: PASSWORD, roles: ['MANAGER', 'CUSTOMER'] },
-    usersRepository,
-    passwordHasher,
-  );
-  const stored = usersRepository.create.mock.calls[0].arguments[0];
-  assert.deepEqual(stored.roles, ['CUSTOMER', 'MANAGER']); // no duplicates
-  assert.equal(stored.status, 'active'); // status comes from the creation flow, not from Customer
-});
 
 test('AA03: login of a returning user never recreates the account nor changes roles or status', async () => {
   const ctx = createAuthTestContext();

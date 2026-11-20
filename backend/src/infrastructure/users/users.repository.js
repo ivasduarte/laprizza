@@ -76,16 +76,32 @@ export async function incrementTokenVersion(id) {
   return Users.findByIdAndUpdate(id, { $inc: { tokenVersion: 1 } }, { returnDocument: 'after' });
 }
 
-export async function addRole(id, role) {
-  return Users.findByIdAndUpdate(
-    id, 
-    { $addToSet: { roles: role } },
+/**
+ * Adds a role only if the user does not have it (atomic).
+ *
+ * @returns {Promise<Object|null>} The updated user, or null when nothing changed
+ *   (unknown user or role already present).
+ */
+export async function addRoleIfAbsent(id, role) {
+  return Users.findOneAndUpdate(
+    { _id: id, roles: { $ne: role } },
+    { $push: { roles: role } },
     { returnDocument: 'after', runValidators: true },
   );
 }
 
-export async function removeRole(id, role, { clearCustomerId = false } = {}) {
+/**
+ * Removes a role only if the user has it (atomic).
+ *
+ * @returns {Promise<Object|null>} The updated user, or null when nothing changed.
+ */
+export async function removeRoleIfPresent(id, role, { clearCustomerId = false } = {}) {
   const update = { $pull: { roles: role } };
   if (clearCustomerId) update.$set = { customerId: null };
-  return Users.findByIdAndUpdate(id, update, { returnDocument: 'after' });
+  return Users.findOneAndUpdate({ _id: id, roles: role }, update, { returnDocument: 'after' });
+}
+
+/** Removes a user. Only used to undo a creation whose role records could not be written. */
+export async function deleteById(id) {
+  return Users.deleteOne({ _id: id });
 }
