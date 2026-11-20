@@ -7,9 +7,10 @@
  * Multi-role and no-role personas are checked with the rules: union of the roles, and every
  * authenticated user also has the Guest permissions.
  *
- * Adding a role (e.g. ADMINISTRATOR) = adding it to the rows it may use.
+ * Adding a role = adding it to the rows it may use.
  */
 export const GUEST = 'GUEST';
+export const ADMINISTRATOR = 'ADMINISTRATOR';
 export const CUSTOMER = 'CUSTOMER';
 export const EMPLOYEE = 'EMPLOYEE';
 export const MANAGER = 'MANAGER';
@@ -18,6 +19,8 @@ export const AUTHENTICATED = 'AUTHENTICATED';
 const PUBLIC = [GUEST, CUSTOMER, EMPLOYEE, MANAGER];
 const STAFF = [EMPLOYEE, MANAGER];
 const MANAGER_ONLY = [MANAGER];
+// Table 1: "Administrator - Manage website user accounts, activation invitations, roles" (AA06)
+const ADMINISTRATOR_ONLY = [ADMINISTRATOR];
 
 export const AUTHORIZATION_MATRIX = Object.freeze([
   // Session (any authenticated user, whatever the roles)
@@ -111,20 +114,22 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['GET', '/ai-data/snapshot', MANAGER_ONLY],
   ['GET', '/ai-data/products/export', MANAGER_ONLY],
 
-  // Internal shared documents: staff read, manager manages
-  // Shared documents: customers, staff and managers read (team decision); only the manager manages
-  ['GET', '/shared-resources', [CUSTOMER, EMPLOYEE, MANAGER]],
-  ['GET', '/shared-resources/:name', [CUSTOMER, EMPLOYEE, MANAGER]],
-  ['PUT', '/shared-resources/:name', MANAGER_ONLY],
-  ['DELETE', '/shared-resources/:name', MANAGER_ONLY],
+  // Shared documents (SYS04): every authenticated role reads; only administrators write
+  ['GET', '/shared-resources', [CUSTOMER, EMPLOYEE, MANAGER, ADMINISTRATOR]],
+  ['GET', '/shared-resources/:name', [CUSTOMER, EMPLOYEE, MANAGER, ADMINISTRATOR]],
+  ['PUT', '/shared-resources/:name', ADMINISTRATOR_ONLY],
+  ['DELETE', '/shared-resources/:name', ADMINISTRATOR_ONLY],
 
-  // User administration (provisionally the manager's; moves to ADMINISTRATOR later)
-  ['GET', '/users', MANAGER_ONLY],
-  ['GET', '/users/:id', MANAGER_ONLY],
-  ['POST', '/users', MANAGER_ONLY],
-  ['PATCH', '/users/:id', MANAGER_ONLY],
-  ['PUT', '/users/:id/roles/:role', MANAGER_ONLY],
-  ['DELETE', '/users/:id/roles/:role', MANAGER_ONLY],
+  // User administration: ADMINISTRATOR only (AA06). The Manager no longer manages users.
+  ['GET', '/users', ADMINISTRATOR_ONLY],
+  ['GET', '/users/assignable-roles', ADMINISTRATOR_ONLY],
+  ['GET', '/users/:id', ADMINISTRATOR_ONLY],
+  ['POST', '/users', ADMINISTRATOR_ONLY],
+  ['PATCH', '/users/:id', ADMINISTRATOR_ONLY],
+  ['PUT', '/users/:id/roles/:role', ADMINISTRATOR_ONLY],
+  ['DELETE', '/users/:id/roles/:role', ADMINISTRATOR_ONLY],
+  ['GET', '/users/:id/role-history', ADMINISTRATOR_ONLY],
+  ['POST', '/users/:id/invitation', ADMINISTRATOR_ONLY],
 ]);
 
 /**

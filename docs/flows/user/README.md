@@ -1,6 +1,8 @@
 # User - Design Diagrams (Mermaid)
 
-The User aggregate manages the application users after they are registered: consultation, listing and updates by a Manager.
+The User aggregate manages the application users after they are registered: consultation, listing and updates by an Administrator.
+
+> Since AA06 every operation on users belongs to the `ADMINISTRATOR` role, and roles, role history and activation invitations have their own endpoints: see [Role Assignment and Activation Invitation (AA06)](../authentication/role-assignment-and-invitations.md). The diagrams below keep the Sprint 1 participants.
 
 Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end API** container (3 diagrams). They were converted from the original PlantUML sequence diagrams.
 
@@ -8,14 +10,15 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 
 | Use case | Endpoint | Roles | Success | Original file |
 |---|---|---|---|---|
-| [Get User](./get-user.md) | `GET /users/:id` | MANAGER | 200 OK | `get.puml` |
-| [List Users](./list-users.md) | `GET /users` | MANAGER | 200 OK | `list.puml` |
-| [UC3 - Update User](./update-user.md) | `PATCH /users/:id` | MANAGER | 200 OK | `update.puml` |
+| [Get User](./get-user.md) | `GET /users/:id` | ADMINISTRATOR | 200 OK | `get.puml` |
+| [List Users](./list-users.md) | `GET /users` | ADMINISTRATOR | 200 OK | `list.puml` |
+| [UC3 - Update User](./update-user.md) | `PATCH /users/:id` | ADMINISTRATOR | 200 OK | `update.puml` |
 
 ## Business rules shown in the diagrams
 
-- All operations are restricted to Manager.
-- A Manager cannot change the status or the role of their own account (403).
+- All operations are restricted to Administrator (AA06; Manager until AA05).
+- Nobody changes the status or the roles of their own account (403).
+- An account that was never activated cannot be enabled here (409 `ACTIVATION_REQUIRED`); disabling revokes the sessions and the pending invitations.
 - A new password is validated by the domain and hashed with Argon2.
 - When the role of a user changes away from CUSTOMER, the customer reference is cleared.
 

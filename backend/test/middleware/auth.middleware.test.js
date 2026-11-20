@@ -177,7 +177,8 @@ test('authenticate works with the real auth service', async () => {
 
   assertNextWithoutError(next);
   assert.deepEqual(req.user.roles, ['MANAGER']);
-  assert.ok(req.user.permissions.includes('users:manage'));
+  assert.ok(req.user.permissions.includes('kitchen:write'));
+  assert.ok(!req.user.permissions.includes('users:manage')); // AA06: Administrator only
   assert.equal(req.user.role, undefined);
   assert.equal(req.user.userId, USER_ID);
   assert.equal(usersRepository.findById.mock.calls[0].arguments[0], USER_ID);

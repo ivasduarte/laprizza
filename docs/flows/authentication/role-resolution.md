@@ -8,7 +8,7 @@
 | Diagram type | Flowcharts (Mermaid) |
 | Containers | Back-end API, Web Application (SPA), MongoDB |
 | Endpoints | `POST /users`, `POST /auth/login`, `GET /auth/external/{provider}/callback`, `POST /auth/refresh`, `GET /auth/me`, every protected endpoint |
-| Allowed roles | Public (login, refresh, callback), MANAGER (`POST /users`), authenticated (`GET /auth/me`) |
+| Allowed roles | Public (login, refresh, callback), ADMINISTRATOR (`POST /users`, since AA06), authenticated (`GET /auth/me`) |
 | Error handling | 403 `NO_ACTIVE_ROLE`, 503 `ROLES_UNAVAILABLE`, 403 `FORBIDDEN` (missing permission) |
 | Decision records | Builds on [ADR 0004](../../adr/0004-authentication-and-authorization.md) (as amended by AA04 and AA03) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
 
@@ -26,9 +26,9 @@ A returning user is never created again. Login does not add a `CUSTOMER` role th
 
 | Creation path | Roles stored | Status |
 |:---|:---|:---|
-| Local account (`POST /users`, permission `users:create`, Manager) | `CUSTOMER` and the requested roles, without duplicates | `active` (Sprint 1 flow, AA06 will use invitations) |
+| Local account (`POST /users`, permission `users:create`, Administrator) | `CUSTOMER` and the requested roles, without duplicates | `inactive`, with an activation invitation ([AA06](./role-assignment-and-invitations.md)) |
 | First login with a verified external identity ([AA02](./external-authentication.md)) | `CUSTOMER` only. Roles or groups sent by the identity provider are ignored | `inactive`, no session (activation by a Manager) |
-| Initial Manager (seeder) | `CUSTOMER`, `MANAGER` | `active` |
+| Initial account (seeder) | `CUSTOMER`, `MANAGER`, `ADMINISTRATOR` (AA06) | `active` |
 
 `withInitialCustomerRole()` (`domain/users/users.domain.js`) is the single rule used by the three creation paths.
 
@@ -114,14 +114,14 @@ The tests use `node:test` with its native `mock` ([ADR 0028](../../adr/0028-mock
 
 ### Manual validation
 
-The development accounts of `npm run seed:dev-users` include `customer@laprizza.dev` and `noroles@laprizza.dev`. The team records the result in this table.
+The development accounts of `npm run seed:dev-users` include `customer@laprizza.pt` and `noroles@laprizza.pt`. The team records the result in this table.
 
 | Step | Expected | Result |
 |:---|:---|:---|
-| 1. Manager creates a user without roles (`POST /users`) | Response and database with `roles: ["CUSTOMER"]` | |
-| 2. Manager creates a user with `roles: ["EMPLOYEE"]` | `["CUSTOMER", "EMPLOYEE"]` | |
-| 3. Login with `customer@laprizza.dev` | No staff entries in the menu, staff route shows access denied, staff endpoint answers 403 | |
-| 4. Login with `noroles@laprizza.dev` | Message `NO_ACTIVE_ROLE`, no session | |
+| 1. Administrator creates a user without roles (`POST /users`) | Response and database with `roles: ["CUSTOMER"]` | |
+| 2. Administrator creates a user with `roles: ["EMPLOYEE"]` | `["CUSTOMER", "EMPLOYEE"]` | |
+| 3. Login with `customer@laprizza.pt` | No staff entries in the menu, staff route shows access denied, staff endpoint answers 403 | |
+| 4. Login with `noroles@laprizza.pt` | Message `NO_ACTIVE_ROLE`, no session | |
 | 5. Login body with `"roles": ["MANAGER"]` | Request refused (400) or answered with the stored roles only | |
 | 6. A Manager removes a role of a logged-in user | Next request to a route of that role answers 403, without a new login | |
 | 7. All roles removed from a logged-in user | Next refresh answers `NO_ACTIVE_ROLE` and the SPA logs out | |
@@ -132,8 +132,6 @@ The development accounts of `npm run seed:dev-users` include `customer@laprizza.
 
 | Item | Impact | Proposal |
 |:---|:---|:---|
-| `POST /users` checks `users:create`, not `roleAssignmentPermission` of each requested role | No impact today: only the Manager can create users and holds every assignable role | Check the assignment permission of each requested role when another role gets `users:create` |
-| `customerId` is refused unless `CUSTOMER` is in the requested roles | A request without roles and with a `customerId` is refused, although the account would receive `CUSTOMER` | Check `customerId` against the roles after `withInitialCustomerRole()` |
 | Roles are read on every protected request | One extra read per request | Cache with invalidation on role change, if load requires it ([ADR 0015](../../adr/0015-introduce-redis-for-caching.md)) |
 
 ## Use of AI

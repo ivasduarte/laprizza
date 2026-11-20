@@ -1,5 +1,3 @@
-import * as usersService from '../../application/users/users.service.js';
-import * as authService from '../../application/auth/auth.service.js';
 import { AppError } from '../../application/app-error.js';
 import { RoleChangeDenial } from '../../domain/auth/permissions.domain.js';
 
@@ -23,83 +21,57 @@ function logRoleChangeDenied(req, err, targetUserId) {
   });
 }
 
-/** GET /users */
-export const list = async (req, res, next, usersRepository) => {
-  try {
-    res.status(200).json(await usersService.listUsers(usersRepository));
-  } catch (err) {
-    next(err);
-  }
-};
+/** Wraps an async handler: errors go to the error handler, role denials are logged first. */
+const handle =
+  (fn, { status = 200, logDenial = false } = {}) =>
+  async (req, res, next) => {
+    try {
+      res.status(status).json(await fn(req));
+    } catch (err) {
+      if (logDenial) logRoleChangeDenied(req, err, req.params?.id ?? null);
+      next(err);
+    }
+  };
 
-/**
- * POST /users. The initial roles follow the same rule as adding roles:
- * the actor must be allowed to assign each of them.
- */
-export const create = async (req, res, next, usersRepository) => {
-  try {
-    usersService.assertRoleChangeAllowed(req.user, null, [], req.body.roles ?? []);
-    const newUser = await authService.registerUser(req.body, usersRepository);
-    res.status(201).json(newUser);
-  } catch (err) {
-    logRoleChangeDenied(req, err, null);
-    next(err);
-  }
-};
+/** GET /users */
+export const list = (usersService) => handle(() => usersService.listUsers());
+
+/** GET /users/assignable-roles */
+export const assignableRoles = (usersService) =>
+  handle(async (req) => ({ roles: usersService.listAssignableRoles(req.user) }));
+
+/** POST /users: inactive account + activation invitation (AA06). */
+export const create = (usersService) =>
+  handle((req) => usersService.createUser(req.user, req.body), { status: 201, logDenial: true });
 
 /** GET /users/:id */
-export const getById = async (req, res, next, usersRepository) => {
-  try {
-    res.status(200).json(await usersService.getUserById(req.params.id, usersRepository));
-  } catch (err) {
-    next(err);
-  }
-};
+export const getById = (usersService) => handle((req) => usersService.getUserById(req.params.id));
 
-/**
- * PATCH /users/:id (password and active status; roles have their own endpoints).
- * Nobody changes their own active status.
- */
-export const update = async (req, res, next, usersRepository) => {
-  try {
+/** PATCH /users/:id. Nobody changes their own active status. */
+export const update = (usersService) =>
+  handle(async (req) => {
     if (req.user.userId === req.params.id.toLowerCase() && req.body.isActive !== undefined) {
       throw new AppError('You cannot change your own active status.', 403);
     }
-    const updatedUser = await usersService.updateUser(req.params.id, req.body, usersRepository);
-    res.status(200).json(updatedUser);
-  } catch (err) {
-    next(err);
-  }
-};
+    return usersService.updateUser(req.params.id, req.body);
+  });
 
 /** PUT /users/:id/roles/:role */
-export const addRole = async (req, res, next, usersRepository) => {
-  try {
-    const user = await usersService.addRole(
-      req.user,
-      req.params.id,
-      req.params.role,
-      usersRepository,
-    );
-    res.status(200).json(user);
-  } catch (err) {
-    logRoleChangeDenied(req, err, req.params.id);
-    next(err);
-  }
-};
+export const addRole = (usersService) =>
+  handle((req) => usersService.addRole(req.user, req.params.id, req.params.role), {
+    logDenial: true,
+  });
 
 /** DELETE /users/:id/roles/:role */
-export const removeRole = async (req, res, next, usersRepository) => {
-  try {
-    const user = await usersService.removeRole(
-      req.user,
-      req.params.id,
-      req.params.role,
-      usersRepository,
-    );
-    res.status(200).json(user);
-  } catch (err) {
-    logRoleChangeDenied(req, err, req.params.id);
-    next(err);
-  }
-};
+export const removeRole = (usersService) =>
+  handle((req) => usersService.removeRole(req.user, req.params.id, req.params.role), {
+    logDenial: true,
+  });
+
+/** GET /users/:id/role-history */
+export const roleHistory = (usersService) =>
+  handle((req) => usersService.getRoleHistory(req.params.id));
+
+/** POST /users/:id/invitation: replaces the activation invitation (AA06). */
+export const reissueInvitation = (usersService) =>
+  handle((req) => usersService.reissueInvitation(req.user, req.params.id), { status: 201 });

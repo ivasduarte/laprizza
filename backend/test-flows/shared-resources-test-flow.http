@@ -1,11 +1,13 @@
 @baseUrl = http://localhost:3000/api/v2
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
-@userPassword = StrongPassword123!
+# Contas de desenvolvimento (AA06): npm run seed:dev-users -- --confirm com
+# SEED_DEV_PASSWORD=LaPrizzaDev_013DI! (desde a AA06 não se criam contas com password por API).
+@devPassword = LaPrizzaDev_013DI!
 @fileName = manual.txt
 
-# Documentos internos partilhados (matriz AA05): MANAGER e EMPLOYEE leem; só o MANAGER grava e
-# remove; o CUSTOMER não tem acesso.
+# Documentos partilhados (SYS04): todas as roles leem; só o ADMINISTRATOR grava e remove.
+# O admin@laprizza.pt é Administrator (seeder ou migração AA06).
 
 ### ==========================================
 ### 1: AUTENTICAÇÃO E PREPARAÇÃO
@@ -25,68 +27,44 @@ Content-Type: application/json
 ### Extração do Token do Manager
 @adminToken = {{loginAdmin.accessToken}}
 
-### 1.2 POST Criar Employee (201 Created)
-# O email é aleatório para o flow poder correr mais do que uma vez.
-# @name createEmployee
-POST {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "email": "employee{{$randomInt 100000 999999}}@laprizza.pt",
-  "password": "{{userPassword}}",
-  "roles": ["EMPLOYEE"]
-}
-?? status == 201
-?? js response.parsedBody.roles.includes('EMPLOYEE') == true
-
-### Variáveis
-@employeeEmail = {{createEmployee.email}}
-
-### 1.3 Login do Employee (200 OK)
+### 1.2 Login do Employee (conta employee@laprizza.pt do seed)
 # @name loginEmployee
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{employeeEmail}}",
-  "password": "{{userPassword}}"
+  "email": "employee@laprizza.pt",
+  "password": "{{devPassword}}"
 }
 ?? status == 200
 
-### Extração do Token do Employee
 @employeeToken = {{loginEmployee.accessToken}}
 
-### 1.4 POST Criar Customer (201 Created)
-# @name createCustomer
-POST {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "email": "customer{{$randomInt 100000 999999}}@laprizza.pt",
-  "password": "{{userPassword}}",
-  "roles": ["CUSTOMER"]
-}
-?? status == 201
-?? js response.parsedBody.roles.includes('CUSTOMER') == true
-
-### Variáveis
-@customerEmail = {{createCustomer.email}}
-
-### 1.5 Login do Customer (200 OK)
+### 1.3 Login do Customer (conta customer@laprizza.pt do seed)
 # @name loginCustomer
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{customerEmail}}",
-  "password": "{{userPassword}}"
+  "email": "customer@laprizza.pt",
+  "password": "{{devPassword}}"
 }
 ?? status == 200
 
-### Extração do Token do Customer
 @customerToken = {{loginCustomer.accessToken}}
+
+### 1.4 Login do Manager sem Administrator (conta manager@laprizza.pt do seed)
+# @name loginManager
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@laprizza.pt",
+  "password": "{{devPassword}}"
+}
+?? status == 200
+
+@managerToken = {{loginManager.accessToken}}
 
 ### 1.6 DELETE Limpeza preventiva do ficheiro (204 ou 404 - sem asserção)
 # Garante que o 2. cria um ficheiro novo (201) mesmo que uma execução anterior tenha parado a meio.
@@ -98,7 +76,7 @@ Authorization: Bearer {{adminToken}}
 ### 2: UPLOAD E VALIDAÇÕES (PUT)
 ### ==========================================
 
-### 2. PUT Upload como Manager, ficheiro novo (201 Created)
+### 2. PUT Upload como Administrator, ficheiro novo (201 Created)
 PUT {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/octet-stream
@@ -122,9 +100,17 @@ Content-Type: application/octet-stream
 x
 ?? status == 400
 
-### 2.3 PUT Upload como Employee (403 Forbidden - apenas Manager)
+### 2.3 PUT Upload como Employee (403 Forbidden - apenas Administrator)
 PUT {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{employeeToken}}
+Content-Type: application/octet-stream
+
+Conteudo de teste
+?? status == 403
+
+### 2.4 PUT Upload como Manager (403 Forbidden - SYS04: o Manager lê mas não grava)
+PUT {{baseUrl}}/shared-resources/{{fileName}}
+Authorization: Bearer {{managerToken}}
 Content-Type: application/octet-stream
 
 Conteudo de teste
@@ -142,7 +128,7 @@ Authorization: Bearer {{employeeToken}}
 
 ### 3.1 GET Listar como Manager (200 OK)
 GET {{baseUrl}}/shared-resources
-Authorization: Bearer {{adminToken}}
+Authorization: Bearer {{managerToken}}
 ?? status == 200
 
 ### 3.2 GET Listar como Customer (200 OK - o Customer lê os recursos partilhados)
@@ -170,12 +156,12 @@ Authorization: Bearer {{customerToken}}
 ### 5: REMOÇÃO (DELETE)
 ### ==========================================
 
-### 5. DELETE Como Employee (403 Forbidden - apenas Manager)
+### 5. DELETE Como Employee (403 Forbidden - apenas Administrator)
 DELETE {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{employeeToken}}
 ?? status == 403
 
-### 5.1 DELETE Como Manager (204 No Content)
+### 5.1 DELETE Como Administrator (204 No Content)
 DELETE {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{adminToken}}
 ?? status == 204

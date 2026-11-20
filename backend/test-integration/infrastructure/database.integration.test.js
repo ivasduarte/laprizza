@@ -7,12 +7,13 @@ import { Roles } from '../../src/domain/users/users.domain.js';
 import KitchenConfiguration from '../../src/infrastructure/kitchen-configuration/kitchen-configuration.model.js';
 import PizzaComponentType from '../../src/infrastructure/pizza-component-type/pizza-component-type.model.js';
 import {
+  seedInitialAccount,
   seedInitialKitchenConfigurations,
-  seedInitialManager,
   seedInitialPizzaComponentTypes,
 } from '../../src/infrastructure/seeder.js';
 import { createMongooseHealthProbe } from '../../src/infrastructure/system/database-health.probe.js';
 import Users from '../../src/infrastructure/users/users.model.js';
+import RoleChange from '../../src/infrastructure/users/role-change.model.js';
 import { startMongo, STARTUP_TIMEOUT_MS } from '../support/mongo-container.js';
 
 /**
@@ -42,13 +43,28 @@ test('every migration is recorded as applied in the changelog', async () => {
   assert.equal(applied, migrations.length);
 });
 
-test('seedInitialManager creates the admin account only once', async () => {
-  await seedInitialManager();
-  await seedInitialManager();
+test('seedInitialAccount creates the first Administrator only once and records its roles (AA06)', async () => {
+  await seedInitialAccount();
+  await seedInitialAccount();
 
-  const managers = await Users.find({ role: Roles.MANAGER });
-  assert.equal(managers.length, 1);
-  assert.equal(managers[0].email, 'admin@laprizza.pt');
+  const admins = await Users.find({ roles: Roles.ADMINISTRATOR });
+  assert.equal(admins.length, 1);
+  assert.equal(admins[0].email, 'admin@laprizza.pt');
+  assert.deepEqual([...admins[0].roles].sort(), ['ADMINISTRATOR', 'CUSTOMER', 'MANAGER']);
+  assert.ok(admins[0].activatedAt instanceof Date);
+
+  const changes = await RoleChange.find({ userId: admins[0]._id }).lean();
+  assert.deepEqual(changes.map((c) => [c.role, c.actor.process]).sort(), [
+    ['ADMINISTRATOR', 'initial-account-seed'],
+    ['CUSTOMER', 'initial-customer-role'],
+    ['MANAGER', 'initial-account-seed'],
+  ]);
+});
+
+test('seedInitialAccount refuses a database with a Manager but no Administrator (AA06 migration missing)', async () => {
+  await Users.updateMany({}, { $pull: { roles: Roles.ADMINISTRATOR } });
+  await assert.rejects(seedInitialAccount(), /migrate:up/);
+  await Users.updateMany({ email: 'admin@laprizza.pt' }, { $push: { roles: Roles.ADMINISTRATOR } });
 });
 
 test('seedInitialPizzaComponentTypes creates the default types only once', async () => {

@@ -30,7 +30,7 @@ const createUser = (overrides = {}) =>
   usersRepository.create({
     email: 'user@laprizza.pt',
     passwordHash: 'hash',
-    role: Roles.MANAGER,
+    roles: [Roles.MANAGER],
     status: AccountStatus.ACTIVE,
     ...overrides,
   });
@@ -93,4 +93,25 @@ test('setPasswordHash can revoke the tokens by bumping tokenVersion', async () =
   });
 
   assert.equal(updated.tokenVersion, 1);
+});
+
+test('AA06: addRoleIfAbsent and removeRoleIfPresent only answer with a user when they change it', async () => {
+  const user = await createUser({ roles: [Roles.CUSTOMER] });
+
+  const added = await usersRepository.addRoleIfAbsent(user._id, Roles.EMPLOYEE);
+  assert.deepEqual([...added.roles], [Roles.CUSTOMER, Roles.EMPLOYEE]);
+  assert.equal(await usersRepository.addRoleIfAbsent(user._id, Roles.EMPLOYEE), null);
+
+  const removed = await usersRepository.removeRoleIfPresent(user._id, Roles.CUSTOMER, {
+    clearCustomerId: true,
+  });
+  assert.deepEqual([...removed.roles], [Roles.EMPLOYEE]);
+  assert.equal(removed.customerId, null);
+  assert.equal(await usersRepository.removeRoleIfPresent(user._id, Roles.CUSTOMER), null);
+});
+
+test('AA06: deleteById removes the user', async () => {
+  const user = await createUser();
+  await usersRepository.deleteById(user._id);
+  assert.equal(await usersRepository.findById(user._id), null);
 });

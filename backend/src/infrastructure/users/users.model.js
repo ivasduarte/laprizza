@@ -38,6 +38,8 @@ const userSchema = new mongoose.Schema(
     failedLoginCount: { type: Number, default: 0, min: 0 },
     lockedUntil: { type: Date, default: null },
     tokenVersion: { type: Number, default: 0, min: 0 },
+    // AA06: set when the account is activated (AA07); an account never activated stays null.
+    activatedAt: { type: Date, default: null },
   },
   { toJSON: { transform: hideSecrets }, toObject: { transform: hideSecrets } },
 );

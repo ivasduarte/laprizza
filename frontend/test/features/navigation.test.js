@@ -18,10 +18,22 @@ const PERMISSIONS = {
     'planning:execute',
     'products:read',
     'resources:read',
-    'resources:write',
     'stock:read',
     'stock:write',
+  ],
+  // AA06: user administration only
+  ADMINISTRATOR: [
+    'catalogue:read',
+    'resources:read',
+    'resources:write',
+    'roles:assign:administrator',
+    'roles:assign:customer',
+    'roles:assign:employee',
+    'roles:assign:manager',
+    'users:create',
+    'users:invite',
     'users:manage',
+    'users:read',
   ],
   NO_ROLES: ['catalogue:read'],
 };
@@ -57,6 +69,18 @@ describe('Dynamic navigation menu (WEB03)', () => {
       'kitchen-configuration',
       'shared-resources',
     ]);
+  });
+
+  it('an Administrator sees the user administration and the shared folder, nothing of the restaurant (AA06, SYS04)', () => {
+    assert.deepEqual(menuOf('ADMINISTRATOR'), [
+      'home',
+      'shared-resources',
+      'users',
+    ]);
+  });
+
+  it('a Manager does not see the user administration (AA06)', () => {
+    assert.ok(!menuOf('MANAGER').includes('users'));
   });
 
   it('several roles see the union of their pages', () => {

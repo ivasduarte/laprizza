@@ -21,7 +21,7 @@ When the ID token is valid, the back end identifies the user by `(issuer, sub)`:
 
 * **Known identity and active account:** a session is created by `establishSession`, the same function used by the local login ([Session Handling](./session-handling.md)). The refresh cookie `lp_rt` is set and the browser is redirected to the SPA. The SPA restores the session with `POST /auth/refresh`, as after a reload. No token travels in a URL.
 * **Known identity and inactive or disabled account:** no session, `ACCOUNT_INACTIVE` or `ACCOUNT_DISABLED`.
-* **Unknown identity with a verified e-mail that no user has:** an `inactive` account with the role `CUSTOMER` is created and linked to the identity. No session is created (`ACCOUNT_PENDING_ACTIVATION`). A Manager activates the account.
+* **Unknown identity with a verified e-mail that no user has:** an `inactive` account with the role `CUSTOMER` is created and linked to the identity. No session is created (`ACCOUNT_PENDING_ACTIVATION`). The account receives an activation invitation by e-mail ([AA06](./role-assignment-and-invitations.md)) and is activated through it (AA07).
 * **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0034](../../adr/0034-external-identity-model-and-account-resolution.md)).
 
 A cancelled or failed login never creates a session. Logout is the existing `POST /auth/logout`.
@@ -328,7 +328,7 @@ The full login needs a consent screen, so it is validated by hand. The team reco
 |---|---|---|
 | 1. Click "Continue with Google" with an unknown account | Provider login, return to `/auth/callback`, message `ACCOUNT_PENDING_ACTIVATION` | |
 | 2. In the database | One `inactive` user with role `CUSTOMER` and one `External Identities` document | |
-| 3. A Manager activates the account (`PATCH /users/:id`) | `isActive: true` | |
+| 3. The user activates the account with the invitation e-mail (AA07; since AA06 an Administrator cannot enable an account that was never activated) | Account `active` | |
 | 4. Repeat step 1 | Return to the home page with a session, cookie `lp_rt` present | |
 | 5. Logout | Session ended, the old access token gets 401 | |
 | 6. Cancel at the provider | Message `ACCESS_DENIED`, no cookie | |

@@ -4,11 +4,14 @@
  *
  * @constant
  * @type {Object}
+ * @property {string} ADMINISTRATOR - Manages user accounts, invitations and roles (AA06). It grants
+ *   no restaurant management: that needs the MANAGER role as well (Table 1).
  * @property {string} MANAGER - LaPrizza Manager.
  * @property {string} EMPLOYEE - Internal staff member with operational access.
  * @property {string} CUSTOMER - External client associated with a customerId.
  */
 export const Roles = Object.freeze({
+  ADMINISTRATOR: 'ADMINISTRATOR',
   MANAGER: 'MANAGER',
   EMPLOYEE: 'EMPLOYEE',
   CUSTOMER: 'CUSTOMER',
@@ -59,9 +62,9 @@ export function validatePasswordStrength(password) {
 
 /**
  * States of a user account.
- * - INACTIVE: create but not activated yet
+ * - INACTIVE: created but not activated yet (activation invitation, AA06/AA07)
  * - ACTIVE: may authenticate
- * - DISABLED: blocked by a Manager
+ * - DISABLED: blocked by an Administrator
  */
 export const AccountStatus = Object.freeze({
   INACTIVE: 'inactive',
@@ -77,6 +80,27 @@ export const AccountStatus = Object.freeze({
  */
 export function statusFromIsActive(isActive) {
   return isActive ? AccountStatus.ACTIVE : AccountStatus.DISABLED;
+}
+
+export const StatusChangeDenial = Object.freeze({
+  ACTIVATION_REQUIRED: 'ACTIVATION_REQUIRED',
+});
+
+/**
+ * AA06: an Administrator may disable any account and re-enable an account that was activated
+ * before. An account that was never activated is enabled only through its activation invitation
+ * (AA07), so automatic roles or an Administrator never replace activation.
+ *
+ * @param {{status?: string, activatedAt?: Date|null}} user
+ * @param {boolean} isActive - Requested state.
+ * @returns {{allowed: true, status: string} | {allowed: false, reason: string}}
+ */
+export function evaluateStatusChange(user, isActive) {
+  if (!isActive) return { allowed: true, status: AccountStatus.DISABLED };
+  if (user?.status === AccountStatus.ACTIVE || user?.activatedAt) {
+    return { allowed: true, status: AccountStatus.ACTIVE };
+  }
+  return { allowed: false, reason: StatusChangeDenial.ACTIVATION_REQUIRED };
 }
 
 /**
