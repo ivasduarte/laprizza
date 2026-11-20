@@ -70,7 +70,12 @@ function noStore(_req, res, next) {
  * @param {Object} [usersRepository] - The injected repository for user-related database operations.
  * @returns {import('express').Router} The configured Express router.
  */
-export default function authRouterFactory({ authService, externalAuthService, config, securityLogger }) {
+export default function authRouterFactory({
+  authService,
+  externalAuthService,
+  config,
+  securityLogger,
+}) {
   const router = Router();
   const controller = createAuthController({ authService, config });
   const { rateLimit } = config;
@@ -97,12 +102,20 @@ export default function authRouterFactory({ authService, externalAuthService, co
   router.get('/me', noStore, requireAuthenticated, controller.me);
   router.get('/guest-permissions', controller.guestPermissions);
 
-  router.use(noStore, authLimiter);
-  if (externalAuthService) router.use('/external', externalAuthRouterFactory({ externalAuthService, config }));
+  // Only /login and /password/change use the login limiter (see the routes below); applying it
+  // here as well would count every /auth request (refresh included) twice.
+  router.use(noStore);
+  if (externalAuthService)
+    router.use('/external', externalAuthRouterFactory({ externalAuthService, config }));
 
   router.post('/login', loginLimiter, validateBody(schemas.login), controller.login);
   router.post('/refresh', requireAllowedOrigin(config.corsOrigins), controller.refresh);
-  router.post('/logout', requireAllowedOrigin(config.corsOrigins), requireAuthenticated, controller.logout);
+  router.post(
+    '/logout',
+    requireAllowedOrigin(config.corsOrigins),
+    requireAuthenticated,
+    controller.logout,
+  );
   router.post('/logout-all', requireAuthenticated, controller.logoutAll);
   router.post(
     '/password/forgot',
