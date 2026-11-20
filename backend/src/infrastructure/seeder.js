@@ -5,7 +5,12 @@ import KitchenConfiguration from './kitchen-configuration/kitchen-configuration.
 import * as pizzaComponentTypesRepository from './pizza-component-type/pizza-component-type.repository.js';
 
 import { passwordHasher } from './security/password-hasher.js';
-import { Roles, AccountStatus, validatePasswordStrength } from '../domain/users/users.domain.js';
+import {
+  Roles,
+  AccountStatus,
+  validatePasswordStrength,
+  withInitialCustomerRole,
+} from '../domain/users/users.domain.js';
 import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-type/pizza-component-types.domain.js';
 
 /** MongoDB error code for violation of a unique index. */
@@ -44,7 +49,7 @@ export async function seedInitialManager() {
       username: 'admin',
       email: 'admin@laprizza.pt',
       passwordHash: await passwordHasher.hash(pw),
-      roles: [Roles.MANAGER],
+      roles: withInitialCustomerRole([Roles.MANAGER]), // AA03: every new account is also Customer
       status: AccountStatus.ACTIVE,
     });
     console.log('Initial Manager account created successfully.');
@@ -116,4 +121,4 @@ export async function seedInitialKitchenConfigurations() {
   ]);
 
   console.log('Initial Kitchen configurations seeded successfully.');
-}
+}

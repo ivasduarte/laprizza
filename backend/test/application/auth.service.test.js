@@ -228,11 +228,11 @@ test('registerUser stores only an argon2id hash and creates an active account', 
   assert.equal(stored.status, 'active');
   assert.equal(stored.tokenVersion, 0);
   assert.equal(stored.failedLoginCount, 0);
-  assert.deepEqual(stored.roles, ['EMPLOYEE']);
+  assert.deepEqual(stored.roles, ['CUSTOMER', 'EMPLOYEE']); // AA03: Customer is automatic
 
   assert.equal(dto.status, 'active');
   assert.equal(dto.passwordHash, undefined);
-  assert.deepEqual(dto.roles, ['EMPLOYEE']);
+  assert.deepEqual(dto.roles, ['CUSTOMER', 'EMPLOYEE']);
 });
 
 /**
@@ -266,7 +266,7 @@ test('registerUser returns 409 Conflict on duplicate email', async () => {
   );
 });
 
-test('registerUser accepts no roles and links customerId to CUSTOMER accounts', async () => {
+test('registerUser without roles creates a Customer account and links customerId to CUSTOMER accounts', async () => {
   const { usersRepository } = createAuthTestContext();
 
   await registerUser(
@@ -274,7 +274,7 @@ test('registerUser accepts no roles and links customerId to CUSTOMER accounts', 
     usersRepository,
     passwordHasher,
   );
-  assert.deepEqual(usersRepository.create.mock.calls[0].arguments[0].roles, []);
+  assert.deepEqual(usersRepository.create.mock.calls[0].arguments[0].roles, ['CUSTOMER']);
 
   await registerUser(
     {
@@ -581,13 +581,13 @@ test('login rejects inactive and disabled accounts only after a correct password
  * by another authentication method and uses loadRoles.
  */
 test('establishSession is reusable and loads roles through the extension point', async () => {
-  const loadRoles = mock.fn(async () => ['CUSTOMER', 'BETA']);
+  const loadRoles = mock.fn(async () => ['CUSTOMER', 'BETA']); // BETA is not an internal role
   const ctx = createAuthTestContext({ loadRoles });
   const user = storedUser();
 
   const result = await ctx.service.establishSession(user, { method: 'oidc', ip: '10.0.0.1' });
 
-  assert.deepEqual(result.user.roles, ['CUSTOMER', 'BETA']);
+  assert.deepEqual(result.user.roles, ['CUSTOMER']);
   assert.deepEqual(result.user.permissions, ['catalogue:read', 'customers:read:own'])
   assert.equal(loadRoles.mock.calls[0].arguments[0], user);
   const [event] = loggedEvents(ctx, 'LOGIN_SUCCEEDED');
@@ -1214,4 +1214,164 @@ test('getCurrentUser refuses missing, inactive or disabled accounts with 401 SES
     ctx.usersRepository.findById.mock.mockImplementation(async () => user);
     await rejectsWith(ctx.service.getCurrentUser(USER_ID), 401, AuthErrorCode.SESSION_REVOKED);
   }
+});
+
+
+/* ===================================================================== */
+/* AA03 - Internal Role Resolution                                       */
+/* ===================================================================== */
+
+test('AA03: registerUser always adds Customer without changing the requested roles or the status', async () => {
+  const { usersRepository } = createAuthTestContext();
+  await registerUser(
+    { email: 'staff@laprizza.pt', password: PASSWORD, roles: ['MANAGER', 'CUSTOMER'] },
+    usersRepository,
+    passwordHasher,
+  );
+  const stored = usersRepository.create.mock.calls[0].arguments[0];
+  assert.deepEqual(stored.roles, ['CUSTOMER', 'MANAGER']); // no duplicates
+  assert.equal(stored.status, 'active'); // status comes from the creation flow, not from Customer
+});
+
+test('AA03: login of a returning user never recreates the account nor changes roles or status', async () => {
+  const ctx = createAuthTestContext();
+  const user = storedUser({ roles: ['EMPLOYEE'] }); // Customer was revoked by a Manager
+  ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () => user);
+
+  const result = await ctx.service.login({ email: user.email, password: PASSWORD }, REQUEST);
+
+  assert.deepEqual(result.user.roles, ['EMPLOYEE']); // Customer is NOT restored
+  assert.equal(ctx.usersRepository.create.mock.callCount(), 0);
+  assert.equal(ctx.usersRepository.update.mock.callCount(), 0);
+});
+
+test('AA03: login of a disabled or inactive account is denied and the account is not changed', async () => {
+  for (const [status, code] of [
+    ['disabled', AuthErrorCode.ACCOUNT_DISABLED],
+    ['inactive', AuthErrorCode.ACCOUNT_INACTIVE],
+  ]) {
+    const ctx = createAuthTestContext();
+    const user = storedUser({ status, roles: ['CUSTOMER'] });
+    ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () => user);
+
+    await rejectsWith(ctx.service.login({ email: user.email, password: PASSWORD }, REQUEST), 403, code);
+    assert.equal(ctx.usersRepository.update.mock.callCount(), 0);
+    assert.equal(ctx.sessionsRepository.create.mock.callCount(), 0);
+  }
+});
+
+test('AA03: an account without active roles cannot log in (access denied, no session)', async () => {
+  for (const roles of [[], ['ADMIN'], undefined]) {
+    const ctx = createAuthTestContext();
+    const user = storedUser({ roles });
+    ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () => user);
+
+    await rejectsWith(
+      ctx.service.login({ email: user.email, password: PASSWORD }, REQUEST),
+      403,
+      AuthErrorCode.NO_ACTIVE_ROLE,
+    );
+    assert.equal(ctx.sessionsRepository.create.mock.callCount(), 0);
+    const [event] = loggedEvents(ctx, 'LOGIN_DENIED');
+    assert.equal(event.reason, 'NO_ACTIVE_ROLE');
+  }
+});
+
+test('AA03: the same role rule applies to external authentication (establishSession)', async () => {
+  const ctx = createAuthTestContext();
+  await rejectsWith(
+    ctx.service.establishSession(storedUser({ roles: [] }), { method: 'oidc' }),
+    403,
+    AuthErrorCode.NO_ACTIVE_ROLE,
+  );
+  const ok = await ctx.service.establishSession(storedUser({ roles: ['CUSTOMER'] }), { method: 'oidc' });
+  assert.deepEqual(ok.user.roles, ['CUSTOMER']);
+  assert.deepEqual(ok.user.permissions, ['catalogue:read', 'customers:read:own']);
+});
+
+test('AA03: roles supplied in the request are ignored; only the stored roles count', async () => {
+  const ctx = createAuthTestContext();
+  const user = storedUser({ roles: ['CUSTOMER'] });
+  ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () => user);
+
+  const result = await ctx.service.login(
+    { email: user.email, password: PASSWORD, roles: ['MANAGER'], role: 'MANAGER' },
+    REQUEST,
+  );
+  assert.deepEqual(result.user.roles, ['CUSTOMER']);
+  assert.ok(!result.user.permissions.includes('users:read'));
+  assert.equal(jwt.decode(result.accessToken).roles, undefined); // roles never travel in the token
+});
+
+test('AA03: if roles cannot be confirmed, no session is created (fail closed)', async () => {
+  const loadRoles = mock.fn(async () => {
+    throw new Error('database unavailable');
+  });
+  const ctx = createAuthTestContext({ loadRoles });
+  const user = storedUser();
+  ctx.usersRepository.findByEmailWithPasswordHash.mock.mockImplementation(async () => user);
+
+  await rejectsWith(
+    ctx.service.login({ email: user.email, password: PASSWORD }, REQUEST),
+    503,
+    AuthErrorCode.ROLES_UNAVAILABLE,
+  );
+  assert.equal(ctx.sessionsRepository.create.mock.callCount(), 0);
+  const [event] = loggedEvents(ctx, 'ROLES_UNAVAILABLE');
+  assert.equal(event.reason, 'Error'); // never the error message
+});
+
+test('AA03: protected requests fail closed when roles cannot be confirmed', async () => {
+  const ctx = loggedIn({
+    loadRoles: async () => {
+      throw new Error('timeout');
+    },
+  });
+  await rejectsWith(
+    ctx.service.authenticateAccessToken(ctx.accessToken()),
+    503,
+    AuthErrorCode.ROLES_UNAVAILABLE,
+  );
+});
+
+test('AA03: refresh after all roles were removed ends the session with access denied', async () => {
+  const ctx = loggedIn();
+  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ roles: [] }));
+  rotationSucceeds(ctx);
+
+  await rejectsWith(
+    ctx.service.refresh(ctx.tokenService.generateOpaqueToken(), REQUEST),
+    403,
+    AuthErrorCode.NO_ACTIVE_ROLE,
+  );
+  assert.equal(ctx.sessionsRepository.revoke.mock.callCount(), 1);
+});
+
+test('AA03: refresh revokes the session when roles cannot be confirmed', async () => {
+  const ctx = loggedIn({
+    loadRoles: async () => {
+      throw new Error('timeout');
+    },
+  });
+  rotationSucceeds(ctx);
+
+  await rejectsWith(
+    ctx.service.refresh(ctx.tokenService.generateOpaqueToken(), REQUEST),
+    503,
+    AuthErrorCode.ROLES_UNAVAILABLE,
+  );
+  assert.equal(ctx.sessionsRepository.revoke.mock.callCount(), 1);
+});
+
+test('AA03: GET /auth/me reflects the stored roles (none -> Guest permissions only)', async () => {
+  const ctx = loggedIn();
+  ctx.usersRepository.findById.mock.mockImplementation(async () =>
+    storedUser({ roles: ['UNKNOWN', 'EMPLOYEE', 'EMPLOYEE'] }),
+  );
+  assert.deepEqual((await ctx.service.getCurrentUser(USER_ID)).roles, ['EMPLOYEE']);
+
+  ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ roles: [] }));
+  const me = await ctx.service.getCurrentUser(USER_ID);
+  assert.deepEqual(me.roles, []);
+  assert.deepEqual(me.permissions, ['catalogue:read']);
 });

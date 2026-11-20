@@ -92,6 +92,10 @@ const baseMessages = {
           'The recovery link is invalid, was already used or has expired. Request a new one.',
         SESSION_REVOKED: 'Your session has ended. Please log in again.',
         REFRESH_INVALID: 'Your session has ended. Please log in again.',
+        NO_ACTIVE_ROLE:
+          'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+        ROLES_UNAVAILABLE:
+          'Your access could not be confirmed right now. Please try again in a moment.',
         NETWORK_ERROR: 'Could not reach the server. Check your connection.',
         UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
       },
@@ -115,6 +119,10 @@ const baseMessages = {
             'The account is not active yet. Contact the restaurant manager.',
           ACCOUNT_DISABLED:
             'The account is disabled. Contact the restaurant manager.',
+          NO_ACTIVE_ROLE:
+            'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+          ROLES_UNAVAILABLE:
+            'Your access could not be confirmed right now. Please try again in a moment.',
         },
       },
     },
@@ -605,6 +613,10 @@ const baseMessages = {
           'O link de recuperação é inválido, já foi usado ou expirou. Peça um novo link.',
         SESSION_REVOKED: 'A sua sessão terminou. Inicie sessão novamente.',
         REFRESH_INVALID: 'A sua sessão terminou. Inicie sessão novamente.',
+        NO_ACTIVE_ROLE:
+          'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gerente do restaurante.',
+        ROLES_UNAVAILABLE:
+          'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
         NETWORK_ERROR:
           'Não foi possível contactar o servidor. Verifique a ligação.',
         UNKNOWN_ERROR: 'Ocorreu um erro inesperado. Tente novamente.',
@@ -629,6 +641,10 @@ const baseMessages = {
             'A conta ainda não está ativa. Contacte o gestor do restaurante.',
           ACCOUNT_DISABLED:
             'A conta está desativada. Contacte o gestor do restaurante.',
+          NO_ACTIVE_ROLE:
+            'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gestor do restaurante.',
+          ROLES_UNAVAILABLE:
+            'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
         },
       },
     },

@@ -17,6 +17,8 @@ export const AuthErrorCode = Object.freeze({
   PASSWORD_POLICY_VIOLATION: 'PASSWORD_POLICY_VIOLATION',
   CURRENT_PASSWORD_INCORRECT: 'CURRENT_PASSWORD_INCORRECT',
   FORBIDDEN: 'FORBIDDEN',
+  NO_ACTIVE_ROLE: 'NO_ACTIVE_ROLE',
+  ROLES_UNAVAILABLE: 'ROLES_UNAVAILABLE',
 });
 
 const DEFAULT_MESSAGES = {
@@ -34,6 +36,8 @@ const DEFAULT_MESSAGES = {
   RESET_TOKEN_INVALID: 'Invalid or expired recovery link.',
   CURRENT_PASSWORD_INCORRECT: 'Current password is incorrect.',
   FORBIDDEN: 'Forbidden.',
+  NO_ACTIVE_ROLE: 'The account has no active role.',
+  ROLES_UNAVAILABLE: 'The account roles could not be confirmed. Try again later.',
 };
 
 export function authError(code, status, message = DEFAULT_MESSAGES[code] ?? code) {
@@ -44,4 +48,4 @@ export function tooManyAttempts(code, retryAfterMs) {
     const err = authError(code, 429);
     err.retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
     return err;
-}
+}

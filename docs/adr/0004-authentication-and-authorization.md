@@ -1,6 +1,6 @@
 # Authentication and Authorization
 
-* Status: accepted
+* Status: accepted, amended (see Amendments)
 * Deciders: Development Team
 * Date: 2026-09-26
 
@@ -40,3 +40,8 @@ Chosen option: "Argon2 with JWT", because Argon2 balances CPU and memory hardnes
 
 * Good, because it introduces memory-hardness and performs better than Bcrypt against ASICs.
 * Bad, because it has been essentially superseded by Argon2.
+
+## Amendments
+
+* AA04 ([ADR 0032](0032-secure-session-handling-in-the-api-and-the-spa.md)): the access token is short-lived and backed by a server-side session with a rotating refresh token, so sessions can be revoked before the token expires.
+* AA03 ([Role Resolution](../flows/authentication/role-resolution.md)): roles are no longer embedded in the JWT. They are internal to LaPrizza, read from the database on every login, refresh and protected request, and never taken from the token, the client or an external identity provider. Every new account starts with the role `CUSTOMER`. The statements above about "JWT with embedded roles" describe the original decision and are superseded on this point.

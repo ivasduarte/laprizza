@@ -1,5 +1,5 @@
 import { AppError } from '../app-error.js';
-import { AccountStatus, Roles } from '../../domain/users/users.domain.js';
+import { AccountStatus, withInitialCustomerRole } from '../../domain/users/users.domain.js';
 import {
   createExternalIdentity,
   extractIdentityClaims,
@@ -127,7 +127,7 @@ export function createExternalAuthService({
       try {
         user = await usersRepository.create({
           email,
-          roles: [Roles.CUSTOMER],
+          roles: withInitialCustomerRole(), // roles from the IdP are never used
           status: AccountStatus.INACTIVE,
         });
       } catch (err) {

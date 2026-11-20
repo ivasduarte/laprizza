@@ -119,3 +119,21 @@ test('security log never contains the e-mail', async () => {
   await assert.rejects(service.completeLogin(input, CTX));
   assert.ok(!JSON.stringify(deps.securityLogger.log.mock.calls).toLowerCase().includes('example.pt'));
 });
+
+test('AA03: roles or groups sent by the identity provider are ignored; new accounts get only CUSTOMER', async () => {
+  const { service, deps } = build({
+    claims: { ...CLAIMS, roles: ['MANAGER'], groups: ['admins'], 'https://laprizza/roles': ['MANAGER'] },
+  });
+  await service.completeLogin(input, CTX);
+  const created = deps.usersRepository.create.mock.calls[0].arguments[0];
+  assert.deepEqual(created.roles, ['CUSTOMER']);
+  assert.equal(created.status, 'inactive'); // Customer does not activate the account
+});
+
+test('AA03: a linked account without active roles is denied by establishSession (same rule as local)', async () => {
+  const denial = Object.assign(new Error('x'), { status: 403, code: 'NO_ACTIVE_ROLE' });
+  const { service, deps } = build({ linked: { userId: 'u1' }, user: { _id: 'u1', status: 'active', roles: [] } });
+  deps.authService.establishSession.mock.mockImplementation(async () => { throw denial; });
+  await assert.rejects(service.completeLogin(input, CTX), { code: 'NO_ACTIVE_ROLE' });
+  assert.equal(deps.usersRepository.create.mock.callCount(), 0); // never recreated
+});

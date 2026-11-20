@@ -1,11 +1,18 @@
 import * as defaultUsersRepository from '../../infrastructure/users/users.repository.js';
 import { passwordHasher as defaultPasswordHasher } from '../../infrastructure/security/password-hasher.js';
-import { Roles, AccountStatus, normalizeEmail } from '../../domain/users/users.domain.js';
+import {
+  Roles,
+  AccountStatus,
+  normalizeEmail,
+  withInitialCustomerRole,
+  activeRoles,
+} from '../../domain/users/users.domain.js';
 import {
   evaluateAuthentication,
   computeLockoutDelayMs,
   remainingLockoutMs,
   isSessionUsable,
+  evaluateRoleAuthorization,
 } from '../../domain/auth/auth.domain.js';
 import { AppError } from '../app-error.js';
 import { AuthErrorCode, authError, tooManyAttempts } from './auth-errors.js';
@@ -17,6 +24,8 @@ import { permissionsFor } from '../../domain/auth/permissions.domain.js';
 /**
  * Registers a user (Manager, Sprint 1). Email is mandatory: it is the login identifier.
  * Accounts created this way are ACTIVE; AA06 will create INACTIVE accounts with an invitation.
+ * AA03: the Customer role is always added by the back end (the requested roles are kept).
+ * It does not change the status: activation rules are not affected.
  *
  * @param {Object} userData
  * @param {Object} [usersRepository=defaultUsersRepository]
@@ -32,6 +41,7 @@ export async function registerUser(
   if (customerId && !roles.includes(Roles.CUSTOMER)) {
     throw new AppError('Only users with the CUSTOMER role can have an associated customerId.', 400);
   }
+  const initialRoles = withInitialCustomerRole(roles);
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) throw new AppError('Email is mandatory.', 400);
 
@@ -43,7 +53,7 @@ export async function registerUser(
       username: username?.trim().toLowerCase(),
       email: normalizedEmail,
       passwordHash,
-      roles,
+      roles: initialRoles,
       customerId,
       status: AccountStatus.ACTIVE,
       failedLoginCount: 0,
@@ -83,7 +93,8 @@ function toSessionUserDto(user, roles) {
  * @param {object} deps.securityLogger
  * @param {{now: () => Date}} deps.clock
  * @param {object} deps.config - config.auth (see loadConfig)
- * @param {(user: object) => Promise<string[]>} [deps.loadRoles] - Extension point for AA03.
+ * @param {(user: object) => Promise<string[]>} [deps.loadRoles] - Reads the account roles from the
+ *   back end (AA03). Only known base roles are used; if it fails, nothing is granted.
  * @param {(task: () => void) => void} [deps.defer] - Runs work after the response (forgot).
  */
 export function createAuthService({
@@ -101,6 +112,37 @@ export function createAuthService({
   defer = (task) => setImmediate(task),
 }) {
   const lockoutPolicy = { threshold: config.lockoutThreshold, stepsMs: config.lockoutStepsMs };
+
+  /**
+   * AA03: the active internal roles of the account, always read from the back end (never from
+   * the request, the token or the identity provider). Fails closed: if they cannot be
+   * confirmed, the caller gets ROLES_UNAVAILABLE (503) and nothing is granted.
+   */
+  async function resolveRoles(user, context = {}) {
+    try {
+      return activeRoles(await loadRoles(user));
+    } catch (err) {
+      securityLogger.log('ROLES_UNAVAILABLE', {
+        userId: String(user._id),
+        ip: context.ip,
+        reason: err?.name, // never the message
+      });
+      throw authError(AuthErrorCode.ROLES_UNAVAILABLE, 503);
+    }
+  }
+
+  /** AA03: an account without active roles cannot open or renew a session. */
+  function assertHasActiveRole(user, roles, context, event) {
+    const decision = evaluateRoleAuthorization(roles);
+    if (decision.allowed) return;
+    securityLogger.log(event, {
+      userId: String(user._id),
+      ip: context.ip,
+      method: context.method,
+      reason: decision.reason,
+    });
+    throw authError(decision.reason, 403);
+  }
 
   async function lockoutRemainingMs(user, throttleKey, now) {
     if (user) return remainingLockoutMs(user.lockedUntil, now);
@@ -146,8 +188,10 @@ export function createAuthService({
       throw authError(decision.reason, 403);
     }
 
+    const roles = await resolveRoles(user, context);
+    assertHasActiveRole(user, roles, context, 'LOGIN_DENIED');
+
     const now = clock.now();
-    const roles = await loadRoles(user);
     const tokenVersion = user.tokenVersion ?? 0;
     const refreshToken = tokenService.generateOpaqueToken();
     const expiresAt = new Date(now.getTime() + config.refreshTokenTtlMs); // absolute expiry
@@ -273,7 +317,20 @@ export function createAuthService({
       throw authError(AuthErrorCode.SESSION_REVOKED, 401);
     }
 
-    const roles = await loadRoles(user);
+    let roles;
+    try {
+      roles = await resolveRoles(user, context);
+    } catch (err) {
+      // The refresh token was already rotated: end the session instead of leaving the old
+      // token to be flagged as reused. Nothing is granted while roles cannot be confirmed.
+      await sessionsRepository.revoke(session._id, now);
+      throw err;
+    }
+    if (!evaluateRoleAuthorization(roles).allowed) {
+      // Roles were removed after the login: the session ends (the next login is denied too).
+      await sessionsRepository.revoke(session._id, now);
+    }
+    assertHasActiveRole(user, roles, context, 'REFRESH_FAILED');
     return {
       accessToken: tokenService.signAccessToken({
         userId: user._id,
@@ -315,7 +372,8 @@ export function createAuthService({
       String(session.userId) === String(user._id);
     if (!valid) throw authError(AuthErrorCode.SESSION_REVOKED, 401);
 
-    const roles = await loadRoles(user);
+    // No active role: the principal only has the Guest permissions (protected routes answer 403).
+    const roles = await resolveRoles(user);
     return {
       userId: String(user._id),
       roles,
@@ -438,7 +496,7 @@ export function createAuthService({
     if (!user || !evaluateAuthentication(user).allowed) {
       throw authError(AuthErrorCode.SESSION_REVOKED, 401);
     }
-    return toSessionUserDto(user, await loadRoles(user));
+    return toSessionUserDto(user, await resolveRoles(user));
   }
 
   return {

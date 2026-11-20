@@ -14,6 +14,32 @@ export const Roles = Object.freeze({
   CUSTOMER: 'CUSTOMER',
 });
 
+const KNOWN_ROLES = new Set(Object.values(Roles));
+
+/**
+ * AA03: initial roles of a NEW internal account (local or external). Customer is always
+ * assigned by the back end; the other requested roles are kept (their assignment is authorized
+ * separately, AA05). Assigning Customer never changes the account status.
+ *
+ * @param {string[]} [requestedRoles=[]]
+ * @returns {string[]} Customer first, then the other known roles, without duplicates.
+ */
+export function withInitialCustomerRole(requestedRoles = []) {
+  return activeRoles([Roles.CUSTOMER, ...(Array.isArray(requestedRoles) ? requestedRoles : [])]);
+}
+
+/**
+ * AA03: the active internal roles of an account, as stored in the back end. Anything that is
+ * not a known base role (legacy values, typos, roles from another system) is ignored.
+ *
+ * @param {unknown} roles
+ * @returns {string[]}
+ */
+export function activeRoles(roles) {
+  if (!Array.isArray(roles)) return [];
+  return [...new Set(roles.filter((role) => KNOWN_ROLES.has(role)))];
+}
+
 /**
  * Validates a plain text password against strict security requirements (NIST guidelines).
  * Business rule: The password must be between 8 and 64 characters long, contain at least
@@ -61,4 +87,4 @@ export function statusFromIsActive(isActive) {
  */
 export function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
-}
+}
