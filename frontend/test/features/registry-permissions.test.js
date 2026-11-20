@@ -13,6 +13,8 @@ const EXPECTED_PERMISSIONS = {
   ai: 'planning:execute',
   'kitchen-configuration': 'kitchen:read',
   'shared-resources': 'resources:read',
+  // AA06: user administration (GET /users), Administrator only
+  users: 'users:read',
 };
 const SESSION_ONLY = ['change-password'];
 // auth-callback (AA02): landing page of the external login; the session does not exist yet.

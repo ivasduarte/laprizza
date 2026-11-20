@@ -10,6 +10,7 @@ const PROTECTED = [
   'kitchen-configuration',
   'shared-resources',
   'change-password',
+  'users',
 ];
 const PUBLIC = ['home', 'login', 'forgot-password', 'reset-password'];
 

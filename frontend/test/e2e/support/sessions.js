@@ -20,15 +20,22 @@ const MANAGER = [
   'pizzas:write',
   'planning:execute',
   'products:write',
-  'resources:write',
-  'roles:assign:customer',
-  'roles:assign:employee',
-  'roles:assign:manager',
   'stock:read:inactive',
   'stock:write',
   'suppliers:import',
   'suppliers:read',
+];
+// AA06: user administration belongs to the ADMINISTRATOR role only.
+export const ADMINISTRATOR_PERMISSIONS = [
+  ...GUEST,
+  'resources:read',
+  'resources:write',
+  'roles:assign:administrator',
+  'roles:assign:customer',
+  'roles:assign:employee',
+  'roles:assign:manager',
   'users:create',
+  'users:invite',
   'users:manage',
   'users:read',
 ];

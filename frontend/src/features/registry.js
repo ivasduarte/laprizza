@@ -74,6 +74,14 @@ export const features = [
     load: () => import('./shared-resources/shared-resources-page.jsx'),
   },
   {
+    id: 'users',
+    path: '/users',
+    labelKey: 'nav.users',
+    requiresAuth: true,
+    permission: 'users:read',
+    load: () => import('./users/users-page.jsx'),
+  },
+  {
     id: 'auth-callback',
     path: '/auth/callback',
     labelKey: 'nav.authCallback',

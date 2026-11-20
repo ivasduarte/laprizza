@@ -1,4 +1,5 @@
 import { mergeMessages, web07Messages } from './web07-messages.js';
+import { aa06Messages } from './aa06-messages.js';
 
 const baseMessages = {
   en: {
@@ -460,7 +461,7 @@ const baseMessages = {
       intro:
         'Restaurant documents and project reports available to all registered users.',
       readOnly:
-        'You can view and download these files. Only managers can add or remove them.',
+        'You can view and download these files. Only administrators can add or remove them.',
       unauthorized: 'Access denied. Sign in to view the shared resources.',
       listTitle: 'Available files',
       refresh: 'Refresh',
@@ -976,7 +977,7 @@ const baseMessages = {
       intro:
         'Documentos do restaurante e relatórios do projeto disponíveis para todos os utilizadores registados.',
       readOnly:
-        'Pode ver e descarregar estes ficheiros. Só os gestores os podem adicionar ou remover.',
+        'Pode ver e descarregar estes ficheiros. Só os administradores os podem adicionar ou remover.',
       unauthorized:
         'Acesso negado. Inicie sessão para ver os recursos partilhados.',
       listTitle: 'Ficheiros disponíveis',
@@ -1041,6 +1042,9 @@ const baseMessages = {
 export const messages = Object.fromEntries(
   Object.entries(baseMessages).map(([language, dictionary]) => [
     language,
-    mergeMessages(dictionary, web07Messages[language] ?? {}),
+    mergeMessages(
+      mergeMessages(dictionary, web07Messages[language] ?? {}),
+      aa06Messages[language] ?? {}
+    ),
   ])
 );
