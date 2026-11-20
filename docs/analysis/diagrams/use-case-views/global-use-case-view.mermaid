@@ -42,6 +42,10 @@ flowchart LR
             UC_Lit(View Lit Kitchen Scene)
             UC_AdjustLight(Adjust Scene Lighting)
         end
+        subgraph PlanningData [AI06: Planning Data]
+            UC_Snapshot(Provide Planning Snapshot)
+            UC_KB(Build Knowledge Base)
+        end
     end
 
     Manager --> UC_Auth
@@ -81,3 +85,6 @@ flowchart LR
     Viz3D -->|renders| UC_Lit
     Viz3D -->|re-renders| UC_AdjustLight
     UC_Planning -->|executes| AI
+    AI -->|pulls| UC_Snapshot
+    AI --> UC_KB
+    UC_Planning -.->|uses| UC_Snapshot

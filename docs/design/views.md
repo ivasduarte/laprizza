@@ -600,6 +600,16 @@ The context, container and component views of the feature, for the Back-End Appl
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md).
 
+#### AI Knowledge Base Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :------- | :---------- | :------------------ | :--- |
+| [UC1 - Provide Planning Snapshot](../flows/ai-knowledge-base/provide-planning-snapshot.md) | The back end builds the planning snapshot from the current data; the Prolog service fetches it with the Manager token (pull) or receives it from the back end (push) | AI Scheduling Module, Back-End Application, Database | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) |
+| [UC2 - Build Knowledge Base](../flows/ai-knowledge-base/build-knowledge-base.md) | The snapshot is validated as a whole and loaded as facts in one transaction, or rejected with 422 | AI Scheduling Module | [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+| [UC3 - Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) | Each calculation gets a new snapshot; the knowledge base is serialized by a mutex and cleared after use | Web Application, Back-End Application, Database, AI Scheduling Module | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+
+The REST API summary, the snapshot format and the facts of the knowledge base are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
+
 ## Non-Functional View
 
 | Attribute                       | Scenario and Expected Result                                                                                                                                                                                                                                           | Architectural Response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Status                                                          |

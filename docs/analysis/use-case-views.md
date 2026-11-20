@@ -40,6 +40,9 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-3)
       - [Flow Mapping](#flow-mapping-14)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-4)
+      - [Flow Mapping](#flow-mapping-15)
 
 ## Actors
 
@@ -407,4 +410,48 @@ flowchart LR
 | **VIS06**  | UC4: Reset Lighting | LaPrizza Manager / Employee | [Reset Lighting](../flows/scene-lighting/reset-lighting.md) |
 
 The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+
+### AI06: Back-End Data and Prolog Knowledge Base
+
+The AI Scheduling Module obtains the business data it needs from the back end, never from the database. There is a single data contract, the planning snapshot of `GET /ai-data/snapshot`, built by the back end from the catalogue and pizza BOM, the stock, the AI scenario (simulated orders and, optionally, its own stock), the forecast and the supplier scenario confirmed in WEB07. Each snapshot records the selected scenario and the origin and version or retrieval time of every input. The snapshot reaches the Prolog service in two ways: in the main path (AI05, used by the Web Application) the back end builds it and sends it in the body of `POST /service/{bom,requirements}` with a service key; in the alternative path the service fetches it itself with the Manager's token when it is called directly on `POST /bom` or `POST /requirements`. In both, the snapshot is validated and loaded as facts for one calculation only, and the facts are removed afterwards. Calculations only read: stock and purchase orders are owned by the back end and are never changed.
+
+```mermaid
+flowchart LR
+    AI([AI Scheduling Module])
+    BE([Back-End Application])
+    Manager([LaPrizza Manager])
+
+    subgraph AI06 [AI06: Back-End Data and Prolog Knowledge Base]
+        direction TB
+        UC1([UC1: Provide Planning Snapshot])
+        UC2([UC2: Build Knowledge Base])
+        UC3([UC3: Refresh Data per Calculation])
+    end
+
+    AI -->|<< pull >>| UC1
+    BE -->|<< push, AI05 >>| UC1
+    AI --> UC2
+    AI --> UC3
+    UC3 -.->|<< include >>| UC1
+    UC3 -.->|<< include >>| UC2
+    Manager -.->|<< initiates via WEB07 / AI05 >>| UC3
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Provide Planning Snapshot** | AI Scheduling Module (pull) / Back-End Application (push) | Returns the planning data of the selected AI scenario and stock mode as one JSON document: products, sizes, pizza BOM per size, aggregates with their classification and composition, pizzas and sizes, stock, simulated orders, forecast, supplier scenario, issues and `meta`. | Authorized access only (`planning:execute`, Manager); no customer data. Quantities in abstract stock units. Missing or invalid BOM consumptions and stock rows are reported in `issues`, never defaulted. `meta` records the snapshot id (hash of the content), one retrieval time and the source and version of the catalogue, stock, orders, forecast and supplier scenario; a snapshot with a scenario is a simulation. Unknown scenario 404, scenario stock missing in scenario mode 400. | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0005](../adr/0005-contract-first-rest-api.md) |
+| **UC2: Build Knowledge Base** | AI Scheduling Module | Validates the snapshot and turns it into Prolog facts with the business identifiers of the back end (products, sizes, BOM, aggregates, stock, orders, forecast, suppliers and offers). | Every problem is collected (missing fields, invalid quantities, duplicates, unknown references, stock of products without stock control, incomplete or nested aggregates, pizzas used as components, purchased aggregates with a composition, invalid forecast or supplier data). With any problem nothing is loaded and the answer is 422 `AI_INVALID_DATA`. Each offer keeps its product, price in EUR, quoted stock units and lead time; a supply limit exists only when given. | [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+| **UC3: Refresh Data per Calculation** | AI Scheduling Module | Every calculation uses a snapshot obtained for it, loads it, calculates and clears the knowledge base. | The snapshot with a scenario is never cached. Loading is serialized (mutex) and done in one transaction, and the facts are always removed at the end, so two calculations never mix versions. If the back end does not answer, the calculation fails (503 or 504) and nothing is calculated with older data. | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AI06**   | UC1: Provide Planning Snapshot | AI Scheduling Module / Back-End Application | [Provide Planning Snapshot](../flows/ai-knowledge-base/provide-planning-snapshot.md) |
+| **AI06**   | UC2: Build Knowledge Base | AI Scheduling Module | [Build Knowledge Base](../flows/ai-knowledge-base/build-knowledge-base.md) |
+| **AI06**   | UC3: Refresh Data per Calculation | AI Scheduling Module | [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) |
+
+The REST API summary, the snapshot format, the facts of the knowledge base and the element catalogue are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
 
