@@ -7,7 +7,8 @@ classDiagram
             +String username
             +String email
             +String passwordHash
-            +boolean active
+            +String status
+            +int tokenVersion
         }
         class Role {
             <<ValueObject>>
@@ -18,6 +19,24 @@ classDiagram
             +String provider
             +String issuer
             +String subject
+        }
+        class AuthSession {
+            <<AggregateRoot>>
+            +long id
+            +String refreshTokenHash
+            +int tokenVersion
+            +date createdAt
+            +date lastUsedAt
+            +date expiresAt
+            +date revokedAt
+        }
+        class PasswordResetToken {
+            <<AggregateRoot>>
+            +long id
+            +String tokenHash
+            +date createdAt
+            +date expiresAt
+            +date usedAt
         }
     }
     namespace Customers {
@@ -32,8 +51,11 @@ classDiagram
         class Address {
             <<ValueObject>>
             +String street
-            +String city
+            +String houseNumber
+            +String complement
             +String postalCode
+            +String city
+            +String district
         }
         class DietaryRestriction {
             <<ValueObject>>
@@ -51,6 +73,14 @@ classDiagram
             +boolean sellable
             +boolean stockControlled
             +isPizzaComponent() boolean
+        }
+        class Aggregate {
+            <<ValueObject>>
+            +String classification
+        }
+        class AggregateItem {
+            <<ValueObject>>
+            +int quantity
         }
         class ProductCategory {
             <<AggregateRoot>>
@@ -129,6 +159,80 @@ classDiagram
             +String resourceType
             +String state
         }
+        class KitchenConfiguration {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +boolean isActive
+        }
+        class AssemblyLineConfiguration {
+            <<AggregateRoot>>
+            +long id
+            +String name
+        }
+    }
+    namespace Forecasts {
+        class Forecast {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +int version
+            +date startDate
+            +date endDate
+            +boolean isActive
+        }
+        class ForecastEntry {
+            <<ValueObject>>
+            +date date
+            +int quantity
+        }
+    }
+    namespace SupplierScenarios {
+        class SupplierScenario {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +int version
+            +boolean simulated
+            +boolean isActive
+        }
+        class Supplier {
+            <<Entity>>
+            +String id
+            +String name
+        }
+        class ScenarioProduct {
+            <<Entity>>
+        }
+        class Offer {
+            <<ValueObject>>
+            +double priceEur
+            +int stockUnits
+            +double leadTimeDays
+            +int supplyLimit
+        }
+    }
+    namespace Planning {
+        class PlanningRun {
+            <<AggregateRoot>>
+            +long id
+            +String kind
+            +String snapshotId
+            +String bomVersion
+            +String status
+            +date createdAt
+        }
+        class PlanningRequest {
+            <<ValueObject>>
+            +String scenarioId
+            +String stockMode
+        }
+        class InputVersion {
+            <<ValueObject>>
+            +String id
+            +String name
+            +int version
+        }
     }
 
     User "1..*" *-- "*" Role : has
@@ -156,3 +260,22 @@ classDiagram
     OrderItem "1" -- "0..*" PreparationActivity : may require
     PreparationActivity "*" -- "*" PreparationActivity : dependsOn
     PreparationActivity "*" -- "*" KitchenResource : uses
+    AuthSession "*" -- "1" User : belongs to
+    PasswordResetToken "*" -- "1" User : resets password of
+    Product "1" *-- "0..1" Aggregate : is an aggregate
+    Aggregate "1" *-- "0..*" AggregateItem : composed of
+    AggregateItem "*" -- "1" Product : item
+    KitchenConfiguration "*" -- "0..1" AssemblyLineConfiguration : places line
+    Forecast "1" *-- "1..*" ForecastEntry : entries
+    ForecastEntry "*" -- "1" Product : product
+    ForecastEntry "*" -- "0..1" PizzaSize : size
+    SupplierScenario "1" *-- "0..*" Supplier : suppliers
+    SupplierScenario "1" *-- "0..*" ScenarioProduct : products
+    ScenarioProduct "*" -- "1" Product : product
+    ScenarioProduct "1" *-- "0..*" Offer : offers
+    Offer "*" -- "1" Supplier : sold by
+    PlanningRun "1" *-- "1" PlanningRequest : request
+    PlanningRun "1" *-- "0..2" InputVersion : forecast, supplierScenario
+    PlanningRun "*" .. "0..1" Forecast : used
+    PlanningRun "*" .. "0..1" SupplierScenario : used
+    PlanningRun "*" -- "0..1" User : requested by

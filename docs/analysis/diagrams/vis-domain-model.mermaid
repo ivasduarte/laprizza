@@ -1,0 +1,127 @@
+classDiagram
+    namespace KitchenConfigurations {
+        class KitchenConfiguration {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +boolean active
+            +activate()
+            +deactivate()
+            +validate()
+        }
+        class KitchenDimensions {
+            <<ValueObject>>
+            +double width
+            +double length
+            +double height
+        }
+        class KitchenElement {
+            <<Entity>>
+            +String elementId
+            +String type
+            +String modelReference
+        }
+        class AssemblyLinePlacement {
+            <<ValueObject>>
+            +long configurationId
+        }
+    }
+    namespace AssemblyLines {
+        class AssemblyLineConfiguration {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +validate()
+        }
+        class LineFootprint {
+            <<ValueObject>>
+            +double width
+            +double length
+            +double height
+        }
+        class AssemblyLineElement {
+            <<Entity>>
+            +String elementId
+            +String type
+            +String modelReference
+            +isProcedural() boolean
+        }
+    }
+    namespace SceneObjects {
+        class Transform {
+            <<ValueObject>>
+            +Vector3 position
+            +Vector3 rotation
+            +Vector3 scale
+        }
+        class Material {
+            <<ValueObject>>
+            +String color
+            +double roughness
+            +double metalness
+            +isTextured() boolean
+        }
+        class TextureMap {
+            <<ValueObject>>
+            +String kind
+            +String url
+            +double repeatX
+            +double repeatY
+        }
+    }
+    namespace SceneLighting {
+        class LightingSetup {
+            <<ValueObject>>
+            +reset()
+        }
+        class LightSource {
+            <<ValueObject>>
+            +String name
+            +String type
+            +boolean enabled
+            +String color
+            +double intensity
+            +double minIntensity
+            +double maxIntensity
+            +boolean castShadow
+            +effectiveIntensity() double
+        }
+        class SpotlightCone {
+            <<ValueObject>>
+            +double cutoffAngle
+            +double penumbra
+        }
+    }
+    namespace Camera {
+        class PerspectiveCamera {
+            <<ValueObject>>
+            +double fieldOfView
+            +Vector3 position
+            +Vector3 target
+        }
+        class CameraLimits {
+            <<ValueObject>>
+            +double minDistance
+            +double maxDistance
+            +double maxPolarAngle
+            +double maxPanOffset
+        }
+    }
+
+    KitchenConfiguration "1" *-- "1" KitchenDimensions : has
+    KitchenConfiguration "1" *-- "0..*" KitchenElement : places
+    KitchenConfiguration "1" *-- "0..1" AssemblyLinePlacement : places line
+    AssemblyLinePlacement "*" -- "1" AssemblyLineConfiguration : references
+    AssemblyLinePlacement "1" *-- "1" Transform : located by
+    AssemblyLineConfiguration "1" *-- "1" LineFootprint : has
+    AssemblyLineConfiguration "1" *-- "1..*" AssemblyLineElement : composed of
+    KitchenElement "1" *-- "1" Transform : located by
+    KitchenElement "1" *-- "0..1" Material : textured with
+    AssemblyLineElement "1" *-- "1" Transform : located by
+    AssemblyLineElement "1" *-- "0..1" Material : textured with
+    Material "1" *-- "0..4" TextureMap : uses
+    LightingSetup "1" *-- "1..*" LightSource : one folder per light
+    LightSource "1" *-- "0..1" SpotlightCone : spotlight
+    LightingSetup "*" .. "1" KitchenDimensions : positions derived from
+    PerspectiveCamera "1" *-- "1" CameraLimits : constrained by
+    PerspectiveCamera "*" .. "1" KitchenDimensions : target at floor centre

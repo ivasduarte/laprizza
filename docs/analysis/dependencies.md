@@ -31,6 +31,26 @@ A class needs to navigate through another to meet its responsibility. The follow
 | `OrderItem`                  | `PreparationActivity` | Association      | No                                          |
 | `PreparationActivity`        | `KitchenResource`     | Association      | No                                          |
 | `PreparationActivity`        | `PreparationActivity` | Dependency       | No                                          |
+| `User`                       | `ExternalIdentity`    | Composition      | No                                          |
+| `AuthSession`                | `User`                | Association      | Yes                                         |
+| `PasswordResetToken`         | `User`                | Association      | Yes                                         |
+| `Product`                    | `Aggregate`           | Composition      | No                                          |
+| `Aggregate`                  | `AggregateItem`       | Composition      | Conditional (only when produced)            |
+| `AggregateItem`              | `Product`             | Association      | Yes                                         |
+| `KitchenConfiguration`       | `AssemblyLineConfiguration` | Association | No                                    |
+| `Forecast`                   | `ForecastEntry`       | Composition      | Yes                                         |
+| `ForecastEntry`              | `Product`             | Association      | Yes                                         |
+| `ForecastEntry`              | `PizzaSize`           | Association      | Conditional (only for pizzas)               |
+| `SupplierScenario`           | `Supplier`            | Composition      | No                                          |
+| `SupplierScenario`           | `ScenarioProduct`     | Composition      | No                                          |
+| `ScenarioProduct`            | `Product`             | Association      | Yes                                         |
+| `ScenarioProduct`            | `Offer`               | Composition      | No                                          |
+| `Offer`                      | `Supplier`            | Association      | Yes                                         |
+| `PlanningRun`                | `PlanningRequest`     | Composition      | Yes                                         |
+| `PlanningRun`                | `InputVersion`        | Composition      | No                                          |
+| `PlanningRun`                | `Forecast`            | Dependency       | No                                          |
+| `PlanningRun`                | `SupplierScenario`    | Dependency       | No                                          |
+| `PlanningRun`                | `User`                | Association      | No                                          |
 
 ***Note:** No User Story from Sprint 1 depends on others from future sprints. The dependency is inverted.*
 
@@ -45,3 +65,7 @@ According to the project's Domain Model, the aggregate dependencies are represen
 - `Stock` and `Kitchen` are not dependent on any other aggregates.
 - `Customers` depends on `Products` as this may maintain information about `DietaryRestriction`.
 - `Orders` depends on everything that is set to be implemented in **Sprint 1**.
+- `Kitchen` also holds the kitchen and assembly line configurations; the kitchen configuration only references a line of the same module, so `Kitchen` still depends on no other module.
+- `Forecasts` depends on `Products` (the product of each entry) and on `Pizza` (the applicable size).
+- `Supplier Scenarios` depends on `Products`, because every offered product must exist in the system.
+- `Planning` depends on `Forecasts` and `Supplier Scenarios` (the versions used by each run) and on `Users` (who requested the run).

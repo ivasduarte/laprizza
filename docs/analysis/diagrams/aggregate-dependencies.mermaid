@@ -2,6 +2,9 @@ flowchart TD
     subgraph users [Users]
         User
         Role
+        ExternalIdentity
+        AuthSession
+        PasswordResetToken
     end
     subgraph customers [Customers]
         Customer
@@ -12,6 +15,8 @@ flowchart TD
         Product
         ProductCategory
         Allergen
+        Aggregate
+        AggregateItem
     end
     subgraph stock [Stock]
         StockInformation
@@ -30,6 +35,23 @@ flowchart TD
     subgraph kitchen [Kitchen]
         PreparationActivity
         KitchenResource
+        KitchenConfiguration
+        AssemblyLineConfiguration
+    end
+    subgraph forecasts [Forecasts]
+        Forecast
+        ForecastEntry
+    end
+    subgraph suppliers [Supplier Scenarios]
+        SupplierScenario
+        Supplier
+        ScenarioProduct
+        Offer
+    end
+    subgraph planning [Planning]
+        PlanningRun
+        PlanningRequest
+        InputVersion
     end
 
     customers -->|via DietaryRestriction| prod
@@ -41,3 +63,9 @@ flowchart TD
     order -->|may preserve a configuration| pizza
     order -->|may require resources| kitchen
     customers -.-> users
+    forecasts -->|daily consumption of| prod
+    forecasts -->|applicable size| pizza
+    suppliers -->|offers for| prod
+    planning -->|forecast version used| forecasts
+    planning -->|supplier scenario version used| suppliers
+    planning -->|requested by| users

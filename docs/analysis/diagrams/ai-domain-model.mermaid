@@ -1,0 +1,249 @@
+classDiagram
+    namespace Products {
+        class Product {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +double price
+            +boolean sellable
+            +boolean stockControlled
+            +boolean isActive
+        }
+        class Aggregate {
+            <<ValueObject>>
+            +String classification
+        }
+        class AggregateItem {
+            <<ValueObject>>
+            +int quantity
+        }
+        class ComponentSizeConfiguration {
+            <<ValueObject>>
+            +double price
+            +int stockUnitsConsumed
+        }
+    }
+    namespace Stock {
+        class StockInformation {
+            <<Entity>>
+            +int quantity
+        }
+    }
+    namespace Pizza {
+        class PizzaSize {
+            <<AggregateRoot>>
+            +long id
+            +String name
+        }
+        class PredefinedPizza {
+            <<AggregateRoot>>
+            +boolean isActive
+        }
+    }
+    namespace Forecasts {
+        class Forecast {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +int version
+            +date startDate
+            +date endDate
+            +boolean isActive
+        }
+        class ForecastEntry {
+            <<ValueObject>>
+            +date date
+            +int quantity
+        }
+    }
+    namespace SupplierScenarios {
+        class SupplierScenario {
+            <<AggregateRoot>>
+            +long id
+            +String name
+            +int version
+            +boolean simulated
+            +boolean isActive
+        }
+        class Supplier {
+            <<Entity>>
+            +String id
+            +String name
+        }
+        class ScenarioProduct {
+            <<Entity>>
+        }
+        class Offer {
+            <<ValueObject>>
+            +double priceEur
+            +int stockUnits
+            +double leadTimeDays
+            +int supplyLimit
+        }
+    }
+    namespace AiScenarios {
+        class AiScenario {
+            <<AggregateRoot>>
+            +long id
+            +String code
+            +String name
+            +String description
+            +int version
+            +boolean simulated
+            +boolean isActive
+        }
+        class ScenarioOrder {
+            <<ValueObject>>
+            +int quantity
+        }
+        class ScenarioStock {
+            <<ValueObject>>
+            +int quantity
+        }
+    }
+    namespace PlanningRuns {
+        class PlanningRun {
+            <<AggregateRoot>>
+            +long id
+            +String kind
+            +String snapshotId
+            +String bomVersion
+            +String stockSource
+            +String status
+            +String requestedBy
+            +date createdAt
+        }
+        class PlanningRequest {
+            <<ValueObject>>
+            +String scenarioId
+            +String stockMode
+            +String forecastId
+            +String supplierScenarioId
+        }
+        class InputVersion {
+            <<ValueObject>>
+            +String id
+            +String name
+            +int version
+        }
+    }
+    namespace AiScheduling {
+        class BomResult {
+            <<ValueObject>>
+            +String status
+            +boolean simulation
+            +boolean feasible
+            +date calculatedAt
+        }
+        class BomItem {
+            <<ValueObject>>
+            +String kind
+            +int required
+            +int requiredDirect
+            +int requiredFromAggregates
+            +int available
+            +int used
+            +int remaining
+            +int shortage
+        }
+        class RequirementsResult {
+            <<ValueObject>>
+            +String status
+            +boolean simulation
+            +date calculatedAt
+            +date startDate
+            +date endDate
+            +date referenceDate
+            +double totalCostEur
+            +int productsToBuy
+            +boolean feasible
+        }
+        class Requirement {
+            <<ValueObject>>
+            +String kind
+            +int required
+            +int available
+            +int shortage
+        }
+        class DailyNeed {
+            <<ValueObject>>
+            +date date
+            +int quantity
+        }
+        class Production {
+            <<ValueObject>>
+            +int toProduce
+        }
+        class Purchase {
+            <<ValueObject>>
+            +int shortage
+            +int covered
+            +int uncovered
+            +double costEur
+            +String status
+        }
+        class Allocation {
+            <<ValueObject>>
+            +date forDate
+            +int quantity
+            +double unitPriceEur
+            +double costEur
+            +date arrivalDate
+            +boolean onTime
+        }
+        class UnmetNeed {
+            <<ValueObject>>
+            +date date
+            +int quantity
+            +String reason
+        }
+        class Warning {
+            <<ValueObject>>
+            +String code
+        }
+    }
+
+    Product "1" -- "0..1" StockInformation : may maintain
+    Product "1" *-- "0..1" Aggregate : is an aggregate
+    Aggregate "1" *-- "0..*" AggregateItem : composed of
+    AggregateItem "*" -- "1" Product : item
+    Product "1" *-- "0..*" ComponentSizeConfiguration : size configurations
+    ComponentSizeConfiguration "*" -- "1" PizzaSize : for
+    PredefinedPizza "1" -- "1" Product : represented by
+    PredefinedPizza "*" -- "1..*" PizzaSize : available in
+    PredefinedPizza "*" -- "1..*" Product : default components
+    Forecast "1" *-- "1..*" ForecastEntry : entries
+    ForecastEntry "*" -- "1" Product : product
+    ForecastEntry "*" -- "0..1" PizzaSize : size
+    SupplierScenario "1" *-- "0..*" Supplier : suppliers
+    SupplierScenario "1" *-- "0..*" ScenarioProduct : products
+    ScenarioProduct "*" -- "1" Product : product
+    ScenarioProduct "1" *-- "0..*" Offer : offers
+    Offer "*" -- "1" Supplier : supplierId
+    AiScenario "1" *-- "0..*" ScenarioOrder : orders
+    AiScenario "1" *-- "0..*" ScenarioStock : stock
+    ScenarioOrder "*" -- "1" Product : pizza
+    ScenarioOrder "*" -- "1" PizzaSize : size
+    ScenarioStock "*" -- "1" Product : product
+    PlanningRun "1" *-- "1" PlanningRequest : request
+    PlanningRun "1" *-- "0..2" InputVersion : forecast, supplierScenario
+    PlanningRequest "*" .. "1" AiScenario : scenarioId
+    PlanningRequest "*" .. "0..1" Forecast : forecastId
+    PlanningRequest "*" .. "0..1" SupplierScenario : supplierScenarioId
+    PlanningRun "1" *-- "0..1" BomResult : result
+    PlanningRun "1" *-- "0..1" RequirementsResult : result
+    BomResult "1" *-- "0..*" BomItem : items
+    BomResult "1" *-- "0..*" Warning : warnings
+    BomItem "*" -- "1" Product : product
+    RequirementsResult "1" *-- "0..*" Requirement : requirements
+    RequirementsResult "1" *-- "0..*" Production : production
+    RequirementsResult "1" *-- "0..*" Purchase : purchases
+    BomResult "1" *-- "0..*" Production : production
+    Requirement "1" *-- "0..*" DailyNeed : needs
+    Production "*" -- "1" Product : product
+    RequirementsResult "1" *-- "0..*" Warning : warnings
+    Requirement "*" -- "1" Product : product
+    Purchase "*" -- "1" Product : product
+    Purchase "1" *-- "0..*" Allocation : allocations
+    Purchase "1" *-- "0..*" UnmetNeed : unmet
+    Allocation "*" -- "1" Supplier : supplierId
