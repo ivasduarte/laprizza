@@ -13,13 +13,18 @@ Requirement: document the folder location and permissions, and audit access; res
 
 The folder is outside `/opt/laprizza/releases`, so deployments and rollbacks do not touch it. It is reachable only through the API, never as a network share.
 
-## Permissions (To be Updated)
+## Permissions
 
-| Actor | List / download | Upload / replace / delete |
+"All authenticated users can read" and "only authorized administrators can write" (SYS04). The website role that administers is `ADMINISTRATOR` (AA06); the Manager reads but does not write. This is a team decision, because Table 1 does not list the shared folder.
+
+| Actor | List / download (`resources:read`) | Upload / replace / delete (`resources:write`) |
 |---|---|---|
 | Guest (no session) | No (`401`) | No (`401`) |
-| Customer, Employee | Yes | No (`403`) |
-| Manager | Yes | Yes |
+| Authenticated user without roles | No (`403`, Guest permissions only, AA03) | No (`403`) |
+| Customer, Employee, Manager | Yes | No (`403`) |
+| Administrator | Yes | Yes |
+
+A removed role or a disabled account loses the access on its next request (roles are read on every request, AA03/AA04).
 
 ## Audit
 
@@ -42,4 +47,4 @@ Retention: 90 days (persistent journal, `MaxRetentionSec=90day`).
 
 ## Restricted content
 
-Customer records, dietary profiles, credentials, backup contents and other restricted information must not be placed in the folder. Only the Manager can add files, only a fixed list of file types is accepted, and the upload form displays this warning. The file name is checked wether or not it contains certain keywords. Furthermore, the bytes are validated to ensure file types are not changed (subtmit a .bson file with a .pdf extension).
+Customer records, dietary profiles, credentials, backup contents and other restricted information must not be placed in the folder. Only an Administrator can add files, only a fixed list of file types is accepted, and the upload form displays this warning. The file name is checked wether or not it contains certain keywords. Furthermore, the bytes are validated to ensure file types are not changed (subtmit a .bson file with a .pdf extension).

@@ -1,5 +1,7 @@
 # UC2 - Register User
 
+> This diagram shows the Sprint 1 flow (active account with a password chosen by a Manager). Since AA06, `POST /users` is for the Administrator, refuses a password and creates an inactive account with an activation invitation: see [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md).
+
 | Attribute | Value |
 |---|---|
 | C4 view | Dynamic diagram, Level 3 (Component) |

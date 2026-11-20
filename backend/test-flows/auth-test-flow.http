@@ -1,10 +1,15 @@
 @baseUrl = http://localhost:3000/api/v2
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
-@userPassword = StrongPassword123!
+# Contas de desenvolvimento (AA06): npm run seed:dev-users -- --confirm com
+# SEED_DEV_PASSWORD=LaPrizzaDev_013DI! (desde a AA06 não se criam contas com password por API).
+@devPassword = LaPrizzaDev_013DI!
+# manager.employee@laprizza.pt: sessões, alteração de password e desativação (reposto no 7.4).
+# noroles@laprizza.pt: espera progressiva (fica em espera 1 minuto depois do flow).
+@userEmail = manager.employee@laprizza.pt
+@userPassword = LaPrizzaDev_013DI!
 @newUserPassword = NewStrongPassword123!
-@dynamicEmail = aa01_{{$timestamp}}@laprizza.pt
-@lockEmail = aa01_lock_{{$timestamp}}@laprizza.pt
+@lockUserEmail = noroles@laprizza.pt
 @ghostEmail = ghost_{{$timestamp}}@laprizza.pt
 # 43 base64url characters: valid format, but does not exist
 @fakeResetToken = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -106,26 +111,7 @@ Authorization: Bearer abc.def.ghi
 ?? status == 401
 ?? js response.parsedBody.error.code == TOKEN_INVALID
 
-### 3.3 Criar utilizador de teste EMPLOYEE (201 Created)
-# @name createUser
-POST {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "email": "{{dynamicEmail}}",
-  "password": "{{userPassword}}",
-  "roles": ["EMPLOYEE"]
-}
-
-?? status == 201
-?? js response.parsedBody.status == active
-
-### Extração do estado (Email fixo e ID)
-@userId = {{createUser.id}}
-@userEmail = {{createUser.email}}
-
-### 3.4 Login do Employee - sessão A (200 OK)
+### 3.3 Login do Manager+Employee do seed - sessão A (200 OK)
 # @name loginUserA
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -139,8 +125,9 @@ Content-Type: application/json
 ?? js response.parsedBody.user.roles.includes('EMPLOYEE') == true
 
 @userTokenA = {{loginUserA.accessToken}}
+@userId = {{loginUserA.user.id}}
 
-### 3.5 Login do Employee - sessão B (200 OK)
+### 3.4 Login da mesma conta - sessão B (200 OK)
 # @name loginUserB
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -154,7 +141,7 @@ Content-Type: application/json
 
 @userTokenB = {{loginUserB.accessToken}}
 
-### 3.6 Employee numa rota de Manager (403 Forbidden - sessão válida, sem permissão)
+### 3.5 Rota de Administrator sem essa role (403 Forbidden - sessão válida, sem permissão)
 GET {{baseUrl}}/users
 Authorization: Bearer {{userTokenA}}
 
@@ -360,6 +347,19 @@ Content-Type: application/json
 ?? status == 401
 ?? js response.parsedBody.error.code == INVALID_CREDENTIALS
 
+### 7.4 Repor a conta do seed: reativar (já foi ativada antes) e voltar à password do seed (200 OK)
+PATCH {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isActive": true,
+  "password": "{{devPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.status == active
+
 
 ### ==========================================
 ### 8: RECUPERAÇÃO DE PASSWORD
@@ -421,21 +421,7 @@ Content-Type: application/json
 ### 9: ESPERA PROGRESSIVA (falhas consecutivas)
 ### ==========================================
 
-### 9.1 Criar utilizador para o teste de bloqueio (201 Created)
-# @name createLockUser
-POST {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "email": "{{lockEmail}}",
-  "password": "{{userPassword}}",
-  "roles": ["EMPLOYEE"]
-}
-
-?? status == 201
-
-@lockUserEmail = {{createLockUser.email}}
+# 9.1 A conta do teste de bloqueio é a noroles@laprizza.pt do seed (@lockUserEmail).
 
 ### 9.2 1.ª falha (401)
 POST {{baseUrl}}/auth/login
@@ -465,7 +451,7 @@ Content-Type: application/json
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
-{ "email": "{{lockUserEmail}}", "password": "{{userPassword}}" }
+{ "email": "{{lockUserEmail}}", "password": "{{devPassword}}" }
 
 ?? status == 429
 ?? js response.parsedBody.error.code == TOO_MANY_ATTEMPTS

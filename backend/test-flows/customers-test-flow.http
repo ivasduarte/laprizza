@@ -2,6 +2,11 @@
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
 @dynamicEmail = cliente_{{$timestamp}}@laprizza.pt
+# Contas de desenvolvimento (AA06): npm run seed:dev-users -- --confirm com
+# SEED_DEV_PASSWORD=LaPrizzaDev_013DI! (desde a AA06 não se criam contas com password por API).
+@devPassword = LaPrizzaDev_013DI!
+# Registo de cliente ligado à conta customer@laprizza.pt (DEV_CUSTOMER em scripts/seed-dev-users.js)
+@devCustomerId = c0c0c00000000000000000d1
 
 ### ==========================================
 ### 1: AUTENTICAÇÃO
@@ -241,34 +246,17 @@ Content-Type: application/json
 ### 6: PROPRIEDADE DOS DADOS (AA05)
 ### ==========================================
 
-### 6. POST Conta de cliente ligada ao cliente criado (201 Created)
-# @name createCustomerAccount
-POST {{baseUrl}}/users
-Authorization: Bearer {{adminToken}}
-Content-Type: application/json
-
-{
-  "email": "conta_{{$timestamp}}@laprizza.pt",
-  "password": "StrongPassword123!",
-  "roles": ["CUSTOMER"],
-  "customerId": "{{customerId}}"
-}
-
-?? status == 201
-
-### 6.1 Login da conta de cliente (200 OK)
+### 6.1 Login da conta de cliente (conta customer@laprizza.pt do seed, ligada ao DEV_CUSTOMER)
 # @name loginCustomer
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{createCustomerAccount.email}}",
-  "password": "StrongPassword123!"
+  "email": "customer@laprizza.pt",
+  "password": "{{devPassword}}"
 }
-
 ?? status == 200
 
-### Token do cliente
 @customerToken = {{loginCustomer.accessToken}}
 
 ### 6.2 GET Os próprios dados (200 OK - o id vem da sessão)
@@ -276,7 +264,7 @@ GET {{baseUrl}}/customers/me
 Authorization: Bearer {{customerToken}}
 
 ?? status == 200
-?? js response.parsedBody.id == {{customerId}}
+?? js response.parsedBody.id == {{devCustomerId}}
 
 ### 6.3 GET Cliente por id, mesmo o próprio (403 Forbidden - só pela /me)
 GET {{baseUrl}}/customers/{{customerId}}

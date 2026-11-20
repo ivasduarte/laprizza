@@ -5,7 +5,8 @@ const mockManagerSession = {
   user: {
     id: '1',
     email: 'admin@laprizza.pt',
-    roles: ['MANAGER'],
+    // SYS04: only administrators write to the shared folder
+    roles: ['ADMINISTRATOR'],
     permissions: ['resources:read', 'resources:write'],
   },
 };

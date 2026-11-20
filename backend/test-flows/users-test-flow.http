@@ -1,7 +1,12 @@
 @baseUrl = http://localhost:3000/api/v2
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
-@dynamicEmail = real_{{$timestamp}}@laprizza.pt
+@dynamicEmail = aa06_{{$timestamp}}@laprizza.pt
+# Contas de desenvolvimento (AA06): npm run seed:dev-users -- --confirm com
+# SEED_DEV_PASSWORD=LaPrizzaDev_013DI! (desde a AA06 não se criam contas com password por API).
+@devPassword = LaPrizzaDev_013DI!
+# manager.employee@laprizza.pt: alteração de password e desativação (reposta no 6.3).
+@seedUserEmail = manager.employee@laprizza.pt
 
 ### ==========================================
 ### 1: AUTENTICAÇÃO
@@ -56,10 +61,11 @@ Content-Type: application/json
 
 
 ### ==========================================
-### 2: GESTÃO E PROVA DE PASSWORD REAL E ÍNDICES
+### 2: CRIAÇÃO DE CONTA E CONVITE DE ATIVAÇÃO (AA06)
 ### ==========================================
 
-### 2. POST Utilizador Novo (201 Created)
+### 2. POST Conta nova, sem password (201 Created - inativa, CUSTOMER automático, convite enviado)
+# O convite aparece no Mailpit (http://localhost:8025); "sent" é false se o Mailpit não estiver a correr.
 # @name createUser
 POST {{baseUrl}}/users
 Authorization: Bearer {{token}}
@@ -67,60 +73,61 @@ Content-Type: application/json
 
 {
   "email": "{{dynamicEmail}}",
-  "password": "StrongPassword123!",
   "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201
+?? js response.parsedBody.status == inactive
+?? js response.parsedBody.pendingActivation == true
+?? js response.parsedBody.roles.includes('CUSTOMER') == true
+?? js response.parsedBody.roles.includes('EMPLOYEE') == true
+?? js response.parsedBody.invitation.expiresAt exists
 
 ### Extração do estado (Email Fixo e ID)
 @userId = {{createUser.id}}
-
 @createdEmail = {{createUser.email}}
 
-### 2.1 Login do utilizador criado (200 OK)
+### 2.1 POST com password (400 Bad Request - a password é definida pelo utilizador na ativação)
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "outro_{{$timestamp}}@laprizza.pt",
+  "password": "StrongPassword123!"
+}
+
+?? status == 400
+
+### 2.2 Login da conta nova (401 Unauthorized - ainda não tem password nem está ativa)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
-{ 
-  "email": "{{createdEmail}}", 
-  "password": "StrongPassword123!" 
+{
+  "email": "{{createdEmail}}",
+  "password": "StrongPassword123!"
 }
 
-?? status == 200
+?? status == 401
 
-### 2.2 PATCH password (200 OK)
+### 2.3 Ativar a conta pelo Administrator (409 Conflict - só pelo convite)
 PATCH {{baseUrl}}/users/{{userId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ 
-  "password": "NewStrongPassword123!" 
+{
+  "isActive": true
 }
 
-?? status == 200
+?? status == 409
+?? js response.parsedBody.error.code == ACTIVATION_REQUIRED
 
-### 2.3 Login com a password nova (200 OK)
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
+### 2.4 POST Novo convite (201 Created - o anterior deixa de funcionar)
+POST {{baseUrl}}/users/{{userId}}/invitation
+Authorization: Bearer {{token}}
 
-{ 
-  "email": "{{createdEmail}}", 
-  "password": "NewStrongPassword123!" 
-}
-
-?? status == 200
-
-### 2.4 Login com a password antiga (401 Unauthorized)
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{ 
-  "email": "{{createdEmail}}", 
-  "password": "StrongPassword123!" 
-}
-
-?? status == 401
+?? status == 201
+?? js response.parsedBody.expiresAt exists
 
 ### 3. POST Duplicado usando o email fixo (409 Conflict - Prova índice unique do email)
 POST {{baseUrl}}/users
@@ -129,7 +136,6 @@ Content-Type: application/json
 
 {
   "email": "{{createdEmail}}",
-  "password": "StrongPassword123!",
   "roles": ["EMPLOYEE"]
 }
 
@@ -143,7 +149,6 @@ Content-Type: application/json
 {
   "email": "outro_email_{{$timestamp}}@laprizza.pt",
   "username": "admin",
-  "password": "StrongPassword123!",
   "roles": ["EMPLOYEE"]
 }
 
@@ -155,16 +160,22 @@ Content-Type: application/json
 ### ==========================================
 
 ### 4. GET Lista
-# @name list
 GET {{baseUrl}}/users
 Authorization: Bearer {{token}}
 
 ?? status == 200
 
-### Extração do Admin ID (Confirmar visualmente se é o índice 0)
-@adminId = {{list[0].id}}
+### 4.1 GET Sessão atual (para obter o id do Admin)
+# @name me
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
 
-### 4.1 PATCH Auto-proteção do Admin (403 Forbidden)
+?? status == 200
+?? js response.parsedBody.roles.includes('ADMINISTRATOR') == true
+
+@adminId = {{me.id}}
+
+### 4.2 PATCH Auto-proteção do Admin (403 Forbidden)
 PATCH {{baseUrl}}/users/{{adminId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -193,40 +204,109 @@ Authorization: Bearer {{token}}
 
 ?? status == 400
 
-### 5.3 PUT Adicionar role (200 OK)
-PUT {{baseUrl}}/users/{{userId}}/roles/CUSTOMER
+### 5.3 PUT Adicionar role (200 OK - sem nova ativação)
+PUT {{baseUrl}}/users/{{userId}}/roles/MANAGER
 Authorization: Bearer {{token}}
 
 ?? status == 200
-?? js response.parsedBody.roles.includes('CUSTOMER') == true
+?? js response.parsedBody.roles.includes('MANAGER') == true
 
 ### 5.4 PUT Role desconhecida (400 Bad Request)
-PUT {{baseUrl}}/users/{{userId}}/roles/ADMINISTRATOR
+PUT {{baseUrl}}/users/{{userId}}/roles/ROOT
 Authorization: Bearer {{token}}
 
 ?? status == 400
 
 ### 5.5 DELETE Remover role (200 OK)
-DELETE {{baseUrl}}/users/{{userId}}/roles/CUSTOMER
+DELETE {{baseUrl}}/users/{{userId}}/roles/MANAGER
 Authorization: Bearer {{token}}
 
 ?? status == 200
-?? js response.parsedBody.roles.includes('CUSTOMER') == false
+?? js response.parsedBody.roles.includes('MANAGER') == false
 
-### 5.6 PUT Alterar as próprias roles (403 Forbidden - AA05: SELF_ROLE_CHANGE)
+### 5.6 PUT Alterar as próprias roles (403 Forbidden - SELF_ROLE_CHANGE)
 PUT {{baseUrl}}/users/{{adminId}}/roles/EMPLOYEE
 Authorization: Bearer {{token}}
 
 ?? status == 403
 ?? js response.parsedBody.error.code == SELF_ROLE_CHANGE
 
+### 5.7 GET Histórico de roles (200 OK - CUSTOMER pelo processo AA03, EMPLOYEE e MANAGER pelo Admin)
+GET {{baseUrl}}/users/{{userId}}/role-history
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js response.parsedBody.length >= 4
+?? js response.parsedBody[0].actor.userId == {{adminId}}
+
+### 5.8 GET Roles que o Administrator pode atribuir (200 OK)
+GET {{baseUrl}}/users/assignable-roles
+Authorization: Bearer {{token}}
+
+?? status == 200
+?? js response.parsedBody.roles.includes('ADMINISTRATOR') == true
+
+### 5.9 Login de um Manager sem Administrator (conta manager@laprizza.pt do seed)
+# @name loginManager
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@laprizza.pt",
+  "password": "{{devPassword}}"
+}
+
+?? status == 200
+
+### 5.10 O Manager não administra utilizadores (403 Forbidden - AA06)
+GET {{baseUrl}}/users
+Authorization: Bearer {{loginManager.accessToken}}
+
+?? status == 403
+
 
 ### ==========================================
-### 4: DESATIVAÇÃO
+### 4: PASSWORD E DESATIVAÇÃO (conta do seed, reposta no fim)
 ### ==========================================
 
-### 6. PATCH Desativar Utilizador
-PATCH {{baseUrl}}/users/{{userId}}
+### 6. Login da conta do seed (200 OK)
+# @name loginSeedUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{seedUserEmail}}",
+  "password": "{{devPassword}}"
+}
+
+?? status == 200
+
+@seedUserId = {{loginSeedUser.user.id}}
+
+### 6.1 PATCH password pelo Administrator (200 OK)
+PATCH {{baseUrl}}/users/{{seedUserId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "password": "NewStrongPassword123!"
+}
+
+?? status == 200
+
+### 6.2 Login com a password antiga (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{seedUserEmail}}",
+  "password": "{{devPassword}}"
+}
+
+?? status == 401
+
+### 6.3 PATCH Desativar a conta (200 OK - sessões e convites pendentes revogados)
+PATCH {{baseUrl}}/users/{{seedUserId}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -235,15 +315,29 @@ Content-Type: application/json
 }
 
 ?? status == 200
+?? js response.parsedBody.status == disabled
 
-### 7. Login de Conta Desativada com a nova password (403 Forbidden - AA01: ACCOUNT_DISABLED)
+### 7. Login de Conta Desativada com a nova password (403 Forbidden - ACCOUNT_DISABLED)
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{createdEmail}}",
+  "email": "{{seedUserEmail}}",
   "password": "NewStrongPassword123!"
 }
 
 ?? status == 403
 ?? js response.parsedBody.error.code == ACCOUNT_DISABLED
+
+### 7.1 Repor a conta do seed: reativar (já tinha sido ativada) e voltar à password do seed (200 OK)
+PATCH {{baseUrl}}/users/{{seedUserId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "isActive": true,
+  "password": "{{devPassword}}"
+}
+
+?? status == 200
+?? js response.parsedBody.status == active

@@ -8,6 +8,8 @@ The Authentication aggregate covers how a user proves their identity (login), ho
 
 > How roles are assigned to new accounts and resolved on every login, refresh and request (AA03) is documented in [Role Resolution (AA03)](./role-resolution.md).
 
+> The Administrator role, role changes with their records and the activation invitations (AA06) are documented in [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md). Since AA06, `POST /users` is for the Administrator and creates an inactive account without a password.
+
 Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end API** container (2 diagrams). They were converted from the original PlantUML sequence diagrams.
 
 ## Diagrams
@@ -18,6 +20,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 | [UC2 - Register User](./register-user.md) | `POST /users` | MANAGER | 201 Created | `register.puml` |
 | [Session Handling (AA04)](./session-handling.md) | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Public (login, refresh), authenticated (logout) | 200 OK, 204 No Content | - |
 | [External Authentication (AA02)](./external-authentication.md) | `GET /auth/external/providers`, `GET /auth/external/{provider}/login`, `GET /auth/external/{provider}/callback` | Public (no authentication) | 302 to the SPA (`status=success`, cookie `lp_rt`) | - |
+| [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md) | `/users`, `/users/{id}`, `/users/{id}/roles/{role}`, `/users/{id}/role-history`, `/users/{id}/invitation` | ADMINISTRATOR | 200 OK, 201 Created | - |
 | [Role Resolution (AA03)](./role-resolution.md) | `POST /users`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, external callback | As in each endpoint | 403 `NO_ACTIVE_ROLE`, 503 `ROLES_UNAVAILABLE` on failure | - |
 
 ## Business rules shown in the diagrams
@@ -30,6 +33,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 - A new external user gets an inactive account with the role `CUSTOMER` and no session. An e-mail that already belongs to another user is refused (no automatic linking).
 - A successful external login creates the same session as the local login (`establishSession`). The token never appears in a URL.
 - Every new account gets the role `CUSTOMER`, in addition to the roles requested by the Manager. Roles are never taken from the identity provider or the client.
+- User administration belongs to the `ADMINISTRATOR` role (AA06). New accounts are inactive and receive a unique, expiring, single-use activation invitation; every role change is recorded with its responsible user or system process and time.
 - Roles are read from the database on every login, refresh and protected request. An account without an active role gets 403 `NO_ACTIVE_ROLE` and no session. If the roles cannot be read, the request fails closed with 503 `ROLES_UNAVAILABLE`.
 
 ## Notation key

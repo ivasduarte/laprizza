@@ -14,9 +14,10 @@ const PASSWORD = 'StrongPassword123!';
 const PASSWORD_HASH = await passwordHasher.hash(PASSWORD);
 
 const USERS = [
-  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['MANAGER'] },
+  { _id: 'abcdef000000000000000001', email: 'admin@laprizza.pt', roles: ['ADMINISTRATOR'] },
   { _id: 'abcdef000000000000000002', email: 'emp@laprizza.pt', roles: ['EMPLOYEE'] },
   { _id: 'abcdef000000000000000003', email: 'customer@laprizza.pt', roles: ['CUSTOMER'] },
+  { _id: 'abcdef000000000000000004', email: 'mgr@laprizza.pt', roles: ['MANAGER'] },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -125,7 +126,7 @@ test('API /shared-resources requires authentication', async (t) => {
   assert.equal(storage.remove.mock.callCount(), 0);
 });
 
-test('API /shared-resources RBAC: customers, staff and managers read, only MANAGER writes', async (t) => {
+test('API /shared-resources RBAC (SYS04): every role reads, only ADMINISTRATOR writes', async (t) => {
   const { server, port, storage } = await setupTestServer();
   t.after(() => {
     server.close();
@@ -137,7 +138,16 @@ test('API /shared-resources RBAC: customers, staff and managers read, only MANAG
   ]);
 
   const empRequest = await loginAs(port, 'emp@laprizza.pt');
-  const managerRequest = await loginAs(port, 'admin@laprizza.pt');
+  const adminRequest = await loginAs(port, 'admin@laprizza.pt');
+  const managerRequest = await loginAs(port, 'mgr@laprizza.pt');
+
+  // The Manager reads but no longer writes (SYS04: only administrators write to the folder)
+  assert.equal((await managerRequest('GET', '/shared-resources')).status, 200);
+  assert.equal(
+    (await managerRequest('PUT', '/shared-resources/manual.txt', { body: 'conteudo' })).status,
+    403,
+  );
+  assert.equal((await managerRequest('DELETE', '/shared-resources/manual.txt')).status, 403);
 
   // Customers may read the shared resources (team decision), but never change them
   const customerRequest = await loginAs(port, 'customer@laprizza.pt');
@@ -162,10 +172,11 @@ test('API /shared-resources RBAC: customers, staff and managers read, only MANAG
   assert.equal(storage.save.mock.callCount(), 0);
   assert.equal(storage.remove.mock.callCount(), 0);
 
-  const putManager = await managerRequest('PUT', '/shared-resources/manual.txt', {
+  assert.equal((await adminRequest('GET', '/shared-resources')).status, 200);
+  const putAdmin = await adminRequest('PUT', '/shared-resources/manual.txt', {
     body: 'conteudo',
   });
-  assert.equal(putManager.status, 201);
+  assert.equal(putAdmin.status, 201);
   assert.equal(storage.save.mock.callCount(), 1);
 });
 
@@ -299,12 +310,12 @@ test('API /shared-resources records every access in the security log', async (t)
   });
 
   const empRequest = await loginAs(port, 'emp@laprizza.pt');
-  const managerRequest = await loginAs(port, 'admin@laprizza.pt');
+  const adminRequest = await loginAs(port, 'admin@laprizza.pt');
 
-  await managerRequest('GET', '/shared-resources');
-  await managerRequest('PUT', '/shared-resources/manual.txt', { body: 'conteudo' });
+  await adminRequest('GET', '/shared-resources');
+  await adminRequest('PUT', '/shared-resources/manual.txt', { body: 'conteudo' });
   storage.remove.mock.mockImplementation(async () => false);
-  await managerRequest('DELETE', '/shared-resources/missing.txt');
+  await adminRequest('DELETE', '/shared-resources/missing.txt');
 
   const pick = ({ action, file, result }) => ({ action, file, result });
   const entries = auditEntries(securityLogger);
