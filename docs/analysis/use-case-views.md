@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration user story (WEB06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration and AI Planning user stories (WEB06, WEB07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -31,6 +31,9 @@ This document shows who uses the LaPrizza information system and which business 
     - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
       - [Use Case Descriptions](#use-case-descriptions)
       - [Flow Mapping](#flow-mapping-11)
+    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
+      - [Use Case Descriptions](#use-case-descriptions-1)
+      - [Flow Mapping](#flow-mapping-12)
 
 ## Actors
 
@@ -41,6 +44,7 @@ This document shows who uses the LaPrizza information system and which business 
 | **Employee**         | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas). |
 | **Customer**         | External client interacting with the system to consult the catalog or register their data.                        |
 | **3D Visualization Module** | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen. |
+| **AI Scheduling Module** | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser. |
 
 ## Use Cases Diagram
 
@@ -247,3 +251,73 @@ flowchart LR
 | **WEB06**  | UC6: Delete Configuration                | LaPrizza Manager                                      | [Delete Configuration](../flows/kitchen-configuration/delete-configuration.md)                                                                             |
 
 The C4 context, container and component views of the feature are in [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).
+
+### WEB07: Artificial Intelligence Configuration and Execution
+
+The AI configuration and execution page lets a Manager prepare the inputs of the requirements planning and run it through the AI Scheduling Module. The Manager creates, consults, edits and deactivates daily product-consumption forecasts, exports the products as JSON, imports a supplier scenario prepared by hand or with an LLM after inspecting it, executes a saved forecast version with a chosen supplier scenario, and consults every saved result together with the versions of the inputs it used. Forecasts and supplier scenarios are immutable and versioned: an edit saves the next version and a delete is a deactivation, so earlier results keep their meaning. Every calculation is a simulation: it never changes the stored stock nor creates purchase orders. The page and all its endpoints are restricted to the Manager: the back end checks a permission on every request (403 otherwise), the route `/ai` requires `planning:execute` and the navigation hides the page from other users. The accepted supplier JSON format is in [Supplier Scenario JSON Format](../flows/ai-planning/supplier-json-format.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph WEB07 [WEB07: Artificial Intelligence Configuration and Execution]
+        direction TB
+        UC1([UC1: Create Forecast])
+        UC2([UC2: List and Consult Forecasts])
+        UC3([UC3: Edit Forecast - new version])
+        UC4([UC4: Delete - Deactivate Forecast])
+        UC5([UC5: Export Products])
+        UC6([UC6: Import Supplier Scenario])
+        UC7([UC7: List and Consult Supplier Scenarios])
+        UC8([UC8: Deactivate Supplier Scenario])
+        UC9([UC9: Execute Forecast])
+        UC10([UC10: Consult Planning Results])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    Manager --> UC6
+    Manager --> UC7
+    Manager --> UC8
+    Manager --> UC9
+    Manager --> UC10
+
+    UC3 -.->|<< extend >>| UC1
+    UC9 -->|<< executes >>| AI
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Create Forecast** | LaPrizza Manager | Creates a forecast: name, period (start and end dates) and daily entries (date, sellable product, size when the product is a pizza, quantity). The page checks the form with the same rules as the back end before sending it. | Quantities are non-negative integers and omitted entries mean zero consumption. Every rule is checked and all problems are returned together: real dates, end not before start, at least one entry, dates inside the period, known and sellable product, size required for a predefined pizza and only one of its sizes, no size for other products, no duplicate date/product/size. The back end assigns the version (1, or the next one of the same name, ignoring case); a `version` sent by the client is ignored. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0005](../adr/0005-contract-first-rest-api.md) |
+| **UC2: List and Consult Forecasts** | LaPrizza Manager | Lists the active forecasts, grouped by name with every active version (newest first, tagged "Latest"), and shows one version with its entries, totals and the "omitted entries mean zero" note. | Only active versions are listed or returned; a deactivated or unknown id answers 404. The page builds the detail from the list; `GET /forecasts/{id}` is available through the API. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| **UC3: Edit Forecast (new version)** | LaPrizza Manager | Opens the editor prefilled with an existing version and saves the changes as the next version of the same name. | The name is read-only in the editor. Saving is a `POST` with the same name and the same rules as UC1; the edited version is never changed, so the results calculated with it stay linked to it. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| **UC4: Delete (Deactivate) Forecast** | LaPrizza Manager | Removes a forecast version from the list after a confirmation dialog. | Soft delete: only `{ "isActive": false }` is accepted. The document stays in the database, the saved results keep its reference, its version number is never reused, and it can no longer be chosen for a new execution. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| **UC5: Export Products** | LaPrizza Manager | Downloads the products that can be bought as a JSON file, the input to prepare the supplier file manually or with an LLM. | Includes raw materials, purchased aggregates and stock-controlled products sold directly; excludes produced aggregates and products without stock control (pizzas). Each product has its id, name, kind and the abstract stock unit; the selling price is optional and never excludes a product. Always a fresh export. | [ADR-0035](../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| **UC6: Import Supplier Scenario** | LaPrizza Manager | Pastes or loads a supplier JSON file, inspects it (parse, local checks and a server dry-run that stores nothing), reviews the preview and confirms to save it. | Suppliers with unique ids (name optional); products that exist, each listed once, with offers from listed suppliers, at most one per supplier; offer price in EUR ≥ 0, positive integer stock units, lead time in days ≥ 0, optional supply limit. Missing fields and invalid values are rejected with their path. A rejected file saves nothing, so the previous scenario stays in use. Saved offers are always marked simulated. Versioned like the forecasts. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0035](../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| **UC7: List and Consult Supplier Scenarios** | LaPrizza Manager | Lists the active supplier scenarios and shows the offers of one. | Products without offers, or exported products missing from the scenario, are shown as "No configured supplier"; every offer is tagged "Simulated". | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| **UC8: Deactivate Supplier Scenario** | LaPrizza Manager | Removes a supplier scenario version from the list after a confirmation dialog. | Same soft delete as UC4. Saved results keep their reference; the scenario is no longer the default for new executions. | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| **UC9: Execute Forecast** | LaPrizza Manager | Runs the requirements planning of a chosen forecast version with a chosen supplier scenario (by default the latest active ones) and shows daily needs, production, replenishment by product, the daily purchase plan with suppliers and expected delivery dates, unmet needs and warnings. | The back end builds the input snapshot (catalogue and BOM, stock, AI scenario, forecast, supplier scenario) and calls the AI Scheduling Module with a service key. The calculation is synchronous and read-only: stock and the scenario stock are never changed. The page shows progress, sends one request per click and maps each failure to invalid input, missing information or service unavailable. Only a successful calculation is saved as a run. | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| **UC10: Consult Planning Results** | LaPrizza Manager | Lists the saved results, optionally for one forecast version, and opens the full plan of one of them. | Each run records the request, the forecast and supplier scenario versions, the snapshot id, the BOM version, the stock source and the full result, taken from the snapshot built by the back end. The list (100 most recent) has no full result; the detail has it. | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **WEB07**  | UC1: Create Forecast | LaPrizza Manager | [Create Forecast](../flows/ai-planning/create-forecast.md) |
+| **WEB07**  | UC2: List and Consult Forecasts | LaPrizza Manager | [List and Consult Forecasts](../flows/ai-planning/list-and-consult-forecasts.md) |
+| **WEB07**  | UC3: Edit Forecast (new version) | LaPrizza Manager | [Edit Forecast](../flows/ai-planning/edit-forecast.md) |
+| **WEB07**  | UC4: Delete (Deactivate) Forecast | LaPrizza Manager | [Deactivate Forecast](../flows/ai-planning/deactivate-forecast.md) |
+| **WEB07**  | UC5: Export Products | LaPrizza Manager | [Export Products](../flows/ai-planning/export-products.md) |
+| **WEB07**  | UC6: Import Supplier Scenario | LaPrizza Manager | [Import Supplier Scenario](../flows/ai-planning/import-supplier-scenario.md) |
+| **WEB07**  | UC7: List and Consult Supplier Scenarios | LaPrizza Manager | [List and Consult Supplier Scenarios](../flows/ai-planning/list-and-consult-supplier-scenarios.md) |
+| **WEB07**  | UC8: Deactivate Supplier Scenario | LaPrizza Manager | [Deactivate Supplier Scenario](../flows/ai-planning/deactivate-supplier-scenario.md) |
+| **WEB07**  | UC9: Execute Forecast | LaPrizza Manager | [Execute Forecast](../flows/ai-planning/execute-forecast.md) |
+| **WEB07**  | UC10: Consult Planning Results | LaPrizza Manager | [Consult Planning Results](../flows/ai-planning/consult-planning-results.md) |
+
+The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md); the container interactions of the execution are in the Level 2 Process View of [Views](../design/views.md).
