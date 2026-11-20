@@ -37,6 +37,9 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+      - [Use Case Descriptions](#use-case-descriptions-3)
+      - [Flow Mapping](#flow-mapping-14)
 
 ## Actors
 
@@ -356,3 +359,52 @@ flowchart LR
 | **VIS05**  | UC1: View Lit Kitchen Scene | LaPrizza Manager / Employee | [View Lit Kitchen Scene](../flows/scene-lighting/view-lit-kitchen-scene.md) |
 
 The light sources, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+
+### VIS06: Interactive Light Controls
+
+The viewer has a lighting panel that lets the user switch each light source on and off and change its colour and intensity, plus the cutoff angle and penumbra of the two spotlights. The panel is built with lil-gui (the build bundled with Three.js), has a title "Lighting", is open by default and sits in the top-right corner of the viewer, with one folder per light source and a Reset button. The light positions stay fixed (VIS05). The settings live only in the browser: they are not stored, call no endpoint and go back to the defaults every time the viewer is mounted. Like the viewer, the panel is shown to every user with the `kitchen:read` permission (Manager).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS06 [VIS06: Interactive Light Controls]
+        direction TB
+        UC1([UC1: Switch a Light On/Off])
+        UC2([UC2: Change Light Colour and Intensity])
+        UC3([UC3: Adjust Spotlight Cutoff Angle and Penumbra])
+        UC4([UC4: Reset Lighting])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Viz3D -->|<< re-renders >>| UC1
+    Viz3D -->|<< re-renders >>| UC2
+    Viz3D -->|<< re-renders >>| UC3
+    Viz3D -->|<< re-renders >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Switch a Light On/Off** | LaPrizza Manager / Employee | Switches a light source on or off with the "On" checkbox of its folder. | A light that is off stays in the scene with intensity 0 (no shader recompilation), and the other controls of its folder (colour, intensity and, for spotlights, cutoff angle and penumbra) are disabled until it is switched on again. | [ADR-0038](../adr/0038-lighting-controls-with-lil-gui.md), [ADR-0037](../adr/0037-scene-lighting-setup.md) |
+| **UC2: Change Light Colour and Intensity** | LaPrizza Manager / Employee | Changes the colour of a light with a colour picker and its intensity with a slider. | Intensity limits per light, step 0.01: ambient and hemisphere 0 to 2, directional 0 to 3, spotlights 0 to 10. The scene is updated on every change. | [ADR-0038](../adr/0038-lighting-controls-with-lil-gui.md) |
+| **UC3: Adjust Spotlight Cutoff Angle and Penumbra** | LaPrizza Manager / Employee | Changes the cutoff angle and the penumbra of the kitchen spotlight or of the assembly line spotlight. | Only in the two spotlight folders. Cutoff angle 5° to 90° (step 1), converted to radians for Three.js; penumbra 0 to 1 (step 0.01). | [ADR-0038](../adr/0038-lighting-controls-with-lil-gui.md) |
+| **UC4: Reset Lighting** | LaPrizza Manager / Employee | Restores the default lighting with the Reset button. | Every light goes back to `DEFAULT_LIGHTING` (the VIS05 look), every control shows the restored value and the controls are enabled or disabled again according to the on/off state. | [ADR-0038](../adr/0038-lighting-controls-with-lil-gui.md), [ADR-0037](../adr/0037-scene-lighting-setup.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS06**  | UC1: Switch a Light On/Off | LaPrizza Manager / Employee | [Switch a Light On/Off](../flows/scene-lighting/switch-light-on-off.md) |
+| **VIS06**  | UC2: Change Light Colour and Intensity | LaPrizza Manager / Employee | [Change Light Colour and Intensity](../flows/scene-lighting/change-light-colour-and-intensity.md) |
+| **VIS06**  | UC3: Adjust Spotlight Cutoff Angle and Penumbra | LaPrizza Manager / Employee | [Adjust Spotlight Cutoff Angle and Penumbra](../flows/scene-lighting/adjust-spotlight-angle-and-penumbra.md) |
+| **VIS06**  | UC4: Reset Lighting | LaPrizza Manager / Employee | [Reset Lighting](../flows/scene-lighting/reset-lighting.md) |
+
+The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+

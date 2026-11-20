@@ -6,7 +6,7 @@
 | SAD view | Process View, Level 3 |
 | Containers | Web Application, 3D Visualization |
 | Endpoints | None (client-side only). The kitchen layout comes from `GET /kitchen-configurations/active` (see [WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md)). |
-| Allowed roles | Users with the `kitchen:read` permission (MANAGER, EMPLOYEE), required by the `/visualization3d` and `/kitchen-configurations` routes |
+| Allowed roles | Users with the `kitchen:read` permission (MANAGER), required by the `/visualization3d` and `/kitchen-configurations` routes |
 | Success response | n/a (the kitchen is rendered with the default lighting and shadows) |
 | Error handling | No active configuration (404) or a failed request: empty state "No active kitchen configuration to display." and no scene (WEB06). Assembly line not loaded: the kitchen is shown with a warning and the line spotlight aims at the room centre. |
 | ADRs | [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0037](../../adr/0037-scene-lighting-setup.md), [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
