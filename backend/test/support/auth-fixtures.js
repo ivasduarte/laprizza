@@ -21,6 +21,9 @@ export const PERSONAS = Object.freeze({
   },
   EMPLOYEE: { _id: 'abcdef0000000000000000e1', roles: ['EMPLOYEE'] },
   MANAGER: { _id: 'abcdef0000000000000000a1', roles: ['MANAGER'] },
+  // AA06: user administration only; restaurant management needs MANAGER as well.
+  ADMINISTRATOR: { _id: 'abcdef0000000000000000ad', roles: ['ADMINISTRATOR'] },
+  ADMINISTRATOR_MANAGER: { _id: 'abcdef0000000000000000ae', roles: ['ADMINISTRATOR', 'MANAGER'] },
   MANAGER_EMPLOYEE: { _id: 'abcdef0000000000000000a2', roles: ['MANAGER', 'EMPLOYEE'] },
   CUSTOMER_EMPLOYEE: {
     _id: 'abcdef0000000000000000c2',

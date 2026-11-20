@@ -26,10 +26,11 @@ export const Permission = Object.freeze({
   USERS_READ: 'users:read',
   USERS_CREATE: 'users:create',
   USERS_MANAGE: 'users:manage',
+  USERS_INVITE: 'users:invite',
   ROLES_ASSIGN_CUSTOMER: 'roles:assign:customer',
   ROLES_ASSIGN_EMPLOYEE: 'roles:assign:employee',
   ROLES_ASSIGN_MANAGER: 'roles:assign:manager',
-  // ROLES_ASSIGN_ADMINISTRATOR: 'roles:assign:administrator', // will exist, granted to nobody
+  ROLES_ASSIGN_ADMINISTRATOR: 'roles:assign:administrator',
 });
 
 export const ALL_PERMISSIONS = Object.freeze(Object.values(Permission));
@@ -37,11 +38,19 @@ const P = Permission;
 
 export const GUEST_PERMISSIONS = Object.freeze([P.CATALOGUE_READ]);
 
-// These permissions will be given to Manager temporarily.
+/**
+ * Website user administration (Table 1, Administrator): accounts, activation invitations and
+ * roles. Only the ADMINISTRATOR role holds them (AA06); restaurant management needs MANAGER.
+ */
 export const ADMIN_PERMISSIONS = Object.freeze([
+  P.USERS_READ,
+  P.USERS_CREATE,
   P.USERS_MANAGE,
+  P.USERS_INVITE,
   P.ROLES_ASSIGN_CUSTOMER,
+  P.ROLES_ASSIGN_EMPLOYEE,
   P.ROLES_ASSIGN_MANAGER,
+  P.ROLES_ASSIGN_ADMINISTRATOR,
 ]);
 
 export const ROLE_PERMISSIONS = Object.freeze({
@@ -73,16 +82,10 @@ export const ROLE_PERMISSIONS = Object.freeze({
     P.SUPPLIERS_IMPORT,
     P.PLANNING_EXECUTE,
     P.RESOURCES_READ,
-    P.RESOURCES_WRITE,
-    P.USERS_READ,
-    P.USERS_CREATE,
-    P.ROLES_ASSIGN_EMPLOYEE,
-    ...ADMIN_PERMISSIONS, // Quando o ADMINISTRATOR for adicionado remover esta permissão
   ]),
 
-  // [Roles.ADMINISTRATOR]: Object.freeze([
-  //   P.USERS_READ, P.USERS_CREATE, P.ROLES_ASSIGN_EMPLOYEE, ...ADMIN_PERMISSIONS,
-  // ]),
+  // SYS04: every authenticated role reads the shared folder; only administrators write to it.
+  [Roles.ADMINISTRATOR]: Object.freeze([...ADMIN_PERMISSIONS, P.RESOURCES_READ, P.RESOURCES_WRITE]),
 });
 
 export function permissionsFor(roles = []) {
@@ -129,5 +132,17 @@ export function evaluateRoleChange({
 
   return denied.length === 0
     ? { allowed: true }
-    : { allowed: false, reason: RoleChangeDenial.ROLE_NOT_ASSIGNABLE, roles: denied }
+    : { allowed: false, reason: RoleChangeDenial.ROLE_NOT_ASSIGNABLE, roles: denied };
+}
+
+/**
+ * Base roles an actor may assign or remove (AA06), from its assignment permissions.
+ *
+ * @param {string[]} actorPermissions
+ * @returns {string[]}
+ */
+export function assignableRoles(actorPermissions) {
+  return Object.values(Roles).filter((role) =>
+    hasPermission(actorPermissions, roleAssignmentPermission(role)),
+  );
 }

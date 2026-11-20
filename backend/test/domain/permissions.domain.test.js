@@ -12,6 +12,7 @@ import {
   hasPermission,
   roleAssignmentPermission,
   evaluateRoleChange,
+  assignableRoles,
 } from '../../src/domain/auth/permissions.domain.js';
 
 const sorted = (list) => [...list].sort();
@@ -88,16 +89,23 @@ test('base roles follow Table 1', () => {
     'products:read',
     'products:write',
     'resources:read',
-    'resources:write',
-    'roles:assign:customer',
-    'roles:assign:employee',
-    'roles:assign:manager',
     'stock:read',
     'stock:read:inactive',
     'stock:write',
     'suppliers:import',
     'suppliers:read',
+  ]);
+
+  assert.deepEqual(permissionsFor([Roles.ADMINISTRATOR]), [
+    'catalogue:read',
+    'resources:read',
+    'resources:write',
+    'roles:assign:administrator',
+    'roles:assign:customer',
+    'roles:assign:employee',
+    'roles:assign:manager',
     'users:create',
+    'users:invite',
     'users:manage',
     'users:read',
   ]);
@@ -123,17 +131,41 @@ test('Customer has no access to other customers, stock, planning or administrati
   }
 });
 
-test('administration permissions are granted to MANAGER (provisional)', () => {
-  for (const permission of ADMIN_PERMISSIONS) {
-    assert.ok(ROLE_PERMISSIONS[Roles.MANAGER].includes(permission), permission);
+test('AA06: only ADMINISTRATOR holds the user administration permissions', () => {
+  for (const [role, permissions] of Object.entries(ROLE_PERMISSIONS)) {
+    const admin = permissions.filter((p) => /^(users|roles):/.test(p));
+    assert.deepEqual(admin, role === Roles.ADMINISTRATOR ? [...ADMIN_PERMISSIONS] : [], role);
   }
 });
 
-test('Manager keeps creating users and assigning EMPLOYEE outside the admin group', () => {
-  for (const permission of ['users:read', 'users:create', 'roles:assign:employee']) {
-    assert.ok(!ADMIN_PERMISSIONS.includes(permission), permission);
-    assert.ok(ROLE_PERMISSIONS[Roles.MANAGER].includes(permission), permission);
+test('SYS04: every base role reads the shared folder; only ADMINISTRATOR writes to it', () => {
+  for (const role of Object.values(Roles)) {
+    const permissions = permissionsFor([role]);
+    assert.ok(hasPermission(permissions, 'resources:read'), role);
+    assert.equal(hasPermission(permissions, 'resources:write'), role === Roles.ADMINISTRATOR, role);
   }
+});
+
+test('AA06: ADMINISTRATOR grants no restaurant management (needs MANAGER as well)', () => {
+  const admin = permissionsFor([Roles.ADMINISTRATOR]);
+  for (const denied of ['customers:read', 'products:write', 'stock:read', 'kitchen:read', 'planning:execute']) {
+    assert.ok(!hasPermission(admin, denied), denied);
+  }
+  const both = permissionsFor([Roles.ADMINISTRATOR, Roles.MANAGER]);
+  assert.ok(hasPermission(both, 'users:manage') && hasPermission(both, 'kitchen:write'));
+});
+
+test('AA06: only an Administrator may assign roles, ADMINISTRATOR included', () => {
+  assert.deepEqual(assignableRoles(permissionsFor([Roles.ADMINISTRATOR])).sort(), [
+    'ADMINISTRATOR',
+    'CUSTOMER',
+    'EMPLOYEE',
+    'MANAGER',
+  ]);
+  for (const role of [Roles.MANAGER, Roles.EMPLOYEE, Roles.CUSTOMER]) {
+    assert.deepEqual(assignableRoles(permissionsFor([role])), [], role);
+  }
+  assert.deepEqual(assignableRoles(undefined), []);
 });
 
 test('multiple roles receive the union of their permissions', () => {
@@ -205,7 +237,7 @@ test('nobody changes their own roles, even with every assignment permission', ()
   assert.equal(result.reason, RoleChangeDenial.SELF_ROLE_CHANGE);
 });
 
-test('a role without a granted assignment permission (e.g. ADMINISTRATOR) is never assignable', () => {
+test('AA06: a Manager cannot grant ADMINISTRATOR (no administrative role without an Administrator)', () => {
   const result = evaluateRoleChange({
     actorPermissions: permissionsFor([Roles.MANAGER]),
     isSelf: false,

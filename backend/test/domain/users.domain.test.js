@@ -5,6 +5,8 @@ import {
   AccountStatus,
   statusFromIsActive,
   normalizeEmail,
+  evaluateStatusChange,
+  StatusChangeDenial,
 } from '../../src/domain/users/users.domain.js';
 
 /**
@@ -50,4 +52,29 @@ test('normalizeEmail trims and lowercases', () => {
   assert.equal(normalizeEmail(undefined), '');
   assert.equal(normalizeEmail(null), '');
   assert.equal(normalizeEmail(42), '');
+});
+
+test('AA06: disabling is always allowed; enabling needs a previous activation', () => {
+  const activated = new Date('2026-01-01T00:00:00Z');
+  assert.deepEqual(evaluateStatusChange({ status: 'active' }, false), {
+    allowed: true,
+    status: AccountStatus.DISABLED,
+  });
+  assert.deepEqual(evaluateStatusChange({ status: 'disabled', activatedAt: activated }, true), {
+    allowed: true,
+    status: AccountStatus.ACTIVE,
+  });
+  assert.deepEqual(evaluateStatusChange({ status: 'active' }, true), {
+    allowed: true,
+    status: AccountStatus.ACTIVE,
+  });
+  for (const user of [
+    { status: 'inactive', activatedAt: null },
+    { status: 'disabled', activatedAt: null },
+  ]) {
+    assert.deepEqual(evaluateStatusChange(user, true), {
+      allowed: false,
+      reason: StatusChangeDenial.ACTIVATION_REQUIRED,
+    });
+  }
 });

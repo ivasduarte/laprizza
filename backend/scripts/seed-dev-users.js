@@ -1,6 +1,7 @@
 /**
- * Development users (AA05): one account per base role, one with two roles and one without roles,
- * all with the password in SEED_DEV_PASSWORD, so the permission matrix can be tried by hand.
+ * Development users (AA05/AA06): one account per base role (ADMINISTRATOR included), one with two
+ * roles, one without roles and one waiting for activation, all with the password in
+ * SEED_DEV_PASSWORD, so the permission matrix can be tried by hand.
  *
  *   npm run seed:dev-users -- --confirm
  *
@@ -26,7 +27,7 @@ export class SeedError extends Error {}
 export const DEV_CUSTOMER = Object.freeze({
   _id: 'c0c0c00000000000000000d1',
   name: 'Cliente Desenvolvimento',
-  email: 'customer@laprizza.dev',
+  email: 'customer@laprizza.pt',
   phoneNumber: '900000001',
   address: {
     street: 'Rua de Teste',
@@ -41,11 +42,14 @@ export const DEV_CUSTOMER = Object.freeze({
 
 /** One account per base role, a multi-role account and an account without roles. */
 export const DEV_USERS = Object.freeze([
-  { email: 'manager@laprizza.dev', roles: [Roles.MANAGER] },
-  { email: 'employee@laprizza.dev', roles: [Roles.EMPLOYEE] },
-  { email: 'customer@laprizza.dev', roles: [Roles.CUSTOMER], customerId: DEV_CUSTOMER._id },
-  { email: 'manager.employee@laprizza.dev', roles: [Roles.MANAGER, Roles.EMPLOYEE] },
-  { email: 'noroles@laprizza.dev', roles: [] },
+  { email: 'administrator@laprizza.pt', roles: [Roles.ADMINISTRATOR] },
+  { email: 'manager@laprizza.pt', roles: [Roles.MANAGER] },
+  { email: 'employee@laprizza.pt', roles: [Roles.EMPLOYEE] },
+  { email: 'customer@laprizza.pt', roles: [Roles.CUSTOMER], customerId: DEV_CUSTOMER._id },
+  { email: 'manager.employee@laprizza.pt', roles: [Roles.MANAGER, Roles.EMPLOYEE] },
+  { email: 'noroles@laprizza.pt', roles: [] },
+  // AA06: inactive account, never activated (an Administrator can issue its invitation).
+  { email: 'pending@laprizza.pt', roles: [Roles.CUSTOMER], status: AccountStatus.INACTIVE },
 ]);
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|mongo)(:\d+)?$/i;
@@ -101,15 +105,22 @@ async function writeSeed(password) {
   const { _id: customerId, ...customer } = DEV_CUSTOMER;
   await Customers.updateOne({ _id: customerId }, { $set: customer }, { upsert: true });
 
-  for (const { email, roles, customerId: linkedCustomer = null } of DEV_USERS) {
+  for (const {
+    email,
+    roles,
+    customerId: linkedCustomer = null,
+    status = AccountStatus.ACTIVE,
+  } of DEV_USERS) {
+    const activated = status === AccountStatus.ACTIVE;
     await Users.updateOne(
       { email },
       {
         $set: {
           roles,
           customerId: linkedCustomer,
-          status: AccountStatus.ACTIVE,
-          passwordHash,
+          status,
+          activatedAt: activated ? new Date() : null,
+          passwordHash: activated ? passwordHash : null,
           failedLoginCount: 0,
           lockedUntil: null,
         },

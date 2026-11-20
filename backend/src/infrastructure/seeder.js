@@ -1,4 +1,5 @@
 import Users from './users/users.model.js';
+import RoleChange from './users/role-change.model.js';
 
 import KitchenConfiguration from './kitchen-configuration/kitchen-configuration.model.js';
 
@@ -11,21 +12,29 @@ import {
   validatePasswordStrength,
   withInitialCustomerRole,
 } from '../domain/users/users.domain.js';
+import {
+  SystemProcess,
+  initialRoleChanges,
+  systemActor,
+} from '../domain/users/role-changes.domain.js';
 import { DEFAULT_PIZZA_COMPONENT_TYPES } from '../domain/pizza-component-type/pizza-component-types.domain.js';
 
 /** MongoDB error code for violation of a unique index. */
 const DUPLICATE_KEY_ERROR_CODE = 11000;
 
 /**
- * Bootstrapping function that seeds the initial Manager account into the database.
- * Checks if at least one user with the MANAGER role exists. If not, it creates a default
- * 'admin' account using the password defined in the SEED_MANAGER_PASSWORD environment variable.
- * This ensures the system is accessible upon first deployment.
+ * Bootstrapping function that seeds the first account of an empty database (AA06).
+ * The account holds ADMINISTRATOR (user administration) and MANAGER (restaurant management),
+ * plus the automatic CUSTOMER role (AA03), with the password in SEED_MANAGER_PASSWORD.
+ * Its role assignments are recorded as made by the seeding process.
+ *
+ * A database that already has a Manager but no Administrator was created before AA06:
+ * the data migration promotes its first Administrator, so the start is refused until it runs.
  *
  * @returns {Promise<void>}
- * @throws {Error} Throws a fatal error if the SEED_MANAGER_PASSWORD environment variable is missing or fails strength validation.
+ * @throws {Error} If the migrations are missing, or SEED_MANAGER_PASSWORD is missing or weak.
  */
-export async function seedInitialManager() {
+export async function seedInitialAccount() {
   const legacy = await Users.collection.findOne(
     { role: { $exists: true } },
     { projection: { _id: 1 } },
@@ -35,27 +44,37 @@ export async function seedInitialManager() {
     throw new Error('Fatal: users still have the legacy "role" field. Run "npm run migrate:up" (AA05).');
   }
 
-  const managerExists = await Users.exists({ roles: Roles.MANAGER });
-
-  if (!managerExists) {
-    console.log('No manager found. Creating initial account...');
-
-    const pw = process.env.SEED_MANAGER_PASSWORD;
-    if (!pw) throw new Error('Fatal: SEED_MANAGER_PASSWORD environment variable is missing.');
-
-    validatePasswordStrength(pw);
-
-    await Users.create({
-      username: 'admin',
-      email: 'admin@laprizza.pt',
-      passwordHash: await passwordHasher.hash(pw),
-      roles: withInitialCustomerRole([Roles.MANAGER]), // AA03: every new account is also Customer
-      status: AccountStatus.ACTIVE,
-    });
-    console.log('Initial Manager account created successfully.');
-  } else {
-    console.log('Account Manager already exists. Seeder ignored.');
+  if (await Users.exists({ roles: Roles.ADMINISTRATOR })) {
+    console.log('An Administrator already exists. Seeder ignored.');
+    return;
   }
+  if (await Users.exists({ roles: Roles.MANAGER })) {
+    throw new Error('Fatal: there is no Administrator. Run "npm run migrate:up" (AA06).');
+  }
+
+  console.log('No Administrator found. Creating the initial account...');
+  const pw = process.env.SEED_MANAGER_PASSWORD;
+  if (!pw) throw new Error('Fatal: SEED_MANAGER_PASSWORD environment variable is missing.');
+  validatePasswordStrength(pw);
+
+  const now = new Date();
+  const account = await Users.create({
+    username: 'admin',
+    email: 'admin@laprizza.pt',
+    passwordHash: await passwordHasher.hash(pw),
+    roles: withInitialCustomerRole([Roles.ADMINISTRATOR, Roles.MANAGER]),
+    status: AccountStatus.ACTIVE,
+    activatedAt: now,
+  });
+  await RoleChange.insertMany(
+    initialRoleChanges({
+      userId: account._id,
+      roles: account.roles,
+      actor: systemActor(SystemProcess.INITIAL_ACCOUNT_SEED),
+      at: now,
+    }),
+  );
+  console.log('Initial Administrator account created successfully.');
 }
 
 export async function seedInitialPizzaComponentTypes() {
