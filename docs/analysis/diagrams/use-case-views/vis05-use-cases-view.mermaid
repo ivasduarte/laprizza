@@ -1,0 +1,11 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS05 [VIS05: Scene Lighting]
+        direction TB
+        UC1([UC1: View Lit Kitchen Scene])
+    end
+
+    Manager --> UC1
+    Viz3D -->|<< renders >>| UC1

@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration and AI Planning user stories (WEB06, WEB07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning and Scene Lighting user stories (WEB06, WEB07, VIS05) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -34,6 +34,9 @@ This document shows who uses the LaPrizza information system and which business 
     - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
       - [Use Case Descriptions](#use-case-descriptions-1)
       - [Flow Mapping](#flow-mapping-12)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+      - [Use Case Descriptions](#use-case-descriptions-2)
+      - [Flow Mapping](#flow-mapping-13)
 
 ## Actors
 
@@ -43,7 +46,7 @@ This document shows who uses the LaPrizza information system and which business 
 | **LaPrizza Manager** | Administrator with full back-office access to manage users, customers, products, stock, and configurations.       |
 | **Employee**         | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas). |
 | **Customer**         | External client interacting with the system to consult the catalog or register their data.                        |
-| **3D Visualization Module** | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen. |
+| **3D Visualization Module** | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting. |
 | **AI Scheduling Module** | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser. |
 
 ## Use Cases Diagram
@@ -321,3 +324,35 @@ flowchart LR
 | **WEB07**  | UC10: Consult Planning Results | LaPrizza Manager | [Consult Planning Results](../flows/ai-planning/consult-planning-results.md) |
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md); the container interactions of the execution are in the Level 2 Process View of [Views](../design/views.md).
+
+### VIS05: Scene Lighting
+
+The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager and Employee).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS05 [VIS05: Scene Lighting]
+        direction TB
+        UC1([UC1: View Lit Kitchen Scene])
+    end
+
+    Manager --> UC1
+    Viz3D -->|<< renders >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: View Lit Kitchen Scene** | LaPrizza Manager / Employee | When the viewer opens, the active kitchen and its assembly line are rendered with the default lighting and shadows. The Manager orbits and zooms freely and the lighting stays the same. | At least an ambient light and a spotlight: the scene has ambient, hemisphere, directional and two spotlights. Low base light (ambient 0.35, hemisphere 0.45 with a dark ground colour) plus a directional light and spotlights give depth and contours without overexposure or pitch-black faces. Only two lights cast shadows (2048 and 1024 shadow maps), the pixel ratio is capped at 2 and meshes are marked for shadows once, checked every 30 frames. Light positions do not depend on the camera, the shadow frustum is fitted to the room and the orbit controls keep the camera between a minimum and maximum distance and above the floor. Without an active configuration the viewer shows an empty state (WEB06). | [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0037](../adr/0037-scene-lighting-setup.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS05**  | UC1: View Lit Kitchen Scene | LaPrizza Manager / Employee | [View Lit Kitchen Scene](../flows/scene-lighting/view-lit-kitchen-scene.md) |
+
+The light sources, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
