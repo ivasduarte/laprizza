@@ -8,11 +8,11 @@
 | Endpoint | `POST /users` |
 | Allowed roles | MANAGER |
 | Success response | 201 Created |
-| Error handling | 400 (weak password), 409 (email or username already in use) |
+| Error handling | 400 (invalid roles or weak password), 409 (email or username already in use) |
 
 ## Description
 
-A Manager registers a new user. The domain validates the password strength, the service hashes the password with Argon2 and persists the user, and a duplicated email or username results in a conflict error.
+A Manager registers a new user. The account always receives the role `CUSTOMER` in addition to the requested roles ([AA03](./role-resolution.md)). The domain validates the password strength, the service hashes the password with Argon2 and persists the user, and a duplicated email or username results in a conflict error.
 
 ## Diagram
 
@@ -32,10 +32,10 @@ sequenceDiagram
     end
 
     activate manager
-    manager->>route: POST /users { email, password, role }
+    manager->>route: POST /users { email, password, roles }
     activate route
 
-    route->>route: verifyToken() & requireRole([MANAGER])
+    route->>route: verifyToken() & requirePermission(users:create)
     route->>route: Validate Payload
 
     route->>controller: create(req, res, next)
@@ -51,6 +51,8 @@ sequenceDiagram
     alt Weak Password
       service-->>controller: AppError(400)
     else Strong Password
+      service->>domain: withInitialCustomerRole(roles)
+      domain-->>service: CUSTOMER + requested roles (AA03)
       service->>service: Argon2 hash(password)
       service->>repo: create(userData)
       activate repo

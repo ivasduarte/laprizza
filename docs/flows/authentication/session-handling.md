@@ -17,7 +17,7 @@ A session is one `AuthSession` document in MongoDB. The browser holds two creden
 | Access token | Signed JWT (HS256, issuer `laprizza-api`) with `sub` (user), `sid` (session) and `tv` (token version) | SPA memory only, sent as `Authorization: Bearer` | `ACCESS_TOKEN_TTL_MINUTES` (60) | On every protected request, together with the user and the session in the database |
 | Refresh token | 256 random bits (`randomBytes(32)`), only its SHA-256 is stored | `HttpOnly` cookie `lp_rt`, path `/api/v1/auth` | `REFRESH_TOKEN_TTL_DAYS` (7), absolute | Only by `POST /auth/refresh`, rotated on every use |
 
-The role used for authorization always comes from the database (`req.user.role`), never from the token or the client. Local login and the external login ([AA02](./external-authentication.md)) both end in `establishSession`, so they create the same kind of session.
+The roles used for authorization always come from the database (`req.user.roles`), never from the token or the client ([Role Resolution (AA03)](./role-resolution.md)). Local login and the external login ([AA02](./external-authentication.md)) both end in `establishSession`, so they create the same kind of session.
 
 ## Diagrams
 
@@ -197,7 +197,8 @@ The guard only avoids rendering protected screens. The back end still authorizes
 | Account disabled or set inactive | `tokenVersion` incremented, sessions revoked | Refused (user not active, `tv` mismatch) |
 | Password reset | Password replaced, `tokenVersion` incremented, all sessions revoked | Refused |
 | Password change | Other sessions revoked, the current one is kept | Other sessions refused, the current one keeps working |
-| Role change | Sessions untouched | New role applies on the next request (role read from the database) |
+| Role change | Sessions untouched | New roles apply on the next request (roles read from the database) |
+| All roles removed | Session revoked on the next refresh (`403 NO_ACTIVE_ROLE`) | Protected requests refused (`403`, Guest permissions only) |
 | Access token expires | Session untouched | Client refreshes (rotation) and repeats the request |
 | Rotated refresh token presented again | Whole session revoked (theft assumed) | Refused |
 | Refresh token reaches its absolute expiry | Document removed by the TTL index on `expiresAt` | Refused |
