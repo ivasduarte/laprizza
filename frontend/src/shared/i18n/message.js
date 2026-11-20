@@ -1,4 +1,5 @@
 import { mergeMessages, web07Messages } from './web07-messages.js';
+import { web05Messages } from './web05-messages.js';
 import { aa06Messages } from './aa06-messages.js';
 
 const baseMessages = {
@@ -1043,7 +1044,10 @@ export const messages = Object.fromEntries(
   Object.entries(baseMessages).map(([language, dictionary]) => [
     language,
     mergeMessages(
-      mergeMessages(dictionary, web07Messages[language] ?? {}),
+      mergeMessages(
+        mergeMessages(dictionary, web07Messages[language] ?? {}),
+        web05Messages[language] ?? {}
+      ),
       aa06Messages[language] ?? {}
     ),
   ])

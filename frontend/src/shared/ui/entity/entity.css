@@ -1,0 +1,140 @@
+.entity-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.entity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.entity-header h1,
+.entity-card h2 {
+  margin: 0;
+}
+
+.entity-card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.entity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entity-form-actions {
+  justify-content: flex-end;
+}
+
+/* Search: input grows, buttons stay on the same line when there is room. */
+.entity-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.entity-search > div {
+  flex: 1 1 16rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.entity-hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.entity-table-scroll {
+  overflow-x: auto;
+}
+
+.entity-table-scroll td:last-child {
+  white-space: nowrap;
+}
+
+tr.is-inactive td {
+  color: var(--color-muted);
+}
+
+tr.is-selected td {
+  background: var(--color-surface-alt);
+}
+
+.entity-badge {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border: 1px solid var(--color-success);
+  border-radius: 999px;
+  background: var(--color-success-bg);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.entity-badge.is-inactive {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-muted);
+}
+
+/* Detail: label/value pairs. */
+.entity-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+}
+
+.entity-fields dt {
+  font-weight: 700;
+}
+
+.entity-fields dd {
+  margin: 0;
+}
+
+.entity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.entity-form > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grid of cards (catalogue): same rules as the kitchen configuration grid (WEB06). */
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 40rem) {
+  .entity-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .entity-fields dd {
+    margin-bottom: 0.5rem;
+  }
+}
