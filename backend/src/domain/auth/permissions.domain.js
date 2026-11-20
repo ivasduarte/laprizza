@@ -45,12 +45,11 @@ export const ADMIN_PERMISSIONS = Object.freeze([
 ]);
 
 export const ROLE_PERMISSIONS = Object.freeze({
-  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN]),
+  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN, P.RESOURCES_READ]),
 
   [Roles.EMPLOYEE]: Object.freeze([
     P.PRODUCTS_READ,
     P.STOCK_READ,
-    P.KITCHEN_READ,
     P.RESOURCES_READ,
   ]),
 

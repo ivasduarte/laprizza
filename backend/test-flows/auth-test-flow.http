@@ -26,7 +26,7 @@ Content-Type: application/json
 ?? status == 200
 ?? js response.parsedBody.tokenType == Bearer
 ?? js response.parsedBody.expiresIn == 3600
-?? js response.parsedBody.user.role == MANAGER
+?? js response.parsedBody.user.roles.includes('MANAGER') == true
 ?? header cache-control == no-store
 
 ### Extração do token do Admin
@@ -115,7 +115,7 @@ Content-Type: application/json
 {
   "email": "{{dynamicEmail}}",
   "password": "{{userPassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201
@@ -136,7 +136,7 @@ Content-Type: application/json
 }
 
 ?? status == 200
-?? js response.parsedBody.user.role == EMPLOYEE
+?? js response.parsedBody.user.roles.includes('EMPLOYEE') == true
 
 @userTokenA = {{loginUserA.accessToken}}
 
@@ -430,7 +430,7 @@ Content-Type: application/json
 {
   "email": "{{lockEmail}}",
   "password": "{{userPassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201

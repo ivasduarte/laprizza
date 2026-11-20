@@ -31,7 +31,7 @@ Content-Type: application/json
 {
   "email": "{{employeeEmail}}",
   "password": "{{managerPassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201
@@ -63,9 +63,20 @@ GET {{baseUrl}}/pizza-size
 
 ?? status == 401
 
-### 2.2 Token de Employee (403 Forbidden - Apenas Manager tem acesso)
+### 2.2 Token de Employee consegue LER (200 OK - products:read)
 GET {{baseUrl}}/pizza-size
 Authorization: Bearer {{empToken}}
+
+?? status == 200
+
+### 2.2b Token de Employee não consegue CRIAR (403 Forbidden - apenas Manager)
+POST {{baseUrl}}/pizza-size
+Authorization: Bearer {{empToken}}
+Content-Type: application/json
+
+{
+  "name": "Employee_{{$randomInt 1000 9999}}"
+}
 
 ?? status == 403
 

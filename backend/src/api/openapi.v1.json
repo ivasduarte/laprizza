@@ -5435,7 +5435,7 @@
     },
     "/kitchen-configurations": {
       "get": {
-        "summary": "List kitchen configurations (MANAGER and EMPLOYEE)",
+        "summary": "List kitchen configurations (MANAGER)",
         "security": [
           {
             "BearerAuth": []
@@ -5479,7 +5479,7 @@
         "deprecated": true
       },
       "post": {
-        "summary": "Create kitchen configuration (MANAGER only)",
+        "summary": "Create kitchen configuration (MANAGER)",
         "security": [
           {
             "BearerAuth": []
@@ -5554,7 +5554,7 @@
     },
     "/kitchen-configurations/active": {
       "get": {
-        "summary": "Get active kitchen configuration (MANAGER and EMPLOYEE)",
+        "summary": "Get active kitchen configuration (MANAGER)",
         "security": [
           {
             "BearerAuth": []
@@ -5757,7 +5757,7 @@
     },
     "/kitchen-configurations/{id}": {
       "get": {
-        "summary": "Get kitchen configuration by ID (MANAGER and EMPLOYEE)",
+        "summary": "Get kitchen configuration by ID (MANAGER)",
         "security": [
           {
             "BearerAuth": []
@@ -5997,7 +5997,7 @@
     },
     "/assembly-line-configurations": {
       "get": {
-        "summary": "List assembly line configurations (MANAGER and EMPLOYEE)",
+        "summary": "List assembly line configurations (MANAGER)",
         "description": "Library of line definitions, sorted by creation date, most recent first.",
         "security": [
           {
@@ -6184,7 +6184,7 @@
     },
     "/assembly-line-configurations/{id}": {
       "get": {
-        "summary": "Get assembly line configuration by ID (MANAGER and EMPLOYEE)",
+        "summary": "Get assembly line configuration by ID (MANAGER)",
         "security": [
           {
             "BearerAuth": []
@@ -7040,7 +7040,7 @@
     },
     "/shared-resources": {
       "get": {
-        "summary": "List shared resources (any authenticated user)",
+        "summary": "List shared resources (MANAGER, EMPLOYEE and CUSTOMER)",
         "description": "Files in the shared folder (SHARED_DIR on the server). Every access is recorded in the security log.",
         "security": [
           {
@@ -7077,7 +7077,7 @@
     },
     "/shared-resources/{name}": {
       "get": {
-        "summary": "Download a shared resource (any authenticated user)",
+        "summary": "Download a shared resource (MANAGER, EMPLOYEE and CUSTOMER)",
         "security": [
           {
             "BearerAuth": []

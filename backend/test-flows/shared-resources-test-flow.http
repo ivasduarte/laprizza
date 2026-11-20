@@ -145,10 +145,10 @@ GET {{baseUrl}}/shared-resources
 Authorization: Bearer {{adminToken}}
 ?? status == 200
 
-### 3.2 GET Listar como Customer (403 Forbidden - documentos internos)
+### 3.2 GET Listar como Customer (200 OK - o Customer lê os recursos partilhados)
 GET {{baseUrl}}/shared-resources
 Authorization: Bearer {{customerToken}}
-?? status == 403
+?? status == 200
 
 ### 4. GET Download como Employee (200 OK - devolve o conteúdo atualizado no 2.1)
 GET {{baseUrl}}/shared-resources/{{fileName}}
@@ -160,10 +160,10 @@ GET {{baseUrl}}/shared-resources/..%2F..%2Fetc%2Fpasswd
 Authorization: Bearer {{employeeToken}}
 ?? status == 400
 
-### 4.2 GET Download como Customer (403 Forbidden - documentos internos)
+### 4.2 GET Download como Customer (200 OK - o Customer lê os recursos partilhados)
 GET {{baseUrl}}/shared-resources/{{fileName}}
 Authorization: Bearer {{customerToken}}
-?? status == 403
+?? status == 200
 
 
 ### ==========================================

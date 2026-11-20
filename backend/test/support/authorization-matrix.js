@@ -78,17 +78,17 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['PATCH', '/customers/:id', MANAGER_ONLY],
   ['GET', '/customers/me', [CUSTOMER]],
 
-  // Kitchen viewer and configurations: staff consult, manager manages and activates
-  ['GET', '/kitchen-configurations', STAFF],
-  ['GET', '/kitchen-configurations/active', STAFF],
-  ['GET', '/kitchen-configurations/:id', STAFF],
+  // Kitchen viewer and configurations: MANAGER only (team decision: the employee lost kitchen:read)
+  ['GET', '/kitchen-configurations', MANAGER_ONLY],
+  ['GET', '/kitchen-configurations/active', MANAGER_ONLY],
+  ['GET', '/kitchen-configurations/:id', MANAGER_ONLY],
   ['POST', '/kitchen-configurations', MANAGER_ONLY],
   ['POST', '/kitchen-configurations/validate', MANAGER_ONLY],
   ['PATCH', '/kitchen-configurations/:id', MANAGER_ONLY],
   ['DELETE', '/kitchen-configurations/:id', MANAGER_ONLY],
   ['PATCH', '/kitchen-configurations/:id/activate', MANAGER_ONLY],
-  ['GET', '/assembly-line-configurations', STAFF],
-  ['GET', '/assembly-line-configurations/:id', STAFF],
+  ['GET', '/assembly-line-configurations', MANAGER_ONLY],
+  ['GET', '/assembly-line-configurations/:id', MANAGER_ONLY],
   ['POST', '/assembly-line-configurations', MANAGER_ONLY],
   ['POST', '/assembly-line-configurations/validate', MANAGER_ONLY],
   ['PATCH', '/assembly-line-configurations/:id', MANAGER_ONLY],
@@ -112,8 +112,9 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['GET', '/ai-data/products/export', MANAGER_ONLY],
 
   // Internal shared documents: staff read, manager manages
-  ['GET', '/shared-resources', STAFF],
-  ['GET', '/shared-resources/:name', STAFF],
+  // Shared documents: customers, staff and managers read (team decision); only the manager manages
+  ['GET', '/shared-resources', [CUSTOMER, EMPLOYEE, MANAGER]],
+  ['GET', '/shared-resources/:name', [CUSTOMER, EMPLOYEE, MANAGER]],
   ['PUT', '/shared-resources/:name', MANAGER_ONLY],
   ['DELETE', '/shared-resources/:name', MANAGER_ONLY],
 

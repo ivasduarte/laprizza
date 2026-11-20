@@ -45,46 +45,45 @@ test.describe('Kitchen Configuration Page E2E', () => {
     );
   });
 
-  test('RBAC: Employee gets a read-only view (no management controls)', async ({
+  test('RBAC: an Employee has no access to the kitchen (MANAGER only)', async ({
     page,
   }) => {
+    let kitchenRequests = 0;
+    await page.setViewportSize({ width: 1440, height: 900 }); // expanded menu
     await page.route('**/api/v2/auth/login', async (route) => {
       await route.fulfill({ json: mockEmployeeSession });
     });
-    await page.route('**/api/v2/kitchen-configurations', async (route) => {
+    await page.route('**/api/v2/kitchen-configurations**', async (route) => {
+      kitchenRequests += 1;
       await route.fulfill({ json: mockConfigs });
     });
-    await page.route(
-      '**/api/v2/kitchen-configurations/active',
-      async (route) => {
-        await route.fulfill({ json: mockConfigs[0] });
-      }
-    );
 
-    await loginAndOpenKitchenConfigs(page, 'emp@laprizza.pt');
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'emp@laprizza.pt');
+    await page.fill('input[type="password"]', 'StrongPassword123!');
+    await Promise.all([
+      page.waitForResponse('**/api/v2/auth/login'),
+      page.click('button[type="submit"]'),
+    ]);
 
-    // Can consult the list, the JSON and the viewer...
+    // Not in the menu...
+    const nav = page.locator('.layout-nav');
     await expect(
-      page.getByRole('heading', { name: 'Standard Layout' })
-    ).toBeVisible();
-
-    await expect(
-      page.getByRole('heading', { name: 'Automated Line' })
+      nav.getByRole('link', { name: 'Shared resources' })
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'View' }).first()
-    ).toBeVisible();
-    await expect(page.getByTestId('viewer-active-config')).toContainText(
-      'Standard Layout'
-    );
+      nav.getByRole('link', { name: 'Kitchen Configuration' })
+    ).toHaveCount(0);
 
-    // ...but cannot create, edit, activate or delete.
-    await expect(page.getByRole('button', { name: 'Create New' })).toHaveCount(
-      0
+    // ...and not reachable by URL (in-app navigation keeps the session in memory).
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/kitchen-configurations');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      /access denied/i
     );
-    await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Activate' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+    expect(kitchenRequests).toBe(0);
   });
 
   test('Viewer: shows an explicit empty state when no configuration is active (404)', async ({

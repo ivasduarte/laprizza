@@ -125,7 +125,7 @@ test('API /shared-resources requires authentication', async (t) => {
   assert.equal(storage.remove.mock.callCount(), 0);
 });
 
-test('API /shared-resources RBAC: staff and managers read, only MANAGER writes, customers are refused', async (t) => {
+test('API /shared-resources RBAC: customers, staff and managers read, only MANAGER writes', async (t) => {
   const { server, port, storage } = await setupTestServer();
   t.after(() => {
     server.close();
@@ -139,11 +139,14 @@ test('API /shared-resources RBAC: staff and managers read, only MANAGER writes, 
   const empRequest = await loginAs(port, 'emp@laprizza.pt');
   const managerRequest = await loginAs(port, 'admin@laprizza.pt');
 
-  // Internal documents are not for customers (least privilege)
+  // Customers may read the shared resources (team decision), but never change them
   const customerRequest = await loginAs(port, 'customer@laprizza.pt');
-  assert.equal((await customerRequest('GET', '/shared-resources')).status, 403);
-  assert.equal((await customerRequest('GET', '/shared-resources/manual.pdf')).status, 403);
-  assert.equal(storage.list.mock.callCount(), 0);
+  assert.equal((await customerRequest('GET', '/shared-resources')).status, 200);
+  const putCustomer = await customerRequest('PUT', '/shared-resources/manual.txt', {
+    body: 'conteudo',
+  });
+  assert.equal(putCustomer.status, 403);
+  assert.equal((await customerRequest('DELETE', '/shared-resources/manual.txt')).status, 403);
 
   const listEmp = await empRequest('GET', '/shared-resources');
   assert.equal(listEmp.status, 200);

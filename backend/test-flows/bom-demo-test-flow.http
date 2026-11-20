@@ -166,7 +166,7 @@ Content-Type: application/json
 {
   "email": "ai01_employee_{{$timestamp}}@laprizza.pt",
   "password": "{{employeePassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 
 ?? status == 201

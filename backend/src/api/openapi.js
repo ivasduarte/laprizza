@@ -1693,7 +1693,7 @@ const baseSpec = {
     ...planningPaths,
     '/kitchen-configurations': {
       get: {
-        summary: 'List kitchen configurations (MANAGER and EMPLOYEE)',
+        summary: 'List kitchen configurations (MANAGER)',
         security: [{ BearerAuth: [] }],
         responses: {
           200: {
@@ -1712,7 +1712,7 @@ const baseSpec = {
         },
       },
       post: {
-        summary: 'Create kitchen configuration (MANAGER only)',
+        summary: 'Create kitchen configuration (MANAGER)',
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1741,7 +1741,7 @@ const baseSpec = {
     },
     '/kitchen-configurations/active': {
       get: {
-        summary: 'Get active kitchen configuration (MANAGER and EMPLOYEE)',
+        summary: 'Get active kitchen configuration (MANAGER)',
         security: [{ BearerAuth: [] }],
         responses: {
           200: {
@@ -1815,7 +1815,7 @@ const baseSpec = {
     },
     '/kitchen-configurations/{id}': {
       get: {
-        summary: 'Get kitchen configuration by ID (MANAGER and EMPLOYEE)',
+        summary: 'Get kitchen configuration by ID (MANAGER)',
         security: [{ BearerAuth: [] }],
         parameters: [
           {
@@ -1897,7 +1897,7 @@ const baseSpec = {
     },
     '/assembly-line-configurations': {
       get: {
-        summary: 'List assembly line configurations (MANAGER and EMPLOYEE)',
+        summary: 'List assembly line configurations (MANAGER)',
         description: 'Library of line definitions, sorted by creation date, most recent first.',
         security: [{ BearerAuth: [] }],
         responses: {
@@ -1976,7 +1976,7 @@ const baseSpec = {
     },
     '/assembly-line-configurations/{id}': {
       get: {
-        summary: 'Get assembly line configuration by ID (MANAGER and EMPLOYEE)',
+        summary: 'Get assembly line configuration by ID (MANAGER)',
         security: [{ BearerAuth: [] }],
         parameters: [idParam],
         responses: {
@@ -2241,7 +2241,7 @@ const baseSpec = {
     },
     '/shared-resources': {
       get: {
-        summary: 'List shared resources (any authenticated user)',
+        summary: 'List shared resources (MANAGER, EMPLOYEE and CUSTOMER)',
         description:
           'Files in the shared folder (SHARED_DIR on the server). Every access is recorded in the security log.',
         security: [{ BearerAuth: [] }],
@@ -2260,7 +2260,7 @@ const baseSpec = {
     },
     '/shared-resources/{name}': {
       get: {
-        summary: 'Download a shared resource (any authenticated user)',
+        summary: 'Download a shared resource (MANAGER, EMPLOYEE and CUSTOMER)',
         security: [{ BearerAuth: [] }],
         parameters: [sharedResourceNameParam],
         responses: {

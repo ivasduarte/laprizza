@@ -5,7 +5,9 @@
 
 # WEB07 - Execução de forecasts pelo serviço de IA e consulta dos resultados.
 # Pré-requisitos:
-#   - seed AI01 (npm run seed:ai01 ou equivalente): pizzas, tamanhos e cenário DEMO-PARTIAL [Demo];
+#   - seed AI01 (npm run seed:ai01-demo -- --confirm): pizzas, tamanhos e cenários DEMO-PARTIAL e
+#     DEMO-SUFFICIENT [Demo]. O modo "stock do cenário" usa o DEMO-SUFFICIENT, que tem stock de todos os
+#     componentes do forecast A (o DEMO-PARTIAL não tem Fiambre nem Cogumelos: daria 422 MISSING_SCENARIO_STOCK);
 #   - serviço Prolog (ai-scheduling) a correr e AI_SERVICE_KEY igual nos dois lados.
 # O cenário AI01 só fornece o contexto (catálogo; com stockMode=live o stock é o real):
 # a procura do Requirements Planning é o forecast.
@@ -121,9 +123,9 @@ Content-Type: application/json
 ### Variáveis
 @suppliersId = {{suppliers.id}}
 
-### 2.4 GET Stock do cenário DEMO-PARTIAL antes das execuções (200 OK, input simulado)
+### 2.4 GET Stock do cenário DEMO-SUFFICIENT antes das execuções (200 OK, input simulado)
 # @name scenarioStockBefore
-GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-PARTIAL&stockMode=scenario
+GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-SUFFICIENT&stockMode=scenario
 Authorization: Bearer {{adminToken}}
 ?? status == 200
 ?? js response.parsedBody.stock.length > 0 == true
@@ -181,7 +183,7 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "scenarioId": "DEMO-PARTIAL",
+  "scenarioId": "DEMO-SUFFICIENT",
   "stockMode": "scenario",
   "forecastId": "{{forecastAId}}",
   "supplierScenarioId": "{{suppliersId}}"
@@ -191,7 +193,7 @@ Content-Type: application/json
 ?? js response.parsedBody.scenario.stockMode == scenario
 
 ### 3.2b GET O stock do cenário (input simulado) também não mudou (200 OK, igual ao passo 2.4)
-GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-PARTIAL&stockMode=scenario
+GET {{baseUrl}}/ai-data/snapshot?scenarioId=DEMO-SUFFICIENT&stockMode=scenario
 Authorization: Bearer {{adminToken}}
 ?? status == 200
 ?? js JSON.stringify(response.parsedBody.stock) === JSON.stringify(scenarioStockBefore.stock) == true

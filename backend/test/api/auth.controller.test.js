@@ -17,13 +17,7 @@ const SESSION_RESULT = {
     email: 'a@b.pt',
     status: 'active',
     roles: ['EMPLOYEE'],
-    permissions: [
-      'catalogue:read',
-      'kitchen:read',
-      'products:read',
-      'resources:read',
-      'stock:read',
-    ],
+    permissions: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
     customerId: null,
   },
 };
@@ -207,20 +201,14 @@ test('logout and logoutAll answer 204 and clear the cookie', async () => {
   const user = { userId: 'u1', sessionId: 's1' };
 
   // 1. Testar logout
-  const { res: resLogout } = await run(
-    controller.logout,
-    createRequest({ user })
-  );
+  const { res: resLogout } = await run(controller.logout, createRequest({ user }));
   assert.equal(resLogout.statusCode, 204);
   assert.ok(resLogout.ended);
   assert.equal(resLogout.cleared.length, 1);
   assert.deepEqual(authService.logout.mock.calls[0].arguments[0], user);
 
   // 2. Testar logoutAll
-  const { res: resLogoutAll } = await run(
-    controller.logoutAll,
-    createRequest({ user })
-  );
+  const { res: resLogoutAll } = await run(controller.logoutAll, createRequest({ user }));
   assert.equal(resLogoutAll.statusCode, 204);
   assert.ok(resLogoutAll.ended);
   assert.equal(resLogoutAll.cleared.length, 1);

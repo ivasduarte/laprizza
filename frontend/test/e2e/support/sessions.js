@@ -3,17 +3,14 @@
  * The permissions follow the back-end matrix (Table 1); the SPA decides only with them.
  */
 const GUEST = ['catalogue:read'];
-const CUSTOMER = [...GUEST, 'customers:read:own'];
-const EMPLOYEE = [
-  ...GUEST,
-  'kitchen:read',
-  'products:read',
-  'resources:read',
-  'stock:read',
-];
+const CUSTOMER = [...GUEST, 'customers:read:own', 'resources:read'];
+// The employee has no access to the kitchen (team decision): kitchen:read is MANAGER only.
+const EMPLOYEE = [...GUEST, 'products:read', 'resources:read', 'stock:read'];
 const MANAGER = [
   ...EMPLOYEE,
+  'allergens:read',
   'allergens:write',
+  'kitchen:read',
   'categories:write',
   'customers:read',
   'customers:write',

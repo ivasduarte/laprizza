@@ -30,7 +30,7 @@ Content-Type: application/json
 {
   "email": "customer_{{dynamicSuffix}}@laprizza.pt",
   "password": "{{managerPassword}}",
-  "role": "CUSTOMER"
+  "roles": ["CUSTOMER"]
 }
 ?? status == 201
 
@@ -280,13 +280,13 @@ Authorization: Bearer {{customerToken}}
 ### 5: SEGURANÇA E ACESSOS (RBAC)
 ### ==========================================
 
-### 5.1 Sem Token - GET Listar (401 Unauthorized)
+### 5.1 Sem Token - GET Listar (200 OK - catálogo público, AA05)
 GET {{baseUrl}}/catalogue
-?? status == 401
+?? status == 200
 
-### 5.2 Sem Token - GET Por ID (401 Unauthorized)
+### 5.2 Sem Token - GET Por ID (200 OK - catálogo público, AA05)
 GET {{baseUrl}}/catalogue/{{visibleProductId}}
-?? status == 401
+?? status == 200
 
 ### 5.3 O Manager Também Pode Consultar o Catálogo (200 OK)
 GET {{baseUrl}}/catalogue/{{visibleProductId}}

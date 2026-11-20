@@ -315,13 +315,7 @@ test('login returns tokens and creates a session storing only the refresh token 
     email: user.email,
     status: 'active',
     roles: ['EMPLOYEE'],
-    permissions: [
-      'catalogue:read',
-      'kitchen:read',
-      'products:read',
-      'resources:read',
-      'stock:read',
-    ],
+    permissions: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
     customerId: null,
   });
 
@@ -587,8 +581,13 @@ test('establishSession is reusable and loads roles through the extension point',
 
   const result = await ctx.service.establishSession(user, { method: 'oidc', ip: '10.0.0.1' });
 
+  // AA03: roles outside the internal set (BETA) are dropped; CUSTOMER also reads shared resources.
   assert.deepEqual(result.user.roles, ['CUSTOMER']);
-  assert.deepEqual(result.user.permissions, ['catalogue:read', 'customers:read:own'])
+  assert.deepEqual(result.user.permissions, [
+    'catalogue:read',
+    'customers:read:own',
+    'resources:read',
+  ]);
   assert.equal(loadRoles.mock.calls[0].arguments[0], user);
   const [event] = loggedEvents(ctx, 'LOGIN_SUCCEEDED');
   assert.equal(event.method, 'oidc');
@@ -633,7 +632,9 @@ test('authenticateAccessToken returns the current roles and permissions from the
   assert.ok(promoted.permissions.includes('stock:write'));
 
   ctx.usersRepository.findById.mock.mockImplementation(async () => storedUser({ roles: [] }));
-  assert.deepEqual((await ctx.service.authenticateAccessToken(accessToken)).permissions, ['catalogue:read']);
+  assert.deepEqual((await ctx.service.authenticateAccessToken(accessToken)).permissions, [
+    'catalogue:read',
+  ]);
 });
 
 /**
@@ -1199,7 +1200,7 @@ test('getCurrentUser returns the session DTO read from the database', async () =
     email: 'user@laprizza.pt',
     status: 'active',
     roles: ['CUSTOMER'],
-    permissions: ['catalogue:read', 'customers:read:own'],
+    permissions: ['catalogue:read', 'customers:read:own', 'resources:read'],
     customerId: '65231abcd345678901234567',
   });
   assert.equal(ctx.usersRepository.findById.mock.calls[0].arguments[0], USER_ID);
@@ -1210,7 +1211,11 @@ test('getCurrentUser returns the session DTO read from the database', async () =
  */
 test('getCurrentUser refuses missing, inactive or disabled accounts with 401 SESSION_REVOKED', async () => {
   const ctx = createAuthTestContext();
-  for (const user of [null, storedUser({ status: 'inactive' }), storedUser({ status: 'disabled' })]) {
+  for (const user of [
+    null,
+    storedUser({ status: 'inactive' }),
+    storedUser({ status: 'disabled' }),
+  ]) {
     ctx.usersRepository.findById.mock.mockImplementation(async () => user);
     await rejectsWith(ctx.service.getCurrentUser(USER_ID), 401, AuthErrorCode.SESSION_REVOKED);
   }
@@ -1286,7 +1291,7 @@ test('AA03: the same role rule applies to external authentication (establishSess
   );
   const ok = await ctx.service.establishSession(storedUser({ roles: ['CUSTOMER'] }), { method: 'oidc' });
   assert.deepEqual(ok.user.roles, ['CUSTOMER']);
-  assert.deepEqual(ok.user.permissions, ['catalogue:read', 'customers:read:own']);
+  assert.deepEqual(ok.user.permissions, ['catalogue:read', 'customers:read:own', 'resources:read']);
 });
 
 test('AA03: roles supplied in the request are ignored; only the stored roles count', async () => {

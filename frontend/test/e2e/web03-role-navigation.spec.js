@@ -65,14 +65,10 @@ const pageTitle = (page) => page.getByRole('heading', { level: 1 }).first();
 
 const MENUS = {
   GUEST: ['Home'],
-  CUSTOMER: ['Home'],
+  CUSTOMER: ['Home', 'Shared resources'],
   NO_ROLES: ['Home'],
-  EMPLOYEE: [
-    'Home',
-    '3D Visualization',
-    'Kitchen Configuration',
-    'Shared resources',
-  ],
+  // The kitchen (configurations and 3D viewer) is MANAGER only.
+  EMPLOYEE: ['Home', 'Shared resources'],
   MANAGER: [
     'Home',
     '3D Visualization',
@@ -106,11 +102,12 @@ const DIRECT_ACCESS = [
   ['GUEST', '/shared-resources', 'login'],
   ['CUSTOMER', '/ai', 'denied'],
   ['CUSTOMER', '/kitchen-configurations', 'denied'],
-  ['CUSTOMER', '/shared-resources', 'denied'],
+  ['CUSTOMER', '/shared-resources', 'allow'],
   ['CUSTOMER', '/visualization3d', 'denied'],
   ['NO_ROLES', '/kitchen-configurations', 'denied'],
   ['EMPLOYEE', '/ai', 'denied'],
-  ['EMPLOYEE', '/kitchen-configurations', 'allow'],
+  ['EMPLOYEE', '/kitchen-configurations', 'denied'],
+  ['EMPLOYEE', '/visualization3d', 'denied'],
   ['EMPLOYEE', '/shared-resources', 'allow'],
   ['MANAGER', '/ai', 'allow'],
   ['MANAGER', '/kitchen-configurations', 'allow'],

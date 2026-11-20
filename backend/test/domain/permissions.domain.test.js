@@ -59,11 +59,14 @@ test('users without roles (or with unknown roles) get only the Guest permissions
 });
 
 test('base roles follow Table 1', () => {
-  assert.deepEqual(permissionsFor([Roles.CUSTOMER]), ['catalogue:read', 'customers:read:own']);
+  assert.deepEqual(permissionsFor([Roles.CUSTOMER]), [
+    'catalogue:read',
+    'customers:read:own',
+    'resources:read',
+  ]);
 
   assert.deepEqual(permissionsFor([Roles.EMPLOYEE]), [
     'catalogue:read',
-    'kitchen:read',
     'products:read',
     'resources:read',
     'stock:read',
@@ -100,6 +103,12 @@ test('base roles follow Table 1', () => {
   ]);
 });
 
+test('Employee has no access to the kitchen (configurations, viewer, assembly lines)', () => {
+  const employee = permissionsFor([Roles.EMPLOYEE]);
+  assert.ok(!hasPermission(employee, Permission.KITCHEN_READ));
+  assert.ok(!hasPermission(employee, Permission.KITCHEN_WRITE));
+});
+
 test('Employee reads stock but cannot change it or see inactive products', () => {
   const employee = permissionsFor([Roles.EMPLOYEE]);
   assert.ok(hasPermission(employee, Permission.STOCK_READ));
@@ -130,9 +139,15 @@ test('Manager keeps creating users and assigning EMPLOYEE outside the admin grou
 test('multiple roles receive the union of their permissions', () => {
   const both = permissionsFor([Roles.CUSTOMER, Roles.EMPLOYEE]);
   assert.ok(hasPermission(both, 'customers:read:own'));
-  assert.ok(hasPermission(both, 'kitchen:read'));
-  assert.deepEqual(permissionsFor([Roles.MANAGER, Roles.EMPLOYEE]), permissionsFor([Roles.MANAGER]));
-  assert.deepEqual(permissionsFor([Roles.EMPLOYEE, Roles.EMPLOYEE]), permissionsFor([Roles.EMPLOYEE]));
+  assert.ok(hasPermission(both, 'stock:read'));
+  assert.deepEqual(
+    permissionsFor([Roles.MANAGER, Roles.EMPLOYEE]),
+    permissionsFor([Roles.MANAGER]),
+  );
+  assert.deepEqual(
+    permissionsFor([Roles.EMPLOYEE, Roles.EMPLOYEE]),
+    permissionsFor([Roles.EMPLOYEE]),
+  );
 });
 
 test('hasPermission fails closed on invalid input', () => {
@@ -143,7 +158,12 @@ test('hasPermission fails closed on invalid input', () => {
 test('an actor only adds or removes roles it may assign', () => {
   const employeeAssigner = ['users:read', 'roles:assign:employee'];
   const change = (currentRoles, nextRoles) =>
-    evaluateRoleChange({ actorPermissions: employeeAssigner, isSelf: false, currentRoles, nextRoles });
+    evaluateRoleChange({
+      actorPermissions: employeeAssigner,
+      isSelf: false,
+      currentRoles,
+      nextRoles,
+    });
 
   assert.deepEqual(change([], ['EMPLOYEE']), { allowed: true });
   assert.deepEqual(change(['EMPLOYEE'], []), { allowed: true });

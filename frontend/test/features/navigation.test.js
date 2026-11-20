@@ -9,14 +9,8 @@ import { visibleFeatures } from '../../src/features/navigation.js';
  */
 const PERMISSIONS = {
   GUEST: ['catalogue:read'],
-  CUSTOMER: ['catalogue:read', 'customers:read:own'],
-  EMPLOYEE: [
-    'catalogue:read',
-    'kitchen:read',
-    'products:read',
-    'resources:read',
-    'stock:read',
-  ],
+  CUSTOMER: ['catalogue:read', 'customers:read:own', 'resources:read'],
+  EMPLOYEE: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
   MANAGER: [
     'catalogue:read',
     'kitchen:read',
@@ -43,18 +37,16 @@ describe('Dynamic navigation menu (WEB03)', () => {
     assert.deepEqual(menuOf('GUEST'), ['home']);
   });
 
-  it('a Customer and a user without roles see what a Guest sees (no customer pages yet)', () => {
-    assert.deepEqual(menuOf('CUSTOMER'), ['home']);
+  it('a Customer also sees the shared resources (team decision)', () => {
+    assert.deepEqual(menuOf('CUSTOMER'), ['home', 'shared-resources']);
+  });
+
+  it('a user without roles sees what a Guest sees', () => {
     assert.deepEqual(menuOf('NO_ROLES'), ['home']);
   });
 
-  it('an Employee sees the kitchen viewer, kitchen configuration and shared resources', () => {
-    assert.deepEqual(menuOf('EMPLOYEE'), [
-      'home',
-      'visualization3d',
-      'kitchen-configuration',
-      'shared-resources',
-    ]);
+  it('an Employee sees the shared resources but nothing of the kitchen (MANAGER only)', () => {
+    assert.deepEqual(menuOf('EMPLOYEE'), ['home', 'shared-resources']);
   });
 
   it('a Manager also sees planning (AI)', () => {

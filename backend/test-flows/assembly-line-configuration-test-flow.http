@@ -30,7 +30,7 @@ Content-Type: application/json
 {
   "email": "emp_{{dynamicSuffix}}@laprizza.pt",
   "password": "{{managerPassword}}",
-  "role": "EMPLOYEE"
+  "roles": ["EMPLOYEE"]
 }
 ?? status == 201
 @empEmail = {{createEmployee.email}}
@@ -56,7 +56,7 @@ Content-Type: application/json
 {
   "email": "cust_{{dynamicSuffix}}@laprizza.pt",
   "password": "{{managerPassword}}",
-  "role": "CUSTOMER"
+  "roles": ["CUSTOMER"]
 }
 ?? status == 201
 @custEmail = {{createCustomer.email}}
@@ -98,10 +98,10 @@ Content-Type: application/json
 }
 ?? status == 403
 
-### 2.4 Token de Employee consegue LER (200 OK)
+### 2.4 Token de Employee não tem acesso (403 Forbidden - a cozinha é só do Manager)
 GET {{baseUrl}}/assembly-line-configurations
 Authorization: Bearer {{empToken}}
-?? status == 200
+?? status == 403
 
 
 ### ==========================================

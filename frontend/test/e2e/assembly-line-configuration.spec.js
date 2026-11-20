@@ -85,30 +85,37 @@ const linesSection = (page) =>
   page.getByRole('region', { name: 'Assembly lines' });
 
 test.describe('Assembly Line Configuration E2E (VIS03)', () => {
-  test('RBAC: Employee gets a read-only view of the assembly lines', async ({
+  test('RBAC: an Employee never loads the assembly lines (kitchen is MANAGER only)', async ({
     page,
   }) => {
+    let lineRequests = 0;
     await mockApi(page, {
       session: mockEmployeeSession,
       activeKitchen: kitchenWithoutLine,
       lines: [mockLine],
     });
+    await page.route('**/api/v2/assembly-line-configurations**', (route) => {
+      lineRequests += 1;
+      return route.fulfill({ json: [mockLine] });
+    });
 
-    await loginAndOpenKitchenConfigs(page, 'emp@laprizza.pt');
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'emp@laprizza.pt');
+    await page.fill('input[type="password"]', 'StrongPassword123!');
+    await Promise.all([
+      page.waitForResponse('**/api/v2/auth/login'),
+      page.click('button[type="submit"]'),
+    ]);
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/kitchen-configurations');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
 
-    const section = linesSection(page);
-    await expect(
-      section.getByRole('heading', { name: 'Linha VIS03' })
-    ).toBeVisible();
-    await expect(section.getByRole('button', { name: 'View' })).toBeVisible();
-
-    await expect(
-      section.getByRole('button', { name: 'New assembly line' })
-    ).toHaveCount(0);
-    await expect(section.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-    await expect(section.getByRole('button', { name: 'Delete' })).toHaveCount(
-      0
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      /access denied/i
     );
+    await expect(linesSection(page)).toHaveCount(0);
+    expect(lineRequests).toBe(0);
   });
 
   test('Manager Flow: creates a line from the VIS03 default content', async ({
