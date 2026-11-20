@@ -31,7 +31,6 @@ These views are:
       - [Interfaces](#interfaces-3)
     - [Level 3 Process View](#level-3-process-view)
       - [Kitchen Configuration Flows](#kitchen-configuration-flows)
-      - [Authentication Flows](#authentication-flows)
   - [Non-Functional View](#non-functional-view)
 
 ## Level 1
@@ -135,11 +134,10 @@ flowchart TB
 | 3D Visualization to Asset Host           | HTTPS               | Loads the models and textures referenced by the kitchen configuration |
 | Back-End Application to AI Scheduling    | JSON/HTTPS          | Requests planning (BOM and requirements) calculations   |
 | Back-End Application to Database         | Mongoose / TCP      | Reads and writes                                        |
-| Back-End Application to External Identity Provider | HTTPS (OIDC)     | Authenticates external users (Authorization Code with PKCE) and validates the ID token |
 
 ### Level 2 Process View
 
-This view shows the interactions between the containers when the AI requirements planning is executed (Sprint 2).
+This view shows the interactions between the containers when a forecast is executed through the AI requirements planning (Sprint 2, WEB07). The Manager chooses the forecast version and the supplier scenario; without them, the back end uses the most recently created active ones. The full flow, with its components and error cases, is in [UC9 - Execute Forecast](../flows/ai-planning/execute-forecast.md).
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'actorBkg':'#438dd5','actorBorder':'#3c7fc0','actorTextColor':'#ffffff','actorLineColor':'#888888','signalColor':'#444444','signalTextColor':'#333333','noteBkgColor':'#ffffff'}}}%%
@@ -152,32 +150,34 @@ sequenceDiagram
     participant db as Database<br/>[Container: MongoDB]
     participant ai as AI Scheduling Module<br/>[Container: SWI-Prolog]
 
-    manager->>spa: Submits forecast execution request
-    spa->>backend: POST /api/v1/planning/execute
-    backend->>db: Retrieves active forecast,<br/>BOM, and stock snapshot
-    db-->>backend: Returns required business data
-    backend->>ai: POST /requirements (JSON payload)
-    ai->>ai: Executes Prolog rules<br/>to calculate planning
-    ai-->>backend: Returns calculated requirements<br/>and supplier selection
-    backend->>db: Saves simulation results<br/>(no operational stock changes)
-    backend-->>spa: Returns 200 OK<br/>with planning results
-    spa-->>manager: Displays daily planning<br/>breakdown and warnings
+    manager->>spa: Chooses the forecast version, the supplier<br/>scenario and the AI scenario, and executes
+    spa->>backend: POST /api/v2/planning/requirements
+    backend->>db: Reads the AI scenario, catalogue and BOM, stock,<br/>chosen forecast and supplier scenario
+    db-->>backend: Returns the required business data
+    backend->>backend: Builds the snapshot<br/>(snapshot id, BOM version, input versions)
+    backend->>ai: POST /service/requirements<br/>(X-Api-Key, request and snapshot)
+    ai->>ai: Executes the Prolog rules<br/>to calculate the planning
+    ai-->>backend: Returns the requirements, the purchase<br/>plan and the warnings
+    backend->>db: Saves the planning run with its input versions<br/>(stock is never changed)
+    backend-->>spa: Returns 200 OK<br/>with the result and the run id
+    spa-->>manager: Displays the daily needs, the purchase<br/>plan, the unmet needs and the warnings
 ```
 
 #### Interaction Steps
 
 | Step | From                 | To                   | Interaction                                                                 |
 | :--: | :------------------- | :------------------- | :-------------------------------------------------------------------------- |
-|  1   | LaPrizza Manager     | Web Application      | Submits the forecast execution request on the AI Configuration page         |
-|  2   | Web Application      | Back-End Application | `POST /api/v1/planning/execute`                                             |
-|  3   | Back-End Application | Database             | Retrieves the active forecast, the BOM and the stock snapshot               |
+|  1   | LaPrizza Manager     | Web Application      | Chooses the forecast version, the supplier scenario, the AI scenario and the stock mode on the AI page, and executes |
+|  2   | Web Application      | Back-End Application | `POST /api/v2/planning/requirements` with `{ scenarioId, stockMode, forecastId?, supplierScenarioId? }` (`/api/v1` is a deprecated alias) |
+|  3   | Back-End Application | Database             | Reads the AI scenario, the catalogue and BOM, the stock (live, or the AI scenario's own stock), the chosen forecast and supplier scenario (the most recent active ones when no id is given) |
 |  4   | Database             | Back-End Application | Returns the required business data                                          |
-|  5   | Back-End Application | AI Scheduling Module | `POST /requirements` with the data as JSON payload                          |
-|  6   | AI Scheduling Module | AI Scheduling Module | Executes the Prolog rules that calculate the planning                       |
-|  7   | AI Scheduling Module | Back-End Application | Returns the calculated requirements and the supplier selection              |
-|  8   | Back-End Application | Database             | Saves the simulation results (no operational stock changes)                 |
-|  9   | Back-End Application | Web Application      | Returns `200 OK` with the planning results                                  |
-|  10  | Web Application      | LaPrizza Manager     | Displays the daily planning breakdown and the warnings                      |
+|  5   | Back-End Application | Back-End Application | Builds the snapshot: content hash (`snapshotId`), BOM version and the versions of the forecast and supplier scenario |
+|  6   | Back-End Application | AI Scheduling Module | `POST /service/requirements` with the service key (`X-Api-Key`, never the user's token) and `{ request, snapshot }`; waits at most 15 s |
+|  7   | AI Scheduling Module | AI Scheduling Module | Executes the Prolog rules that calculate the planning                       |
+|  8   | AI Scheduling Module | Back-End Application | Returns the daily requirements, production, purchase plan by supplier, unmet needs and warnings (422 when data is missing) |
+|  9   | Back-End Application | Database             | Saves the planning run with the versions of its inputs; stock and purchase orders are never changed, and a failure saves nothing |
+|  10  | Back-End Application | Web Application      | Returns `200 OK` with the result and the `runId`                            |
+|  11  | Web Application      | LaPrizza Manager     | Displays the daily needs, the purchase plan with suppliers and delivery dates, the unmet needs and the warnings |
 
 
 ### Level 2 Development View
@@ -583,13 +583,22 @@ This view shows how the components of the containers interact in each use case. 
 
 The context, container and component views of the feature, for the Back-End Application module and for the Web Application page, are in the [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).
 
-
-#### Authentication Flows
+#### AI Planning Flows
 
 | Use Case | Interaction | Containers involved | ADRs |
-| :--- | :--- | :--- | :--- |
-| [UC3 - External Login (AA02)](../flows/authentication/external-authentication.md) | The back end runs the OpenID Connect flow with PKCE, resolves the user by `(issuer, sub)` and creates the same session as the local login; a new user gets an inactive `CUSTOMER` account | Web Application, Back-End Application, Database, External Identity Provider | [ADR-0033](../adr/0033-external-authentication-with-openid-connect.md), [ADR-0034](../adr/0034-external-identity-model-and-account-resolution.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
-| [Session Handling (AA04)](../flows/authentication/session-handling.md) | Access token in memory and rotating refresh cookie, shared by local and external login | Web Application, Back-End Application, Database | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| :------- | :---------- | :------------------ | :--- |
+| [UC1 - Create Forecast](../flows/ai-planning/create-forecast.md) | The form is checked in the browser; the back end validates with Joi and the forecast rules and assigns the next version of the name | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| [UC2 - List and Consult Forecasts](../flows/ai-planning/list-and-consult-forecasts.md) | Only active versions are listed, grouped by name; the detail comes from the list | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| [UC3 - Edit Forecast (new version)](../flows/ai-planning/edit-forecast.md) | Saving with the same name creates the next version; the edited version is never changed | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| [UC4 - Delete (Deactivate) Forecast](../flows/ai-planning/deactivate-forecast.md) | After a confirmation, the forecast is deactivated and kept for the saved runs | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| [UC5 - Export Products](../flows/ai-planning/export-products.md) | The products that can be bought are exported as JSON | Web Application, Back-End Application, Database | [ADR-0035](../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| [UC6 - Import Supplier Scenario](../flows/ai-planning/import-supplier-scenario.md) | Parse and structure checks in the browser, server dry-run, preview, then save on confirmation | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0035](../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| [UC7 - List and Consult Supplier Scenarios](../flows/ai-planning/list-and-consult-supplier-scenarios.md) | Only active versions are listed; offers are shown as simulated, products without offers as "No configured supplier" | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| [UC8 - Deactivate Supplier Scenario](../flows/ai-planning/deactivate-supplier-scenario.md) | After a confirmation, the scenario is deactivated and kept for the saved runs | Web Application, Back-End Application, Database | [ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| [UC9 - Execute Forecast](../flows/ai-planning/execute-forecast.md) | The back end builds the snapshot, calls the AI Scheduling Module with a service key and saves the run; stock is never changed | Web Application, Back-End Application, Database, AI Scheduling Module | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| [UC10 - Consult Planning Results](../flows/ai-planning/consult-planning-results.md) | Saved runs are listed with the versions of their inputs; one run is opened with its full plan | Web Application, Back-End Application, Database | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+
+The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md).
 
 ## Non-Functional View
 

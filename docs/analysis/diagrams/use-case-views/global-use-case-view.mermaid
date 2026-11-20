@@ -3,6 +3,8 @@ flowchart LR
     SystemUser([System User])
     Employee([Employee])
     Customer([Customer])
+    Viz3D([3D Visualization Module])
+    AI([AI Scheduling Module])
 
     subgraph System [LaPrizza Information System]
         subgraph Auth [BCK01: Auth & Users]
@@ -27,6 +29,15 @@ flowchart LR
         subgraph Stock [BCK09: Stock]
             UC_Stock(Manage & Adjust Stock)
         end
+        subgraph Kitchen [WEB06: Kitchen Configuration]
+            UC_Kitchen(Manage Kitchen Configurations)
+            UC_ActiveKitchen(Get Active Kitchen Configuration)
+        end
+        subgraph Planning [WEB07: AI Planning]
+            UC_Forecasts(Manage Forecasts)
+            UC_Suppliers(Prepare Supplier Data)
+            UC_Planning(Execute & Consult Planning)
+        end
     end
 
     Manager --> UC_Auth
@@ -41,14 +52,24 @@ flowchart LR
     Manager --> UC_Predef
     Manager --> UC_Stock
     Manager --> UC_Catalog
+    Manager --> UC_Kitchen
+    Manager --> UC_ActiveKitchen
+    Manager --> UC_Forecasts
+    Manager --> UC_Suppliers
+    Manager --> UC_Planning
 
     SystemUser --> UC_Auth
-    
+
     Employee -.->|read-only| UC_Allergens
     Employee -.->|read-only| UC_Prod
     Employee -.->|read-only| UC_Configs
     Employee -.->|read-only| UC_Predef
+    Employee -.->|read-only| UC_Kitchen
+    Employee --> UC_ActiveKitchen
     Employee --> UC_Stock
     Employee --> UC_Catalog
-    
+
     Customer --> UC_Catalog
+
+    Viz3D -->|consumes| UC_ActiveKitchen
+    UC_Planning -->|executes| AI

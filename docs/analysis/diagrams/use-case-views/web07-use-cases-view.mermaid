@@ -1,0 +1,31 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph WEB07 [WEB07: Artificial Intelligence Configuration and Execution]
+        direction TB
+        UC1([UC1: Create Forecast])
+        UC2([UC2: List and Consult Forecasts])
+        UC3([UC3: Edit Forecast - new version])
+        UC4([UC4: Delete - Deactivate Forecast])
+        UC5([UC5: Export Products])
+        UC6([UC6: Import Supplier Scenario])
+        UC7([UC7: List and Consult Supplier Scenarios])
+        UC8([UC8: Deactivate Supplier Scenario])
+        UC9([UC9: Execute Forecast])
+        UC10([UC10: Consult Planning Results])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+    Manager --> UC5
+    Manager --> UC6
+    Manager --> UC7
+    Manager --> UC8
+    Manager --> UC9
+    Manager --> UC10
+
+    UC3 -.->|<< extend >>| UC1
+    UC9 -->|<< executes >>| AI
