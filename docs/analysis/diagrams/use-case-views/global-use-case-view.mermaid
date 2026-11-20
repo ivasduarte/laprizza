@@ -38,8 +38,9 @@ flowchart LR
             UC_Suppliers(Prepare Supplier Data)
             UC_Planning(Execute & Consult Planning)
         end
-        subgraph Lighting [VIS05: 3D Scene Lighting]
+        subgraph Lighting [VIS05-06: 3D Scene Lighting]
             UC_Lit(View Lit Kitchen Scene)
+            UC_AdjustLight(Adjust Scene Lighting)
         end
     end
 
@@ -61,6 +62,7 @@ flowchart LR
     Manager --> UC_Suppliers
     Manager --> UC_Planning
     Manager --> UC_Lit
+    Manager --> UC_AdjustLight
 
     SystemUser --> UC_Auth
 
@@ -77,4 +79,5 @@ flowchart LR
 
     Viz3D -->|consumes| UC_ActiveKitchen
     Viz3D -->|renders| UC_Lit
+    Viz3D -->|re-renders| UC_AdjustLight
     UC_Planning -->|executes| AI

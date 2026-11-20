@@ -1,0 +1,21 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS06 [VIS06: Interactive Light Controls]
+        direction TB
+        UC1([UC1: Switch a Light On/Off])
+        UC2([UC2: Change Light Colour and Intensity])
+        UC3([UC3: Adjust Spotlight Cutoff Angle and Penumbra])
+        UC4([UC4: Reset Lighting])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Viz3D -->|<< re-renders >>| UC1
+    Viz3D -->|<< re-renders >>| UC2
+    Viz3D -->|<< re-renders >>| UC3
+    Viz3D -->|<< re-renders >>| UC4
