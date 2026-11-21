@@ -10,9 +10,8 @@ WorkingDirectory=/opt/laprizza/ai-scheduling
 ExecStart=/opt/laprizza/ai-scheduling/start-server.sh
 Restart=on-failure
 RestartSec=5
+# Sem PrivateTmp/ProtectSystem: as VMs do DEI não permitem mount namespaces (ver laprizza-api.service).
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=full
 
 [Install]
 WantedBy=multi-user.target

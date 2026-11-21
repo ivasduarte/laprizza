@@ -12,11 +12,10 @@ EnvironmentFile=/opt/laprizza/.env
 ExecStart=/usr/bin/node src/index.js
 Restart=on-failure
 RestartSec=5
-# Endurecimento: só escreve nos logs e na pasta partilhada
+# Endurecimento possível nas VMs do DEI. PrivateTmp, ProtectSystem e ReadWritePaths precisam de
+# mount namespaces, que estas VMs não permitem ("Failed to set up mount namespacing: Permission
+# denied", status=226/NAMESPACE). O processo corre como "deploy", sem privilégios.
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=full
-ReadWritePaths=/srv/laprizza-shared
 
 [Install]
 WantedBy=multi-user.target
