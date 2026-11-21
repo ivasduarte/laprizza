@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, AA01, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories with use cases of their own (WEB04, WEB06, WEB07, AA01, AA02, AA04, AA07, VIS01, VIS02, VIS05, VIS06, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -49,6 +49,21 @@ This document shows who uses the LaPrizza information system and which business 
     - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
+    - [WEB04: User Feedback and Validation](#web04-user-feedback-and-validation)
+      - [Use Case Descriptions](#use-case-descriptions-7)
+      - [Flow Mapping](#flow-mapping-18)
+    - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
+      - [Use Case Descriptions](#use-case-descriptions-8)
+      - [Flow Mapping](#flow-mapping-19)
+    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
+      - [Use Case Descriptions](#use-case-descriptions-9)
+      - [Flow Mapping](#flow-mapping-20)
+    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
+      - [Use Case Descriptions](#use-case-descriptions-10)
+      - [Flow Mapping](#flow-mapping-21)
+    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
+      - [Use Case Descriptions](#use-case-descriptions-11)
+      - [Flow Mapping](#flow-mapping-22)
 
 ## Actors
 
@@ -560,3 +575,176 @@ flowchart LR
 | **AI06**   | UC3: Refresh Data per Calculation | AI Scheduling Module                        | [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) |
 
 The REST API summary, the snapshot format, the facts of the knowledge base and the element catalogue are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
+
+### WEB04: User Feedback and Validation
+
+Every page of the Web Application gives the same kind of feedback: it says when something is loading, confirms what was saved, explains what is wrong in a form and how to fix it, asks before actions with significant consequences, and lets the user retry a failed request. These behaviours are shared components of the SPA, so every feature uses them in the same way; the back end remains the authority for every rule and answers with structured, translatable errors that never carry internal details.
+
+```mermaid
+flowchart LR
+    User([System User])
+
+    subgraph WEB04 [WEB04: User Feedback and Validation]
+        direction TB
+        UC1([UC1: Submit a Form])
+        UC2([UC2: Confirm a Significant Action])
+        UC3([UC3: Wait for Information])
+        UC4([UC4: Recover from a Failure])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    UC1 -.->|<< include >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Submit a Form** | System User | Fills a form and saves it. | Rules are checked in the browser first (`validators.js`) and again by the API (Joi and domain). Each violation is shown on its field and in a summary with links to the fields; the text explains how to correct it (e.g. the password policy, the name rule, the stock limits). A second submission is ignored while one is running (`useSubmit`, submit guard). On failure the inputs keep their values; success is confirmed by a toast that closes after 3 s. | [ADR-0018](../adr/0018-internationalization-of-the-web-application-(english-and-portuguese).md), [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC2: Confirm a Significant Action** | System User | Deactivates, deletes, removes stock or enters an unusual quantity. | A confirmation dialog (`useConfirm`) states what will happen before the request is sent; stock movements of 1000 units or more show the change (from → to). | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC3: Wait for Information** | System User | Opens a page or a list. | A global progress bar follows the pending requests; pages and lists show a placeholder that keeps the room of the content, so the layout does not move when the data arrives. | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC4: Recover from a Failure** | System User | A request fails (network, timeout, server error). | Errors are normalized by kind and translated by code (`error-normalizer.js`, `error-text.js`); messages never show server text, stack traces or session data; 5xx answers carry no details. Lists offer "Retry"; a failed operation is never shown as completed. | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **WEB04**  | UC1-UC4 | System User | Client-side behaviour, no flow of its own. Examples in the feature flows: [Adjust Stock](../flows/stock/adjust-stock.md), [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04), [Customer](../flows/customer/README.md) |
+
+Evidence: `submit-guard.test.js`, `validators.test.js`, `name-rules.test.js`, `feedback-store.test.js`, `confirm-store.test.js`, `error-normalizer.test.js`, `error-text.test.js`, `http-client-feedback.test.js`, `stock-rules.test.js`, `json-locations.test.js` (front end); `error-handler.test.js` (back end).
+
+### AA02: External Identity Provider Integration
+
+A user can sign in with Google or Microsoft (OpenID Connect, Authorization Code with PKCE) besides the local login. The first external login of a verified e-mail creates an active account with the `CUSTOMER` role and opens the session; a returning identity signs in to its account. The provider password never reaches LaPrizza, and an e-mail that already belongs to another account is never linked automatically. When the provider does not supply a phone number, it is asked before the customer features are available.
+
+```mermaid
+flowchart LR
+    User([System User])
+    IdP([External Identity Provider])
+
+    subgraph AA02 [AA02: External Identity Provider Integration]
+        direction TB
+        UC1([UC1: Sign In with an External Provider])
+        UC2([UC2: Complete the Contact Phone])
+    end
+
+    User --> UC1
+    User --> UC2
+    UC1 -->|<< authenticates at >>| IdP
+    UC2 -.->|<< extend: first login without phone >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Sign In with an External Provider** | System User | Presses "Continue with <provider>", authenticates at the provider and returns to the application signed in. | Only enabled providers are shown. `state`, `nonce` and PKCE in a signed transaction cookie; the ID token is validated by the library; the identity is `(issuer, sub)`. New identity: a verified, unused e-mail creates an active `CUSTOMER` account (if the identity link fails, the account is removed); an e-mail of another account is refused (`ACCOUNT_LINK_REQUIRED`). A never-activated linked account is activated by the login; disabled accounts are refused. Cancelled or failed logins show a translated code and grant nothing. The session is the same as the local one (AA04). | [ADR-0044](../adr/0044-external-authentication-with-openid-connect.md), [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| **UC2: Complete the Contact Phone** | System User | After the first external login, enters the phone number before using the customer pages. | `phoneRequired` in the session user while a `CUSTOMER` has neither a phone nor a Customer record; the back end withholds the customer permissions until then. Portuguese number, stored normalized (`PUT /auth/me/phone`). | [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AA02**   | UC1: Sign In with an External Provider | System User | [External Authentication](../flows/authentication/external-authentication.md#diagrams) |
+| **AA02**   | UC2: Complete the Contact Phone | System User | [External Authentication - Contact phone](../flows/authentication/external-authentication.md#contact-phone-after-the-first-external-login) |
+
+### AA04: Secure Session Handling
+
+A signed-in user keeps working while the session is valid: the session survives a reload or a new tab of the same browser, expires after 7 days or 30 minutes without use, is checked on every protected request and ends everywhere it is shared when the user logs out. Local and external logins create the same kind of session.
+
+```mermaid
+flowchart LR
+    User([System User])
+
+    subgraph AA04 [AA04: Secure Session Handling]
+        direction TB
+        UC1([UC1: Keep the Session])
+        UC2([UC2: Log Out])
+        UC3([UC3: Log Out Everywhere])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Keep the Session** | System User | Works in the application, reloads the page or opens a new tab. | Access token (60 min) only in memory; rotating refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie restores it after a reload. Every request re-checks the user, the token version and the session (absolute and idle expiry). Refreshes are serialized across tabs (Web Lock). HTTPS outside `localhost`. | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| **UC2: Log Out** | System User | Logs out in one tab. | The session is revoked and the cookie cleared; the other tabs of the same browser end too (`BroadcastChannel`, and the server refuses their token); other browsers keep their own sessions. Cached data is cleared and pages restored from the back/forward cache are reloaded. | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| **UC3: Log Out Everywhere** | System User | Ends every session of the account. | `tokenVersion` incremented and all sessions revoked. | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AA04**   | UC1: Keep the Session | System User | [Session Handling - Protected request and renewal, Restoring the session after a reload](../flows/authentication/session-handling.md#diagrams) |
+| **AA04**   | UC2: Log Out | System User | [Session Handling - Logout and other tabs](../flows/authentication/session-handling.md#logout-and-other-tabs) |
+| **AA04**   | UC3: Log Out Everywhere | System User | [Session Handling - Session invalidation rules](../flows/authentication/session-handling.md#session-invalidation-rules) |
+
+### VIS01: 3D Module Integration
+
+The 3D viewer is a React Three Fiber component (Three.js) of the SPA, in `frontend/src/features/visualization3d`. It is a lazy-loaded feature of the registry, rendered inside the common layout (header, menu, breadcrumbs) and protected by the same session and permissions as the other pages: `kitchen:read` (Manager and Employee). It is shown on the 3D Visualization page and on the Kitchen Configuration page.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS01 [VIS01: 3D Module Integration]
+        direction TB
+        UC1([UC1: Open the 3D Viewer])
+    end
+
+    Staff --> UC1
+    UC1 -->|<< uses >>| Viz3D
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Open the 3D Viewer** | LaPrizza Manager / Employee | Opens the 3D Visualization page (or the Kitchen Configuration page) and sees the active kitchen. | Same navigation, layout, language and session as the rest of the SPA; the route guard and the API both require `kitchen:read`. The viewer fetches the active configuration every time it is mounted and shows an empty state when none is active. | [ADR-0007](../adr/0007-web-application-(spa)-technology-and-structure.md), [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS01**  | UC1: Open the 3D Viewer | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md) |
+
+### VIS02: Kitchen Layout and Equipment
+
+The viewer draws the kitchen of the active configuration: the floor with its dimensions and texture, every element at its position, rotation (degrees) and scale, and the assembly line at its placement (VIS03). Everything comes from the back end as JSON; no layout is embedded in the SPA.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS02 [VIS02: Kitchen Layout and Equipment]
+        direction TB
+        UC1([UC1: View the Kitchen Layout])
+    end
+
+    Staff --> UC1
+    Viz3D -->|<< renders >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: View the Kitchen Layout** | LaPrizza Manager / Employee | Sees the kitchen of the active configuration in 3D. | Dimensions, positions, orientations, scales, materials and model references come from `GET /kitchen-configurations/active`. Elements are drawn procedurally by type (`equipment`: stone/dome wood-fired oven; other types: a box) inside the kitchen bounds checked by the back end. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+
+Known gaps (Sprint 2 review): `modelReference` is validated and stored but the viewer does not load imported models yet (the `Model` component of `kitchen-scene.jsx` is not used), and only the oven has a procedural model; tables, counters, fryer, griddle, grill, refrigerator, dishwasher, exhaust hood and cooking tools are drawn as boxes.
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) |

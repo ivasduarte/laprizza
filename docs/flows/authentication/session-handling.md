@@ -15,7 +15,9 @@ A session is one `AuthSession` document in MongoDB. The browser holds two creden
 | Credential | Content | Where it lives | Lifetime | Checked |
 |:---|:---|:---|:---|:---|
 | Access token | Signed JWT (HS256, issuer `laprizza-api`) with `sub` (user), `sid` (session) and `tv` (token version) | SPA memory only, sent as `Authorization: Bearer` | `ACCESS_TOKEN_TTL_MINUTES` (60) | On every protected request, together with the user and the session in the database |
-| Refresh token | 256 random bits (`randomBytes(32)`), only its SHA-256 is stored | `HttpOnly` cookie `lp_rt`, path `/api/v1/auth` | `REFRESH_TOKEN_TTL_DAYS` (7), absolute | Only by `POST /auth/refresh`, rotated on every use |
+| Refresh token | 256 random bits (`randomBytes(32)`), only its SHA-256 is stored | `HttpOnly` cookie `lp_rt`, path `/api/v2/auth` (the API version the SPA calls) | `REFRESH_TOKEN_TTL_DAYS` (7), absolute, and `SESSION_IDLE_TIMEOUT_MINUTES` (30) without use | Only by `POST /auth/refresh`, rotated on every use |
+
+**Reload and new tabs (clarification of AA04).** The access token is not persisted (no `localStorage`): after F5 or in a new tab of the same browser the SPA calls `POST /auth/refresh` with the cookie and gets a new access token, as long as the session has not expired and was used in the last `SESSION_IDLE_TIMEOUT_MINUTES`. Requests refresh `lastUsedAt` at most once per minute. A logout in one tab ends the session in every tab of the browser that shares it (server-side revocation plus a `BroadcastChannel` event); sessions of other browsers or devices are independent. Outside `localhost` this needs HTTPS: the `Secure` cookie and the Web Locks are only available in secure contexts ([HTTPS](../../sys-admin/https.md)).
 
 The roles used for authorization always come from the database (`req.user.roles`), never from the token or the client ([Role Resolution (AA03)](./role-resolution.md)). Local login and the external login ([AA02](./external-authentication.md)) both end in `establishSession`, so they create the same kind of session.
 
@@ -202,6 +204,7 @@ The guard only avoids rendering protected screens. The back end still authorizes
 | Access token expires | Session untouched | Client refreshes (rotation) and repeats the request |
 | Rotated refresh token presented again | Whole session revoked (theft assumed) | Refused |
 | Refresh token reaches its absolute expiry | Document removed by the TTL index on `expiresAt` | Refused |
+| No use for `SESSION_IDLE_TIMEOUT_MINUTES` | Refresh refused (`rotateRefreshToken` only matches sessions with a recent `lastUsedAt`) | Refused (`isSessionUsable` applies the same window) |
 
 ## Configuration (`.env`)
 
@@ -212,11 +215,12 @@ The guard only avoids rendering protected screens. The back end still authorizes
 | `JWT_SECRET` | none, startup fails without it | Signs and verifies access tokens (HS256). Changing it invalidates every access token | Long random value from the secret store ([ADR 0017](../../adr/0017-secrets-management-strategy.md)), never committed |
 | `ACCESS_TOKEN_TTL_MINUTES` | `60` | Access token lifetime | `60` or less |
 | `REFRESH_TOKEN_TTL_DAYS` | `7` | Absolute lifetime of the session | `7` |
+| `SESSION_IDLE_TIMEOUT_MINUTES` | `30` | Inactivity limit of the session; `0` disables it | `30` |
 | `REFRESH_COOKIE_NAME` | `lp_rt` | Name of the refresh cookie | `lp_rt` |
 | `REFRESH_COOKIE_SECURE` | `true` | `Secure` flag of the cookie. Only `false` disables it | `true` |
 | `REFRESH_COOKIE_SAMESITE` | `strict` | `SameSite` flag. `none` requires `REFRESH_COOKIE_SECURE=true`, otherwise the server refuses to start | `strict` (SPA and API on the same site) |
 | `CORS_ORIGIN` | `http://localhost:4200` | Comma-separated SPA origins. Used by CORS (with credentials) and as the allow-list of `POST /auth/refresh` | Exact origin of the SPA |
-| `TRUST_PROXY` | `false` | Express `trust proxy`. Needed so `req.ip` is the client when a reverse proxy is in front | Number of proxies, for example `1` |
+| `TRUST_PROXY` | `false` | Express `trust proxy`. Needed so `req.ip` is the client when a reverse proxy is in front (used in memory by the rate limiter, never stored) | `loopback` (nginx on the same VM) |
 | `RATE_LIMIT_ENABLED` | `true` (`false` when `NODE_ENV=test`) | Enables the per-IP limiters | `true` |
 | `AUTH_RATE_LIMIT_WINDOW_MINUTES` | `15` | Window of the limiter applied to every `/auth/*` route, except `GET /auth/external/providers` | `15` |
 | `AUTH_RATE_LIMIT_MAX` | `10` | Requests per IP in that window | `10` (see limitations) |
@@ -235,7 +239,7 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:3000/api/v1` | Base URL of the API. It holds no credentials |
+| `VITE_API_BASE_URL` | `http://localhost:3000/api/v2` | Base URL of the API (current version, same as the cookie path). It holds no credentials |
 
 ### Local development
 
@@ -260,13 +264,13 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 | ID | Threat | Mitigation in the system | Evidence | Residual risk |
 |---|---|---|---|---|
 | T1 | Theft of tokens by XSS | Access token only in memory. Refresh token in an `HttpOnly` cookie, so scripts cannot read it | `session-store.js`, cookie options in `auth.controller.js` | A script running in the page can still call the API while the page is open. No Content-Security-Policy is configured by the application |
-| T2 | CSRF against the cookie endpoint | `SameSite=Strict`, cookie limited to `/api/v1/auth`, `Origin` must be allow-listed on `/auth/refresh`. Business endpoints need the Bearer header, which browsers do not attach on their own | `requireAllowedOrigin` in `auth.routes.js` | Requests without an `Origin` header are accepted, but they still need the cookie |
+| T2 | CSRF against the cookie endpoint | `SameSite=Strict`, cookie limited to `/api/v2/auth`, `Origin` must be allow-listed on `/auth/refresh`. Business endpoints need the Bearer header, which browsers do not attach on their own | `requireAllowedOrigin` in `auth.routes.js` | Requests without an `Origin` header are accepted, but they still need the cookie |
 | T3 | Stolen access token replayed | HTTPS, 60 minute lifetime, never in URLs, and every request re-checks the session, so logout or disabling the user refuses it at once | `authenticateAccessToken` in `auth.service.js`, `auth.middleware.test.js` | Valid until revoked or expired |
 | T4 | Stolen refresh token replayed | Rotation on every use, only the SHA-256 is stored, a rotated token presented again revokes the whole session, absolute expiry | `rotateRefreshToken`, `findByRotatedHash` | The thief and the user race for the first use. The loser is refused and the session ends |
 | T5 | Session fixation | Session id and refresh token are generated by the server at each login. The client cannot supply them | `establishSession` | None identified |
 | T6 | Stale or escalated permissions | Role read from the database on every request, `tokenVersion` and session revocation on disabling or password change, roles from the client are never accepted | `authenticateAccessToken`, `requireRole`, `users.service.js` | None identified |
 | T7 | Brute force and credential stuffing | Progressive lockout per account, per-IP rate limit, same `401` for every failure and a dummy hash for unknown accounts | `computeLockoutDelayMs`, `rate-limit.js` | The rate limiter is in memory ([ADR 0008](../../adr/0008-implement-rate-limiting-policies.md)). Lockout can be used to annoy a known user |
-| T8 | Session data leaking through URLs, messages or logs | Credentials only in the header and the cookie. Errors use generic codes. The security logger drops keys that look like secrets | `security-logger.test.js`, `auth-errors.js` | `LOGIN_FAILED` logs the email, which is personal data and needs a retention period (GDP01). `sessionId` is logged on purpose (ADR 0032, D8) |
+| T8 | Session data leaking through URLs, messages or logs | Credentials only in the header and the cookie. Errors use generic codes. The security logger drops keys that look like secrets | `security-logger.test.js`, `auth-errors.js` | `LOGIN_FAILED` logs the email, which is personal data ([GDP01](../../gdpr/personal-data-handling.md)). No IP address is logged or stored. `sessionId` is logged on purpose (ADR 0032, D8) |
 | T9 | Protected data visible after logout (back button, shared computer) | `Cache-Control: no-store` on API responses, query cache cleared at session end, reload when restored from the back/forward cache, route guard | `session-cache.test.js`, `route-protection.test.js`, `guard.test.js` | The cached `index.html` holds no user data. Its headers depend on the web server |
 | T10 | Refresh race between tabs revoking a healthy session | Web Lock serializes refreshes across tabs | `refresh-lock.test.js` | Without a secure context the lock is unavailable and the race is possible |
 | T11 | Other tabs keep a session that was ended elsewhere | `BroadcastChannel` event, and the server refuses the old token anyway | `session-sync.test.js`, flow 6.2 in `auth-test-flow.http` | Without `BroadcastChannel` the tab notices on its next request |
@@ -285,6 +289,8 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 | Local and external authentication behave the same | Both call `establishSession` ([External Authentication](./external-authentication.md)) | `auth.service.test.js`, `external-auth.service.test.js` |
 | Session information is not exposed in URLs, messages or logs | See T3, T8 and T12 | `security-logger.test.js` |
 | Going back after logout shows nothing protected | See T9 | `session-cache.test.js`, `session-sync.test.js` |
+| (Clarification a) The session survives F5 and a new tab while valid and not idle | Refresh cookie restores the session; idle window on refresh and on every request | `auth.session-policy.test.js`, `auth.domain.test.js` |
+| (Clarification b) Logout in one tab ends the session in the other tabs of the same browser, not in other browsers | Server revocation of the shared session plus `BroadcastChannel`; other browsers hold other sessions | `session-sync.test.js`, flow 6.2 in `auth-test-flow.http` |
 
 ## Known limitations and follow-ups
 
