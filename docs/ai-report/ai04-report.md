@@ -43,11 +43,11 @@ This report documents the Artificial Intelligence work of Sprint 2: the Bill of 
 
 Each product gets a status: `on_time`, `late` (covered, some lines late), `partial` (part uncovered) or `unavailable` (nothing covered); uncovered quantities are listed in `unmet` with the reason `NO_SUPPLIER_OFFER` or `INSUFFICIENT_SUPPLY`. `summary.feasible` is true only if every product is on time. Without a supplier scenario every product is `unavailable` with a warning.
 
-**Assumptions about capacity (as implemented).** `supplyLimit`, when present, is the total a supplier can deliver of the product over the whole plan (`0` means no capacity). Without a limit, the capacity used is the offer's `stockUnits`. Missing capacity is therefore neither read as zero nor as unlimited.
+**Offer price and cost.** An offer is a price in EUR for `stockUnits` stock units, so offers are compared on a common stock-unit basis: unit price = `priceEur / stockUnits` (reported as `unitPriceEur` in each allocation). The cost of an allocation is the unit price × the quantity, pro rata: there is no rounding to whole offers and no minimum order.
 
-**Known discrepancy, to be resolved by the team before the evaluation.** `requirements.pl` uses `priceEur` as the price of one stock unit (offers are ordered by `priceEur` and the cost is `priceEur × quantity`), while the supplier JSON format defines `priceEur` as the price of `stockUnits` units and the SPA preview shows `priceEur / stockUnits` ([Supplier JSON format](../flows/ai-planning/supplier-json-format.md)). AI02 requires prices to be compared on a common stock-unit basis, so either `requirements.pl` must order and cost by `priceEur / stockUnits`, or the format must define `priceEur` per unit. The same decision affects the capacity without a limit (one offer of `stockUnits`).
+**Assumptions about capacity (as implemented).** `supplyLimit`, when present, is the total a supplier can deliver of the product over the whole plan, across all days (`0` means no capacity). Without a limit the capacity is not verified: it is neither read as zero nor as verified unlimited availability. The calculation takes it as unbounded and flags every such allocation with `capacityStated: false`, so the Manager can see which lines rely on unconfirmed supply.
 
-**Execution example:** `swipl -g "requirements_print_file('<snapshot with a forecast>.json'), halt" requirements.pl`. Tests in `test/requirements.plt` cover on-time and late offers, the cheapest on-time offer, cumulative and zero limits, products without offers, chronological stock consumption and the empty knowledge base after a calculation.
+**Execution example:** `swipl -g "requirements_print_file('<snapshot with a forecast>.json'), halt" requirements.pl`. Tests in `test/requirements.plt` cover on-time and late offers, the unit price (`priceEur / stockUnits`), the cheapest on-time offer, cumulative and zero limits, offers without a limit (unbounded and flagged), the separation of the on-time and late passes, products without offers, chronological stock consumption and the empty knowledge base after a calculation.
 
 ## AI03 - Artificial Neural Networks Study
 
@@ -150,7 +150,7 @@ Calculations only read the KB, and their balances are results only. Stock and pu
 ## Limitations
 
 - No ordering workflow: AI01 uses the simulated order of the scenario.
-- The price/capacity reading of offers must be aligned (see AI02, known discrepancy).
+- Offers are costed pro rata (no whole-offer rounding or minimum order), and an offer without `supplyLimit` is taken as unbounded and flagged `capacityStated: false` (see AI02).
 - No currency conversion (EUR only). Every quantity uses the abstract stock unit of its product, so offers and needs are compared in the same unit; there is no check of different units (AI02 asks to flag incompatible units).
 - The neural-network study is a study: no model is trained or deployed (AI03).
 
