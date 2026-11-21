@@ -1,8 +1,39 @@
 import { useEffect, useImperativeHandle, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { MOUSE } from 'three';
+import { Box3, MOUSE } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { CAMERA_FOV, CONTROL_SPEEDS, constrainPan } from './camera-view.js';
+import {
+  CAMERA_BLOCKER,
+  CAMERA_FOV,
+  CONTROL_SPEEDS,
+  OBSTACLE_MARGIN,
+  constrainPan,
+  isCameraPositionAllowed,
+} from './camera-view.js';
+
+/** The obstacle boxes are recomputed at most every BOXES_TTL ms (elements load late). */
+const BOXES_TTL = 500;
+
+/**
+ * Bounding boxes (expanded by OBSTACLE_MARGIN) of the scene objects marked as camera
+ * blockers (the configuration elements).
+ */
+function createObstacleBoxes(scene) {
+  let boxes = [];
+  let computedAt = -Infinity;
+  return () => {
+    const now = performance.now();
+    if (now - computedAt < BOXES_TTL) return boxes;
+    computedAt = now;
+    boxes = [];
+    scene.traverse((object) => {
+      if (!object.userData?.[CAMERA_BLOCKER]) return;
+      const box = new Box3().setFromObject(object);
+      if (!box.isEmpty()) boxes.push(box.expandByScalar(OBSTACLE_MARGIN));
+    });
+    return boxes;
+  };
+}
 
 function moveTo(controls, view) {
   controls.enableDamping = false;
@@ -26,6 +57,7 @@ function moveTo(controls, view) {
 export default function CameraControls({ setup, ref }) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
+  const scene = useThree((state) => state.scene);
   const controlsRef = useRef(null);
 
   useEffect(() => {
@@ -51,6 +83,15 @@ export default function CameraControls({ setup, ref }) {
     controls.minAzimuthAngle = setup.minAzimuthAngle;
     controls.maxAzimuthAngle = setup.maxAzimuthAngle;
 
+    // Last camera position (and target) outside every object, restored when a pan,
+    // orbit or dolly would put the camera inside an object or under the floor.
+    const obstacleBoxes = createObstacleBoxes(scene);
+    const lastAllowed = {
+      position: camera.position.clone(),
+      target: controls.target.clone(),
+    };
+    controls.userData = { lastAllowed };
+
     // Pan limit: "change" is dispatched by update() after the camera has looked at the
     // target, so moving both by the same offset keeps the orientation (no jump).
     const onChange = () => {
@@ -59,9 +100,20 @@ export default function CameraControls({ setup, ref }) {
         camera.position,
         setup.panBounds
       );
-      if (!changed) return;
-      controls.target.set(target.x, target.y, target.z);
-      camera.position.set(position.x, position.y, position.z);
+      if (changed) {
+        controls.target.set(target.x, target.y, target.z);
+        camera.position.set(position.x, position.y, position.z);
+      }
+
+      // VIS07: the camera cannot go through objects.
+      if (isCameraPositionAllowed(camera.position, obstacleBoxes())) {
+        lastAllowed.position.copy(camera.position);
+        lastAllowed.target.copy(controls.target);
+        return;
+      }
+      camera.position.copy(lastAllowed.position);
+      controls.target.copy(lastAllowed.target);
+      camera.lookAt(controls.target);
     };
 
     // Right drag orbits: the browser context menu must not open on the canvas.
@@ -78,7 +130,7 @@ export default function CameraControls({ setup, ref }) {
       controls.dispose();
       controlsRef.current = null;
     };
-  }, [camera, domElement, setup]);
+  }, [camera, domElement, scene, setup]);
 
   // Damping needs one update per frame. A negative priority keeps R3F's own rendering.
   useFrame(() => controlsRef.current?.update(), -1);
@@ -87,7 +139,11 @@ export default function CameraControls({ setup, ref }) {
     ref,
     () => ({
       reset: () => {
-        if (controlsRef.current) moveTo(controlsRef.current, setup);
+        const controls = controlsRef.current;
+        if (!controls) return;
+        moveTo(controls, setup);
+        controls.userData?.lastAllowed.position.copy(controls.object.position);
+        controls.userData?.lastAllowed.target.copy(controls.target);
       },
     }),
     [setup]

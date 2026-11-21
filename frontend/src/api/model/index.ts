@@ -16,6 +16,7 @@ export * from './assemblyLineConfigurationContent';
 export * from './assemblyLineConfigurationContentDimensions';
 export * from './assemblyLineConfigurationInput';
 export * from './assemblyLineElement';
+export * from './assemblyLineElementModel';
 export * from './assemblyLineElementType';
 export * from './catalogueItem';
 export * from './catalogueItemAllergensItem';

@@ -29,6 +29,7 @@ classDiagram
     class Element {
         id : string, min length 1, unique [required]
         type : one of equipment, assembly-line, decoration, tool [required]
+        model : furniture model name [optional]
         modelReference : URL or path [required]
         position : Vector3 [required]
         rotation : Vector3 [required]
@@ -57,6 +58,7 @@ classDiagram
 | `dimensions.width`, `length`, `height` | number | Required, strictly greater than 0 |
 | `elements[].id` | string | Required, at least 1 character, **unique** within the configuration (domain rule) |
 | `elements[].type` | string | Required, one of `equipment`, `assembly-line`, `decoration`, `tool` |
+| `elements[].model` | string | Optional. Procedural kitchen furniture for `decoration`/`tool` elements: `work-table`, `fridge`, `shelves`, `cabinet`, `ingredient-bins`, `dough-trays`. Built at the size given by `scale` (metres), standing on `y = 0`, front towards local +z (turn it with `rotation.y`) |
 | `elements[].modelReference` | string | Required, absolute `http(s)` URL or root-relative path (domain rule, see below) |
 | `elements[].position` | `{x, y, z}` | Required, numbers |
 | `elements[].rotation` | `{x, y, z}` | Required, numbers (orientation) |

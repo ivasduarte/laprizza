@@ -2555,6 +2555,13 @@ const baseSpec = {
             ],
             example: 'robotic-arm',
           },
+          model: {
+            type: 'string',
+            description:
+              'Optional (kitchen decoration/tool elements). Procedural kitchen furniture built at the size given by scale (metres), standing on y = 0 with its front towards +z.',
+            enum: ['work-table', 'fridge', 'shelves', 'cabinet', 'ingredient-bins', 'dough-trays'],
+            example: 'fridge',
+          },
           modelReference: {
             type: 'string',
             format: 'uri-reference',

@@ -191,3 +191,20 @@ test('validateKitchenConfigurationContent exposes schema violations in details',
     },
   );
 });
+test('kitchen furniture model (VIS03): known models are accepted, unknown ones rejected', () => {
+  const content = (model) => ({
+    dimensions: { width: 10, length: 15, height: 3 },
+    elements: [
+      {
+        id: 'fridge-01',
+        type: 'decoration',
+        model,
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 90, z: 0 },
+        scale: { x: 0.9, y: 2, z: 0.8 },
+      },
+    ],
+  });
+  assert.doesNotThrow(() => validateKitchenConfigurationContent(content('fridge')));
+  assert.throws(() => validateKitchenConfigurationContent(content('spaceship')), DomainError);
+});

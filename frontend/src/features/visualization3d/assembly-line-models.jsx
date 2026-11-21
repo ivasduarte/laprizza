@@ -1,4 +1,3 @@
-import { DoubleSide } from 'three';
 import { Surface } from './scene-materials.jsx';
 
 /**
@@ -8,9 +7,9 @@ import { Surface } from './scene-materials.jsx';
  * towards the kitchen. Every model stands on y = 0 of its own origin, so the JSON
  * position places its base (e.g. on the counter top, y = 0.9).
  *
- * `material` (VIS04) is the material of the element from the JSON, applied to the main
- * surfaces; small detail parts keep their own colours. Without it the default colours
- * are used.
+ * `material` (VIS04) is the material of the element (from the JSON, or the texture of
+ * its type when the JSON has none, see scene-textures.js). It is applied to every mesh,
+ * so the whole model is textured; the colours below are only used if it is missing.
  *
  * Parts that will be animated in Sprint 3 are named groups with their pivot at the
  * joint, so animating means rotating or moving that group:
@@ -88,15 +87,15 @@ export function CrustDispenserModel({ material }) {
         {Array.from({ length: CRUST_COUNT }, (_, i) => (
           <mesh key={i} position={[0, 0.015 + i * 0.03, 0]}>
             <cylinderGeometry args={[0.35, 0.35, 0.025, 32]} />
-            <meshStandardMaterial color={COLORS.crust} />
+            <Surface material={material} color={COLORS.crust} />
           </mesh>
         ))}
       </group>
       {/* Chute under the shelf: drops one crust onto the platform (Sprint 3). */}
       <group name="release" position={[0, shelfY - 0.025, 0]}>
         <mesh position={[0, -0.1, 0]}>
-          <cylinderGeometry args={[0.38, 0.3, 0.2, 32, 1, true]} />
-          <meshStandardMaterial color={COLORS.steel} side={DoubleSide} />
+          <cylinderGeometry args={[0.38, 0.3, 0.2, 32]} />
+          <Surface material={material} color={COLORS.steel} />
         </mesh>
       </group>
     </group>
@@ -120,7 +119,7 @@ export function ConveyorBeltModel({ length, material }) {
       {[-1, 1].map((side) => (
         <mesh key={side} position={[0, 0.1, side * (BELT_WIDTH / 2 + 0.03)]}>
           <boxGeometry args={[safeLength, 0.16, 0.05]} />
-          <meshStandardMaterial color={COLORS.steel} />
+          <Surface material={material} color={COLORS.steel} />
         </mesh>
       ))}
       <mesh position={[0, 0.08, 0]}>
@@ -132,7 +131,7 @@ export function ConveyorBeltModel({ length, material }) {
         {Array.from({ length: slatCount }, (_, i) => (
           <mesh key={i} position={[firstSlatX + i * SLAT_SPACING, 0, 0]}>
             <boxGeometry args={[0.05, 0.02, BELT_WIDTH - 0.02]} />
-            <meshStandardMaterial color={COLORS.slat} />
+            <Surface material={material} color={COLORS.slat} />
           </mesh>
         ))}
       </group>
@@ -145,7 +144,7 @@ export function ConveyorBeltModel({ length, material }) {
             rotation={[Math.PI / 2, 0, 0]}
           >
             <cylinderGeometry args={[0.07, 0.07, BELT_WIDTH, 16]} />
-            <meshStandardMaterial color={COLORS.darkSteel} />
+            <Surface material={material} color={COLORS.darkSteel} />
           </mesh>
         ))}
       </group>
@@ -162,7 +161,7 @@ export function RoboticArmModel({ material }) {
     <group name="base">
       <mesh position={[0, 0.05, 0]}>
         <cylinderGeometry args={[0.16, 0.18, 0.1, 24]} />
-        <meshStandardMaterial color={COLORS.jointDark} />
+        <Surface material={material} color={COLORS.jointDark} />
       </mesh>
       <mesh position={[0, 0.45, 0]}>
         <cylinderGeometry args={[0.06, 0.06, 0.7, 16]} />
@@ -172,7 +171,7 @@ export function RoboticArmModel({ material }) {
       <group name="shoulder" position={[0, 0.82, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.08, 0.08, 0.16, 20]} />
-          <meshStandardMaterial color={COLORS.joint} />
+          <Surface material={material} color={COLORS.joint} />
         </mesh>
         <mesh position={[0, 0, 0.28]}>
           <boxGeometry args={[0.09, 0.09, 0.56]} />
@@ -182,7 +181,7 @@ export function RoboticArmModel({ material }) {
         <group name="elbow" position={[0, 0, 0.56]}>
           <mesh rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.065, 0.065, 0.13, 20]} />
-            <meshStandardMaterial color={COLORS.jointDark} />
+            <Surface material={material} color={COLORS.jointDark} />
           </mesh>
           <mesh position={[0, -0.14, 0]}>
             <boxGeometry args={[0.07, 0.28, 0.07]} />
@@ -192,12 +191,12 @@ export function RoboticArmModel({ material }) {
           <group name="wrist" position={[0, -0.28, 0]}>
             <mesh>
               <sphereGeometry args={[0.05, 16, 12]} />
-              <meshStandardMaterial color={COLORS.joint} />
+              <Surface material={material} color={COLORS.joint} />
             </mesh>
             {/* Ingredient nozzle */}
             <mesh position={[0, -0.08, 0]} rotation={[Math.PI, 0, 0]}>
               <coneGeometry args={[0.05, 0.12, 16]} />
-              <meshStandardMaterial color={COLORS.jointDark} />
+              <Surface material={material} color={COLORS.jointDark} />
             </mesh>
           </group>
         </group>
@@ -212,7 +211,7 @@ export function WoodFiredOvenModel({ material }) {
     <group>
       <mesh position={[0, 0.2, 0]}>
         <boxGeometry args={[1.3, 0.4, 1.3]} />
-        <meshStandardMaterial color={COLORS.ovenBase} />
+        <Surface material={material} color={COLORS.ovenBase} />
       </mesh>
       <mesh position={[0, 0.4, 0]}>
         <sphereGeometry args={[0.62, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -221,7 +220,7 @@ export function WoodFiredOvenModel({ material }) {
       {/* Mouth, where the conveyor delivers the pizzas */}
       <mesh position={[-0.55, 0.58, 0]}>
         <boxGeometry args={[0.14, 0.3, 0.42]} />
-        <meshStandardMaterial color={COLORS.ovenMouth} />
+        <Surface material={material} color={COLORS.ovenMouth} />
       </mesh>
       {/* Chimney */}
       <mesh position={[0.15, 1.15, 0]}>
