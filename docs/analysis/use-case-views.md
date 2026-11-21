@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, AA01, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -46,9 +46,12 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-7)
+      - [Flow Mapping](#flow-mapping-18)
 
 ## Actors
 
@@ -59,7 +62,7 @@ This document shows who uses the LaPrizza information system and which business 
 | **Employee**                   | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas).                                                                                                                                              |
 | **Customer**                   | External client interacting with the system to consult the catalog or register their data.                                                                                                                                                                     |
 | **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting.                                                                                                               |
-| **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser.                                                                       |
+| **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the Bill of Materials and the requirements planning (AI05). The Web Application reaches it only through the Back-End Application, which calls it with a service key; direct calls with a Manager token are used for tests and demos.                                                                       |
 | **Invited User**               | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07).                                                                                                                                   |
 | **E-mail Server**              | Secondary (system) actor. SMTP server that delivers the e-mails sent by the back end: password recovery links (AA01) and activation invitations (AA06). Mailpit in every environment ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)). |
 | **External Identity Provider** | Secondary (external) actor. OpenID Connect provider (Google, Microsoft) that authenticates external users (AA02) and confirms the identity of an invited external user (AA07).                                                                                 |
@@ -516,6 +519,55 @@ flowchart LR
 | **VIS06**  | UC4: Reset Lighting                             | LaPrizza Manager / Employee | [Reset Lighting](../flows/scene-lighting/reset-lighting.md)                                                  |
 
 The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+
+### AI05: Artificial Intelligence Service Access
+
+The AI Scheduling Module exposes the Bill of Materials and the Requirements Planning as documented REST endpoints. The Web Application never calls it directly. It calls the back end (`POST /planning/bom`, `POST /planning/requirements`, `GET /planning/runs`), which authenticates the user, checks the permission `planning:execute` (Manager only), builds the planning snapshot (AI06) and calls the Prolog service with its service identity (`X-Api-Key`). A client with a Manager token can also call the Prolog service directly (`POST /bom`, `POST /requirements`). The service then fetches the snapshot with that token, so the back end still decides who may calculate. Requests and results are JSON and use the identifiers of the back end. Every answer is one of four outcomes: a successful calculation, invalid input, missing information, or service unavailable. Calculations are simulations: they never change stock nor register purchase orders, and the only record they leave is the planning run. Representative requests, responses and errors are in [AI Service Interface](../flows/ai-service-access/service-interface.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    BE([Back-End Application])
+    Client([Authorized client - Manager token])
+    AI([AI Scheduling Module])
+
+    subgraph AI05 [AI05: Artificial Intelligence Service Access]
+        direction TB
+        UC1([UC1: Calculate Bill of Materials])
+        UC2([UC2: Calculate Requirements Planning])
+        UC3([UC3: Consult Planning Results])
+        UC4([UC4: Request a Calculation from the AI Service])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    BE -->|<< service key, push >>| UC4
+    Client -->|<< bearer token, pull >>| UC4
+    UC1 -.->|<< include >>| UC4
+    UC2 -.->|<< include >>| UC4
+    UC4 -->|<< executes >>| AI
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Calculate Bill of Materials** | LaPrizza Manager | Chooses an AI scenario and a stock mode in the Execution tab of `/ai` and runs the BOM. The page shows the required, available, used and remaining quantities per item, the shortages, the production of aggregates and the warnings. | Same validation in the page and in the back end (`scenarioId` `^[A-Z0-9-]{1,64}$`, `stockMode` `live` or `scenario`). The back end builds a fresh snapshot and calls `POST /service/bom` with the service key. Shortages are a result, not an error (`feasible: false`). Warnings never block. A successful calculation is saved as a run with `kind: "bom"`. | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| **UC2: Calculate Requirements Planning** | LaPrizza Manager | Runs the requirements planning of a forecast version with a supplier scenario and consults the quantities, the purchases by supplier and the warnings (WEB07 UC9). | Same service access as UC1, through `POST /service/requirements`. Purchases are suggestions only. | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| **UC3: Consult Planning Results** | LaPrizza Manager | Lists the saved runs and opens one with its full result and the versions of its inputs (WEB07 UC10). | `GET /planning/runs[?kind&forecastId&supplierScenarioId]`, 100 most recent, without `result`; `GET /planning/runs/{id}` with `result`. | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| **UC4: Request a Calculation from the AI Service** | Back-End Application / authorized client | Sends a calculation request to the Prolog service and gets the JSON result or a JSON error. | Push: `X-Api-Key` equal to `AI_SERVICE_KEY` and the snapshot in the body. The routes are closed when no key is configured, and a user token is not a service identity (401 `SERVICE_UNAUTHORIZED`). Pull: the Bearer token is forwarded to the back end, which answers 401/403 to users without `planning:execute`. The service listens only on `127.0.0.1`. Errors are 400 (invalid input), 422 (missing information) and 503/504 (unavailable). | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0017](../adr/0017-secrets-management-strategy.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AI05** | UC1: Calculate Bill of Materials | LaPrizza Manager | [Calculate Bill of Materials](../flows/ai-service-access/calculate-bom.md) |
+| **AI05** | UC2: Calculate Requirements Planning | LaPrizza Manager | [Execute Forecast](../flows/ai-planning/execute-forecast.md) (WEB07 UC9) |
+| **AI05** | UC3: Consult Planning Results | LaPrizza Manager | [Consult Planning Results](../flows/ai-planning/consult-planning-results.md) (WEB07 UC10) |
+| **AI05** | UC4: Request a Calculation from the AI Service | Back-End Application / authorized client | Push: [Calculate Bill of Materials](../flows/ai-service-access/calculate-bom.md), [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md). Pull: [Provide Planning Snapshot](../flows/ai-knowledge-base/provide-planning-snapshot.md) |
+
+The REST API summary, the outcomes seen by the page, the access control and the element catalogue are in the [AI Service Access README](../flows/ai-service-access/README.md).
 
 ### AI06: Back-End Data and Prolog Knowledge Base
 

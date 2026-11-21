@@ -1,6 +1,6 @@
 # AI Knowledge Base - Design Diagrams (Mermaid)
 
-AI06 connects the back end and the AI Scheduling Module. The back end owns the business data and exposes it as one document, the **planning snapshot** (`GET /ai-data/snapshot`). The Prolog service validates the snapshot, loads it as facts for one calculation and clears them afterwards. The calculations themselves (BOM and requirements planning) are AI01, AI02 and AI05; WEB07 UC9 starts them from the Web Application.
+AI06 connects the back end and the AI Scheduling Module. The back end owns the business data and exposes it as one document, the **planning snapshot** (`GET /ai-data/snapshot`). The Prolog service validates the snapshot, loads it as facts for one calculation and clears them afterwards. The calculations themselves (BOM and requirements planning) are AI01, AI02 and AI05 ([AI Service Access](../ai-service-access/README.md)); WEB07 UC9 starts them from the Web Application.
 
 Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end API** and **AI Scheduling Module** containers. The snapshot format is in [Planning Snapshot Format](./snapshot-format.md).
 

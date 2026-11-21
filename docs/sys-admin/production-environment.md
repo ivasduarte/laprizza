@@ -55,7 +55,7 @@ flowchart LR
 | `NODE_ENV` | development/staging | `production` (the dev-users seed refuses to run) |
 | Swagger UI | Available | Blocked by nginx (404) |
 | Versions | Ubuntu 24.04, Node 24.22.2, nginx 1.24.0, MongoDB 9.0.4, mongosh 2.14.1 | Same versions, held with `apt-mark hold`; SWI-Prolog 9.x from Ubuntu (staging has none: the Prolog service runs locally) |
-| E-mail | Mailpit | Real SMTP (activation invitations, password recovery) |
+| E-mail | Mailpit (Docker) | Mailpit as a systemd service on `127.0.0.1` (`laprizza-mailpit.service`): no e-mail leaves the VM; read through an SSH tunnel ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)) |
 
 Files: `deploy/production/` (nginx site, systemd units, configuration examples and scripts). The deploy scripts are the same as staging (`deploy/laprizza-deploy.sh`, `deploy/laprizza-deploy-web.sh`); they now also accept `DEPLOY_TAG`.
 
@@ -133,17 +133,32 @@ sudo chmod 440 /etc/sudoers.d/laprizza-deploy && sudo visudo -c
 sudo install -o deploy -g deploy -m 640 deploy/production/deploy.conf.example /opt/laprizza/deploy.conf
 sudo install -o deploy -g deploy -m 640 deploy/production/deploy-web.conf.example /opt/laprizza/deploy-web.conf
 sudo install -o deploy -g deploy -m 600 deploy/production/backend.env.production.example /opt/laprizza/.env
-sudo -u deploy nano /opt/laprizza/.env     # secrets, MongoDB password, public URL, SMTP
+sudo -u deploy nano /opt/laprizza/.env     # secrets, MongoDB password, public URL
 ```
 
 `backend.env.production.example` explains every value. New secrets: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
 ### 5. Services
 
+Mailpit receives the activation invitations (AA06) and the password recovery e-mails (AA01). It is a single Go binary (no Docker, no AVX needed) and listens only on `127.0.0.1`: SMTP on `1025` (the `SMTP_*` values of `backend.env.production.example`) and the web interface on `8025`.
+
 ```bash
-sudo install -m 644 deploy/production/laprizza-api.service deploy/production/laprizza-ai.service /etc/systemd/system/
+cd /tmp
+curl -fsSLO https://github.com/axllent/mailpit/releases/latest/download/mailpit-linux-amd64.tar.gz
+tar -xzf mailpit-linux-amd64.tar.gz mailpit
+sudo install -m 755 mailpit /usr/local/bin/mailpit && rm -f mailpit mailpit-linux-amd64.tar.gz
+mailpit version                                   # record the version in this guide
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin mailpit
+sudo install -d -o mailpit -g mailpit -m 750 /var/lib/mailpit
+cd /opt/laprizza/repo
+```
+
+```bash
+sudo install -m 644 deploy/production/laprizza-api.service deploy/production/laprizza-ai.service \
+  deploy/production/laprizza-mailpit.service /etc/systemd/system/
 sudo install -m 644 deploy/systemd/laprizza-deploy*.service deploy/systemd/laprizza-deploy*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemctl enable --now laprizza-mailpit
 sudo systemctl enable laprizza-api laprizza-ai
 ```
 
@@ -174,8 +189,19 @@ sudo systemctl enable --now laprizza-deploy.timer laprizza-deploy-web.timer   # 
 curl -s http://localhost:2226/api/v2/health
 curl -s http://localhost:2226/version.json
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:2226/api/v2/docs/  # 404
-ss -ltnp | grep -E ':(3000|5000)\b'                                          # only 127.0.0.1
+ss -ltnp | grep -E ':(3000|5000|1025|8025)\b'                                # only 127.0.0.1
+curl -s http://127.0.0.1:8025/api/v1/info                                    # Mailpit
 ```
+
+### Reading the e-mails (Mailpit)
+
+The interface is not published: open an SSH tunnel through the VPN, with the same SSH access used to administer the VM, and browse `http://localhost:8025` on your machine.
+
+```bash
+ssh -L 8025:127.0.0.1:8025 <user>@<VM address on the VPN>
+```
+
+The links in the e-mails point to the public site (`https://vs-gate.dei.isep.ipp.pt:10944/activate#token=...`), so they can be opened from any browser. To show an invitation to someone without VPN access, copy its link from Mailpit.
 
 ### Client IP (`TRUST_PROXY`)
 
@@ -188,7 +214,7 @@ sudo tail -n 5 /var/log/nginx/laprizza.access.log
 * `xff="<public IP of the phone>"`: `vs-gate` sends `X-Forwarded-For`; set `TRUST_PROXY=2` (vs-gate + nginx) and restart `laprizza-api`.
 * `xff="-"`: `vs-gate` does not send it; keep `TRUST_PROXY=1`. Every public client then shares the `vs-gate` address, so the per-IP rate limits count all users together: known limitation, the per-account lockout (AA01) still applies.
 
-From a phone without the VPN: open `https://vs-gate.dei.isep.ipp.pt:10944`, sign in with `admin@laprizza.pt`, and create a user (the invitation needs the SMTP settings).
+From a phone without the VPN: open `https://vs-gate.dei.isep.ipp.pt:10944`, sign in with `admin@laprizza.pt`, and create a user. The invitation appears in Mailpit (see above); open its link and activate the account.
 
 ## Submission (Sprint 2 tag)
 
@@ -196,7 +222,7 @@ From a phone without the VPN: open `https://vs-gate.dei.isep.ipp.pt:10944`, sign
 sudo /opt/laprizza/bin/laprizza-reset-production.sh <tag> --confirm
 ```
 
-It stops the services, drops the production database, empties the shared folder (`--keep-shared` keeps it), publishes the tag in the back end, the front end and the Prolog service, and disables the deploy timers. The seeder creates `admin@laprizza.pt` again with `SEED_MANAGER_PASSWORD`. The script refuses to run unless `/opt/laprizza/.env` has `NODE_ENV=production`, `MONGODB_DB_NAME` is not `laprizza` (staging), and `MONGODB_URI` points to the host of `MONGO_HOST` (`/opt/laprizza/deploy.conf`) and to the database of `MONGODB_DB_NAME`.
+It stops the services, drops the production database, empties the shared folder (`--keep-shared` keeps it), publishes the tag in the back end, the front end and the Prolog service, and disables the deploy timers. The seeder creates `admin@laprizza.pt` again with `SEED_MANAGER_PASSWORD`. Old e-mails stay in Mailpit; to empty it as well: `curl -X DELETE http://127.0.0.1:8025/api/v1/messages`. The script refuses to run unless `/opt/laprizza/.env` has `NODE_ENV=production`, `MONGODB_DB_NAME` is not `laprizza` (staging), and `MONGODB_URI` points to the host of `MONGO_HOST` (`/opt/laprizza/deploy.conf`) and to the database of `MONGODB_DB_NAME`.
 
 ## Security notes
 
@@ -211,4 +237,5 @@ It stops the services, drops the production database, empties the shared folder 
 | Item | Impact | Proposal |
 |---|---|---|
 | Production and staging share the MongoDB server (`10.9.22.16`) | Separate databases and users, but the same `mongod`: an outage or overload of that server stops both, and its administrator account reaches both | A MongoDB VM only for production, on a DEI host with AVX |
+| E-mails are delivered to Mailpit, never to real mailboxes | Invited users do not receive the invitation in their own mailbox; the administrator copies the link from Mailpit | Real SMTP provider: only the `SMTP_*` and `MAIL_FROM` values change, after checking that the DEI network allows outbound SMTP |
 | The connection to `10.9.22.16` is not encrypted | Inside the DEI internal network only, never through `vs-gate` | Enable TLS on the MongoDB server |
