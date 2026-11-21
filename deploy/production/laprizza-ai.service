@@ -1,0 +1,18 @@
+[Unit]
+Description=LaPrizza – serviço de planeamento (Prolog, AI01/AI05)
+After=network-online.target laprizza-api.service
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/laprizza/ai-scheduling
+ExecStart=/opt/laprizza/ai-scheduling/start-server.sh
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

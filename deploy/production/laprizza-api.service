@@ -1,0 +1,22 @@
+[Unit]
+Description=LaPrizza – back end (API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/laprizza/current
+EnvironmentFile=/opt/laprizza/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+# Endurecimento: só escreve nos logs e na pasta partilhada
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/laprizza-shared
+
+[Install]
+WantedBy=multi-user.target

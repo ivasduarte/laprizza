@@ -1,0 +1,20 @@
+# Deploy do back end em PRODUÇÃO
+# Copiar para /opt/laprizza/deploy.conf (dono: deploy, chmod 640). Sem segredos (estão em /opt/laprizza/.env).
+
+# Até à submissão: main. Depois de criada a tag de submissão do sprint 2, publicar só a tag:
+#   DEPLOY_TAG=<tag>   (por exemplo "sprint2"), e desligar o timer automático.
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_TAG="${DEPLOY_TAG:-}"
+
+APP_SUBDIR=backend
+KEEP_RELEASES=5
+RUN_LINT=true
+
+HEALTH_URL=http://localhost:3000/api/v2/health
+VERSION_URL=http://localhost:3000/api/v2/version
+HEALTH_TIMEOUT_SECONDS=60
+
+# MongoDB da produção: servidor partilhado com o staging, database laprizza_prod.
+# O deploy aborta se não responder; o script de reset só apaga a database neste host.
+MONGO_HOST=10.9.22.16
+MONGO_PORT=27017
