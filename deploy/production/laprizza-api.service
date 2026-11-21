@@ -1,0 +1,21 @@
+[Unit]
+Description=LaPrizza – back end (API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/laprizza/current
+EnvironmentFile=/opt/laprizza/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+# Endurecimento possível nas VMs do DEI. PrivateTmp, ProtectSystem e ReadWritePaths precisam de
+# mount namespaces, que estas VMs não permitem ("Failed to set up mount namespacing: Permission
+# denied", status=226/NAMESPACE). O processo corre como "deploy", sem privilégios.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

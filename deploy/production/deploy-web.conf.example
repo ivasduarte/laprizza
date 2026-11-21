@@ -1,0 +1,20 @@
+# Deploy do front end em PRODUÇÃO
+# Copiar para /opt/laprizza/deploy-web.conf (dono: deploy, chmod 640). Sem segredos.
+
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_TAG="${DEPLOY_TAG:-}"
+
+WEB_SUBDIR=frontend
+BUILD_OUTPUT=dist
+KEEP_RELEASES=5
+RUN_LINT=true
+RUN_TESTS=true
+
+# O nginx encaminha /api/ para o back end da mesma VM: caminho relativo, versão atual da API.
+WEB_BUILD_ENV=("VITE_API_BASE_URL=/api/v2")
+BUILD_MUST_NOT_CONTAIN=""
+
+# O nginx da produção escuta na 2226 (mapeada para https://vs-gate.dei.isep.ipp.pt:10944)
+SITE_URL=http://localhost:2226/
+VERSION_URL=http://localhost:2226/version.json
+HEALTH_TIMEOUT_SECONDS=30

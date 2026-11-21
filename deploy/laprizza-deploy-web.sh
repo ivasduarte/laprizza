@@ -10,6 +10,7 @@
 # Variáveis úteis na linha de comandos:
 #   FORCE=true           volta a publicar mesmo que o commit não tenha mudado
 #   DEPLOY_BRANCH=<nome> publica outro branch (testes antes do merge)
+#   DEPLOY_TAG=<tag>     publica uma tag em vez de um branch (produção: tag de submissão)
 #
 # Configuração: /opt/laprizza/deploy-web.conf (ver deploy-web.conf.example)
 #
@@ -32,6 +33,10 @@ CURRENT_LINK="${CURRENT_LINK:-$WEB_ROOT/current}"
 WORK_ROOT="${WORK_ROOT:-$WEB_ROOT/build}"
 LOG_ROOT="${LOG_ROOT:-/var/log/laprizza/deploys/web}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_TAG="${DEPLOY_TAG:-}"
+# O que é publicado: a tag, se estiver definida; senão, o branch.
+DEPLOY_REF="${DEPLOY_TAG:+tag $DEPLOY_TAG}"
+DEPLOY_REF="${DEPLOY_REF:-branch $DEPLOY_BRANCH}"
 WEB_SUBDIR="${WEB_SUBDIR:-frontend}"
 BUILD_OUTPUT="${BUILD_OUTPUT:-dist}"
 BUILD_MUST_NOT_CONTAIN="${BUILD_MUST_NOT_CONTAIN-localhost:3000}"
@@ -64,7 +69,7 @@ current_release() { [[ -L "$CURRENT_LINK" ]] && readlink -f "$CURRENT_LINK" || t
 record() {
   # Regista o resultado no histórico e na pasta da execução
   mkdir -p "$LOG_ROOT"
-  printf '%s\t%s\t%s\t%s\t%s\n' "$TS" "$ACTION" "$DEPLOY_BRANCH" "$SHA" "$STATUS" >> "$HISTORY_FILE"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$TS" "$ACTION" "$DEPLOY_REF" "$SHA" "$STATUS" >> "$HISTORY_FILE"
   if [[ -n "$RUN_DIR" ]]; then
     echo "$STATUS" > "$RUN_DIR/STATUS"
     ln -sfn "$RUN_DIR" "$LOG_ROOT/latest"
@@ -171,12 +176,17 @@ acquire_lock() {
 # -----------------------------------------------------------------------------
 do_deploy() {
   acquire_lock
-  log "A verificar o branch '$DEPLOY_BRANCH' no GitHub…"
-  git -C "$REPO_DIR" fetch --prune --quiet origin "$DEPLOY_BRANCH" \
-    || { STATUS="FETCH_FAILED"; log "ERRO: não foi possível contactar o GitHub."; record; exit 1; }
-
+  log "A verificar $DEPLOY_REF no GitHub…"
   local target_full
-  target_full="$(git -C "$REPO_DIR" rev-parse "origin/$DEPLOY_BRANCH")"
+  if [[ -n "$DEPLOY_TAG" ]]; then
+    git -C "$REPO_DIR" fetch --quiet --force origin "refs/tags/$DEPLOY_TAG:refs/tags/$DEPLOY_TAG" \
+      || { STATUS="FETCH_FAILED"; log "ERRO: não foi possível obter a tag '$DEPLOY_TAG'."; record; exit 1; }
+    target_full="$(git -C "$REPO_DIR" rev-parse "refs/tags/$DEPLOY_TAG^{commit}")"
+  else
+    git -C "$REPO_DIR" fetch --prune --quiet origin "$DEPLOY_BRANCH" \
+      || { STATUS="FETCH_FAILED"; log "ERRO: não foi possível contactar o GitHub."; record; exit 1; }
+    target_full="$(git -C "$REPO_DIR" rev-parse "origin/$DEPLOY_BRANCH")"
+  fi
   SHA="${target_full:0:7}"
   PREV="$(current_release)"
   local prev_sha=""
@@ -188,7 +198,7 @@ do_deploy() {
   fi
 
   start_run_log
-  log "Deploy de $SHA (branch $DEPLOY_BRANCH). Versão atual: ${prev_sha:-nenhuma}"
+  log "Deploy de $SHA ($DEPLOY_REF). Versão atual: ${prev_sha:-nenhuma}"
 
   REL="$RELEASES_DIR/$SHA"
   if [[ "$REL" == "$PREV" ]]; then
@@ -229,7 +239,7 @@ do_deploy() {
 {
   "sha": "$target_full",
   "shortSha": "$SHA",
-  "branch": "$DEPLOY_BRANCH",
+  "branch": "$DEPLOY_REF",
   "commitDate": "$(git -C "$REPO_DIR" log -1 --format=%cI "$target_full")",
   "deployedAt": "$(date -u +%FT%TZ)"
 }
