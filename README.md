@@ -9,7 +9,7 @@ The system supports the business and operational processes of the restaurant, fr
 
 The web application is deployed at <http://vs814.dei.isep.ipp.pt> (staging environment) and <https://vs-gate.dei.isep.ipp.pt:10944> (production environment).
 
-> **Note:** the website can only be accessed from within the DEI network. When off campus, connect to the DEI VPN first.
+> **Note:** the staging environment website can only be accessed from within the DEI network. When off campus, connect to the DEI VPN first.
 
 ## System Modules
 The project integrates four main technological areas:
