@@ -87,7 +87,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 
 ## Business rules shown in the diagrams
 
-- **Permissions, never role names.** Routes use `requirePermission(Permission.X)` (or `requireAuthenticated` for the session routes). Services that need a finer rule (ownership, inactive stock) also use permissions ([ADR-0043](../../adr/0043-permission-based-authorization-matrix.md)).
+- **Permissions, never role names.** Routes use `requirePermission(Permission.X)` (or `requireAuthenticated` for the session routes). Services that need a finer rule (ownership, inactive stock) also use permissions ([ADR-0046](../../adr/0046-permission-based-authorization-matrix.md)).
 - **Server-side roles.** The access token carries only the user, the session and the token version. On every protected request the user and the session are read from the database, the active roles are resolved (AA03) and turned into permissions (`permissionsFor`). A role change, a deactivation or a revoked session applies on the next request.
 - **Guest.** A request without `Authorization` gets the Guest principal (`GUEST_PERMISSIONS`) without touching the database. If the route is not public for Guests, the answer is `401 TOKEN_MISSING`, never `403`, so the Web Application can send the user to the login.
 - **401 versus 403.** `401` for a missing, malformed, invalid or expired token and for a revoked session or inactive account (`TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`). `403 FORBIDDEN` for a valid session without the permission. `503 ROLES_UNAVAILABLE` when the roles cannot be read (fail closed).
@@ -109,7 +109,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 | [ADR-0028](../../adr/0028-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
 | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
 | [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations | Accepted |
-| [ADR-0043](../../adr/0043-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
+| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
 
 ## Notation key
 
@@ -151,7 +151,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 
 ## Notes
 
-- The Web Application side (menu built from the permissions, route guards, "access denied" and "not found" pages, refresh of the permissions when the tab becomes visible) belongs to WEB03 and uses only the permissions returned by UC2 and UC3.
+- The Web Application side (menu built from the permissions, route guards, "access denied" and "not found" pages, refresh of the permissions when the tab becomes visible) belongs to WEB03 ([Role-Based Navigation](../role-based-navigation/README.md)) and uses only the permissions returned by UC2 and UC3.
 - Migration `migrations/aa05-user-roles.js` turns the single `role` of each user into the array `roles`; the server refuses to start while a user still has the old field (`npm run migrate:up`). The rollback keeps the most privileged role and warns about accounts with more than one role or none.
 - Development helper: `npm run seed:dev-users` creates one account per base role, one with two roles and one without roles, to try the matrix by hand.
 - Tests:

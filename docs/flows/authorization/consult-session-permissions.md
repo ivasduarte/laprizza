@@ -9,7 +9,7 @@
 | Allowed roles | Any authenticated user, whatever the roles (`requireAuthenticated`) |
 | Success response | 200 OK `{ "id", "email", "status", "roles": [...], "permissions": [...], "customerId": "<id>" \| null }`, `Cache-Control: no-store` |
 | Error handling | 401 `TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED` (recorded, [UC1](./access-protected-functionality.md)); 503 `ROLES_UNAVAILABLE` |
-| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../../adr/0043-permission-based-authorization-matrix.md) |
+| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) |
 
 ## Description
 

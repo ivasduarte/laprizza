@@ -33,6 +33,11 @@ flowchart LR
         subgraph Stock [BCK09: Stock]
             UC_Stock(Manage & Adjust Stock)
         end
+        subgraph Navigation [WEB03: Role-Based Navigation]
+            UC_Menu(Navigate with the Permitted Menu)
+            UC_OpenPage(Open a Page by URL)
+            UC_Reflect(Reflect Role and Status Changes)
+        end
         subgraph Kitchen [WEB06: Kitchen Configuration]
             UC_Kitchen(Manage Kitchen Configurations)
             UC_ActiveKitchen(Get Active Kitchen Configuration)
@@ -104,6 +109,13 @@ flowchart LR
 
     Guest --> UC_Catalog
     Guest --> UC_Authorize
+    Guest --> UC_Menu
+    Guest --> UC_OpenPage
+    SystemUser --> UC_Menu
+    SystemUser --> UC_OpenPage
+    SystemUser --> UC_Reflect
+    UC_OpenPage -.->|checked by| UC_Authorize
+    UC_Reflect -.->|uses| UC_Permissions
     SystemUser --> UC_Authorize
     SystemUser --> UC_Permissions
     UC_OwnData -.->|include| UC_Authorize

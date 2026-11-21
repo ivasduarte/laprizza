@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication, Authorization Enforcement and Account Activation user stories (WEB06, WEB07, VIS05, AA01, AA05, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Role-Based Navigation, Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication, Authorization Enforcement and Account Activation user stories (WEB03, WEB06, WEB07, VIS05, AA01, AA05, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -28,30 +28,33 @@ This document shows who uses the LaPrizza information system and which business 
       - [Flow Mapping](#flow-mapping-9)
     - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
       - [Flow Mapping](#flow-mapping-10)
-    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
+    - [WEB03: Role-Based Navigation](#web03-role-based-navigation)
       - [Use Case Descriptions](#use-case-descriptions)
       - [Flow Mapping](#flow-mapping-11)
-    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
+    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
       - [Use Case Descriptions](#use-case-descriptions-1)
       - [Flow Mapping](#flow-mapping-12)
-    - [AA01: Local Authentication](#aa01-local-authentication)
+    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
-    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
+    - [AA01: Local Authentication](#aa01-local-authentication)
       - [Use Case Descriptions](#use-case-descriptions-3)
       - [Flow Mapping](#flow-mapping-14)
-    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
       - [Use Case Descriptions](#use-case-descriptions-4)
       - [Flow Mapping](#flow-mapping-15)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-8)
+      - [Flow Mapping](#flow-mapping-19)
 
 ## Actors
 
@@ -216,6 +219,57 @@ This document shows who uses the LaPrizza information system and which business 
 | :--------- | :-------------------------- | :--------------- | :---------------------------------------------------------------------------- |
 | **BCK11**  | UC1: List Product Catalogue | LaPrizza Manager | [List Product Catalogue](../flows/product-catalogue/list-search-catalogue.md) |
 | **BCK11**  | UC2: Get Catalogue Item     | LaPrizza Manager | [Get Catalogue Item](../flows/product-catalogue/get-catalogue-item.md)        |
+
+### WEB03: Role-Based Navigation
+
+The Web Application shows each user only the sections and actions they may use. The menu, the protection of each page and the buttons of each action are decided with the permissions returned by the back end for the session (or, without a session, the Guest permissions), never with role names, so they always follow Table 1 and give users with several roles the union of their access. Typing the URL of an unauthorized section shows a generic "access denied" page (or the login, for a Guest) and never loads its data. Role and account changes made by an Administrator reach an open tab when the user returns to it or when the API refuses a request. Hiding is only a convenience: the back end checks every request (AA05).
+
+```mermaid
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+
+    subgraph WEB03 [WEB03: Role-Based Navigation]
+        direction TB
+        UC1([UC1: Navigate with the Permitted Menu])
+        UC2([UC2: Open a Page by URL])
+        UC3([UC3: Show Access Denied])
+        UC4([UC4: Use Permitted Actions])
+        UC5([UC5: Reflect Role and Status Changes])
+    end
+
+    Guest --> UC1
+    Guest --> UC2
+    SystemUser --> UC1
+    SystemUser --> UC2
+    SystemUser --> UC4
+    SystemUser --> UC5
+
+    UC3 -.->|<< extend >>| UC2
+    UC5 -.->|<< extend >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Navigate with the Permitted Menu** | Guest, System User | Opens the Web Application and sees a menu with only the sections they may use. | The session is restored and the Guest permissions are loaded before the first page. The menu uses the permissions of the session, or the Guest ones without a session, and shows each page whose permission is granted. A user with several roles sees the union of their sections; a user without roles sees only what a Guest sees. The Web Application keeps no copy of the permission matrix. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| **UC2: Open a Page by URL** | Guest, System User | Opens a section from the menu or by typing its URL. | The same guard protects both paths, using the access rule of the page in the registry. While the session is being restored nothing is decided. A Guest goes to the login and returns to the requested page afterwards. Only an allowed page is loaded, so a refused page never requests its data. Unknown URLs show "page not found". | [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| **UC3: Show Access Denied** | - (extends UC2) | A user with a session opens a section they may not use. | Shown at the requested URL, inside the normal layout, with a link to the home page. The message is generic: it never names the permission, the role or anything of the page. | [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| **UC4: Use Permitted Actions** | System User | Uses the buttons and forms of a page (for example adjusting stock). | Each action is offered only with the permission of its API route; read-only pages say so. The back end checks the request anyway: a refused request shows the error and triggers UC5. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| **UC5: Reflect Role and Status Changes** | System User | After an Administrator changes the roles or the status of the account, the open tab shows the new access. | The user is reloaded from the back end when the tab becomes visible again and after any `403`. The menu, the guards and the buttons update at once; an open page that is no longer allowed becomes "access denied". A disabled account or an ended session (`401`) ends the session in the Web Application and leads to the login. | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **WEB03**  | UC1: Navigate with the Permitted Menu | Guest, System User | [Navigate with the Permitted Menu](../flows/role-based-navigation/navigate-with-permitted-menu.md) |
+| **WEB03**  | UC2: Open a Page by URL | Guest, System User | [Open a Page by URL](../flows/role-based-navigation/open-page-by-url.md) |
+| **WEB03**  | UC3: Show Access Denied | - | Shown in [Open a Page by URL](../flows/role-based-navigation/open-page-by-url.md) |
+| **WEB03**  | UC4: Use Permitted Actions | System User | [Use Permitted Actions](../flows/role-based-navigation/use-permitted-actions.md) |
+| **WEB03**  | UC5: Reflect Role and Status Changes | System User | [Reflect Role and Status Changes](../flows/role-based-navigation/reflect-role-and-status-changes.md) |
+
+The page registry, the business rules and the element catalogue of the feature are in the [Role-Based Navigation README](../flows/role-based-navigation/README.md).
 
 ### WEB06: Kitchen Configuration and 3D Integration
 
@@ -431,11 +485,11 @@ flowchart LR
 
 | Use Case                                | Primary Actor      | Description                                                                                                                                | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ADRs                                                                                                                                        |
 | :-------------------------------------- | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| **UC1: Access Protected Functionality** | Guest, System User | Requests a protected page, list, record or action. The back end checks the permission of the route before any business logic runs.         | Routes check permissions, never role names. Roles are read from the database on every request and turned into permissions (union of the roles plus the Guest set), so role changes apply without a new login. No session or an invalid, expired or revoked one answers `401`; a valid session without the permission answers `403 FORBIDDEN`, without naming the permission. Every route is either guarded or a listed public entry point, checked by automated tests. | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
-| **UC2: Consult Session Permissions**    | System User        | The Web Application asks for the current user, roles and permissions after the session is restored and when the tab becomes visible again. | Any authenticated user, whatever the roles. Read from the database, never from the token. No secrets in the answer, never cached, not rate limited.                                                                                                                                                                                                                                                                                                                    | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../adr/0043-permission-based-authorization-matrix.md) |
-| **UC3: Consult Guest Permissions**      | Guest              | The Web Application asks what a user without a session may use, to build the public menu.                                                  | Public, the same for everyone, no user data. The Web Application keeps no copy of the matrix.                                                                                                                                                                                                                                                                                                                                                                          | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
-| **UC4: Consult Own Customer Data**      | Customer           | Reads their own customer record.                                                                                                           | The customer comes from the session, never from a parameter. The generic `/customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. An account without a linked customer gets `404`.                                                                                                                                                                                                                                                        | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
-| **UC5: Record Unauthorized Attempt**    | - (extends UC1)    | Every `401` and `403` is written to the security log.                                                                                      | User and roles (when known), IP, method, path, route, user agent, required permission and reason. Fields named like a secret are dropped and values that look like a token or a password hash are redacted.                                                                                                                                                                                                                                                            | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
+| **UC1: Access Protected Functionality** | Guest, System User | Requests a protected page, list, record or action. The back end checks the permission of the route before any business logic runs.         | Routes check permissions, never role names. Roles are read from the database on every request and turned into permissions (union of the roles plus the Guest set), so role changes apply without a new login. No session or an invalid, expired or revoked one answers `401`; a valid session without the permission answers `403 FORBIDDEN`, without naming the permission. Every route is either guarded or a listed public entry point, checked by automated tests. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC2: Consult Session Permissions**    | System User        | The Web Application asks for the current user, roles and permissions after the session is restored and when the tab becomes visible again. | Any authenticated user, whatever the roles. Read from the database, never from the token. No secrets in the answer, never cached, not rate limited.                                                                                                                                                                                                                                                                                                                    | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../adr/0046-permission-based-authorization-matrix.md) |
+| **UC3: Consult Guest Permissions**      | Guest              | The Web Application asks what a user without a session may use, to build the public menu.                                                  | Public, the same for everyone, no user data. The Web Application keeps no copy of the matrix.                                                                                                                                                                                                                                                                                                                                                                          | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC4: Consult Own Customer Data**      | Customer           | Reads their own customer record.                                                                                                           | The customer comes from the session, never from a parameter. The generic `/customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. An account without a linked customer gets `404`.                                                                                                                                                                                                                                                        | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC5: Record Unauthorized Attempt**    | - (extends UC1)    | Every `401` and `403` is written to the security log.                                                                                      | User and roles (when known), IP, method, path, route, user agent, required permission and reason. Fields named like a secret are dropped and values that look like a token or a password hash are redacted.                                                                                                                                                                                                                                                            | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
 
 #### Flow Mapping
 

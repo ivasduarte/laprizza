@@ -9,7 +9,7 @@
 | Allowed roles | Those whose permissions include the permission of the route ([permission matrix](./README.md#permission-matrix)) |
 | Success response | The business answer of the route (the request reaches the controller) |
 | Error handling | 401 `TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`; 403 `FORBIDDEN`; 503 `ROLES_UNAVAILABLE`. Every 401 and 403 is recorded (UC5) |
-| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../../adr/0043-permission-based-authorization-matrix.md) |
+| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) |
 
 ## Description
 

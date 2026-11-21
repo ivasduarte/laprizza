@@ -9,7 +9,7 @@
 | Allowed roles | CUSTOMER (`customers:read:own`) |
 | Success response | 200 OK with the customer record linked to the session, `Cache-Control: no-store` |
 | Error handling | 401 (no or invalid session), 403 `FORBIDDEN` (no `customers:read:own`), 404 `CUSTOMER_PROFILE_NOT_FOUND` (no linked customer); `GET /customers/{id}` answers 403 to a customer |
-| ADRs | [ADR-0043](../../adr/0043-permission-based-authorization-matrix.md) |
+| ADRs | [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) |
 
 ## Description
 
