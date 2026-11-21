@@ -5561,8 +5561,8 @@
                     "value": {
                       "error": {
                         "status": 503,
-                        "code": "SERVICE_UNAVAILABLE",
-                        "message": "Service Unavailable",
+                        "code": "AI_SERVICE_UNAVAILABLE",
+                        "message": "The AI service is not available.",
                         "details": {
                           "reason": "connection_failed"
                         }
@@ -5585,8 +5585,8 @@
                     "value": {
                       "error": {
                         "status": 504,
-                        "code": "GATEWAY_TIMEOUT",
-                        "message": "Gateway Timeout",
+                        "code": "AI_SERVICE_TIMEOUT",
+                        "message": "The AI service did not answer in time.",
                         "details": {
                           "reason": "timeout"
                         }
@@ -5855,8 +5855,8 @@
                     "value": {
                       "error": {
                         "status": 503,
-                        "code": "SERVICE_UNAVAILABLE",
-                        "message": "Service Unavailable",
+                        "code": "AI_SERVICE_UNAVAILABLE",
+                        "message": "The AI service is not available.",
                         "details": {
                           "reason": "connection_failed"
                         }
@@ -5879,8 +5879,8 @@
                     "value": {
                       "error": {
                         "status": 504,
-                        "code": "GATEWAY_TIMEOUT",
-                        "message": "Gateway Timeout",
+                        "code": "AI_SERVICE_TIMEOUT",
+                        "message": "The AI service did not answer in time.",
                         "details": {
                           "reason": "timeout"
                         }

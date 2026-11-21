@@ -31,6 +31,7 @@ Chosen option: "Nodemailer with Mailpit in every environment", because it delive
 * `EmailService` (`infrastructure/email/email.service.js`) exposes only `send({ to, subject, text, html })` over a Nodemailer transport created from `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM`. It is injected into the services, so tests use a fake transport.
 * Each use case builds its own message (`password-reset-email.js` in AA01, `activation-invitation-email.js` in AA06), in Portuguese and English, as plain text. The messages carry links, never passwords.
 * Mailpit is a service of the root `docker-compose.yml`: SMTP on port `1025`, web interface on `http://localhost:8025`. Its HTTP API lets the httpyac flows read the invitations (AA06/AA07).
+* In production (VM `vs944`) Mailpit runs as a systemd service (`deploy/production/laprizza-mailpit.service`), bound to `127.0.0.1`, with the same ports. Its interface is read through an SSH tunnel; no e-mail leaves the VM.
 * Sending never blocks or changes an answer: the password recovery sends after its `202`, and a failure is written to the security log.
 
 ### Positive Consequences

@@ -136,7 +136,7 @@ const commonErrors = {
       'application/json': {
         schema: errorRef,
         examples: {
-          down: errorExample(503, 'SERVICE_UNAVAILABLE', 'Service Unavailable', {
+          down: errorExample(503, 'AI_SERVICE_UNAVAILABLE', 'The AI service is not available.', {
             reason: 'connection_failed',
           }),
         },
@@ -149,7 +149,9 @@ const commonErrors = {
       'application/json': {
         schema: errorRef,
         examples: {
-          timeout: errorExample(504, 'GATEWAY_TIMEOUT', 'Gateway Timeout', { reason: 'timeout' }),
+          timeout: errorExample(504, 'AI_SERVICE_TIMEOUT', 'The AI service did not answer in time.', {
+            reason: 'timeout',
+          }),
         },
       },
     },
