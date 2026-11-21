@@ -61,3 +61,26 @@ export function collectMaterialViolations(material, path) {
 
   return violations;
 }
+
+/**
+ * VIS04/WEB04: every object of the scene must be drawn with textures. The material is
+ * mandatory and needs a colour map plus a roughness, bump or normal map (the general rules
+ * of collectMaterialViolations also apply).
+ * @param {object | undefined} material
+ * @param {string} path
+ * @returns {string[]}
+ */
+export function collectRequiredTextureViolations(material, path) {
+  if (!material) {
+    return [
+      `${path} is required: every object needs textures (colorMap and a roughnessMap, bumpMap or normalMap)`,
+    ];
+  }
+  const violations = collectMaterialViolations(material, path);
+  if (!TEXTURE_MAPS.some((map) => material[map] !== undefined)) {
+    violations.push(
+      `${path} must have textures: a colorMap and a roughnessMap, bumpMap or normalMap`,
+    );
+  }
+  return violations;
+}

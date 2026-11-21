@@ -6,6 +6,8 @@ import {
   computeLockoutDelayMs,
   remainingLockoutMs,
   isSessionUsable,
+  isSessionIdle,
+  idleCutoff,
 } from '../../src/domain/auth/auth.domain.js';
 
 const POLICY = { threshold: 3, stepsMs: [60_000, 300_000, 1_800_000] };
@@ -91,4 +93,19 @@ test('isSessionUsable checks existence, revocation and expiry', () => {
   assert.equal(isSessionUsable({ revokedAt: NOW, expiresAt: future }, NOW), false);
   assert.equal(isSessionUsable({ revokedAt: null, expiresAt: past }, NOW), false);
   assert.equal(isSessionUsable({ revokedAt: null, expiresAt: NOW }, NOW), false);
+});
+
+test('AA04: isSessionUsable refuses sessions idle for the whole inactivity window', () => {
+  const future = new Date(NOW.getTime() + 60_000);
+  const idle = { idleTimeoutMs: 30 * 60_000 };
+  const usedAgo = (ms) => ({ revokedAt: null, expiresAt: future, lastUsedAt: new Date(NOW - ms) });
+  assert.equal(isSessionUsable(usedAgo(29 * 60_000), NOW, idle), true);
+  assert.equal(isSessionUsable(usedAgo(30 * 60_000), NOW, idle), false);
+  assert.equal(isSessionUsable(usedAgo(30 * 60_000), NOW), true); // check disabled by default
+  assert.equal(isSessionIdle({}, NOW, idle), false); // no lastUsedAt: absolute expiry only
+});
+
+test('AA04: idleCutoff is the oldest accepted lastUsedAt (null when disabled)', () => {
+  assert.equal(idleCutoff(NOW, { idleTimeoutMs: 60_000 }).getTime(), NOW.getTime() - 60_000);
+  assert.equal(idleCutoff(NOW, { idleTimeoutMs: 0 }), null);
 });

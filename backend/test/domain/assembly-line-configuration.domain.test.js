@@ -108,6 +108,11 @@ test('createAssemblyLineConfigurationData rejects missing or blank names', () =>
 
 // --- Asset reference rules (ADR-0021: absolute http(s) URL or root-relative path) ---
 
+const TEXTURED = {
+  colorMap: '/textures/metal_plate/diffuse.jpg',
+  normalMap: '/textures/metal_plate/normal.jpg',
+};
+
 function buildContent(elementOverrides = {}) {
   return {
     dimensions: { width: 12, length: 30, height: 4 },
@@ -119,6 +124,7 @@ function buildContent(elementOverrides = {}) {
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
+        material: TEXTURED,
         ...elementOverrides,
       },
     ],
@@ -286,3 +292,24 @@ test('validateAssemblyLineConfigurationContent rejects out-of-range material pro
   }
 });
 
+test('WEB04/VIS04: every line component needs a textured material', () => {
+  const content = buildContent();
+  delete content.elements[0].material;
+  assert.throws(
+    () => validateAssemblyLineConfigurationContent(content),
+    (err) => err.details.some((d) => d.startsWith('/elements/0/material is required')),
+  );
+});
+
+test('WEB04: line components stay inside the line footprint (z from 0 to length)', () => {
+  // Line 12 x 30 x 4: x in [-6, 6], z in [0, 30], y in [0, 4].
+  assert.throws(
+    () => validateAssemblyLineConfigurationContent(buildContent({ position: { x: 0, y: 0, z: -1 } })),
+    (err) => {
+      assert.deepEqual(err.details, [
+        '/elements/0/position/z must be between 0 and 30 (inside the assembly line)',
+      ]);
+      return true;
+    },
+  );
+});

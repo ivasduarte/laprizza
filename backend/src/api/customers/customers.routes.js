@@ -6,6 +6,11 @@ import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 import { requirePermission } from '../middleware/authorization.middleware.js';
+import {
+  CUSTOMER_FIELD_LIMITS as LIMITS,
+  PERSON_NAME_PATTERN,
+  PLACE_NAME_PATTERN,
+} from '../../domain/customers/customers.domain.js';
 
 /**
  * Factory function that creates and configures the Express router for customer management endpoints.
@@ -18,25 +23,29 @@ import { requirePermission } from '../middleware/authorization.middleware.js';
 export default function customersRouterFactory(customersRepository, postalCodeValidator) {
   const router = Router();
 
+  // WEB04: every field has a length limit; names only accept letters between their words.
+  const placeName = (max) => Joi.string().trim().max(max).pattern(PLACE_NAME_PATTERN, 'placeName');
   const addressSchema = Joi.object({
-    street: Joi.string().required(),
-    houseNumber: Joi.string().required(),
-    complement: Joi.string().optional(),
+    street: Joi.string().trim().max(LIMITS.street).required(),
+    houseNumber: Joi.string().trim().max(LIMITS.houseNumber).required(),
+    complement: Joi.string().trim().max(LIMITS.complement).optional(),
     postalCode: Joi.string()
       .pattern(/^\d{4}-\d{3}$/)
       .required(),
-    city: Joi.string().required(),
-    district: Joi.string().required(),
+    city: placeName(LIMITS.city).required(),
+    district: placeName(LIMITS.district).required(),
   });
+  const personName = () =>
+    Joi.string().trim().min(3).max(LIMITS.name).pattern(PERSON_NAME_PATTERN, 'personName');
 
   const createCustomerSchema = Joi.object({
-    name: Joi.string().min(3).max(50).trim().required().messages({
+    name: personName().required().messages({
       'any.required': 'Mandatory field.',
     }),
-    email: Joi.string().email().trim().required().messages({
+    email: Joi.string().email().trim().max(LIMITS.email).required().messages({
       'any.required': 'Mandatory field.',
     }),
-    phoneNumber: Joi.string().required(),
+    phoneNumber: Joi.string().max(LIMITS.phoneNumber).required(),
     address: addressSchema.required(),
     dietaryRestrictions: Joi.array()
       .items(
@@ -93,9 +102,9 @@ export default function customersRouterFactory(customersRepository, postalCodeVa
   );
 
   const updateCustomerSchema = Joi.object({
-    name: Joi.string().min(3).max(50).trim().optional(),
-    email: Joi.string().email().trim().optional(),
-    phoneNumber: Joi.string().optional(),
+    name: personName().optional(),
+    email: Joi.string().email().trim().max(LIMITS.email).optional(),
+    phoneNumber: Joi.string().max(LIMITS.phoneNumber).optional(),
     address: addressSchema.optional(),
     dietaryRestrictions: Joi.array()
       .items(

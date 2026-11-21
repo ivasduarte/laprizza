@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema(
       },
     },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customers', required: false },
+    // AA02: contact phone (9 national digits) until a Customer record exists; external
+    // providers do not supply it.
+    phoneNumber: { type: String, trim: true, default: null },
     status: {
       type: String,
       enum: Object.values(AccountStatus),

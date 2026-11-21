@@ -87,10 +87,10 @@ export function createAuthModule(config, repos = {}) {
         oidcClient: repos.oidcClient ?? createOidcClient(),
         authService,
         roleChangeRecorder,
-        invitationService,
         activationService,
         securityLogger,
         config: config.external,
+        clock,
       })
     : null;
   return {

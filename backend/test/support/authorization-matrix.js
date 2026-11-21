@@ -25,6 +25,7 @@ const ADMINISTRATOR_ONLY = [ADMINISTRATOR];
 export const AUTHORIZATION_MATRIX = Object.freeze([
   // Session (any authenticated user, whatever the roles)
   ['GET', '/auth/me', AUTHENTICATED],
+  ['PUT', '/auth/me/phone', AUTHENTICATED],
   ['POST', '/auth/logout', AUTHENTICATED],
   ['POST', '/auth/logout-all', AUTHENTICATED],
   ['POST', '/auth/password/change', AUTHENTICATED],
@@ -81,17 +82,17 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['PATCH', '/customers/:id', MANAGER_ONLY],
   ['GET', '/customers/me', [CUSTOMER]],
 
-  // Kitchen viewer and configurations: MANAGER only (team decision: the employee lost kitchen:read)
-  ['GET', '/kitchen-configurations', MANAGER_ONLY],
-  ['GET', '/kitchen-configurations/active', MANAGER_ONLY],
-  ['GET', '/kitchen-configurations/:id', MANAGER_ONLY],
+  // Kitchen viewer and configurations: read by the staff (Table 1), changed by the MANAGER only
+  ['GET', '/kitchen-configurations', STAFF],
+  ['GET', '/kitchen-configurations/active', STAFF],
+  ['GET', '/kitchen-configurations/:id', STAFF],
   ['POST', '/kitchen-configurations', MANAGER_ONLY],
   ['POST', '/kitchen-configurations/validate', MANAGER_ONLY],
   ['PATCH', '/kitchen-configurations/:id', MANAGER_ONLY],
   ['DELETE', '/kitchen-configurations/:id', MANAGER_ONLY],
   ['PATCH', '/kitchen-configurations/:id/activate', MANAGER_ONLY],
-  ['GET', '/assembly-line-configurations', MANAGER_ONLY],
-  ['GET', '/assembly-line-configurations/:id', MANAGER_ONLY],
+  ['GET', '/assembly-line-configurations', STAFF],
+  ['GET', '/assembly-line-configurations/:id', STAFF],
   ['POST', '/assembly-line-configurations', MANAGER_ONLY],
   ['POST', '/assembly-line-configurations/validate', MANAGER_ONLY],
   ['PATCH', '/assembly-line-configurations/:id', MANAGER_ONLY],

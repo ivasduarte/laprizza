@@ -7,6 +7,7 @@ import { validateKitchenConfigurationContent } from '../../src/domain/kitchen-co
 
 const buildKitchen = (assemblyLine) => ({
   dimensions: { width: 12, length: 30, height: 4 },
+  floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
   elements: [],
   ...(assemblyLine !== undefined && { assemblyLine }),
 });

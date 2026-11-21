@@ -166,6 +166,69 @@
         }
       }
     },
+    "/auth/me/phone": {
+      "put": {
+        "summary": "Sets the contact phone of the current account (AA02)",
+        "description": "Asked after the first external login, because the identity providers do not supply it. While `phoneRequired` is true the customer permissions (e.g. customers:read:own) are withheld.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phoneNumber"
+                ],
+                "properties": {
+                  "phoneNumber": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "example": "912345678"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated session user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_FAILED or PHONE_INVALID (not a Portuguese number)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/guest-permissions": {
       "get": {
         "summary": "Permissions of a visitor without a session (public)",
@@ -1430,7 +1493,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 3,
-                    "maxLength": 50
+                    "maxLength": 50,
+                    "description": "WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen."
                   },
                   "email": {
                     "type": "string",
@@ -1612,7 +1676,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 3,
-                    "maxLength": 50
+                    "maxLength": 50,
+                    "description": "WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen."
                   },
                   "email": {
                     "type": "string",
@@ -1843,7 +1908,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 3,
-                    "maxLength": 50
+                    "maxLength": 50,
+                    "description": "WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen."
                   }
                 }
               }
@@ -2006,7 +2072,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 3,
-                    "maxLength": 50
+                    "maxLength": 50,
+                    "description": "WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen."
                   },
                   "isActive": {
                     "type": "boolean"
@@ -4891,16 +4958,18 @@
                 "properties": {
                   "amount": {
                     "type": "integer",
-                    "minimum": 1,
-                    "description": "Positive integer amount to adjust."
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "description": "increase/decrease: units to move (> 0). set: the counted quantity (>= 0) that replaces the current one (WEB04)."
                   },
                   "operation": {
                     "type": "string",
                     "enum": [
                       "increase",
-                      "decrease"
+                      "decrease",
+                      "set"
                     ],
-                    "description": "Type of adjustment. Cannot decrease below 0."
+                    "description": "Type of adjustment. The result must stay between 0 and 100000 units."
                   }
                 }
               }
@@ -4919,7 +4988,7 @@
             }
           },
           "400": {
-            "description": "Validation error, not stock controlled, or negative stock result",
+            "description": "VALIDATION_FAILED, not stock controlled, STOCK_NEGATIVE (below 0) or STOCK_ABOVE_MAXIMUM (above 100000)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8273,6 +8342,10 @@
           "customerId": {
             "type": "string",
             "nullable": true
+          },
+          "phoneRequired": {
+            "type": "boolean",
+            "description": "AA02: Customer without a contact phone; customer features are withheld."
           }
         }
       },
@@ -8287,13 +8360,16 @@
         ],
         "properties": {
           "street": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "houseNumber": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 10
           },
           "complement": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "postalCode": {
             "type": "string",
@@ -8301,10 +8377,14 @@
             "example": "4460-123"
           },
           "city": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 60,
+            "description": "Letters; spaces, apostrophes, hyphens or dots between words."
           },
           "district": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 40,
+            "description": "Letters; spaces, apostrophes, hyphens or dots between words."
           }
         }
       },

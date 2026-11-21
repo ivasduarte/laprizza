@@ -5,6 +5,7 @@ import { Permission } from '../../domain/auth/permissions.domain.js';
 import { AppError } from '../../application/app-error.js';
 import { joiDetails } from '../middleware/joi-details.js';
 import { requirePermission } from '../middleware/authorization.middleware.js';
+import { MAX_STOCK_QUANTITY } from '../../domain/stock/stock.domain.js';
 
 export default function stockRouterFactory(repos) {
   const router = Router();
@@ -27,17 +28,26 @@ export default function stockRouterFactory(repos) {
     next();
   };
 
+  // WEB04: `set` records a physical count (amount = counted quantity, 0 allowed); increase and
+  // decrease move `amount` units (> 0). The domain checks the result (0..MAX_STOCK_QUANTITY).
   const adjustStockSchema = Joi.object({
-    amount: Joi.number().integer().positive().required().messages({
-      'number.base': 'Amount must be a number.',
-      'number.integer': 'Amount must be an integer.',
-      'number.positive': 'Amount must be a positive integer.',
-      'any.required': 'Amount is required.',
-    }),
-    operation: Joi.string().valid('increase', 'decrease').required().messages({
-      'any.only': 'Operation must be either increase or decrease.',
+    operation: Joi.string().valid('increase', 'decrease', 'set').required().messages({
+      'any.only': 'Operation must be increase, decrease or set.',
       'any.required': 'Operation is required.',
     }),
+    amount: Joi.number()
+      .integer()
+      .max(MAX_STOCK_QUANTITY)
+      .when('operation', { is: 'set', then: Joi.number().min(0), otherwise: Joi.number().positive() })
+      .required()
+      .messages({
+        'number.base': 'Amount must be a number.',
+        'number.integer': 'Amount must be an integer.',
+        'number.positive': 'Amount must be a positive integer.',
+        'number.min': 'The counted quantity cannot be negative.',
+        'number.max': `Amount cannot exceed ${MAX_STOCK_QUANTITY}.`,
+        'any.required': 'Amount is required.',
+      }),
   });
 
   const listStockQuerySchema = Joi.object({

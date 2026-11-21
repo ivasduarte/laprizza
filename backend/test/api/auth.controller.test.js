@@ -17,7 +17,7 @@ const SESSION_RESULT = {
     email: 'a@b.pt',
     status: 'active',
     roles: ['EMPLOYEE'],
-    permissions: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
+    permissions: ['catalogue:read', 'kitchen:read', 'products:read', 'resources:read', 'stock:read'],
     customerId: null,
   },
 };

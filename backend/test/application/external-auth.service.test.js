@@ -11,6 +11,7 @@ const PROVIDER = {
 };
 const CLAIMS = { iss: 'https://accounts.google.com', sub: 'g-1', email: 'Ana@Example.pt', email_verified: true };
 const CTX = { ip: '10.0.0.1', userAgent: 'node-test' };
+const NOW = new Date('2026-11-21T10:00:00.000Z');
 
 function build({ claims = CLAIMS, linked = null, user = null, emailOwner = null, exchange } = {}) {
   const deps = {
@@ -18,6 +19,8 @@ function build({ claims = CLAIMS, linked = null, user = null, emailOwner = null,
       findByEmail: mock.fn(async () => emailOwner),
       findById: mock.fn(async () => user),
       create: mock.fn(async (data) => ({ _id: 'new-id', ...data })),
+      deleteById: mock.fn(async () => ({ deletedCount: 1 })),
+      activateAccount: mock.fn(async (id, { activatedAt }) => ({ _id: id, status: 'active', activatedAt })),
     },
     externalIdentitiesRepository: {
       findByIssuerAndSubject: mock.fn(async () => linked),
@@ -39,6 +42,7 @@ function build({ claims = CLAIMS, linked = null, user = null, emailOwner = null,
     },
     securityLogger: { log: mock.fn() },
     config: { providers: { google: PROVIDER } },
+    clock: { now: () => NOW },
   };
   return { deps, service: createExternalAuthService(deps) };
 }
@@ -73,24 +77,52 @@ test('linked + active user: session through establishSession with method oidc, n
   assert.equal(deps.usersRepository.findByEmail.mock.callCount(), 0);
 });
 
-test('linked but inactive/disabled: the denial of establishSession propagates, no new account', async () => {
+test('linked but deactivated/disabled: the denial of establishSession propagates, no new account', async () => {
   const denial = Object.assign(new Error('x'), { status: 403, code: 'ACCOUNT_INACTIVE' });
-  const { service, deps } = build({ linked: { userId: 'u1' }, user: { _id: 'u1', status: 'inactive' } });
+  const deactivated = { _id: 'u1', status: 'inactive', activatedAt: new Date('2026-01-01') };
+  const { service, deps } = build({ linked: { userId: 'u1' }, user: deactivated });
   deps.authService.establishSession.mock.mockImplementation(async () => { throw denial; });
   await assert.rejects(service.completeLogin(input, CTX), { code: 'ACCOUNT_INACTIVE' });
   assert.equal(deps.usersRepository.create.mock.callCount(), 0);
 });
 
-test('new verified e-mail: INACTIVE account with CUSTOMER role, identity linked, NO session', async () => {
+test('AA02: new verified e-mail: ACTIVE account with CUSTOMER role, identity linked, session opened', async () => {
   const { service, deps } = build();
   const out = await service.completeLogin(input, CTX);
-  assert.equal(out.outcome, ExternalLoginOutcome.PENDING_ACTIVATION);
+  assert.equal(out.outcome, ExternalLoginOutcome.SESSION);
+  assert.deepEqual(out.session, { refreshToken: 'rt', accessToken: 'at' });
   assert.deepEqual(deps.usersRepository.create.mock.calls[0].arguments[0], {
-    email: 'ana@example.pt', roles: ['CUSTOMER'], status: 'inactive',
+    email: 'ana@example.pt', roles: ['CUSTOMER'], status: 'active', activatedAt: NOW,
   });
   assert.deepEqual(deps.externalIdentitiesRepository.create.mock.calls[0].arguments[0], {
     userId: 'new-id', provider: 'google', issuer: 'https://accounts.google.com', subject: 'g-1',
   });
+  const [sessionUser, sessionCtx] = deps.authService.establishSession.mock.calls[0].arguments;
+  assert.equal(sessionUser._id, 'new-id');
+  assert.deepEqual(sessionCtx, { ...CTX, method: 'oidc' });
+});
+
+test('AA02: the first external login sends no activation invitation', async () => {
+  const { service, deps } = build();
+  await service.completeLogin(input, CTX);
+  assert.equal(deps.invitationService.issue.mock.callCount(), 0);
+});
+
+test('AA02: a failed identity link removes the new account (no orphan blocking the e-mail)', async () => {
+  const { service, deps } = build();
+  deps.externalIdentitiesRepository.create.mock.mockImplementation(async () => { throw new Error('db'); });
+  await assert.rejects(service.completeLogin(input, CTX), { message: 'db' });
+  assert.deepEqual(deps.usersRepository.deleteById.mock.calls[0].arguments, ['new-id']);
+  assert.equal(deps.authService.establishSession.mock.callCount(), 0);
+});
+
+test('AA02: concurrent first login of the same identity: account removed, AUTH_FAILED, no session', async () => {
+  const { service, deps } = build();
+  deps.externalIdentitiesRepository.create.mock.mockImplementation(async () => {
+    throw Object.assign(new Error('dup'), { code: 11000 });
+  });
+  await assert.rejects(service.completeLogin(input, CTX), { status: 409, code: 'AUTH_FAILED' });
+  assert.equal(deps.usersRepository.deleteById.mock.callCount(), 1);
   assert.equal(deps.authService.establishSession.mock.callCount(), 0);
 });
 
@@ -136,7 +168,7 @@ test('AA03: roles or groups sent by the identity provider are ignored; new accou
   await service.completeLogin(input, CTX);
   const created = deps.usersRepository.create.mock.calls[0].arguments[0];
   assert.deepEqual(created.roles, ['CUSTOMER']);
-  assert.equal(created.status, 'inactive'); // Customer does not activate the account
+  assert.equal(created.status, 'active'); // activated by the verified identity (AA02), not by the role
 });
 
 test('AA03: a linked account without active roles is denied by establishSession (same rule as local)', async () => {
@@ -147,29 +179,23 @@ test('AA03: a linked account without active roles is denied by establishSession 
   assert.equal(deps.usersRepository.create.mock.callCount(), 0); // never recreated
 });
 
-test('AA06: first external login records CUSTOMER as a system process and sends the activation invitation', async () => {
+test('AA06: first external login records CUSTOMER as a system process', async () => {
   const { service, deps } = build();
   await service.completeLogin(input, CTX);
 
   const [user, actor] = deps.roleChangeRecorder.recordInitialRoles.mock.calls[0].arguments;
   assert.deepEqual(user.roles, ['CUSTOMER']);
   assert.deepEqual(actor, { kind: 'SYSTEM', process: 'external-first-login' });
-  const [invited, { issuedBy }] = deps.invitationService.issue.mock.calls[0].arguments;
-  assert.equal(invited.email, 'ana@example.pt');
-  assert.equal(invited.status, 'inactive');
-  assert.deepEqual(issuedBy, { kind: 'SYSTEM', process: 'external-first-login' });
 });
 
-test('AA06: a failed record or invitation never blocks the answer; it is logged for the Administrator', async () => {
+test('AA06: a failed role record never blocks the login; it is logged for the Administrator', async () => {
   const { service, deps } = build();
   deps.roleChangeRecorder.recordInitialRoles.mock.mockImplementation(async () => { throw new Error('db'); });
-  deps.invitationService.issue.mock.mockImplementation(async () => { throw new Error('smtp'); });
 
   const out = await service.completeLogin(input, CTX);
-  assert.equal(out.outcome, ExternalLoginOutcome.PENDING_ACTIVATION);
+  assert.equal(out.outcome, ExternalLoginOutcome.SESSION);
   const events = deps.securityLogger.log.mock.calls.map((c) => c.arguments[0]);
   assert.ok(events.includes('ROLE_CHANGE_RECORD_FAILED'));
-  assert.ok(events.includes('ACTIVATION_INVITATION_FAILED'));
 });
 
 test('AA06: selecting an authentication method never grants an administrative role', async () => {
@@ -177,7 +203,6 @@ test('AA06: selecting an authentication method never grants an administrative ro
   const { service, deps } = build({ claims });
   await service.completeLogin(input, CTX);
   assert.deepEqual(deps.usersRepository.create.mock.calls[0].arguments[0].roles, ['CUSTOMER']);
-  assert.equal(deps.invitationService.issue.mock.callCount(), 1);
 });
 
 test('AA06: a returning external user gets no new invitation and no role record', async () => {
@@ -185,6 +210,27 @@ test('AA06: a returning external user gets no new invitation and no role record'
   await service.completeLogin(input, CTX);
   assert.equal(deps.invitationService.issue.mock.callCount(), 0);
   assert.equal(deps.roleChangeRecorder.recordInitialRoles.mock.callCount(), 0);
+});
+
+test('AA07: a linked account still waiting for activation is activated by the external login', async () => {
+  const pending = { _id: 'u1', status: 'inactive', activatedAt: null };
+  const { service, deps } = build({ linked: { userId: 'u1' }, user: pending });
+  const out = await service.completeLogin(input, CTX);
+  assert.equal(out.outcome, ExternalLoginOutcome.SESSION);
+  assert.deepEqual(deps.usersRepository.activateAccount.mock.calls[0].arguments, ['u1', { activatedAt: NOW }]);
+  assert.equal(deps.authService.establishSession.mock.calls[0].arguments[0].status, 'active');
+});
+
+test('AA03: a deactivated (already activated) or disabled linked account is never reactivated', async () => {
+  for (const user of [
+    { _id: 'u1', status: 'inactive', activatedAt: new Date('2026-01-01') },
+    { _id: 'u1', status: 'disabled', activatedAt: null },
+  ]) {
+    const { service, deps } = build({ linked: { userId: 'u1' }, user });
+    await service.completeLogin(input, CTX);
+    assert.equal(deps.usersRepository.activateAccount.mock.callCount(), 0);
+    assert.equal(deps.authService.establishSession.mock.calls[0].arguments[0], user);
+  }
 });
 
 // ---------- AA07: activation of external accounts ----------

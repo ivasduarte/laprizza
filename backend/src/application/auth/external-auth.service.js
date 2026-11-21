@@ -15,7 +15,6 @@ export const ExternalAuthCode = Object.freeze({
 
 export const ExternalLoginOutcome = Object.freeze({
   SESSION: 'SESSION',
-  PENDING_ACTIVATION: 'PENDING_ACTIVATION',
   ACTIVATED: 'ACTIVATED',
 });
 
@@ -37,11 +36,11 @@ const externalError = (code, status, message) =>
  * @param {object} deps.oidcClient - createAuthorizationRequest, completeAuthorization.
  * @param {{establishSession: Function}} deps.authService - shared session creation (AA01/AA04).
  * @param {{recordInitialRoles: Function}} deps.roleChangeRecorder - AA06 role change records.
- * @param {{issue: Function}} deps.invitationService - AA06 activation invitations.
  * @param {{prepareExternal: Function, completeExternal: Function}} [deps.activationService] -
  *   AA07 account activation.
  * @param {{log: Function}} deps.securityLogger
  * @param {{providers: Record<string, object>}} deps.config - config.external.
+ * @param {{now: () => Date}} [deps.clock]
  */
 export function createExternalAuthService({
   usersRepository,
@@ -49,20 +48,21 @@ export function createExternalAuthService({
   oidcClient,
   authService,
   roleChangeRecorder,
-  invitationService,
   activationService,
   securityLogger,
   config,
+  clock = { now: () => new Date() },
 }) {
   /**
-   * AA06: the automatic CUSTOMER role is recorded and the new inactive account receives its
-   * activation invitation. A failure here never blocks the login answer: it is logged, and an
-   * Administrator can issue a replacement invitation.
+   * AA06: the automatic CUSTOMER role is recorded as a system process. A failure here never
+   * blocks the login: it is logged for the Administrator.
    */
-  async function recordAndInvite(user) {
-    const actor = systemActor(SystemProcess.EXTERNAL_FIRST_LOGIN);
+  async function recordInitialRoles(user) {
     try {
-      await roleChangeRecorder.recordInitialRoles(user, actor);
+      await roleChangeRecorder.recordInitialRoles(
+        user,
+        systemActor(SystemProcess.EXTERNAL_FIRST_LOGIN),
+      );
     } catch (err) {
       securityLogger.log('ROLE_CHANGE_RECORD_FAILED', {
         userId: String(user._id),
@@ -71,14 +71,54 @@ export function createExternalAuthService({
         reason: err?.name ?? 'Error',
       });
     }
+  }
+
+  /**
+   * AA07: an external account is validated by a successful login at its provider. Accounts left
+   * waiting for activation by the previous flow (never activated) are activated here; an account
+   * deactivated or disabled after its activation is never reactivated (AA03).
+   */
+  async function activateIfPending(user, provider, context) {
+    if (user.status !== AccountStatus.INACTIVE || user.activatedAt) return user;
+    const activated = await usersRepository.activateAccount(user._id, { activatedAt: clock.now() });
+    if (!activated) return user; // changed meanwhile: establishSession applies the current state
+    securityLogger.log('ACCOUNT_ACTIVATED', {
+      userId: String(user._id),
+      method: 'external',
+      provider: provider.name,
+      ip: context.ip,
+    });
+    return activated;
+  }
+
+  /**
+   * AA02: account + identity link for a new verified identity. The two writes are not atomic,
+   * so the account is removed if the link fails; otherwise the e-mail would stay taken by an
+   * account no provider can sign in to (every later attempt: ACCOUNT_LINK_REQUIRED).
+   */
+  async function createLinkedAccount(email, identity, provider, context) {
+    let user;
     try {
-      await invitationService.issue(user, { issuedBy: actor });
-    } catch (err) {
-      securityLogger.log('ACTIVATION_INVITATION_FAILED', {
-        userId: String(user._id),
-        reason: err?.code ?? err?.name ?? 'Error',
+      user = await usersRepository.create({
+        email,
+        roles: withInitialCustomerRole(), // roles from the IdP are never used
+        // AA02/AA07: the verified provider identity validates the account.
+        status: AccountStatus.ACTIVE,
+        activatedAt: clock.now(),
       });
+    } catch (err) {
+      if (err?.code === 11000) throw deny(provider, context, 'ACCOUNT_LINK_REQUIRED', 403);
+      throw err;
     }
+    try {
+      await externalIdentitiesRepository.create({ userId: user._id, ...identity });
+    } catch (err) {
+      await usersRepository.deleteById(user._id);
+      // Same identity linked by a concurrent first login: that request owns the account.
+      if (err?.code === 11000) throw deny(provider, context, ExternalAuthCode.AUTH_FAILED, 409);
+      throw err;
+    }
+    return user;
   }
 
   function providerOf(name) {
@@ -138,8 +178,9 @@ export function createExternalAuthService({
      * Completes the login after the IdP redirect.
      * - Linked identity: creates a session through authService.establishSession
      *   (inactive/disabled accounts are refused there).
-     * - Unknown identity with a verified, unused e-mail: creates an INACTIVE account with the
-     *   CUSTOMER role and NO session (activation: AA06/AA07).
+     * - Unknown identity with a verified, unused e-mail: creates an ACTIVE account with the
+     *   CUSTOMER role and opens the session (AA02). The contact phone is asked next
+     *   (session user `phoneRequired`).
      *
      * @returns {Promise<{outcome: string, session?: object}>}
      * @throws {AppError} with a stable `code`.
@@ -194,32 +235,23 @@ export function createExternalAuthService({
       }
 
       if (result.decision === ExternalLoginDecision.LOGIN) {
-        const user = await usersRepository.findById(linked.userId);
+        let user = await usersRepository.findById(linked.userId);
         if (!user) throw deny(provider, context, ExternalAuthCode.AUTH_FAILED, 401);
+        user = await activateIfPending(user, provider, context);
         const session = await authService.establishSession(user, { ...context, method: 'oidc' });
         return { outcome: ExternalLoginOutcome.SESSION, session };
       }
 
-      // CREATE_ACCOUNT: Customer role is automatic (AA03), activation is not (AA06/AA07).
-      let user;
-      try {
-        user = await usersRepository.create({
-          email,
-          roles: withInitialCustomerRole(), // roles from the IdP are never used
-          status: AccountStatus.INACTIVE,
-        });
-      } catch (err) {
-        if (err?.code === 11000) throw deny(provider, context, 'ACCOUNT_LINK_REQUIRED', 403);
-        throw err;
-      }
-      await externalIdentitiesRepository.create({ userId: user._id, ...identity });
+      // CREATE_ACCOUNT: Customer role is automatic (AA03); the account is active (AA02).
+      const user = await createLinkedAccount(email, identity, provider, context);
       securityLogger.log('EXTERNAL_ACCOUNT_CREATED', {
         provider: provider.name,
         userId: String(user._id),
         ip: context.ip,
       });
-      await recordAndInvite(user);
-      return { outcome: ExternalLoginOutcome.PENDING_ACTIVATION };
+      await recordInitialRoles(user);
+      const session = await authService.establishSession(user, { ...context, method: 'oidc' });
+      return { outcome: ExternalLoginOutcome.SESSION, session };
     },
   };
 }

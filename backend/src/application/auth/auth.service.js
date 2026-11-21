@@ -1,10 +1,17 @@
-import { AccountStatus, normalizeEmail, activeRoles } from '../../domain/users/users.domain.js';
+import {
+  AccountStatus,
+  normalizeEmail,
+  activeRoles,
+  isContactPhoneMissing,
+} from '../../domain/users/users.domain.js';
+import { normalizePhoneNumber } from '../../domain/customers/customers.domain.js';
 import {
   evaluateAuthentication,
   computeLockoutDelayMs,
   remainingLockoutMs,
   isSessionUsable,
   evaluateRoleAuthorization,
+  idleCutoff,
 } from '../../domain/auth/auth.domain.js';
 import { AuthErrorCode, authError, tooManyAttempts } from './auth-errors.js';
 import { assertPasswordPolicy } from './password-policy.js';
@@ -13,15 +20,21 @@ import { permissionsFor } from '../../domain/auth/permissions.domain.js';
 
 /** Data of the authenticated user returned to the SPA (no secrets). */
 function toSessionUserDto(user, roles) {
+  const contactPhoneMissing = isContactPhoneMissing(user, roles);
   return {
     id: String(user._id ?? user.id),
     email: user.email,
     status: user.status,
     roles,
-    permissions: permissionsFor(roles),
+    permissions: permissionsFor(roles, { contactPhoneMissing }),
     customerId: user.customerId ? String(user.customerId) : null,
+    // AA02: the SPA asks for the phone before showing the customer features.
+    phoneRequired: contactPhoneMissing,
   };
 }
+
+/** lastUsedAt is written at most once per interval, so active users do not cost a write per request. */
+const SESSION_TOUCH_INTERVAL_MS = 60_000;
 
 /**
  * Authentication use cases. Every dependency is injected (testable without Mongo/Express).
@@ -56,6 +69,8 @@ export function createAuthService({
   defer = (task) => setImmediate(task),
 }) {
   const lockoutPolicy = { threshold: config.lockoutThreshold, stepsMs: config.lockoutStepsMs };
+  // AA04: 0 disables the inactivity limit (only the absolute expiry applies).
+  const idlePolicy = { idleTimeoutMs: config.sessionIdleTimeoutMs ?? 0 };
 
   /**
    * AA03: the active internal roles of the account, always read from the back end (never from
@@ -149,7 +164,7 @@ export function createAuthService({
       expiresAt,
       revokedAt: null,
       userAgent: context.userAgent?.slice(0, 256),
-      ip: context.ip,
+      // GDP01: the client IP is not stored (data minimisation).
     });
 
     securityLogger.log('LOGIN_SUCCEEDED', {
@@ -226,6 +241,7 @@ export function createAuthService({
       currentHash,
       tokenService.hashOpaqueToken(nextToken),
       now,
+      { idleSince: idleCutoff(now, idlePolicy) },
     );
 
     if (!session) {
@@ -309,19 +325,27 @@ export function createAuthService({
     ]);
     if (!user) throw authError(AuthErrorCode.TOKEN_INVALID, 401);
 
+    const now = clock.now();
     const valid =
       evaluateAuthentication(user).allowed &&
       (user.tokenVersion ?? 0) === claims.tv &&
-      isSessionUsable(session, clock.now()) &&
+      isSessionUsable(session, now, idlePolicy) &&
       String(session.userId) === String(user._id);
     if (!valid) throw authError(AuthErrorCode.SESSION_REVOKED, 401);
+
+    // AA04: requests count as activity, so a user working with a valid access token is not idle.
+    if (now - new Date(session.lastUsedAt) >= SESSION_TOUCH_INTERVAL_MS) {
+      await sessionsRepository.touch(session._id, now);
+    }
 
     // No active role: the principal only has the Guest permissions (protected routes answer 403).
     const roles = await resolveRoles(user);
     return {
       userId: String(user._id),
       roles,
-      permissions: permissionsFor(roles),
+      permissions: permissionsFor(roles, {
+        contactPhoneMissing: isContactPhoneMissing(user, roles),
+      }),
       customerId: user.customerId ? String(user.customerId) : null,
       sessionId: String(session._id),
     };
@@ -443,8 +467,28 @@ export function createAuthService({
     return toSessionUserDto(user, await resolveRoles(user));
   }
 
+  /**
+   * AA02: stores the contact phone of the signed-in account (asked after the first external
+   * login, because the providers do not supply it). Unlocks the customer features.
+   *
+   * @throws {AppError} 400 PHONE_INVALID; 401 SESSION_REVOKED if the account is no longer usable.
+   */
+  async function setContactPhone({ userId, phoneNumber }, context = {}) {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    if (!normalized) throw authError(AuthErrorCode.PHONE_INVALID, 400);
+
+    const user = await usersRepository.findById(userId);
+    if (!user || !evaluateAuthentication(user).allowed) {
+      throw authError(AuthErrorCode.SESSION_REVOKED, 401);
+    }
+    const updated = await usersRepository.update(user._id, { phoneNumber: normalized });
+    securityLogger.log('CONTACT_PHONE_SET', { userId: String(user._id), ip: context.ip });
+    return toSessionUserDto(updated, await resolveRoles(updated));
+  }
+
   return {
     establishSession,
+    setContactPhone,
     login,
     refresh,
     authenticateAccessToken,

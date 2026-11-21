@@ -102,3 +102,18 @@ test('errorHandler hides internal details of server errors', (t) => {
   assert.equal(res.body.error.code, 'INTERNAL_SERVER_ERROR');
   assert.equal(res.body.error.message, 'Internal Server Error');
 });
+
+/**
+ * Unit test (WEB04): details of a 5xx are never returned (no internal data in the response).
+ */
+test('errorHandler never returns the details of a server error', (t) => {
+  t.mock.method(console, 'error', () => {});
+  const err = new Error('boom');
+  err.status = 503;
+  err.details = ['at Mongo.connect (internal/db.js:12)'];
+
+  const res = handle(err);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.error.details, undefined);
+});

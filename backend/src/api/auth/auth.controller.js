@@ -127,6 +127,19 @@ export function createAuthController({ authService, activationService, config })
       }
     },
 
+    /** AA02: answers with the updated session user (permissions and phoneRequired). */
+    async setContactPhone(req, res, next) {
+      try {
+        const user = await authService.setContactPhone(
+          { userId: req.user.userId, phoneNumber: req.body.phoneNumber },
+          contextOf(req),
+        );
+        res.status(200).json(user);
+      } catch (err) {
+        next(err);
+      }
+    },
+
     guestPermissions(_req, res) {
       res.set('Cache-Control', 'public, max-age=300');
       res.status(200).json({ permissions: [...GUEST_PERMISSIONS] });

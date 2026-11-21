@@ -91,7 +91,11 @@ test('KitchenConfig Controller: create returns 201 and new config', async () => 
   const req = {
     body: {
       name: 'New Layout',
-      content: { dimensions: { width: 10, length: 10, height: 3 }, elements: [] },
+      content: {
+        dimensions: { width: 10, length: 10, height: 3 },
+        floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
+        elements: [],
+      },
     },
   };
   const res = createResponseMock();
@@ -108,7 +112,11 @@ test('KitchenConfig Controller: create returns 201 and new config', async () => 
 
 test('KitchenConfig Controller: validate returns 200 and valid result for correct JSON', async () => {
   const req = {
-    body: { content: { dimensions: { width: 10, length: 10, height: 3 }, elements: [] } },
+    body: { content: {
+        dimensions: { width: 10, length: 10, height: 3 },
+        floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
+        elements: [],
+      } },
   };
   const res = createResponseMock();
   const next = mock.fn();
@@ -141,7 +149,11 @@ test('KitchenConfig Controller: update returns 200 and the updated config', asyn
     findById: mock.fn(async () => ({
       _id: '1',
       name: 'Old Layout',
-      content: { dimensions: { width: 10, length: 10, height: 3 }, elements: [] },
+      content: {
+        dimensions: { width: 10, length: 10, height: 3 },
+        floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
+        elements: [],
+      },
     })),
     update: mock.fn(async (id, data) => ({ _id: id, ...data })),
   };
@@ -151,4 +163,4 @@ test('KitchenConfig Controller: update returns 200 and the updated config', asyn
   assert.equal(mockRepo.update.mock.calls[0].arguments[0], '1');
   assert.equal(statusOf(res), 200);
   assert.equal(bodyOf(res).name, 'Updated Layout');
-});
+});
