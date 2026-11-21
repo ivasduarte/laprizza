@@ -47,9 +47,9 @@ The use cases are described in the [Use Case Views](../../analysis/use-case-view
 | [UC1 - Calculate Bill of Materials](./calculate-bom.md) | `POST /planning/bom` → `POST /service/bom` | MANAGER (SPA) | 200 OK, BOM result + `runId` | `calculate-bom.md` |
 | [UC2 - Calculate Requirements Planning](../ai-planning/execute-forecast.md) | `POST /planning/requirements` → `POST /service/requirements` | MANAGER (SPA) | 200 OK, requirements result + `runId` | WEB07 UC9, `execute-forecast.md` |
 | [UC3 - Consult Planning Results](../ai-planning/consult-planning-results.md) | `GET /planning/runs`, `GET /planning/runs/{id}` | MANAGER (SPA) | 200 OK | WEB07 UC10, `consult-planning-results.md` |
-| UC4 - Request a Calculation from the AI Service | Push: `POST /service/{bom,requirements}`. Pull: `POST /bom`, `POST /requirements` | Back end (`X-Api-Key`), or a client with a Manager token | 200 OK, result | Push: [UC1](./calculate-bom.md) and [AI06 UC3](../ai-knowledge-base/refresh-per-calculation.md). Pull: [AI06 UC1](../ai-knowledge-base/provide-planning-snapshot.md) |
+| [UC4 - Request a Calculation from the AI Service](./request-calculation.md) | Push: `POST /service/{bom,requirements}`. Pull: `POST /bom`, `POST /requirements` | Back end (`X-Api-Key`), or a client with a Manager token | 200 OK, result | `request-calculation.md` |
 
-UC2 and UC3 are the WEB07 use cases. AI05 provides their service access, so they are not drawn again here.
+UC2 and UC3 are the WEB07 use cases. AI05 provides their service access, so they are not drawn again here. UC4 shows the access to the Prolog service for both identities; the snapshot itself is detailed in [AI06](../ai-knowledge-base/README.md).
 
 ## REST API summary
 
@@ -155,10 +155,10 @@ The user token never reaches the Prolog service in the push path, and the Prolog
 | AiDataService | Component | Node.js module | `getSnapshot` → `getScenarioSnapshot` → `buildScenarioSnapshot` (AI06) | [UC1](./calculate-bom.md) |
 | AiServiceClient | Component | Node.js module, `fetch` | `calculate(kind, request, snapshot)`: `POST {AI_SERVICE_URL}/service/{kind}` with `X-Api-Key`, timeout, and the mapping of answers to 200, 422, 503 or 504 | [UC1](./calculate-bom.md) |
 | PlanningRunRepository | Component | Repository, MongoDB (model `PlanningRun`) | `create`, `list`, `findById` | [UC1](./calculate-bom.md) |
-| AI HTTP Server | Component | SWI-Prolog HTTP server (`server.pl`) | Routes, `service_key_ok/1`, `service_plan_request/4`, `plan_request/5`, `calculate/5`, JSON errors | [UC1](./calculate-bom.md) |
-| Knowledge Base | Component | SWI-Prolog module (`kb.pl`) | `with_snapshot/2`: validates and loads the snapshot, runs the calculation and clears the facts (AI06) | [UC1](./calculate-bom.md) |
-| BOM | Component | SWI-Prolog module (`bom.pl`) | `bom_calculate/2`: explodes the orders through the BOM, compares with the stock, returns items, shortages, production and warnings, or `invalid_data` with the problems | [UC1](./calculate-bom.md) |
-| Requirements | Component | SWI-Prolog module (`requirements.pl`) | `requirements_calculate/2`: daily net requirements of the forecast and purchase plan with the supplier offers | [WEB07 UC9](../ai-planning/execute-forecast.md) |
+| AI HTTP Server | Component | SWI-Prolog HTTP server (`server.pl`) | Routes, `service_key_ok/1`, `service_plan_request/4`, `plan_request/5`, `calculate/5`, JSON errors | [UC1](./calculate-bom.md), [UC4](./request-calculation.md) |
+| Knowledge Base | Component | SWI-Prolog module (`kb.pl`) | `with_snapshot/2`: validates and loads the snapshot, runs the calculation and clears the facts (AI06) | [UC1](./calculate-bom.md), [UC4](./request-calculation.md) |
+| BOM | Component | SWI-Prolog module (`bom.pl`) | `bom_calculate/2`: explodes the orders through the BOM, compares with the stock, returns items, shortages, production and warnings, or `invalid_data` with the problems | [UC1](./calculate-bom.md), [UC4](./request-calculation.md) |
+| Requirements | Component | SWI-Prolog module (`requirements.pl`) | `requirements_calculate/2`: daily net requirements of the forecast and purchase plan with the supplier offers | [UC4](./request-calculation.md), [WEB07 UC9](../ai-planning/execute-forecast.md) |
 
 ## Notes
 

@@ -565,7 +565,7 @@ flowchart LR
 | **AI05** | UC1: Calculate Bill of Materials | LaPrizza Manager | [Calculate Bill of Materials](../flows/ai-service-access/calculate-bom.md) |
 | **AI05** | UC2: Calculate Requirements Planning | LaPrizza Manager | [Execute Forecast](../flows/ai-planning/execute-forecast.md) (WEB07 UC9) |
 | **AI05** | UC3: Consult Planning Results | LaPrizza Manager | [Consult Planning Results](../flows/ai-planning/consult-planning-results.md) (WEB07 UC10) |
-| **AI05** | UC4: Request a Calculation from the AI Service | Back-End Application / authorized client | Push: [Calculate Bill of Materials](../flows/ai-service-access/calculate-bom.md), [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md). Pull: [Provide Planning Snapshot](../flows/ai-knowledge-base/provide-planning-snapshot.md) |
+| **AI05** | UC4: Request a Calculation from the AI Service | Back-End Application / authorized client | [Request a Calculation from the AI Service](../flows/ai-service-access/request-calculation.md) |
 
 The REST API summary, the outcomes seen by the page, the access control and the element catalogue are in the [AI Service Access README](../flows/ai-service-access/README.md).
 
