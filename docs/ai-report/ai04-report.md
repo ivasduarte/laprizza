@@ -4,16 +4,6 @@ This report documents the Artificial Intelligence work of Sprint 2: the Bill of 
 
 **Calculations, stock changes and purchase orders are separate (AI04).** Every Prolog result is a calculation with `simulation: true`: balances, "hypothetical remaining stock" and purchase proposals are results only. Stock and purchase orders are owned by the back end: stock changes only through the stock operations of the back end (BCK09/WEB04), and Sprint 2 creates no operational purchase orders (a future confirmation would also go through the back end). No endpoint of the AI service writes either of them. The only record written after a calculation is the planning run (inputs and result), kept by the back end (ADR-0034).
 
-## AI03 - Artificial Neural Networks Study
-
-The study looked at how artificial neural networks could support LaPrizza's management. Three applications were analysed:
-
-- **A - Demand forecasting** per product and size (regression). It would propose the daily forecasts that the Prolog Requirements Planning uses.
-- **B - Stock-shortage risk** (classification). It would flag products likely to run short.
-- **C - Preparation and waiting time** (regression). It would estimate durations for the scheduler.
-
-The study also covered data quality (no real sales history yet, abstract units, catalogue changes, no customer data), evaluation (MAE/RMSE for regression, precision/recall/F1 for classification, comparison with a simple baseline) and risks (black-box predictions, invalid outputs, false alarms). The conclusion is that **A is the most promising**, but only once real data exist, and always as an advisory tool reviewed by the Manager. Generative AI (Claude, Gemini) was used for structure and wording, and its output was checked against the requirements and rewritten by the team.
-
 ## AI01 - Bill of Materials and Stock Requirements (`bom.pl`)
 
 **Input.** The simulated order of the selected scenario (pizza, size, quantity), the BOM of each pizza and size in abstract stock units, the aggregates with their composition and production-or-purchase classification, and the stock (live or scenario), all from the planning snapshot (AI06).
@@ -21,7 +11,7 @@ The study also covered data quality (no real sales history yet, abstract units, 
 **Algorithm (two passes, no double counting).**
 
 1. Demand of each component: sum over the order lines of quantity × consumption of the component in that pizza and size.
-2. Pass 1 - aggregates. Each aggregate uses its own stock first. Only the missing part of a *produced* aggregate is expanded into its ingredients; a *purchased* aggregate is never expanded and is replenished directly. A produced aggregate without stock control is produced in full.
+2. Pass 1 - aggregates. Each aggregate uses its own stock first. Only the missing part of a _produced_ aggregate is expanded into its ingredients; a _purchased_ aggregate is never expanded and is replenished directly. A produced aggregate without stock control is produced in full.
 3. Pass 2 - simple products. Each simple product is processed once, with its direct demand plus the demand derived from the produced aggregates, so an ingredient used directly and inside an aggregate is never counted twice.
 4. Per item: `required`, `available`, hypothetical `remaining` (never negative) and `shortage`. Stock-controlled items that are not produced internally and are short go to `shortages` (`replenishmentNeeded`); produced aggregates go to `production` with `canProduce` and the missing ingredients.
 
@@ -46,10 +36,10 @@ The study also covered data quality (no real sales history yet, abstract units, 
 
 **Supplier selection criteria and justification.**
 
-| Pass | Needs | Choice | Why |
-|---|---|---|---|
+| Pass        | Needs                      | Choice                                                                          | Why                                                                                                                                                                                                                          |
+| ----------- | -------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1 - on time | Every need, earliest first | Cheapest offer that arrives on time; ties by earliest arrival, then supplier id | Meeting the date is a hard requirement; among the offers that meet it, cost is minimized. Serving the earliest need first is also the cheapest, because an offer on time for an earlier need is also on time for a later one |
-| 2 - late | Needs still open | Earliest arrival first, then cheapest | When no offer is on time, the shortest delay matters more than the price; these lines are flagged `onTime: false` |
+| 2 - late    | Needs still open           | Earliest arrival first, then cheapest                                           | When no offer is on time, the shortest delay matters more than the price; these lines are flagged `onTime: false`                                                                                                            |
 
 Each product gets a status: `on_time`, `late` (covered, some lines late), `partial` (part uncovered) or `unavailable` (nothing covered); uncovered quantities are listed in `unmet` with the reason `NO_SUPPLIER_OFFER` or `INSUFFICIENT_SUPPLY`. `summary.feasible` is true only if every product is on time. Without a supplier scenario every product is `unavailable` with a warning.
 
@@ -59,26 +49,71 @@ Each product gets a status: `on_time`, `late` (covered, some lines late), `parti
 
 **Execution example:** `swipl -g "requirements_print_file('<snapshot with a forecast>.json'), halt" requirements.pl`. Tests in `test/requirements.plt` cover on-time and late offers, the cheapest on-time offer, cumulative and zero limits, products without offers, chronological stock consumption and the empty knowledge base after a calculation.
 
-## AI05 - Service Endpoints
+## AI03 - Artificial Neural Networks Study
 
-| Endpoint | Caller | Authentication | Purpose |
-|---|---|---|---|
-| `POST /planning/bom`, `POST /planning/requirements` (back end, `/api/v2`) | SPA (WEB07) | Bearer token with `planning:execute` (Manager) | Builds the snapshot and calls the AI service; records the run |
-| `GET /planning/runs`, `GET /planning/runs/{id}` (back end) | SPA | `planning:execute` | Consult saved results |
-| `POST /service/bom`, `POST /service/requirements` (AI service, 127.0.0.1) | Back end only | `X-Api-Key: <AI_SERVICE_KEY>`; closed without the key | Calculation on the snapshot sent in the body (push) |
-| `POST /bom`, `POST /requirements` (AI service) | Direct calls (tests) | Bearer token of a Manager, forwarded to `GET /ai-data/snapshot` | Calculation with the snapshot fetched by Prolog (pull) |
-| `GET /health` (AI service) | Monitoring | None | Never calls the back end |
+The study looked at how artificial neural networks could support LaPrizza's management. Three applications were analysed:
 
-| Situation | Answer |
-|---|---|
-| Valid request | `200`, `status: "ok"`, `simulation: true` |
-| Invalid request body | `400` with `details` in the back-end format (`field`, `type`, `message`) |
-| Missing or invalid data in the snapshot | `422`, `status: "invalid_data"` with `problems[]` (back end: `AI_INVALID_DATA`) |
-| Not authenticated / not authorized | `401` / `403` |
-| AI service unreachable or too slow (seen from the back end) | `AI_SERVICE_UNAVAILABLE` / `AI_SERVICE_TIMEOUT` |
-| Back end unreachable or too slow (pull, seen from Prolog) | `503 AI_DATA_UNAVAILABLE` / `504 AI_DATA_TIMEOUT` |
+- **A - Demand forecasting** per product and size (regression). It would propose the daily forecasts that the Prolog Requirements Planning uses.
+- **B - Stock-shortage risk** (classification). It would flag products likely to run short.
+- **C - Preparation and waiting time** (regression). It would estimate durations for the scheduler.
 
-The token of a request is never written to the console nor returned; the service listens only on `127.0.0.1`.
+The study also covered data quality (no real sales history yet, abstract units, catalogue changes, no customer data), evaluation (MAE/RMSE for regression, precision/recall/F1 for classification, comparison with a simple baseline) and risks (black-box predictions, invalid outputs, false alarms). The conclusion is that **A is the most promising**, but only once real data exist, and always as an advisory tool reviewed by the Manager. Generative AI (Claude, Gemini) was used for structure and wording, and its output was checked against the requirements and rewritten by the team.
+
+## AI05 - Artificial Intelligence Service Access
+
+### 1. Endpoints
+
+The SPA never calls Prolog directly. It calls the back end, and the back end calls the Prolog service with its own service identity.
+
+| Layer    | Endpoint                                          | Caller and credential                                  | Purpose                                                      |
+| -------- | ------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| Back end | `POST /api/v2/planning/bom`                       | SPA, Manager token (`planning:execute`)                | Bill of Materials of the AI scenario                         |
+| Back end | `POST /api/v2/planning/requirements`              | SPA, Manager token                                     | Requirements planning of a forecast with a supplier scenario |
+| Back end | `GET /api/v2/planning/runs[/{id}]`                | SPA, Manager token                                     | Saved results with their input versions                      |
+| Prolog   | `POST /service/bom`, `POST /service/requirements` | Back end, `X-Api-Key` (service identity)               | Calculation with the snapshot sent in the body (push)        |
+| Prolog   | `POST /bom`, `POST /requirements`                 | Client with a Manager token, forwarded to the back end | Direct calls for tests and demos (pull)                      |
+| Prolog   | `GET /health`                                     | None                                                   | Liveness                                                     |
+
+The back-end routes are documented in OpenAPI (`/api/v2/docs`). The Prolog routes, with representative requests, responses and errors, are documented in `docs/flows/ai-service-access/service-interface.md`.
+
+### 2. Requests and results
+
+- The request is `{ scenarioId, stockMode }`, plus `forecastId` and `supplierScenarioId` for the requirements calculation. `scenarioId` is the code of an AI scenario. The other ids are the MongoDB ids of the back end.
+- The BOM result has `orders`, `items` (required, available, used, remaining, shortage), `shortages`, `production` and `warnings`. The requirements result adds the daily `requirements` and `purchases`, with the chosen supplier, price, arrival date and unmet quantities.
+- Every result carries `simulation: true`, `scenario` and `inputs { snapshotId, sources }`, so each quantity can be traced to the exact data it came from. The back end adds the `runId` of the saved run.
+
+### 3. Validation and outcomes
+
+| Outcome                | Answer                                                                                                                 | Shown by the SPA                               |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Successful calculation | `200`, `status: "ok"` (shortages give `feasible: false`, which is still a success)                                     | Result tables and warnings                     |
+| Invalid input          | `400 VALIDATION_ERROR` / `SCENARIO_WITHOUT_STOCK`, `404 AI_SCENARIO_NOT_FOUND` / `FORECAST_NOT_FOUND`                  | Error next to the field                        |
+| Missing information    | `422 AI_INVALID_DATA` with `details.problems` (e.g. `MISSING_SCENARIO_STOCK`, `INCOMPLETE_RECIPE`, `MISSING_FORECAST`) | List of problems with the product or pizza ids |
+| Service unavailable    | `503 AI_SERVICE_UNAVAILABLE` (`details.reason`, `Retry-After: 5`), `504 AI_SERVICE_TIMEOUT`                            | "Service unavailable", with a retry hint       |
+
+The same rules are checked in the SPA (`validatePlanningInput`), in the back end (Joi) and in Prolog (`validate_input/3`, plus the validation of the whole snapshot). Missing data are reported, never replaced by defaults.
+
+### 4. Access control
+
+- Back end: `requirePermission(planning:execute)`, granted only to MANAGER. Without a token the answer is 401, and an Employee, Customer or Administrator gets 403.
+- Prolog, push path: the key must be equal to `AI_SERVICE_KEY`. Without a configured key the routes are closed, and a user token is not accepted as a service identity (`401 SERVICE_UNAUTHORIZED`).
+- Prolog, pull path: the token is forwarded to the back end, which applies the same permission. The token is never logged.
+- The Prolog service listens only on `127.0.0.1`.
+
+### 5. No silent changes
+
+Calculations only read the knowledge base. Stock balances, production and purchases are results only. The only write is the planning run of a successful calculation, which the back end saves in its own collection. A stock change or a purchase order is always an explicit action through the responsible back-end functionality (for example the stock endpoints of BCK09). The httpyac flows check that the real stock and the scenario stock are unchanged after the calculations.
+
+### 6. Demonstration in the common solution
+
+With the back end, the Prolog service and the AI01 demo seed running:
+
+1. Log in as Manager and open `/ai` → Execution.
+2. Choose "Bill of Materials", scenario `DEMO-PARTIAL` and "Scenario stock", then execute. The result shows the mozzarella shortage and the dough to produce.
+3. Choose "Requirements" with a forecast and a supplier scenario, then execute. The result shows the daily needs and the purchases by supplier.
+4. Stop the Prolog service and execute again. The page reports that the service is unavailable.
+
+The same cases are automated in `bom-demo-test-flow.http` (pull path) and `planning-test-flow.http` (push path).
 
 ## AI06 - Back-End Data and Prolog Knowledge Base
 
@@ -114,19 +149,19 @@ Calculations only read the KB, and their balances are results only. Stock and pu
 
 ## Limitations
 
-* No ordering workflow: AI01 uses the simulated order of the scenario.
-* The price/capacity reading of offers must be aligned (see AI02, known discrepancy).
-* No currency conversion (EUR only). Every quantity uses the abstract stock unit of its product, so offers and needs are compared in the same unit; there is no check of different units (AI02 asks to flag incompatible units).
-* The neural-network study is a study: no model is trained or deployed (AI03).
+- No ordering workflow: AI01 uses the simulated order of the scenario.
+- The price/capacity reading of offers must be aligned (see AI02, known discrepancy).
+- No currency conversion (EUR only). Every quantity uses the abstract stock unit of its product, so offers and needs are compared in the same unit; there is no check of different units (AI02 asks to flag incompatible units).
+- The neural-network study is a study: no model is trained or deployed (AI03).
 
 ## References
 
-* SWI-Prolog Reference Manual (HTTP server, JSON, `library(plunit)`).
-* LaPrizza Sprint 2 user stories AI01-AI06 and the documents linked above: [Snapshot format](../flows/ai-knowledge-base/snapshot-format.md), [Supplier JSON format](../flows/ai-planning/supplier-json-format.md), [AI Knowledge Base](../flows/ai-knowledge-base/README.md), [AI Planning](../flows/ai-planning/README.md), ADR-0039 and ADR-0040.
-* Neural networks study: [report](../artifical-neural-networks/report.md).
+- SWI-Prolog Reference Manual (HTTP server, JSON, `library(plunit)`).
+- LaPrizza Sprint 2 user stories AI01-AI06 and the documents linked above: [Snapshot format](../flows/ai-knowledge-base/snapshot-format.md), [Supplier JSON format](../flows/ai-planning/supplier-json-format.md), [AI Knowledge Base](../flows/ai-knowledge-base/README.md), [AI Planning](../flows/ai-planning/README.md), ADR-0039 and ADR-0040.
+- Neural networks study: [report](../artifical-neural-networks/report.md).
 
 ## Use of AI-generated content
 
-| Tool | Use | Validation |
-|---|---|---|
+| Tool           | Use                                                                             | Validation                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Claude, Gemini | Structure and wording of the study and of this report; drafts of code and tests | Checked against the user stories and the code; Prolog behaviour verified by the plunit tests (`./run-tests.sh`) and the demonstration fixtures |

@@ -1,0 +1,18 @@
+[Unit]
+Description=LaPrizza – Mailpit (SMTP local dos convites e da recuperação de password, ADR-0045)
+After=network-online.target
+Before=laprizza-api.service
+
+[Service]
+Type=simple
+User=mailpit
+Group=mailpit
+# Só em 127.0.0.1: o SMTP serve apenas o back end e a interface lê-se por túnel SSH (VPN).
+ExecStart=/usr/local/bin/mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025 --database /var/lib/mailpit/mailpit.db --max 1000
+Restart=on-failure
+RestartSec=5
+# Sem PrivateTmp/ProtectSystem: as VMs do DEI não permitem mount namespaces (ver laprizza-api.service).
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -5565,8 +5565,8 @@
                     "value": {
                       "error": {
                         "status": 503,
-                        "code": "SERVICE_UNAVAILABLE",
-                        "message": "Service Unavailable",
+                        "code": "AI_SERVICE_UNAVAILABLE",
+                        "message": "The AI service is not available.",
                         "details": {
                           "reason": "connection_failed"
                         }
@@ -5589,8 +5589,8 @@
                     "value": {
                       "error": {
                         "status": 504,
-                        "code": "GATEWAY_TIMEOUT",
-                        "message": "Gateway Timeout",
+                        "code": "AI_SERVICE_TIMEOUT",
+                        "message": "The AI service did not answer in time.",
                         "details": {
                           "reason": "timeout"
                         }
@@ -5858,8 +5858,8 @@
                     "value": {
                       "error": {
                         "status": 503,
-                        "code": "SERVICE_UNAVAILABLE",
-                        "message": "Service Unavailable",
+                        "code": "AI_SERVICE_UNAVAILABLE",
+                        "message": "The AI service is not available.",
                         "details": {
                           "reason": "connection_failed"
                         }
@@ -5882,8 +5882,8 @@
                     "value": {
                       "error": {
                         "status": 504,
-                        "code": "GATEWAY_TIMEOUT",
-                        "message": "Gateway Timeout",
+                        "code": "AI_SERVICE_TIMEOUT",
+                        "message": "The AI service did not answer in time.",
                         "details": {
                           "reason": "timeout"
                         }
@@ -8851,6 +8851,19 @@
               "tool"
             ],
             "example": "robotic-arm"
+          },
+          "model": {
+            "type": "string",
+            "description": "Optional (kitchen decoration/tool elements). Procedural kitchen furniture built at the size given by scale (metres), standing on y = 0 with its front towards +z.",
+            "enum": [
+              "work-table",
+              "fridge",
+              "shelves",
+              "cabinet",
+              "ingredient-bins",
+              "dough-trays"
+            ],
+            "example": "fridge"
           },
           "modelReference": {
             "type": "string",

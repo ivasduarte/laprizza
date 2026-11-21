@@ -203,7 +203,11 @@ test('WEB04/VIS04: every object and the floor need textures (colorMap + detail m
   const content = buildContent({ material: undefined });
   delete content.elements[0].material;
   content.floor = { material: { color: '#ffffff' } };
-  content.elements.push({ ...buildContent().elements[0], id: 'flat', material: { colorMap: '/t/c.jpg' } });
+  content.elements.push({
+    ...buildContent().elements[0],
+    id: 'flat',
+    material: { colorMap: '/t/c.jpg' },
+  });
 
   assert.throws(
     () => validateKitchenConfigurationContent(content),
@@ -242,4 +246,22 @@ test('WEB04: positions, sizes and the assembly line placement must be inside the
   assert.doesNotThrow(() =>
     validateKitchenConfigurationContent(buildContent({ position: { x: -5, y: 3, z: 7.5 } })),
   );
+});
+
+test('kitchen furniture model (VIS03): known models are accepted, unknown ones rejected', () => {
+  const content = (model) => ({
+    dimensions: { width: 10, length: 15, height: 3 },
+    elements: [
+      {
+        id: 'fridge-01',
+        type: 'decoration',
+        model,
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 90, z: 0 },
+        scale: { x: 0.9, y: 2, z: 0.8 },
+      },
+    ],
+  });
+  assert.doesNotThrow(() => validateKitchenConfigurationContent(content('fridge')));
+  assert.throws(() => validateKitchenConfigurationContent(content('spaceship')), DomainError);
 });

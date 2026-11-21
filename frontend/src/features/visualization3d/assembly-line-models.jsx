@@ -1,4 +1,3 @@
-import { DoubleSide } from 'three';
 import { Surface } from './scene-materials.jsx';
 
 /**
@@ -95,8 +94,8 @@ export function CrustDispenserModel({ material }) {
       {/* Chute under the shelf: drops one crust onto the platform (Sprint 3). */}
       <group name="release" position={[0, shelfY - 0.025, 0]}>
         <mesh position={[0, -0.1, 0]}>
-          <cylinderGeometry args={[0.38, 0.3, 0.2, 32, 1, true]} />
-          <meshStandardMaterial color={COLORS.steel} side={DoubleSide} />
+          <cylinderGeometry args={[0.38, 0.3, 0.2, 32]} />
+          <Surface material={material} color={COLORS.steel} />
         </mesh>
       </group>
     </group>

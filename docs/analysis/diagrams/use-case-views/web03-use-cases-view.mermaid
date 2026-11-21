@@ -1,0 +1,22 @@
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+
+    subgraph WEB03 [WEB03: Role-Based Navigation]
+        direction TB
+        UC1([UC1: Navigate with the Permitted Menu])
+        UC2([UC2: Open a Page by URL])
+        UC3([UC3: Show Access Denied])
+        UC4([UC4: Use Permitted Actions])
+        UC5([UC5: Reflect Role and Status Changes])
+    end
+
+    Guest --> UC1
+    Guest --> UC2
+    SystemUser --> UC1
+    SystemUser --> UC2
+    SystemUser --> UC4
+    SystemUser --> UC5
+
+    UC3 -.->|<< extend >>| UC2
+    UC5 -.->|<< extend >>| UC4

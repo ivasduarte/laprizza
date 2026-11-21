@@ -11,11 +11,21 @@ import {
   RoboticArmModel,
   WoodFiredOvenModel,
 } from './assembly-line-models.jsx';
+import { KITCHEN_MODELS } from './kitchen-models.jsx';
 import { Surface, WithMaterial } from './scene-materials.jsx';
 import LightingControls from './lighting-controls.jsx';
 import { DEFAULT_LIGHTING } from './lighting-defaults.js';
 import CameraControls from './camera-controls.jsx';
-import { CAMERA_FOV, computeCameraSetup } from './camera-view.js';
+import {
+  CAMERA_BLOCKER,
+  CAMERA_FOV,
+  computeCameraSetup,
+} from './camera-view.js';
+import {
+  elementMaterial,
+  floorMaterial,
+  kitchenWalls,
+} from './scene-textures.js';
 
 function Model({ url, position, rotation, scale }) {
   const { scene } = useGLTF(url);
@@ -43,6 +53,9 @@ const toScale = (v) => [
   Number(v?.y) || 1,
   Number(v?.z) || 1,
 ];
+
+/** VIS07: the camera cannot go through the configuration elements. */
+const BLOCKER = Object.freeze({ [CAMERA_BLOCKER]: true });
 
 /** Colour of a JSON material that sets properties but no colour. */
 const DEFAULT_SURFACE_COLOR = '#c8c8c8';
@@ -166,12 +179,15 @@ function ShadowGroup({ children }) {
  * parent: the kitchen origin, or the line origin for assembly line elements.
  */
 function SceneElement({ element }) {
+  // VIS04: material from the JSON; without a colour map, the texture of the element type.
+  // Memoised so the textured material is not rebuilt on every render.
+  const spec = useMemo(() => elementMaterial(element), [element]);
+
   if (!element || !element.position || !element.scale || !element.rotation)
     return null;
 
-  // VIS04: material from the JSON; without one the models keep their default colours.
   return (
-    <WithMaterial spec={element.material} fallbackColor={DEFAULT_SURFACE_COLOR}>
+    <WithMaterial spec={spec} fallbackColor={DEFAULT_SURFACE_COLOR}>
       {(material) => (
         <SceneElementModel element={element} material={material} />
       )}
@@ -189,8 +205,25 @@ function SceneElementModel({ element, material }) {
   const Vis03Model = VIS03_MODELS[element.type];
   if (Vis03Model) {
     return (
-      <group name={element.id} position={pos} rotation={rot} scale={scl}>
+      <group
+        name={element.id}
+        position={pos}
+        rotation={rot}
+        scale={scl}
+        userData={BLOCKER}
+      >
         <Vis03Model material={material} />
+      </group>
+    );
+  }
+
+  // Kitchen furniture (decoration/tool with a `model`): built at the real size given by
+  // the scale, so legs, handles and boards are not stretched.
+  const KitchenModel = KITCHEN_MODELS[element.model];
+  if (KitchenModel) {
+    return (
+      <group name={element.id} position={pos} rotation={rot} userData={BLOCKER}>
+        <KitchenModel size={scl} material={material} />
       </group>
     );
   }
@@ -203,6 +236,7 @@ function SceneElementModel({ element, material }) {
         position={pos}
         rotation={rot}
         scale={[1, scl[1], scl[2]]}
+        userData={BLOCKER}
       >
         <ConveyorBeltModel length={scl[0]} material={material} />
       </group>
@@ -212,7 +246,7 @@ function SceneElementModel({ element, material }) {
   // 1. FORNO DE PEDRA PROCEDURAL (US2)
   if (element.type === 'equipment') {
     return (
-      <group position={pos} rotation={rot} scale={scl}>
+      <group position={pos} rotation={rot} scale={scl} userData={BLOCKER}>
         {/* Base de pedra */}
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[2, 1, 2]} />
@@ -230,7 +264,7 @@ function SceneElementModel({ element, material }) {
   // 2. CORREIA TRANSPORTADORA PROCEDURAL (US3)
   if (element.type === 'assembly-line') {
     return (
-      <group position={pos} rotation={rot} scale={scl}>
+      <group position={pos} rotation={rot} scale={scl} userData={BLOCKER}>
         {/* Base metálica da estrutura (cinzento metálico) */}
         <mesh position={[0, -0.2, 0]}>
           <boxGeometry args={[1, 0.4, 0.8]} />
@@ -247,11 +281,37 @@ function SceneElementModel({ element, material }) {
 
   // 3. FALLBACK SEGURO
   return (
-    <mesh position={pos} rotation={rot} scale={scl}>
+    <mesh position={pos} rotation={rot} scale={scl} userData={BLOCKER}>
       <boxGeometry args={[1, 1, 1]} />
       <Surface material={material} color="#c8231a" />
     </mesh>
   );
+}
+
+/**
+ * Kitchen walls (VIS04): textured planes as high as the kitchen, facing the room.
+ * Not camera blockers: the camera looks at the kitchen from outside, like a dollhouse.
+ */
+function KitchenWalls({ width, length, height }) {
+  const walls = useMemo(
+    () => kitchenWalls({ width, length, height }),
+    [width, length, height]
+  );
+  return walls.map((wall) => (
+    <WithMaterial key={wall.key} spec={wall.material} fallbackColor="#d9cbb5">
+      {(material) => (
+        <mesh
+          name={`wall-${wall.key}`}
+          position={wall.position}
+          rotation={wall.rotation}
+          receiveShadow
+        >
+          <planeGeometry args={wall.size} />
+          <Surface material={material} color="#d9cbb5" />
+        </mesh>
+      )}
+    </WithMaterial>
+  ));
 }
 
 /**
@@ -302,6 +362,12 @@ export default function KitchenScene({ config, assemblyLine }) {
     [safeWidth, safeLength, safeHeight]
   );
 
+  const floorSpec = config?.content?.floor?.material;
+  const floorTexture = useMemo(
+    () => floorMaterial(floorSpec, { width: safeWidth, length: safeLength }),
+    [floorSpec, safeWidth, safeLength]
+  );
+
   if (!dimensions) return null;
 
   const elements = config.content.elements || [];
@@ -339,11 +405,8 @@ export default function KitchenScene({ config, assemblyLine }) {
         {/* VIS07: left drag pans, right drag orbits, wheel dollies (limited to the kitchen) */}
         <CameraControls ref={cameraControlsRef} setup={cameraSetup} />
 
-        {/* Kitchen floor (VIS04: optional material in content.floor) */}
-        <WithMaterial
-          spec={config.content.floor?.material}
-          fallbackColor="#e6d5bd"
-        >
+        {/* Kitchen floor (VIS04: material in content.floor, textured by default) */}
+        <WithMaterial spec={floorTexture} fallbackColor="#e6d5bd">
           {(material) => (
             <mesh
               rotation={[-Math.PI / 2, 0, 0]}
@@ -355,6 +418,13 @@ export default function KitchenScene({ config, assemblyLine }) {
             </mesh>
           )}
         </WithMaterial>
+
+        {/* Kitchen walls (VIS04) */}
+        <KitchenWalls
+          width={safeWidth}
+          length={safeLength}
+          height={safeHeight}
+        />
 
         <Suspense
           fallback={

@@ -5,6 +5,7 @@
  * Current API version. Application version 0.1.0.
  * OpenAPI spec version: 2.0.0
  */
+import type { AssemblyLineElementModel } from './assemblyLineElementModel';
 import type { AssemblyLineElementType } from './assemblyLineElementType';
 import type { Material } from './material';
 import type { PositiveVector3 } from './positiveVector3';
@@ -18,6 +19,8 @@ export interface AssemblyLineElement {
   id: string;
   /** VIS03 components: counter, receiving-platform, crust-dispenser (overhead crust supply), conveyor-belt, robotic-arm, wood-fired-oven. The generic types are kept for compatibility. */
   type: AssemblyLineElementType;
+  /** Optional (kitchen decoration/tool elements). Procedural kitchen furniture built at the size given by scale (metres), standing on y = 0 with its front towards +z. */
+  model?: AssemblyLineElementModel;
   /** Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0021). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03). */
   modelReference?: string;
   position: Vector3;

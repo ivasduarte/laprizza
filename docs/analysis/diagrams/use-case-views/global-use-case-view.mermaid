@@ -3,6 +3,7 @@ flowchart LR
     SystemUser([System User])
     Employee([Employee])
     Customer([Customer])
+    Guest([Guest])
     Viz3D([3D Visualization Module])
     AI([AI Scheduling Module])
     InvitedUser([Invited User])
@@ -32,6 +33,11 @@ flowchart LR
         subgraph Stock [BCK09: Stock]
             UC_Stock(Manage & Adjust Stock)
         end
+        subgraph Navigation [WEB03: Role-Based Navigation]
+            UC_Menu(Navigate with the Permitted Menu)
+            UC_OpenPage(Open a Page by URL)
+            UC_Reflect(Reflect Role and Status Changes)
+        end
         subgraph Kitchen [WEB06: Kitchen Configuration]
             UC_Kitchen(Manage Kitchen Configurations)
             UC_ActiveKitchen(Get Active Kitchen Configuration)
@@ -54,6 +60,11 @@ flowchart LR
             UC_EndSessions(End Sessions)
             UC_RecoverPwd(Recover Password)
             UC_ChangePwd(Change Password)
+        end
+        subgraph Authorization [AA05: Authorization Enforcement]
+            UC_Authorize(Check Permissions on Every Request)
+            UC_Permissions(Consult Own Permissions)
+            UC_OwnData(Consult Own Customer Data)
         end
         subgraph Activation [AA07: Account Activation]
             UC_CheckLink(Check Activation Link)
@@ -87,16 +98,27 @@ flowchart LR
     SystemUser --> UC_RecoverPwd
     SystemUser --> UC_ChangePwd
 
-    Employee -.->|read-only| UC_Allergens
     Employee -.->|read-only| UC_Prod
     Employee -.->|read-only| UC_Configs
     Employee -.->|read-only| UC_Predef
-    Employee -.->|read-only| UC_Kitchen
-    Employee --> UC_ActiveKitchen
-    Employee --> UC_Stock
+    Employee -.->|read-only, active products| UC_Stock
     Employee --> UC_Catalog
 
     Customer --> UC_Catalog
+    Customer --> UC_OwnData
+
+    Guest --> UC_Catalog
+    Guest --> UC_Authorize
+    Guest --> UC_Menu
+    Guest --> UC_OpenPage
+    SystemUser --> UC_Menu
+    SystemUser --> UC_OpenPage
+    SystemUser --> UC_Reflect
+    UC_OpenPage -.->|checked by| UC_Authorize
+    UC_Reflect -.->|uses| UC_Permissions
+    SystemUser --> UC_Authorize
+    SystemUser --> UC_Permissions
+    UC_OwnData -.->|include| UC_Authorize
 
     Viz3D -->|consumes| UC_ActiveKitchen
     Viz3D -->|renders| UC_Lit

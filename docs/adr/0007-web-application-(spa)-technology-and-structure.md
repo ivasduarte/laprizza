@@ -40,3 +40,7 @@ Chosen option: "React with Vite and Feature-based Structure", because React is c
 
 * Good, because of faster initial load times.
 * Bad, because they do not fit the requirement of building a SPA that consumes a REST API.
+
+## Amendments
+
+* WEB03 ([ADR 0047](0047-permission-driven-navigation-in-the-web-application.md)): the navigation, the route guards and the action buttons are decided with the permissions returned by the back end (AA05), never with role names. Each page declares its access rule (`requiresAuth`, `permission`) in the feature registry, which feeds both the menu and the route guard.

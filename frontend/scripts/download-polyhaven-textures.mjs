@@ -21,6 +21,8 @@ const TEXTURES = [
   'red_brick', // wood-fired oven
   'rock_wall_08', // stone oven (kitchen equipment)
   'tiled_floor_001', // kitchen floor
+  'beige_wall_001', // kitchen walls
+  'dark_wood', // kitchen cabinets and shelves
 ];
 
 const RESOLUTION = '1k';

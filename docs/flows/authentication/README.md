@@ -10,6 +10,8 @@ The Authentication aggregate covers how a user proves their identity (login), ho
 
 > How roles are assigned to new accounts and resolved on every login, refresh and request (AA03) is documented in [Role Resolution (AA03)](./role-resolution.md).
 
+> How permissions are checked on every request, from the role → permission matrix, with 401 versus 403, the Guest permissions, data ownership and the record of refused attempts (AA05), is documented in [Authorization Enforcement (AA05)](../authorization/README.md).
+
 > The Administrator role, role changes with their records and the activation invitations (AA06) are documented in [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md). Since AA06, `POST /users` is for the Administrator and creates an inactive account without a password.
 
 > How an invited user activates the account with the invitation, by setting the password (local account) or by signing in at the linked identity provider (external account) (AA07), is documented in [Account Activation (AA07)](../account-activation/README.md).

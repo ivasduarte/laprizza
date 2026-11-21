@@ -48,6 +48,11 @@
             "type": "string",
             "enum": ["equipment", "assembly-line", "decoration", "tool"]
           },
+          "model": {
+            "description": "Optional. Procedural kitchen furniture model (VIS03) for decoration and tool elements, built at the size given by scale (metres), standing on y = 0 with its front towards +z.",
+            "type": "string",
+            "enum": ["work-table", "fridge", "shelves", "cabinet", "ingredient-bins", "dough-trays"]
+          },
           "modelReference": {
             "description": "Optional. Imported model URL (absolute http(s) URL or root-relative path). When absent, the element is created procedurally from its type (VIS03).",
             "type": "string",

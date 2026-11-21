@@ -107,3 +107,33 @@ export function constrainPan(target, position, bounds) {
     changed: dx !== 0 || dy !== 0 || dz !== 0,
   };
 }
+
+/** userData flag of the scene objects the camera cannot go through (VIS07). */
+export const CAMERA_BLOCKER = 'cameraBlocker';
+
+/** Distance (m) the camera keeps from the objects. */
+export const OBSTACLE_MARGIN = 0.25;
+
+/** The camera never goes below this height (m), so it cannot go under the floor. */
+export const MIN_CAMERA_HEIGHT = 0.3;
+
+/**
+ * Whether the camera may be at `position`: above the minimum height and outside every
+ * obstacle box (`{min, max}`, already expanded by the margin).
+ */
+export function isCameraPositionAllowed(
+  position,
+  boxes,
+  { minHeight = MIN_CAMERA_HEIGHT } = {}
+) {
+  if (position.y < minHeight) return false;
+  return !boxes.some(
+    ({ min, max }) =>
+      position.x >= min.x &&
+      position.x <= max.x &&
+      position.y >= min.y &&
+      position.y <= max.y &&
+      position.z >= min.z &&
+      position.z <= max.z
+  );
+}

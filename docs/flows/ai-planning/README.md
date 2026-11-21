@@ -84,7 +84,7 @@ Errors follow `{ "error": { "status", "code", "message", "details"? } }`. Valida
 - Joi (`BAD_REQUEST` on forecasts and supplier scenarios, `VALIDATION_ERROR` on planning): `type` is the Joi type (`any.required`, `string.hex`, `number.min`, ...) and `field` uses dots (`entries.0.date`).
 - Business rules (`VALIDATION_ERROR`): `type` is a stable code (`productUnknown`, `dateOutside`, ...) and `field` uses brackets (`entries[0].date`). The page turns both into the dot form and translates the codes as `feedback.validation.ai_<code>`.
 
-The same `POST /planning/{kind}` route also serves `POST /planning/bom` (AI05); the WEB07 execution uses `requirements`.
+The same `POST /planning/{kind}` route also serves `POST /planning/bom` ([AI05 UC1](../ai-service-access/calculate-bom.md)); the WEB07 execution uses `requirements`. The service access (identities, outcomes, interface examples) is in the [AI Service Access README](../ai-service-access/README.md).
 
 ## Business rules shown in the diagrams
 

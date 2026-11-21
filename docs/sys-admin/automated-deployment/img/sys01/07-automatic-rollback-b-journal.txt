@@ -1,0 +1,245 @@
+Nov 06 10:44:34 laprizza-backend systemd[1]: Stopping laprizza-api.service - LaPrizza API (staging)...
+Nov 06 10:44:34 laprizza-backend systemd[1]: laprizza-api.service: Deactivated successfully.
+Nov 06 10:44:34 laprizza-backend systemd[1]: Stopped laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:34 laprizza-backend systemd[1]: laprizza-api.service: Consumed 3.901s CPU time.
+Nov 06 10:44:34 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:35 laprizza-backend node[96922]: node:internal/modules/package_json_reader:331
+Nov 06 10:44:35 laprizza-backend node[96922]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:44:35 laprizza-backend node[96922]:         ^
+Nov 06 10:44:35 laprizza-backend node[96922]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:44:35 laprizza-backend node[96922]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:44:35 laprizza-backend node[96922]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:44:35 laprizza-backend node[96922]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:44:35 laprizza-backend node[96922]: }
+Nov 06 10:44:35 laprizza-backend node[96922]: Node.js v24.22.2
+Nov 06 10:44:35 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:44:35 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:44:40 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 1.
+Nov 06 10:44:40 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:40 laprizza-backend node[96936]: node:internal/modules/package_json_reader:331
+Nov 06 10:44:40 laprizza-backend node[96936]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:44:40 laprizza-backend node[96936]:         ^
+Nov 06 10:44:40 laprizza-backend node[96936]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:44:40 laprizza-backend node[96936]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:44:40 laprizza-backend node[96936]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:44:40 laprizza-backend node[96936]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:44:40 laprizza-backend node[96936]: }
+Nov 06 10:44:40 laprizza-backend node[96936]: Node.js v24.22.2
+Nov 06 10:44:40 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:44:40 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:44:45 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 2.
+Nov 06 10:44:45 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:46 laprizza-backend node[96949]: node:internal/modules/package_json_reader:331
+Nov 06 10:44:46 laprizza-backend node[96949]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:44:46 laprizza-backend node[96949]:         ^
+Nov 06 10:44:46 laprizza-backend node[96949]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:44:46 laprizza-backend node[96949]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:44:46 laprizza-backend node[96949]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:44:46 laprizza-backend node[96949]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:44:46 laprizza-backend node[96949]: }
+Nov 06 10:44:46 laprizza-backend node[96949]: Node.js v24.22.2
+Nov 06 10:44:46 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:44:46 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:44:51 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 3.
+Nov 06 10:44:51 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:51 laprizza-backend node[96962]: node:internal/modules/package_json_reader:331
+Nov 06 10:44:51 laprizza-backend node[96962]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:44:51 laprizza-backend node[96962]:         ^
+Nov 06 10:44:51 laprizza-backend node[96962]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:44:51 laprizza-backend node[96962]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:44:51 laprizza-backend node[96962]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:44:51 laprizza-backend node[96962]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:44:51 laprizza-backend node[96962]: }
+Nov 06 10:44:51 laprizza-backend node[96962]: Node.js v24.22.2
+Nov 06 10:44:51 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:44:51 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:44:56 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 4.
+Nov 06 10:44:56 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:44:57 laprizza-backend node[96975]: node:internal/modules/package_json_reader:331
+Nov 06 10:44:57 laprizza-backend node[96975]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:44:57 laprizza-backend node[96975]:         ^
+Nov 06 10:44:57 laprizza-backend node[96975]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:44:57 laprizza-backend node[96975]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:44:57 laprizza-backend node[96975]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:44:57 laprizza-backend node[96975]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:44:57 laprizza-backend node[96975]: }
+Nov 06 10:44:57 laprizza-backend node[96975]: Node.js v24.22.2
+Nov 06 10:44:57 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:44:57 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:02 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 5.
+Nov 06 10:45:02 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:02 laprizza-backend node[96991]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:02 laprizza-backend node[96991]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:02 laprizza-backend node[96991]:         ^
+Nov 06 10:45:02 laprizza-backend node[96991]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:02 laprizza-backend node[96991]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:02 laprizza-backend node[96991]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:02 laprizza-backend node[96991]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:02 laprizza-backend node[96991]: }
+Nov 06 10:45:02 laprizza-backend node[96991]: Node.js v24.22.2
+Nov 06 10:45:02 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:02 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:07 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 6.
+Nov 06 10:45:07 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:08 laprizza-backend node[97002]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:08 laprizza-backend node[97002]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:08 laprizza-backend node[97002]:         ^
+Nov 06 10:45:08 laprizza-backend node[97002]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:08 laprizza-backend node[97002]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:08 laprizza-backend node[97002]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:08 laprizza-backend node[97002]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:08 laprizza-backend node[97002]: }
+Nov 06 10:45:08 laprizza-backend node[97002]: Node.js v24.22.2
+Nov 06 10:45:08 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:08 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:13 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 7.
+Nov 06 10:45:13 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:13 laprizza-backend node[97015]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:13 laprizza-backend node[97015]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:13 laprizza-backend node[97015]:         ^
+Nov 06 10:45:13 laprizza-backend node[97015]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:13 laprizza-backend node[97015]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:13 laprizza-backend node[97015]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:13 laprizza-backend node[97015]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:13 laprizza-backend node[97015]: }
+Nov 06 10:45:13 laprizza-backend node[97015]: Node.js v24.22.2
+Nov 06 10:45:13 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:13 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:18 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 8.
+Nov 06 10:45:18 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:19 laprizza-backend node[97028]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:19 laprizza-backend node[97028]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:19 laprizza-backend node[97028]:         ^
+Nov 06 10:45:19 laprizza-backend node[97028]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:19 laprizza-backend node[97028]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:19 laprizza-backend node[97028]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:19 laprizza-backend node[97028]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:19 laprizza-backend node[97028]: }
+Nov 06 10:45:19 laprizza-backend node[97028]: Node.js v24.22.2
+Nov 06 10:45:19 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:19 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:24 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 9.
+Nov 06 10:45:24 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:24 laprizza-backend node[97041]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:24 laprizza-backend node[97041]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:24 laprizza-backend node[97041]:         ^
+Nov 06 10:45:24 laprizza-backend node[97041]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:24 laprizza-backend node[97041]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:24 laprizza-backend node[97041]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:24 laprizza-backend node[97041]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:24 laprizza-backend node[97041]: }
+Nov 06 10:45:24 laprizza-backend node[97041]: Node.js v24.22.2
+Nov 06 10:45:24 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:24 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:29 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 10.
+Nov 06 10:45:29 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:30 laprizza-backend node[97054]: node:internal/modules/package_json_reader:331
+Nov 06 10:45:30 laprizza-backend node[97054]:   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Nov 06 10:45:30 laprizza-backend node[97054]:         ^
+Nov 06 10:45:30 laprizza-backend node[97054]: Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from /opt/laprizza/releases/0ec4bfa/src/domain/kitchen-configuration/kitchen-configuration.domain.js
+Nov 06 10:45:30 laprizza-backend node[97054]:     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:331:9)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at packageResolve (node:internal/modules/esm/resolve:784:25)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at moduleResolve (node:internal/modules/esm/resolve:873:18)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at #resolve (node:internal/modules/esm/loader:687:17)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+Nov 06 10:45:30 laprizza-backend node[97054]:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:276:33) {
+Nov 06 10:45:30 laprizza-backend node[97054]:   code: 'ERR_MODULE_NOT_FOUND'
+Nov 06 10:45:30 laprizza-backend node[97054]: }
+Nov 06 10:45:30 laprizza-backend node[97054]: Node.js v24.22.2
+Nov 06 10:45:30 laprizza-backend systemd[1]: laprizza-api.service: Main process exited, code=exited, status=1/FAILURE
+Nov 06 10:45:30 laprizza-backend systemd[1]: laprizza-api.service: Failed with result 'exit-code'.
+Nov 06 10:45:35 laprizza-backend systemd[1]: laprizza-api.service: Scheduled restart job, restart counter is at 11.
+Nov 06 10:45:35 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:35 laprizza-backend systemd[1]: Stopping laprizza-api.service - LaPrizza API (staging)...
+Nov 06 10:45:35 laprizza-backend systemd[1]: laprizza-api.service: Deactivated successfully.
+Nov 06 10:45:35 laprizza-backend systemd[1]: Stopped laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:35 laprizza-backend systemd[1]: Started laprizza-api.service - LaPrizza API (staging).
+Nov 06 10:45:36 laprizza-backend node[97080]: Database connection successful
+Nov 06 10:45:36 laprizza-backend node[97080]: Account Manager already exists. Seeder ignored.
+Nov 06 10:45:36 laprizza-backend node[97080]: LaPrizza API listening on http://127.0.0.1:3000/api/v1
+Nov 06 10:45:38 laprizza-backend node[97080]: 127.0.0.1 - - [06/Nov/2026:10:45:38 +0000] "GET /api/v1/health HTTP/1.1" 200 72 "-" "curl/8.5.0"
+Nov 06 10:45:38 laprizza-backend node[97080]: 127.0.0.1 - - [06/Nov/2026:10:45:38 +0000] "GET /api/v1/version HTTP/1.1" 200 200 "-" "curl/8.5.0"

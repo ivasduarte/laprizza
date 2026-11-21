@@ -21,6 +21,11 @@ Each folder holds the 1k JPG maps of one texture:
 | `red_brick`        | [Red Brick](https://polyhaven.com/a/red_brick)               | Wood-fired oven      |
 | `rock_wall_08`     | [Rock Wall 08](https://polyhaven.com/a/rock_wall_08)         | Stone oven (kitchen) |
 | `tiled_floor_001`  | [Tiled Floor 001](https://polyhaven.com/a/tiled_floor_001)   | Kitchen floor        |
+| `beige_wall_001`   | [Beige Wall 001](https://polyhaven.com/a/beige_wall_001)     | Kitchen walls        |
+| `dark_wood`        | [Dark Wood](https://polyhaven.com/a/dark_wood)               | Cabinets, shelves    |
+
+Objects whose JSON material has no `colorMap` (and the kitchen walls) use the texture of
+their type, so every object is drawn with a texture (`src/features/visualization3d/scene-textures.js`).
 
 To download or restore them: `node scripts/download-polyhaven-textures.mjs`
 (files already present are kept).

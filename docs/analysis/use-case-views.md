@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories with use cases of their own (WEB04, WEB06, WEB07, AA01, AA02, AA04, AA07, VIS01, VIS02, VIS05, VIS06, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -28,56 +28,66 @@ This document shows who uses the LaPrizza information system and which business 
       - [Flow Mapping](#flow-mapping-9)
     - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
       - [Flow Mapping](#flow-mapping-10)
-    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
+    - [WEB03: Role-Based Navigation](#web03-role-based-navigation)
       - [Use Case Descriptions](#use-case-descriptions)
       - [Flow Mapping](#flow-mapping-11)
-    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
+    - [WEB04: User Feedback and Validation](#web04-user-feedback-and-validation)
       - [Use Case Descriptions](#use-case-descriptions-1)
       - [Flow Mapping](#flow-mapping-12)
-    - [AA01: Local Authentication](#aa01-local-authentication)
+    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
-    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
       - [Use Case Descriptions](#use-case-descriptions-3)
       - [Flow Mapping](#flow-mapping-14)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [AA01: Local Authentication](#aa01-local-authentication)
       - [Use Case Descriptions](#use-case-descriptions-4)
       - [Flow Mapping](#flow-mapping-15)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
-    - [WEB04: User Feedback and Validation](#web04-user-feedback-and-validation)
+    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
-    - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
       - [Use Case Descriptions](#use-case-descriptions-8)
       - [Flow Mapping](#flow-mapping-19)
-    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
+    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
       - [Use Case Descriptions](#use-case-descriptions-9)
       - [Flow Mapping](#flow-mapping-20)
-    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
+    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
       - [Use Case Descriptions](#use-case-descriptions-10)
       - [Flow Mapping](#flow-mapping-21)
-    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-11)
       - [Flow Mapping](#flow-mapping-22)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+      - [Use Case Descriptions](#use-case-descriptions-12)
+      - [Flow Mapping](#flow-mapping-23)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+      - [Use Case Descriptions](#use-case-descriptions-13)
+      - [Flow Mapping](#flow-mapping-24)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-14)
+      - [Flow Mapping](#flow-mapping-25)
 
 ## Actors
 
-| Actor                          | Description                                                                                                                                                                                                                                                    |
-| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **System User**                | Any registered entity capable of authenticating into the system. Acts as the base role.                                                                                                                                                                        |
-| **LaPrizza Manager**           | Administrator with full back-office access to manage users, customers, products, stock, and configurations.                                                                                                                                                    |
-| **Employee**                   | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas).                                                                                                                                              |
-| **Customer**                   | External client interacting with the system to consult the catalog or register their data.                                                                                                                                                                     |
-| **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting.                                                                                                               |
-| **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser.                                                                       |
-| **Invited User**               | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07).                                                                                                                                   |
-| **E-mail Server**              | Secondary (system) actor. SMTP server that delivers the e-mails sent by the back end: password recovery links (AA01) and activation invitations (AA06). Mailpit in every environment ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)). |
-| **External Identity Provider** | Secondary (external) actor. OpenID Connect provider (Google, Microsoft) that authenticates external users (AA02) and confirms the identity of an invited external user (AA07).                                                                                 |
+| Actor                          | Description                                                                                                                                                                                                                                                                                           |
+| :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **System User**                | Any registered entity capable of authenticating into the system. Acts as the base role.                                                                                                                                                                                                               |
+| **LaPrizza Manager**           | Back-office user who manages customers, products, categories, allergens, pizza configurations, stock, kitchen configurations, forecasts, supplier scenarios and planning. User administration is not part of this role (AA06).                                                                        |
+| **Employee**                   | Restaurant staff member with read-only operational access: the catalogue, products and pizza configurations, and the stock of active products (AA05).                                                                                                                                                 |
+| **Customer**                   | External client interacting with the system to consult the catalog and their own customer data.                                                                                                                                                                                                       |
+| **Guest**                      | Person without a session. Has only the Guest permissions: browse the public catalogue (with the allergens of each product) and use the authentication entry points (AA05).                                                                                                                            |
+| **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting.                                                                                                                                                      |
+| **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the Bill of Materials and the requirements planning (AI05). The Web Application reaches it only through the Back-End Application, which calls it with a service key; direct calls with a Manager token are used for tests and demos. |
+| **Invited User**               | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07).                                                                                                                                                                          |
+| **E-mail Server**              | Secondary (system) actor. SMTP server that delivers the e-mails sent by the back end: password recovery links (AA01) and activation invitations (AA06). Mailpit in every environment ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)).                                        |
+| **External Identity Provider** | Secondary (external) actor. OpenID Connect provider (Google, Microsoft) that authenticates external users (AA02) and confirms the identity of an invited external user (AA07).                                                                                                                        |
 
 ## Use Cases Diagram
 
@@ -227,6 +237,97 @@ This document shows who uses the LaPrizza information system and which business 
 | :--------- | :-------------------------- | :--------------- | :---------------------------------------------------------------------------- |
 | **BCK11**  | UC1: List Product Catalogue | LaPrizza Manager | [List Product Catalogue](../flows/product-catalogue/list-search-catalogue.md) |
 | **BCK11**  | UC2: Get Catalogue Item     | LaPrizza Manager | [Get Catalogue Item](../flows/product-catalogue/get-catalogue-item.md)        |
+
+### WEB03: Role-Based Navigation
+
+The Web Application shows each user only the sections and actions they may use. The menu, the protection of each page and the buttons of each action are decided with the permissions returned by the back end for the session (or, without a session, the Guest permissions), never with role names, so they always follow Table 1 and give users with several roles the union of their access. Typing the URL of an unauthorized section shows a generic "access denied" page (or the login, for a Guest) and never loads its data. Role and account changes made by an Administrator reach an open tab when the user returns to it or when the API refuses a request. Hiding is only a convenience: the back end checks every request (AA05).
+
+```mermaid
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+
+    subgraph WEB03 [WEB03: Role-Based Navigation]
+        direction TB
+        UC1([UC1: Navigate with the Permitted Menu])
+        UC2([UC2: Open a Page by URL])
+        UC3([UC3: Show Access Denied])
+        UC4([UC4: Use Permitted Actions])
+        UC5([UC5: Reflect Role and Status Changes])
+    end
+
+    Guest --> UC1
+    Guest --> UC2
+    SystemUser --> UC1
+    SystemUser --> UC2
+    SystemUser --> UC4
+    SystemUser --> UC5
+
+    UC3 -.->|<< extend >>| UC2
+    UC5 -.->|<< extend >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case                                  | Primary Actor      | Description                                                                                               | Main Rules                                                                                                                                                                                                                                                                                                                                                                                        | ADRs                                                                                                                                                      |
+| :---------------------------------------- | :----------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: Navigate with the Permitted Menu** | Guest, System User | Opens the Web Application and sees a menu with only the sections they may use.                            | The session is restored and the Guest permissions are loaded before the first page. The menu uses the permissions of the session, or the Guest ones without a session, and shows each page whose permission is granted. A user with several roles sees the union of their sections; a user without roles sees only what a Guest sees. The Web Application keeps no copy of the permission matrix. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md)          |
+| **UC2: Open a Page by URL**               | Guest, System User | Opens a section from the menu or by typing its URL.                                                       | The same guard protects both paths, using the access rule of the page in the registry. While the session is being restored nothing is decided. A Guest goes to the login and returns to the requested page afterwards. Only an allowed page is loaded, so a refused page never requests its data. Unknown URLs show "page not found".                                                             | [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md)                                                                            |
+| **UC3: Show Access Denied**               | - (extends UC2)    | A user with a session opens a section they may not use.                                                   | Shown at the requested URL, inside the normal layout, with a link to the home page. The message is generic: it never names the permission, the role or anything of the page.                                                                                                                                                                                                                      | [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md)                                                                            |
+| **UC4: Use Permitted Actions**            | System User        | Uses the buttons and forms of a page (for example adjusting stock).                                       | Each action is offered only with the permission of its API route; read-only pages say so. The back end checks the request anyway: a refused request shows the error and triggers UC5.                                                                                                                                                                                                             | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md)          |
+| **UC5: Reflect Role and Status Changes**  | System User        | After an Administrator changes the roles or the status of the account, the open tab shows the new access. | The user is reloaded from the back end when the tab becomes visible again and after any `403`. The menu, the guards and the buttons update at once; an open page that is no longer allowed becomes "access denied". A disabled account or an ended session (`401`) ends the session in the Web Application and leads to the login.                                                                | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case                              | Primary Actor      | Flow Document (SAD)                                                                                  |
+| :--------- | :------------------------------------ | :----------------- | :--------------------------------------------------------------------------------------------------- |
+| **WEB03**  | UC1: Navigate with the Permitted Menu | Guest, System User | [Navigate with the Permitted Menu](../flows/role-based-navigation/navigate-with-permitted-menu.md)   |
+| **WEB03**  | UC2: Open a Page by URL               | Guest, System User | [Open a Page by URL](../flows/role-based-navigation/open-page-by-url.md)                             |
+| **WEB03**  | UC3: Show Access Denied               | -                  | Shown in [Open a Page by URL](../flows/role-based-navigation/open-page-by-url.md)                    |
+| **WEB03**  | UC4: Use Permitted Actions            | System User        | [Use Permitted Actions](../flows/role-based-navigation/use-permitted-actions.md)                     |
+| **WEB03**  | UC5: Reflect Role and Status Changes  | System User        | [Reflect Role and Status Changes](../flows/role-based-navigation/reflect-role-and-status-changes.md) |
+
+The page registry, the business rules and the element catalogue of the feature are in the [Role-Based Navigation README](../flows/role-based-navigation/README.md).
+
+### WEB04: User Feedback and Validation
+
+Every page of the Web Application gives the same kind of feedback: it says when something is loading, confirms what was saved, explains what is wrong in a form and how to fix it, asks before actions with significant consequences, and lets the user retry a failed request. These behaviours are shared components of the SPA, so every feature uses them in the same way; the back end remains the authority for every rule and answers with structured, translatable errors that never carry internal details.
+
+```mermaid
+flowchart LR
+    User([System User])
+
+    subgraph WEB04 [WEB04: User Feedback and Validation]
+        direction TB
+        UC1([UC1: Submit a Form])
+        UC2([UC2: Confirm a Significant Action])
+        UC3([UC3: Wait for Information])
+        UC4([UC4: Recover from a Failure])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    UC1 -.->|<< include >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case                              | Primary Actor | Description                                                        | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                        | ADRs                                                                                                                                                                                        |
+| :------------------------------------ | :------------ | :----------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **UC1: Submit a Form**                | System User   | Fills a form and saves it.                                         | Rules are checked in the browser first (`validators.js`) and again by the API (Joi and domain). Each violation is shown on its field and in a summary with links to the fields; the text explains how to correct it (e.g. the password policy, the name rule, the stock limits). A second submission is ignored while one is running (`useSubmit`, submit guard). On failure the inputs keep their values; success is confirmed by a toast that closes after 3 s. | [ADR-0018](<../adr/0018-internationalization-of-the-web-application-(english-and-portuguese).md>), [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC2: Confirm a Significant Action** | System User   | Deactivates, deletes, removes stock or enters an unusual quantity. | A confirmation dialog (`useConfirm`) states what will happen before the request is sent; stock movements of 1000 units or more show the change (from → to).                                                                                                                                                                                                                                                                                                       | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+| **UC3: Wait for Information**         | System User   | Opens a page or a list.                                            | A global progress bar follows the pending requests; pages and lists show a placeholder that keeps the room of the content, so the layout does not move when the data arrives.                                                                                                                                                                                                                                                                                     | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+| **UC4: Recover from a Failure**       | System User   | A request fails (network, timeout, server error).                  | Errors are normalized by kind and translated by code (`error-normalizer.js`, `error-text.js`); messages never show server text, stack traces or session data; 5xx answers carry no details. Lists offer "Retry"; a failed operation is never shown as completed.                                                                                                                                                                                                  | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD)                                                                                                                                                                                                                                                                                    |
+| :--------- | :------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WEB04**  | UC1-UC4  | System User   | Client-side behaviour, no flow of its own. Examples in the feature flows: [Adjust Stock](../flows/stock/adjust-stock.md), [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04), [Customer](../flows/customer/README.md) |
+
+Evidence: `submit-guard.test.js`, `validators.test.js`, `name-rules.test.js`, `feedback-store.test.js`, `confirm-store.test.js`, `error-normalizer.test.js`, `error-text.test.js`, `http-client-feedback.test.js`, `stock-rules.test.js`, `json-locations.test.js` (front end); `error-handler.test.js` (back end).
 
 ### WEB06: Kitchen Configuration and 3D Integration
 
@@ -389,13 +490,13 @@ flowchart LR
 
 #### Use Case Descriptions
 
-| Use Case                             | Primary Actor | Description                                                                                                                                                                          | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | ADRs                                                                                                                                                                                                                                                                                                                                                                          |
-| :----------------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Use Case                             | Primary Actor | Description                                                                                                                                                                                                                  | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | ADRs                                                                                                                                                                                                                                                                                                                                                                          |
+| :----------------------------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **UC1: Log In with a Local Account** | System User   | Opens the login page from the **Login** button of the header and signs in with the e-mail and the password of the account. On success the user returns to the page that was requested and the header shows the account menu. | The e-mail is normalized (trim, lowercase). An unknown account and a wrong password answer the same `401 INVALID_CREDENTIALS`, and a fictitious Argon2 verification runs for unknown accounts so the time is the same. From the 3rd consecutive failure the account waits 1, 5 and then 30 minutes (`429 TOO_MANY_ATTEMPTS` with `Retry-After`), also for unknown e-mails, which are counted by their hash. Failed attempts are also limited per IP. Only with the correct password does an inactive or disabled account get `403 ACCOUNT_INACTIVE` (the user is told to use the activation invitation) or `403 ACCOUNT_DISABLED`. A successful login reads the roles from the database, creates a session and returns a 60-minute access token kept only in memory, plus a 7-day refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie. Passwords are stored with Argon2id and never returned. | [ADR-0004](../adr/0004-authentication-and-authorization.md), [ADR-0008](../adr/0008-implement-rate-limiting-policies.md), [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md) |
-| **UC2: End Sessions**                | System User   | Chooses **Logout** in the account menu of the header (this session), or **Logout on all devices** on the Change password page, after a confirmation.                                 | Logout revokes the session identified by the access token and clears the refresh cookie (`204`). Logout on all devices also increments `tokenVersion` and revokes every session of the user. An ended session is refused on the next request (`401 SESSION_REVOKED`) and its refresh token can no longer be used, even before the access token expires.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)                                                                                                                                                                                                                            |
-| **UC3: Request Password Recovery**   | System User   | From the login page, opens "Forgot your password?" and types the e-mail of the account.                                                                                              | Always the same answer (`202`) and the same message, whether the account exists or not; the work is done after the answer. Only active accounts receive the e-mail, with a link to `/reset-password#token=...` valid for 30 minutes. The token is 256 random bits and only its SHA-256 is stored; a new request invalidates the previous links. Passwords are never sent by e-mail. Limited to 3 requests per hour per IP.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | [ADR-0008](../adr/0008-implement-rate-limiting-policies.md), [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md), [ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)                                                                                                                                                               |
-| **UC4: Reset Password**              | System User   | Opens the link of the e-mail and chooses a new password with its confirmation.                                                                                                       | The page reads the token from the fragment and removes it from the address bar. The password policy is checked before the link is used, so a weak password does not spend it. The link is used atomically (single use) and expires after 30 minutes; every refusal answers `400 RESET_TOKEN_INVALID`. A reset ends every session of the user and clears the login wait. No session is opened: the user logs in afterwards (UC1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md)                                                                                                                                                                                                                                                                                                    |
-| **UC5: Change Password**             | System User   | Opens **Change password** in the account menu of the header and types the current password, the new one and its confirmation.                                                        | Requires a session and the current password (`400 CURRENT_PASSWORD_INCORRECT` otherwise, without ending the session). Same password policy as UC4. The current session is kept and every other session of the user is revoked. Failed attempts count in the per-IP login limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md)                                                                                                                                                                                                                         |
+| **UC2: End Sessions**                | System User   | Chooses **Logout** in the account menu of the header (this session), or **Logout on all devices** on the Change password page, after a confirmation.                                                                         | Logout revokes the session identified by the access token and clears the refresh cookie (`204`). Logout on all devices also increments `tokenVersion` and revokes every session of the user. An ended session is refused on the next request (`401 SESSION_REVOKED`) and its refresh token can no longer be used, even before the access token expires.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)                                                                                                                                                                                                                            |
+| **UC3: Request Password Recovery**   | System User   | From the login page, opens "Forgot your password?" and types the e-mail of the account.                                                                                                                                      | Always the same answer (`202`) and the same message, whether the account exists or not; the work is done after the answer. Only active accounts receive the e-mail, with a link to `/reset-password#token=...` valid for 30 minutes. The token is 256 random bits and only its SHA-256 is stored; a new request invalidates the previous links. Passwords are never sent by e-mail. Limited to 3 requests per hour per IP.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | [ADR-0008](../adr/0008-implement-rate-limiting-policies.md), [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md), [ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)                                                                                                                                                               |
+| **UC4: Reset Password**              | System User   | Opens the link of the e-mail and chooses a new password with its confirmation.                                                                                                                                               | The page reads the token from the fragment and removes it from the address bar. The password policy is checked before the link is used, so a weak password does not spend it. The link is used atomically (single use) and expires after 30 minutes; every refusal answers `400 RESET_TOKEN_INVALID`. A reset ends every session of the user and clears the login wait. No session is opened: the user logs in afterwards (UC1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md)                                                                                                                                                                                                                                                                                                    |
+| **UC5: Change Password**             | System User   | Opens **Change password** in the account menu of the header and types the current password, the new one and its confirmation.                                                                                                | Requires a session and the current password (`400 CURRENT_PASSWORD_INCORRECT` otherwise, without ending the session). Same password policy as UC4. The current session is kept and every other session of the user is revoked. Failed attempts count in the per-IP login limit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0044](../adr/0044-password-recovery-with-single-use-hashed-tokens.md)                                                                                                                                                                                                                         |
 
 #### Flow Mapping
 
@@ -408,6 +509,128 @@ flowchart LR
 | **AA01**   | UC5: Change Password             | System User   | [Change Password](../flows/authentication/change-password.md)                     |
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [Authentication README](../flows/authentication/README.md). The session renewal, the restore after a reload and the route guard of the SPA are in [Session Handling (AA04)](../flows/authentication/session-handling.md).
+
+### AA02: External Identity Provider Integration
+
+A user can sign in with Google or Microsoft (OpenID Connect, Authorization Code with PKCE) besides the local login. The first external login of a verified e-mail creates an active account with the `CUSTOMER` role and opens the session; a returning identity signs in to its account. The provider password never reaches LaPrizza, and an e-mail that already belongs to another account is never linked automatically. When the provider does not supply a phone number, it is asked before the customer features are available.
+
+```mermaid
+flowchart LR
+    User([System User])
+    IdP([External Identity Provider])
+
+    subgraph AA02 [AA02: External Identity Provider Integration]
+        direction TB
+        UC1([UC1: Sign In with an External Provider])
+        UC2([UC2: Complete the Contact Phone])
+    end
+
+    User --> UC1
+    User --> UC2
+    UC1 -->|<< authenticates at >>| IdP
+    UC2 -.->|<< extend: first login without phone >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case                                   | Primary Actor | Description                                                                                                 | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | ADRs                                                                                                                                                                                                                                 |
+| :----------------------------------------- | :------------ | :---------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: Sign In with an External Provider** | System User   | Presses "Continue with <provider>", authenticates at the provider and returns to the application signed in. | Only enabled providers are shown. `state`, `nonce` and PKCE in a signed transaction cookie; the ID token is validated by the library; the identity is `(issuer, sub)`. New identity: a verified, unused e-mail creates an active `CUSTOMER` account (if the identity link fails, the account is removed); an e-mail of another account is refused (`ACCOUNT_LINK_REQUIRED`). A never-activated linked account is activated by the login; disabled accounts are refused. Cancelled or failed logins show a translated code and grant nothing. The session is the same as the local one (AA04). | [ADR-0044](../adr/0044-external-authentication-with-openid-connect.md), [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| **UC2: Complete the Contact Phone**        | System User   | After the first external login, enters the phone number before using the customer pages.                    | `phoneRequired` in the session user while a `CUSTOMER` has neither a phone nor a Customer record; the back end withholds the customer permissions until then. Portuguese number, stored normalized (`PUT /auth/me/phone`).                                                                                                                                                                                                                                                                                                                                                                    | [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md)                                                                                                                                                            |
+
+#### Flow Mapping
+
+| User Story | Use Case                               | Primary Actor | Flow Document (SAD)                                                                                                                        |
+| :--------- | :------------------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| **AA02**   | UC1: Sign In with an External Provider | System User   | [External Authentication](../flows/authentication/external-authentication.md#diagrams)                                                     |
+| **AA02**   | UC2: Complete the Contact Phone        | System User   | [External Authentication - Contact phone](../flows/authentication/external-authentication.md#contact-phone-after-the-first-external-login) |
+
+### AA04: Secure Session Handling
+
+A signed-in user keeps working while the session is valid: the session survives a reload or a new tab of the same browser, expires after 7 days or 30 minutes without use, is checked on every protected request and ends everywhere it is shared when the user logs out. Local and external logins create the same kind of session.
+
+```mermaid
+flowchart LR
+    User([System User])
+
+    subgraph AA04 [AA04: Secure Session Handling]
+        direction TB
+        UC1([UC1: Keep the Session])
+        UC2([UC2: Log Out])
+        UC3([UC3: Log Out Everywhere])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+```
+
+#### Use Case Descriptions
+
+| Use Case                    | Primary Actor | Description                                                    | Main Rules                                                                                                                                                                                                                                                                                                                | ADRs                                                                                                                                               |
+| :-------------------------- | :------------ | :------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: Keep the Session**   | System User   | Works in the application, reloads the page or opens a new tab. | Access token (60 min) only in memory; rotating refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie restores it after a reload. Every request re-checks the user, the token version and the session (absolute and idle expiry). Refreshes are serialized across tabs (Web Lock). HTTPS outside `localhost`. | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| **UC2: Log Out**            | System User   | Logs out in one tab.                                           | The session is revoked and the cookie cleared; the other tabs of the same browser end too (`BroadcastChannel`, and the server refuses their token); other browsers keep their own sessions. Cached data is cleared and pages restored from the back/forward cache are reloaded.                                           | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)                                                                          |
+| **UC3: Log Out Everywhere** | System User   | Ends every session of the account.                             | `tokenVersion` incremented and all sessions revoked.                                                                                                                                                                                                                                                                      | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)                                                                          |
+
+#### Flow Mapping
+
+| User Story | Use Case                | Primary Actor | Flow Document (SAD)                                                                                                                            |
+| :--------- | :---------------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AA04**   | UC1: Keep the Session   | System User   | [Session Handling - Protected request and renewal, Restoring the session after a reload](../flows/authentication/session-handling.md#diagrams) |
+| **AA04**   | UC2: Log Out            | System User   | [Session Handling - Logout and other tabs](../flows/authentication/session-handling.md#logout-and-other-tabs)                                  |
+| **AA04**   | UC3: Log Out Everywhere | System User   | [Session Handling - Session invalidation rules](../flows/authentication/session-handling.md#session-invalidation-rules)                        |
+
+### AA05: Authorization Enforcement
+
+The back end checks the permissions of the requester whenever protected information or functionality is requested. Permissions come from a single role → permission matrix (Table 1, least privilege): a user with several roles gets the union of their permissions, and a request without a session is a Guest with only the Guest permissions (the public catalogue and the authentication entry points). An authentication failure answers `401` and a lack of permission answers `403`, and every refused attempt is recorded without passwords or session secrets. The Web Application reads the same permissions from the back end and shows only the sections and actions the user may use (WEB03), but the API still checks every request. A customer reads only their own personal data, through an endpoint that takes the customer from the session.
+
+```mermaid
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+    Customer([Customer])
+
+    subgraph AA05 [AA05: Authorization Enforcement]
+        direction TB
+        UC3([UC3: Consult Guest Permissions])
+        UC1([UC1: Access Protected Functionality])
+        UC2([UC2: Consult Session Permissions])
+        UC4([UC4: Consult Own Customer Data])
+        UC5([UC5: Record Unauthorized Attempt])
+    end
+
+    Guest --> UC3
+    Guest --> UC1
+    SystemUser --> UC1
+    SystemUser --> UC2
+    Customer --> UC4
+
+    UC4 -.->|<< include >>| UC1
+    UC5 -.->|<< extend >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case                                | Primary Actor      | Description                                                                                                                                | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ADRs                                                                                                                                        |
+| :-------------------------------------- | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| **UC1: Access Protected Functionality** | Guest, System User | Requests a protected page, list, record or action. The back end checks the permission of the route before any business logic runs.         | Routes check permissions, never role names. Roles are read from the database on every request and turned into permissions (union of the roles plus the Guest set), so role changes apply without a new login. No session or an invalid, expired or revoked one answers `401`; a valid session without the permission answers `403 FORBIDDEN`, without naming the permission. Every route is either guarded or a listed public entry point, checked by automated tests. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC2: Consult Session Permissions**    | System User        | The Web Application asks for the current user, roles and permissions after the session is restored and when the tab becomes visible again. | Any authenticated user, whatever the roles. Read from the database, never from the token. No secrets in the answer, never cached, not rate limited.                                                                                                                                                                                                                                                                                                                    | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../adr/0046-permission-based-authorization-matrix.md) |
+| **UC3: Consult Guest Permissions**      | Guest              | The Web Application asks what a user without a session may use, to build the public menu.                                                  | Public, the same for everyone, no user data. The Web Application keeps no copy of the matrix.                                                                                                                                                                                                                                                                                                                                                                          | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC4: Consult Own Customer Data**      | Customer           | Reads their own customer record.                                                                                                           | The customer comes from the session, never from a parameter. The generic `/customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. An account without a linked customer gets `404`.                                                                                                                                                                                                                                                        | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+| **UC5: Record Unauthorized Attempt**    | - (extends UC1)    | Every `401` and `403` is written to the security log.                                                                                      | User and roles (when known), IP, method, path, route, user agent, required permission and reason. Fields named like a secret are dropped and values that look like a token or a password hash are redacted.                                                                                                                                                                                                                                                            | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)                                                                            |
+
+#### Flow Mapping
+
+| User Story | Use Case                            | Primary Actor      | Flow Document (SAD)                                                                                 |
+| :--------- | :---------------------------------- | :----------------- | :-------------------------------------------------------------------------------------------------- |
+| **AA05**   | UC1: Access Protected Functionality | Guest, System User | [Access Protected Functionality](../flows/authorization/access-protected-functionality.md)          |
+| **AA05**   | UC2: Consult Session Permissions    | System User        | [Consult Session Permissions](../flows/authorization/consult-session-permissions.md)                |
+| **AA05**   | UC3: Consult Guest Permissions      | Guest              | [Consult Guest Permissions](../flows/authorization/consult-guest-permissions.md)                    |
+| **AA05**   | UC4: Consult Own Customer Data      | Customer           | [Consult Own Customer Data](../flows/authorization/consult-own-customer-data.md)                    |
+| **AA05**   | UC5: Record Unauthorized Attempt    | -                  | Shown in [Access Protected Functionality](../flows/authorization/access-protected-functionality.md) |
+
+The permission matrix, the permission of each resource, the business rules and the element catalogue of the feature are in the [Authorization README](../flows/authorization/README.md).
 
 ### AA07: Secure Account Activation
 
@@ -452,9 +675,71 @@ flowchart LR
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [Account Activation README](../flows/account-activation/README.md).
 
+### VIS01: 3D Module Integration
+
+The 3D viewer is a React Three Fiber component (Three.js) of the SPA, in `frontend/src/features/visualization3d`. It is a lazy-loaded feature of the registry, rendered inside the common layout (header, menu, breadcrumbs) and protected by the same session and permissions as the other pages: `kitchen:read` (Manager and Employee). It is shown on the 3D Visualization page and on the Kitchen Configuration page.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS01 [VIS01: 3D Module Integration]
+        direction TB
+        UC1([UC1: Open the 3D Viewer])
+    end
+
+    Staff --> UC1
+    UC1 -->|<< uses >>| Viz3D
+```
+
+#### Use Case Descriptions
+
+| Use Case                    | Primary Actor               | Description                                                                                      | Main Rules                                                                                                                                                                                                                                        | ADRs                                                                                                                                                                                                                  |
+| :-------------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: Open the 3D Viewer** | LaPrizza Manager / Employee | Opens the 3D Visualization page (or the Kitchen Configuration page) and sees the active kitchen. | Same navigation, layout, language and session as the rest of the SPA; the route guard and the API both require `kitchen:read`. The viewer fetches the active configuration every time it is mounted and shows an empty state when none is active. | [ADR-0007](<../adr/0007-web-application-(spa)-technology-and-structure.md>), [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case                | Primary Actor               | Flow Document (SAD)                                                                                    |
+| :--------- | :---------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------------- |
+| **VIS01**  | UC1: Open the 3D Viewer | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md) |
+
+### VIS02: Kitchen Layout and Equipment
+
+The viewer draws the kitchen of the active configuration: the floor with its dimensions and texture, every element at its position, rotation (degrees) and scale, and the assembly line at its placement (VIS03). Everything comes from the back end as JSON; no layout is embedded in the SPA.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS02 [VIS02: Kitchen Layout and Equipment]
+        direction TB
+        UC1([UC1: View the Kitchen Layout])
+    end
+
+    Staff --> UC1
+    Viz3D -->|<< renders >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case                         | Primary Actor               | Description                                         | Main Rules                                                                                                                                                                                                                                                                           | ADRs                                                                                                                                                                                                       |
+| :------------------------------- | :-------------------------- | :-------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: View the Kitchen Layout** | LaPrizza Manager / Employee | Sees the kitchen of the active configuration in 3D. | Dimensions, positions, orientations, scales, materials and model references come from `GET /kitchen-configurations/active`. Elements are drawn procedurally by type (`equipment`: stone/dome wood-fired oven; other types: a box) inside the kitchen bounds checked by the back end. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+
+Known gaps (Sprint 2 review): `modelReference` is validated and stored but the viewer does not load imported models yet (the `Model` component of `kitchen-scene.jsx` is not used), and only the oven has a procedural model; tables, counters, fryer, griddle, grill, refrigerator, dishwasher, exhaust hood and cooking tools are drawn as boxes.
+
+#### Flow Mapping
+
+| User Story | Use Case                     | Primary Actor               | Flow Document (SAD)                                                                                                                                                                        |
+| :--------- | :--------------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) |
+
 ### VIS05: Scene Lighting
 
-The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager and Employee).
+The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager).
 
 ```mermaid
 flowchart LR
@@ -532,6 +817,55 @@ flowchart LR
 
 The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
 
+### AI05: Artificial Intelligence Service Access
+
+The AI Scheduling Module exposes the Bill of Materials and the Requirements Planning as documented REST endpoints. The Web Application never calls it directly. It calls the back end (`POST /planning/bom`, `POST /planning/requirements`, `GET /planning/runs`), which authenticates the user, checks the permission `planning:execute` (Manager only), builds the planning snapshot (AI06) and calls the Prolog service with its service identity (`X-Api-Key`). A client with a Manager token can also call the Prolog service directly (`POST /bom`, `POST /requirements`). The service then fetches the snapshot with that token, so the back end still decides who may calculate. Requests and results are JSON and use the identifiers of the back end. Every answer is one of four outcomes: a successful calculation, invalid input, missing information, or service unavailable. Calculations are simulations: they never change stock nor register purchase orders, and the only record they leave is the planning run. Representative requests, responses and errors are in [AI Service Interface](../flows/ai-service-access/service-interface.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    BE([Back-End Application])
+    Client([Authorized client - Manager token])
+    AI([AI Scheduling Module])
+
+    subgraph AI05 [AI05: Artificial Intelligence Service Access]
+        direction TB
+        UC1([UC1: Calculate Bill of Materials])
+        UC2([UC2: Calculate Requirements Planning])
+        UC3([UC3: Consult Planning Results])
+        UC4([UC4: Request a Calculation from the AI Service])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    BE -->|<< service key, push >>| UC4
+    Client -->|<< bearer token, pull >>| UC4
+    UC1 -.->|<< include >>| UC4
+    UC2 -.->|<< include >>| UC4
+    UC4 -->|<< executes >>| AI
+```
+
+#### Use Case Descriptions
+
+| Use Case                                           | Primary Actor                            | Description                                                                                                                                                                                                                           | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                        | ADRs                                                                                                                                                                                                                                                     |
+| :------------------------------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UC1: Calculate Bill of Materials**               | LaPrizza Manager                         | Chooses an AI scenario and a stock mode in the Execution tab of `/ai` and runs the BOM. The page shows the required, available, used and remaining quantities per item, the shortages, the production of aggregates and the warnings. | Same validation in the page and in the back end (`scenarioId` `^[A-Z0-9-]{1,64}$`, `stockMode` `live` or `scenario`). The back end builds a fresh snapshot and calls `POST /service/bom` with the service key. Shortages are a result, not an error (`feasible: false`). Warnings never block. A successful calculation is saved as a run with `kind: "bom"`.                                                                                     | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| **UC2: Calculate Requirements Planning**           | LaPrizza Manager                         | Runs the requirements planning of a forecast version with a supplier scenario and consults the quantities, the purchases by supplier and the warnings (WEB07 UC9).                                                                    | Same service access as UC1, through `POST /service/requirements`. Purchases are suggestions only.                                                                                                                                                                                                                                                                                                                                                 | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md)                                                                                        |
+| **UC3: Consult Planning Results**                  | LaPrizza Manager                         | Lists the saved runs and opens one with its full result and the versions of its inputs (WEB07 UC10).                                                                                                                                  | `GET /planning/runs[?kind&forecastId&supplierScenarioId]`, 100 most recent, without `result`; `GET /planning/runs/{id}` with `result`.                                                                                                                                                                                                                                                                                                            | [ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md)                                                                                                                                                                             |
+| **UC4: Request a Calculation from the AI Service** | Back-End Application / authorized client | Sends a calculation request to the Prolog service and gets the JSON result or a JSON error.                                                                                                                                           | Push: `X-Api-Key` equal to `AI_SERVICE_KEY` and the snapshot in the body. The routes are closed when no key is configured, and a user token is not a service identity (401 `SERVICE_UNAUTHORIZED`). Pull: the Bearer token is forwarded to the back end, which answers 401/403 to users without `planning:execute`. The service listens only on `127.0.0.1`. Errors are 400 (invalid input), 422 (missing information) and 503/504 (unavailable). | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0017](../adr/0017-secrets-management-strategy.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md)                                          |
+
+#### Flow Mapping
+
+| User Story | Use Case                                       | Primary Actor                            | Flow Document (SAD)                                                                            |
+| :--------- | :--------------------------------------------- | :--------------------------------------- | :--------------------------------------------------------------------------------------------- |
+| **AI05**   | UC1: Calculate Bill of Materials               | LaPrizza Manager                         | [Calculate Bill of Materials](../flows/ai-service-access/calculate-bom.md)                     |
+| **AI05**   | UC2: Calculate Requirements Planning           | LaPrizza Manager                         | [Execute Forecast](../flows/ai-planning/execute-forecast.md) (WEB07 UC9)                       |
+| **AI05**   | UC3: Consult Planning Results                  | LaPrizza Manager                         | [Consult Planning Results](../flows/ai-planning/consult-planning-results.md) (WEB07 UC10)      |
+| **AI05**   | UC4: Request a Calculation from the AI Service | Back-End Application / authorized client | [Request a Calculation from the AI Service](../flows/ai-service-access/request-calculation.md) |
+
+The REST API summary, the outcomes seen by the page, the access control and the element catalogue are in the [AI Service Access README](../flows/ai-service-access/README.md).
+
 ### AI06: Back-End Data and Prolog Knowledge Base
 
 The AI Scheduling Module obtains the business data it needs from the back end, never from the database. There is a single data contract, the planning snapshot of `GET /ai-data/snapshot`, built by the back end from the catalogue and pizza BOM, the stock, the AI scenario (simulated orders and, optionally, its own stock), the forecast and the supplier scenario confirmed in WEB07. Each snapshot records the selected scenario and the origin and version or retrieval time of every input. The snapshot reaches the Prolog service in two ways: in the main path (AI05, used by the Web Application) the back end builds it and sends it in the body of `POST /service/{bom,requirements}` with a service key; in the alternative path the service fetches it itself with the Manager's token when it is called directly on `POST /bom` or `POST /requirements`. In both, the snapshot is validated and loaded as facts for one calculation only, and the facts are removed afterwards. Calculations only read: stock and purchase orders are owned by the back end and are never changed.
@@ -575,176 +909,3 @@ flowchart LR
 | **AI06**   | UC3: Refresh Data per Calculation | AI Scheduling Module                        | [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) |
 
 The REST API summary, the snapshot format, the facts of the knowledge base and the element catalogue are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
-
-### WEB04: User Feedback and Validation
-
-Every page of the Web Application gives the same kind of feedback: it says when something is loading, confirms what was saved, explains what is wrong in a form and how to fix it, asks before actions with significant consequences, and lets the user retry a failed request. These behaviours are shared components of the SPA, so every feature uses them in the same way; the back end remains the authority for every rule and answers with structured, translatable errors that never carry internal details.
-
-```mermaid
-flowchart LR
-    User([System User])
-
-    subgraph WEB04 [WEB04: User Feedback and Validation]
-        direction TB
-        UC1([UC1: Submit a Form])
-        UC2([UC2: Confirm a Significant Action])
-        UC3([UC3: Wait for Information])
-        UC4([UC4: Recover from a Failure])
-    end
-
-    User --> UC1
-    User --> UC2
-    User --> UC3
-    User --> UC4
-    UC1 -.->|<< include >>| UC4
-```
-
-#### Use Case Descriptions
-
-| Use Case | Primary Actor | Description | Main Rules | ADRs |
-| :------- | :------------ | :---------- | :--------- | :--- |
-| **UC1: Submit a Form** | System User | Fills a form and saves it. | Rules are checked in the browser first (`validators.js`) and again by the API (Joi and domain). Each violation is shown on its field and in a summary with links to the fields; the text explains how to correct it (e.g. the password policy, the name rule, the stock limits). A second submission is ignored while one is running (`useSubmit`, submit guard). On failure the inputs keep their values; success is confirmed by a toast that closes after 3 s. | [ADR-0018](../adr/0018-internationalization-of-the-web-application-(english-and-portuguese).md), [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
-| **UC2: Confirm a Significant Action** | System User | Deactivates, deletes, removes stock or enters an unusual quantity. | A confirmation dialog (`useConfirm`) states what will happen before the request is sent; stock movements of 1000 units or more show the change (from → to). | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
-| **UC3: Wait for Information** | System User | Opens a page or a list. | A global progress bar follows the pending requests; pages and lists show a placeholder that keeps the room of the content, so the layout does not move when the data arrives. | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
-| **UC4: Recover from a Failure** | System User | A request fails (network, timeout, server error). | Errors are normalized by kind and translated by code (`error-normalizer.js`, `error-text.js`); messages never show server text, stack traces or session data; 5xx answers carry no details. Lists offer "Retry"; a failed operation is never shown as completed. | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
-
-#### Flow Mapping
-
-| User Story | Use Case | Primary Actor | Flow Document (SAD) |
-| :--------- | :------- | :------------ | :------------------ |
-| **WEB04**  | UC1-UC4 | System User | Client-side behaviour, no flow of its own. Examples in the feature flows: [Adjust Stock](../flows/stock/adjust-stock.md), [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04), [Customer](../flows/customer/README.md) |
-
-Evidence: `submit-guard.test.js`, `validators.test.js`, `name-rules.test.js`, `feedback-store.test.js`, `confirm-store.test.js`, `error-normalizer.test.js`, `error-text.test.js`, `http-client-feedback.test.js`, `stock-rules.test.js`, `json-locations.test.js` (front end); `error-handler.test.js` (back end).
-
-### AA02: External Identity Provider Integration
-
-A user can sign in with Google or Microsoft (OpenID Connect, Authorization Code with PKCE) besides the local login. The first external login of a verified e-mail creates an active account with the `CUSTOMER` role and opens the session; a returning identity signs in to its account. The provider password never reaches LaPrizza, and an e-mail that already belongs to another account is never linked automatically. When the provider does not supply a phone number, it is asked before the customer features are available.
-
-```mermaid
-flowchart LR
-    User([System User])
-    IdP([External Identity Provider])
-
-    subgraph AA02 [AA02: External Identity Provider Integration]
-        direction TB
-        UC1([UC1: Sign In with an External Provider])
-        UC2([UC2: Complete the Contact Phone])
-    end
-
-    User --> UC1
-    User --> UC2
-    UC1 -->|<< authenticates at >>| IdP
-    UC2 -.->|<< extend: first login without phone >>| UC1
-```
-
-#### Use Case Descriptions
-
-| Use Case | Primary Actor | Description | Main Rules | ADRs |
-| :------- | :------------ | :---------- | :--------- | :--- |
-| **UC1: Sign In with an External Provider** | System User | Presses "Continue with <provider>", authenticates at the provider and returns to the application signed in. | Only enabled providers are shown. `state`, `nonce` and PKCE in a signed transaction cookie; the ID token is validated by the library; the identity is `(issuer, sub)`. New identity: a verified, unused e-mail creates an active `CUSTOMER` account (if the identity link fails, the account is removed); an e-mail of another account is refused (`ACCOUNT_LINK_REQUIRED`). A never-activated linked account is activated by the login; disabled accounts are refused. Cancelled or failed logins show a translated code and grant nothing. The session is the same as the local one (AA04). | [ADR-0044](../adr/0044-external-authentication-with-openid-connect.md), [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
-| **UC2: Complete the Contact Phone** | System User | After the first external login, enters the phone number before using the customer pages. | `phoneRequired` in the session user while a `CUSTOMER` has neither a phone nor a Customer record; the back end withholds the customer permissions until then. Portuguese number, stored normalized (`PUT /auth/me/phone`). | [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md) |
-
-#### Flow Mapping
-
-| User Story | Use Case | Primary Actor | Flow Document (SAD) |
-| :--------- | :------- | :------------ | :------------------ |
-| **AA02**   | UC1: Sign In with an External Provider | System User | [External Authentication](../flows/authentication/external-authentication.md#diagrams) |
-| **AA02**   | UC2: Complete the Contact Phone | System User | [External Authentication - Contact phone](../flows/authentication/external-authentication.md#contact-phone-after-the-first-external-login) |
-
-### AA04: Secure Session Handling
-
-A signed-in user keeps working while the session is valid: the session survives a reload or a new tab of the same browser, expires after 7 days or 30 minutes without use, is checked on every protected request and ends everywhere it is shared when the user logs out. Local and external logins create the same kind of session.
-
-```mermaid
-flowchart LR
-    User([System User])
-
-    subgraph AA04 [AA04: Secure Session Handling]
-        direction TB
-        UC1([UC1: Keep the Session])
-        UC2([UC2: Log Out])
-        UC3([UC3: Log Out Everywhere])
-    end
-
-    User --> UC1
-    User --> UC2
-    User --> UC3
-```
-
-#### Use Case Descriptions
-
-| Use Case | Primary Actor | Description | Main Rules | ADRs |
-| :------- | :------------ | :---------- | :--------- | :--- |
-| **UC1: Keep the Session** | System User | Works in the application, reloads the page or opens a new tab. | Access token (60 min) only in memory; rotating refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie restores it after a reload. Every request re-checks the user, the token version and the session (absolute and idle expiry). Refreshes are serialized across tabs (Web Lock). HTTPS outside `localhost`. | [ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
-| **UC2: Log Out** | System User | Logs out in one tab. | The session is revoked and the cookie cleared; the other tabs of the same browser end too (`BroadcastChannel`, and the server refuses their token); other browsers keep their own sessions. Cached data is cleared and pages restored from the back/forward cache are reloaded. | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
-| **UC3: Log Out Everywhere** | System User | Ends every session of the account. | `tokenVersion` incremented and all sessions revoked. | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
-
-#### Flow Mapping
-
-| User Story | Use Case | Primary Actor | Flow Document (SAD) |
-| :--------- | :------- | :------------ | :------------------ |
-| **AA04**   | UC1: Keep the Session | System User | [Session Handling - Protected request and renewal, Restoring the session after a reload](../flows/authentication/session-handling.md#diagrams) |
-| **AA04**   | UC2: Log Out | System User | [Session Handling - Logout and other tabs](../flows/authentication/session-handling.md#logout-and-other-tabs) |
-| **AA04**   | UC3: Log Out Everywhere | System User | [Session Handling - Session invalidation rules](../flows/authentication/session-handling.md#session-invalidation-rules) |
-
-### VIS01: 3D Module Integration
-
-The 3D viewer is a React Three Fiber component (Three.js) of the SPA, in `frontend/src/features/visualization3d`. It is a lazy-loaded feature of the registry, rendered inside the common layout (header, menu, breadcrumbs) and protected by the same session and permissions as the other pages: `kitchen:read` (Manager and Employee). It is shown on the 3D Visualization page and on the Kitchen Configuration page.
-
-```mermaid
-flowchart LR
-    Staff([LaPrizza Manager / Employee])
-    Viz3D([3D Visualization Module])
-
-    subgraph VIS01 [VIS01: 3D Module Integration]
-        direction TB
-        UC1([UC1: Open the 3D Viewer])
-    end
-
-    Staff --> UC1
-    UC1 -->|<< uses >>| Viz3D
-```
-
-#### Use Case Descriptions
-
-| Use Case | Primary Actor | Description | Main Rules | ADRs |
-| :------- | :------------ | :---------- | :--------- | :--- |
-| **UC1: Open the 3D Viewer** | LaPrizza Manager / Employee | Opens the 3D Visualization page (or the Kitchen Configuration page) and sees the active kitchen. | Same navigation, layout, language and session as the rest of the SPA; the route guard and the API both require `kitchen:read`. The viewer fetches the active configuration every time it is mounted and shows an empty state when none is active. | [ADR-0007](../adr/0007-web-application-(spa)-technology-and-structure.md), [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0027](../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
-
-#### Flow Mapping
-
-| User Story | Use Case | Primary Actor | Flow Document (SAD) |
-| :--------- | :------- | :------------ | :------------------ |
-| **VIS01**  | UC1: Open the 3D Viewer | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md) |
-
-### VIS02: Kitchen Layout and Equipment
-
-The viewer draws the kitchen of the active configuration: the floor with its dimensions and texture, every element at its position, rotation (degrees) and scale, and the assembly line at its placement (VIS03). Everything comes from the back end as JSON; no layout is embedded in the SPA.
-
-```mermaid
-flowchart LR
-    Staff([LaPrizza Manager / Employee])
-    Viz3D([3D Visualization Module])
-
-    subgraph VIS02 [VIS02: Kitchen Layout and Equipment]
-        direction TB
-        UC1([UC1: View the Kitchen Layout])
-    end
-
-    Staff --> UC1
-    Viz3D -->|<< renders >>| UC1
-```
-
-#### Use Case Descriptions
-
-| Use Case | Primary Actor | Description | Main Rules | ADRs |
-| :------- | :------------ | :---------- | :--------- | :--- |
-| **UC1: View the Kitchen Layout** | LaPrizza Manager / Employee | Sees the kitchen of the active configuration in 3D. | Dimensions, positions, orientations, scales, materials and model references come from `GET /kitchen-configurations/active`. Elements are drawn procedurally by type (`equipment`: stone/dome wood-fired oven; other types: a box) inside the kitchen bounds checked by the back end. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
-
-Known gaps (Sprint 2 review): `modelReference` is validated and stored but the viewer does not load imported models yet (the `Model` component of `kitchen-scene.jsx` is not used), and only the oven has a procedural model; tables, counters, fryer, griddle, grill, refrigerator, dishwasher, exhaust hood and cooking tools are drawn as boxes.
-
-#### Flow Mapping
-
-| User Story | Use Case | Primary Actor | Flow Document (SAD) |
-| :--------- | :------- | :------------ | :------------------ |
-| **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) |
