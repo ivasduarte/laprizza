@@ -10,8 +10,11 @@
 %   - the order date is the reference date ("today"): retrievedAt of the snapshot, or the
 %     option today(Date); an offer arrives at today + ceiling(leadTimeDays);
 %   - an offer is on time for a need when it arrives on or before the day of the need;
+%   - an offer is a price in EUR for stockUnits units: the unit price is priceEur / stockUnits
+%     (offers are compared on this common basis; the cost is pro rata, no pack rounding);
 %   - supplier_limit/3 is the total a supplier can give for a product in the whole plan;
-%     without a limit the capacity is stockUnits;
+%     without a limit the capacity is not verified: it is taken as unbounded and the
+%     allocation is flagged with capacityStated: false;
 %   - pass 1 allocates on-time offers (cheapest first, then earliest); pass 2 uses what is left
 %     for the needs not covered, flagged as late (earliest arrival first, then cheapest);
 %   - orders are not part of the plan: the forecast is the demand.
@@ -284,7 +287,7 @@ purchase_entry(Today, row(Id, _, _, _, _, Shortage, Needs), Entry) :-
     allocate_all(Needs, Offers, Lines, Unmet),
     sum_amounts(Unmet, Uncovered),
     Covered is Shortage - Uncovered,
-    maplist(allocation_entry, Lines, Allocations),
+    maplist(allocation_entry(Id), Lines, Allocations),
     foldl(line_cost, Lines, 0, Cost0),
     Cost is round(Cost0 * 100) / 100,
     purchase_status(Shortage, Uncovered, Lines, Status),
@@ -302,19 +305,22 @@ purchase_status(Shortage, Uncovered, Lines, Status) :-
     ;   Status = "on_time"
     ).
 
-%  o(Supplier, UnitPrice, ArrivalDate, RemainingCapacity)
+%  o(Supplier, UnitPrice, ArrivalDate, RemainingCapacity); the capacity is an integer or
+%  unbounded. The unit price is the price of the offer over the units it covers.
 offers_state(Product, Today, Offers) :-
-    findall(o(Sup, Price, Arrival, Cap),
+    findall(o(Sup, UnitPrice, Arrival, Cap),
             ( supplier_offer(Sup, Product, Price, Units, Lead),
-              offer_capacity(Sup, Product, Units, Cap),
+              UnitPrice is Price / Units,
+              offer_capacity(Sup, Product, Cap),
               Days is ceiling(Lead),
               date_add(Today, Days, Arrival) ),
             Offers0),
     msort(Offers0, Offers).
 
-%  The supply limit (total for the plan), when stated; otherwise the units in stock.
-offer_capacity(Sup, Product, Units, Cap) :-
-    (   supplier_limit(Sup, Product, Limit) -> Cap = Limit ; Cap = Units ).
+%  The supply limit (total for the plan), when stated. Without it the capacity is neither
+%  zero nor verified: it is taken as unbounded and reported as not stated.
+offer_capacity(Sup, Product, Cap) :-
+    (   supplier_limit(Sup, Product, Limit) -> Cap = Limit ; Cap = unbounded ).
 
 date_add(Date, Days, Date2) :-
     parse_time(Date, iso_8601, Stamp),
@@ -343,20 +349,27 @@ allocate_pass(Phase, [Date-Units|Needs], Os0, Os, Lines, Rest) :-
 allocate(_, _, 0, Os, Os, [], 0) :- !.
 allocate(Phase, Date, Units, Os0, Os, Lines, Left) :-
     (   pick(Phase, Date, Os0, o(Sup, Price, Arrival, Cap))
-    ->  Take is min(Units, Cap),
+    ->  take_units(Cap, Units, Take, NewCap),
         Rest is Units - Take,
-        NewCap is Cap - Take,
         replace_offer(Sup, NewCap, Os0, Os1),
         Lines = [line(Phase, Date, Sup, Price, Arrival, Take)|Lines1],
         allocate(Phase, Date, Rest, Os1, Os, Lines1, Left)
     ;   Os = Os0, Lines = [], Left = Units
     ).
 
+take_units(unbounded, Units, Units, unbounded) :- !.
+take_units(Cap, Units, Take, NewCap) :-
+    Take is min(Units, Cap),
+    NewCap is Cap - Take.
+
+has_capacity(unbounded).
+has_capacity(Cap) :- integer(Cap), Cap > 0.
+
 pick(Phase, Date, Offers, Chosen) :-
     findall(Key-Offer,
             ( member(Offer, Offers),
               Offer = o(Sup, Price, Arrival, Cap),
-              Cap > 0,
+              has_capacity(Cap),
               eligible(Phase, Arrival, Date),
               offer_key(Phase, Price, Arrival, Sup, Key) ),
             Keyed),
@@ -424,11 +437,12 @@ production_entry(prod(Id, Required, State, Net),
 
 date_entry(Date-Units, _{date: Date, quantity: Units}).
 
-allocation_entry(line(Phase, For, Sup, Price, Arrival, Units),
+allocation_entry(Product, line(Phase, For, Sup, Price, Arrival, Units),
                  _{ supplierId: Sup, supplierName: Name, forDate: For, quantity: Units,
                     unitPriceEur: Price, costEur: Cost, arrivalDate: Arrival,
-                    onTime: OnTime }) :-
+                    onTime: OnTime, capacityStated: Stated }) :-
     ( Phase == on_time -> OnTime = true ; OnTime = false ),
+    ( supplier_limit(Sup, Product, _) -> Stated = true ; Stated = false ),
     ( supplier(Sup, N), N \== none -> Name = N ; Name = null ),
     Cost is round(Price * Units * 100) / 100.
 

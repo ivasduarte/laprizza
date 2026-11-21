@@ -6,6 +6,8 @@
 %   flour (stock 5000): derived 9750 on 11-03 and 2250 on 11-04 -> short 4750 + 2250
 %   mozzarella (stock 3000): short 1800 / 9800 / 1200
 %   ham (stock 500): short 700 on 11-03;  mushrooms: 1000 on 11-03;  tomato and yeast have no offers
+% Offers: priceEur is for stockUnits units (mozzarella sup-a 12.5/100 = 0.125, sup-b 11.9/100 = 0.119
+% with a limit of 500; ham 9/50 = 0.18; flour 8/1000 = 0.008).
 
 :- use_module(library(plunit)).
 :- use_module(library(http/json)).
@@ -141,26 +143,35 @@ test(forecast_line_without_size_is_direct_demand) :-
 
 test(offer_that_arrives_in_time_is_on_time) :-
     plan(R), purchase(R, 'c-ham', P),                % sup-a: lead 1 -> arrives 11-03
-    allocations(P, ['sup-a'-'2026-11-03'-50-true]),
-    get_dict(covered, P, 50), get_dict(uncovered, P, 650),
-    get_dict(status, P, "partial").
+    allocations(P, ['sup-a'-'2026-11-03'-700-true]),
+    get_dict(covered, P, 700), get_dict(uncovered, P, 0),
+    get_dict(status, P, "on_time"),
+    get_dict(costEur, P, Cost), near(Cost, 126).     % 700 * 9/50
+
+test(unit_price_is_the_price_over_the_quoted_units) :-
+    plan(R), purchase(R, 'c-ham', P),
+    get_dict(allocations, P, [A]), get_dict(unitPriceEur, A, U), near(U, 0.18).
 
 test(cheapest_offer_that_arrives_in_time_wins) :-
-    % order date 10-29: sup-a arrives 10-31 (12.5), sup-b arrives 11-02 (11.9): both on time
+    % order date 10-29: sup-a arrives 10-31 (0.125), sup-b arrives 11-02 (0.119, limit 500)
     plan(identity, '2026-10-29', R), purchase(R, 'c-mozzarella', P),
-    allocations(P, ['sup-b'-'2026-11-02'-500-true, 'sup-a'-'2026-11-02'-100-true]),
-    get_dict(covered, P, 600), get_dict(uncovered, P, 12200),
-    get_dict(costEur, P, Cost), near(Cost, 7200).
+    allocations(P, [ 'sup-b'-'2026-11-02'-500-true, 'sup-a'-'2026-11-02'-1300-true,
+                     'sup-a'-'2026-11-03'-9800-true, 'sup-a'-'2026-11-04'-1200-true ]),
+    get_dict(covered, P, 12800), get_dict(uncovered, P, 0),
+    get_dict(status, P, "on_time"),
+    get_dict(costEur, P, Cost), near(Cost, 1597).     % 500*0.119 + 12300*0.125
 
 test(supply_limit_is_cumulative_over_the_plan) :-
     plan(identity, '2026-10-29', R), purchase(R, 'c-mozzarella', P),
     allocations(P, Allocs),
     units_of(Allocs, 'sup-b', 500).                   % limit 500 in total, not per day
 
-test(without_limit_the_stock_units_are_the_capacity) :-
+test(offer_without_limit_is_unbounded_and_flagged) :-
     plan(identity, '2026-10-29', R), purchase(R, 'c-mozzarella', P),
-    allocations(P, Allocs),
-    units_of(Allocs, 'sup-a', 100).
+    allocations(P, Allocs), units_of(Allocs, 'sup-a', 12300),
+    get_dict(allocations, P, As),
+    forall(( member(A, As), get_dict(supplierId, A, Sup) ),
+           ( get_dict(capacityStated, A, Stated), ( Sup == 'sup-b' -> Stated == true ; Stated == false ) )).
 
 test(zero_supply_limit_means_no_capacity) :-
     plan([D0, D]>>set_offer_field("sup-b", supplyLimit, 0, D0, D), '2026-10-29', R),
@@ -168,20 +179,28 @@ test(zero_supply_limit_means_no_capacity) :-
     allocations(P, Allocs),
     units_of(Allocs, 'sup-b', 0).
 
+test(limited_supply_leaves_unmet_needs) :-
+    plan([D0, D]>>set_offer_field("sup-a", supplyLimit, 100, D0, D), '2026-10-29', R),
+    purchase(R, 'c-mozzarella', P),
+    get_dict(covered, P, 600), get_dict(uncovered, P, 12200),
+    get_dict(status, P, "partial"),
+    get_dict(unmet, P, [U|_]), get_dict(reason, U, "INSUFFICIENT_SUPPLY").
+
 test(late_offer_is_flagged_with_its_arrival) :-
     plan(R), purchase(R, 'r-flour', P),               % sup-b: lead 3 -> arrives 11-05
-    allocations(P, ['sup-b'-'2026-11-03'-1000-false]),
-    get_dict(allocations, P, [A]), get_dict(arrivalDate, A, '2026-11-05'),
-    get_dict(covered, P, 1000), get_dict(uncovered, P, 6000),
-    get_dict(status, P, "partial"),
-    get_dict(costEur, P, Cost), near(Cost, 8000).
+    allocations(P, ['sup-b'-'2026-11-03'-4750-false, 'sup-b'-'2026-11-04'-2250-false]),
+    get_dict(allocations, P, [A|_]), get_dict(arrivalDate, A, '2026-11-05'),
+    get_dict(covered, P, 7000), get_dict(uncovered, P, 0),
+    get_dict(status, P, "late"),
+    get_dict(costEur, P, Cost), near(Cost, 56).       % 7000 * 8/1000
 
 test(late_capacity_does_not_take_the_place_of_an_on_time_need) :-
-    % sup-a mozzarella (100 units, arrives 11-04) serves the need of 11-04 on time,
-    % it is not spent as a late delivery of the earlier need of 11-02
-    plan(R), purchase(R, 'c-mozzarella', P),
+    % sup-a (limit 1200, arrives 11-04) serves the need of 11-04 on time; it is not spent
+    % as a late delivery of the earlier need of 11-02, which gets what sup-b still has
+    plan([D0, D]>>set_offer_field("sup-a", supplyLimit, 1200, D0, D), '2026-11-02', R),
+    purchase(R, 'c-mozzarella', P),
     allocations(P, Allocs),
-    memberchk('sup-a'-'2026-11-04'-100-true, Allocs),
+    memberchk('sup-a'-'2026-11-04'-1200-true, Allocs),
     memberchk('sup-b'-'2026-11-02'-500-false, Allocs),
     \+ memberchk('sup-a'-'2026-11-02'-_-_, Allocs).
 
@@ -200,17 +219,15 @@ test(supplier_name_is_null_when_absent) :-
     get_dict(allocations, P, As),
     member(A, As), get_dict(supplierId, A, 'sup-b'), get_dict(supplierName, A, null), !.
 
-test(everything_on_time_when_supply_and_date_allow) :-
-    plan([D0, D]>>( set_offer_field("sup-a", stockUnits, 20000, D0, D1),
-                    set_offer_field("sup-b", supplyLimit, 20000, D1, D) ),
-         '2026-10-01', R),
-    purchase(R, 'c-mozzarella', P),
-    get_dict(status, P, "on_time"), get_dict(uncovered, P, 0).
+test(everything_on_time_with_an_early_order_date) :-
+    plan(identity, '2026-10-01', R),
+    forall(member(Id, ['c-mozzarella', 'c-ham', 'r-flour']),
+           ( purchase(R, Id, P), get_dict(status, P, "on_time"), get_dict(uncovered, P, 0) )).
 
 test(summary_totals) :-
     plan(R), get_dict(summary, R, S),
     get_dict(productsToBuy, S, 6), get_dict(feasible, S, false),
-    get_dict(totalCostEur, S, Total), near(Total, 15650).   % ham 450 + mozzarella 7200 + flour 8000
+    get_dict(totalCostEur, S, Total), near(Total, 1782).   % ham 126 + mozzarella 1600 + flour 56
 
 :- end_tests(suppliers).
 
