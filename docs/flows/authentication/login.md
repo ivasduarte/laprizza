@@ -1,5 +1,7 @@
 # UC1 - Login
 
+> This diagram shows the original single-token login of BCK01 (identifier by e-mail or username, 35-minute JWT). It was replaced by the local login of AA01: see [UC1 - Log In with a Local Account (AA01)](./local-login.md).
+
 | Attribute | Value |
 |---|---|
 | C4 view | Dynamic diagram, Level 3 (Component) |

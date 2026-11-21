@@ -1,0 +1,23 @@
+flowchart LR
+    User([System User])
+    Mail([E-mail Server])
+
+    subgraph AA01 [AA01: Local Authentication]
+        direction TB
+        UC1([UC1: Log In with a Local Account])
+        UC2([UC2: End Sessions])
+        UC3([UC3: Request Password Recovery])
+        UC4([UC4: Reset Password])
+        UC5([UC5: Change Password])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    User --> UC5
+
+    UC3 -->|<< sends link via >>| Mail
+    UC4 -.->|<< uses link of >>| UC3
+    UC2 -.->|<< requires >>| UC1
+    UC5 -.->|<< requires >>| UC1

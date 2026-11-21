@@ -7,6 +7,7 @@ flowchart LR
     AI([AI Scheduling Module])
     InvitedUser([Invited User])
     IdP([External Identity Provider])
+    Mail([E-mail Server])
 
     subgraph System [LaPrizza Information System]
         subgraph Auth [BCK01: Auth & Users]
@@ -48,6 +49,12 @@ flowchart LR
             UC_Snapshot(Provide Planning Snapshot)
             UC_KB(Build Knowledge Base)
         end
+        subgraph LocalAuth [AA01: Local Authentication]
+            UC_LocalLogin(Log In with a Local Account)
+            UC_EndSessions(End Sessions)
+            UC_RecoverPwd(Recover Password)
+            UC_ChangePwd(Change Password)
+        end
         subgraph Activation [AA07: Account Activation]
             UC_CheckLink(Check Activation Link)
             UC_Activate(Activate Local or External Account)
@@ -75,6 +82,10 @@ flowchart LR
     Manager --> UC_AdjustLight
 
     SystemUser --> UC_Auth
+    SystemUser --> UC_LocalLogin
+    SystemUser --> UC_EndSessions
+    SystemUser --> UC_RecoverPwd
+    SystemUser --> UC_ChangePwd
 
     Employee -.->|read-only| UC_Allergens
     Employee -.->|read-only| UC_Prod
@@ -99,3 +110,6 @@ flowchart LR
     InvitedUser --> UC_Activate
     UC_Activate -.->|include| UC_CheckLink
     UC_Activate -->|verifies identity at| IdP
+
+    UC_RecoverPwd -->|sends link via| Mail
+    UC_LocalLogin -.->|refines| UC_Auth
