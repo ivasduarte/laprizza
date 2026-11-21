@@ -43,8 +43,11 @@ BUILD_MUST_NOT_CONTAIN="${BUILD_MUST_NOT_CONTAIN-localhost:3000}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
 RUN_LINT="${RUN_LINT:-true}"
 RUN_TESTS="${RUN_TESTS:-true}"
-SITE_URL="${SITE_URL:-http://localhost/}"
-VERSION_URL="${VERSION_URL:-http://localhost/version.json}"
+SITE_URL="${SITE_URL:-https://localhost/}"
+VERSION_URL="${VERSION_URL:-https://localhost/version.json}"
+# Verificação local (loopback): confirma a versão publicada, não a validade do certificado, que
+# não é emitido para "localhost". Pôr vazio se o certificado for válido para o SITE_URL.
+HEALTH_CURL_TLS_OPTS="${HEALTH_CURL_TLS_OPTS---insecure}"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-30}"
 FORCE="${FORCE:-false}"
 if ! declare -p WEB_BUILD_ENV &>/dev/null; then
@@ -93,8 +96,9 @@ health_check() {
   # $1 = sha curto esperado em /version.json
   local expected="$1" waited=0
   while (( waited < HEALTH_TIMEOUT_SECONDS )); do
-    if curl -fsS --max-time 5 "$SITE_URL" >/dev/null 2>&1 \
-       && curl -fsS --max-time 5 "$VERSION_URL" 2>/dev/null | grep -q "$expected"; then
+    # shellcheck disable=SC2086 # HEALTH_CURL_TLS_OPTS pode estar vazio
+    if curl -fsS $HEALTH_CURL_TLS_OPTS --max-time 5 "$SITE_URL" >/dev/null 2>&1 \
+       && curl -fsS $HEALTH_CURL_TLS_OPTS --max-time 5 "$VERSION_URL" 2>/dev/null | grep -q "$expected"; then
       return 0
     fi
     sleep 2; waited=$(( waited + 2 ))
@@ -293,7 +297,7 @@ do_rollback() {
 
 do_status() {
   echo "Versão em execução: $(basename "$(current_release)" 2>/dev/null || echo nenhuma)"
-  echo "Resposta de /version.json: $(curl -fsS --max-time 5 "$VERSION_URL" 2>/dev/null | tr -d '\n' || echo 'sem resposta')"
+  echo "Resposta de /version.json: $(curl -fsS $HEALTH_CURL_TLS_OPTS --max-time 5 "$VERSION_URL" 2>/dev/null | tr -d '\n' || echo 'sem resposta')"
   echo
   echo "Versões guardadas (mais recente primeiro):"
   find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%TY-%Tm-%Td %TH:%TM  %f\n' 2>/dev/null | sort -r

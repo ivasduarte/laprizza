@@ -21,7 +21,9 @@ RUN_TESTS=true
 # O nginx reencaminha /api/ para o back end, por isso o front end usa um caminho
 # relativo e não precisa de saber o endereço público da VM.
 # O frontend lê VITE_API_BASE_URL (frontend/src/health.js).
-WEB_BUILD_ENV=("VITE_API_BASE_URL=/api/v1")
+# v2 é a versão atual: o cookie de refresh do login externo tem o caminho /api/v2/auth, por isso
+# o SPA tem de chamar a mesma versão (com /api/v1 o F5 depois de um login externo termina a sessão).
+WEB_BUILD_ENV=("VITE_API_BASE_URL=/api/v2")
 
 # Se o build contiver este texto, o deploy aborta. Está desativado porque o
 # health.js tem http://localhost:3000/api/v1 como valor por omissão, que fica
@@ -29,6 +31,7 @@ WEB_BUILD_ENV=("VITE_API_BASE_URL=/api/v1")
 BUILD_MUST_NOT_CONTAIN=""
 
 # Verificação depois de trocar a versão (nginx local)
-SITE_URL=http://localhost/
-VERSION_URL=http://localhost/version.json
+# HTTPS (o nginx redireciona a porta 80). Ver HEALTH_CURL_TLS_OPTS no script.
+SITE_URL=https://localhost/
+VERSION_URL=https://localhost/version.json
 HEALTH_TIMEOUT_SECONDS=30
