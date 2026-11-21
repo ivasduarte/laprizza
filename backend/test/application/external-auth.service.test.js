@@ -1,6 +1,9 @@
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { createExternalAuthService, ExternalLoginOutcome } from '../../src/application/auth/external-auth.service.js';
+import {
+  createExternalAuthService,
+  ExternalLoginOutcome,
+} from '../../src/application/auth/external-auth.service.js';
 
 const PROVIDER = {
   name: 'google', label: 'Google', issuer: 'https://accounts.google.com',
@@ -30,6 +33,10 @@ function build({ claims = CLAIMS, linked = null, user = null, emailOwner = null,
     authService: { establishSession: mock.fn(async () => ({ refreshToken: 'rt', accessToken: 'at' })) },
     roleChangeRecorder: { recordInitialRoles: mock.fn(async () => {}) },
     invitationService: { issue: mock.fn(async () => ({ expiresAt: new Date(), sent: true })) },
+    activationService: {
+      prepareExternal: mock.fn(async () => ({ provider: 'google', invitationHash: 'hash-1' })),
+      completeExternal: mock.fn(async () => {}),
+    },
     securityLogger: { log: mock.fn() },
     config: { providers: { google: PROVIDER } },
   };
@@ -178,4 +185,69 @@ test('AA06: a returning external user gets no new invitation and no role record'
   await service.completeLogin(input, CTX);
   assert.equal(deps.invitationService.issue.mock.callCount(), 0);
   assert.equal(deps.roleChangeRecorder.recordInitialRoles.mock.callCount(), 0);
+});
+
+// ---------- AA07: activation of external accounts ----------
+
+const TOKEN = 'A'.repeat(43);
+const activationInput = {
+  ...input,
+  transaction: { state: 's', provider: 'google', purpose: 'activation', invitationHash: 'hash-1' },
+};
+
+test('AA07: startActivation goes to the provider linked to the account, keeping only the token hash', async () => {
+  const { service, deps } = build();
+  const out = await service.startActivation({ token: TOKEN }, CTX);
+  assert.deepEqual(deps.activationService.prepareExternal.mock.calls[0].arguments, [{ token: TOKEN }, CTX]);
+  assert.equal(out.authorizationUrl, 'https://idp/authorize?x=1');
+  assert.deepEqual(out.transaction, {
+    state: 's', nonce: 'n', codeVerifier: 'v',
+    provider: 'google', purpose: 'activation', invitationHash: 'hash-1',
+  });
+  assert.ok(!JSON.stringify(out.transaction).includes(TOKEN));
+});
+
+test('AA07: startActivation with an invalid invitation never reaches the provider', async () => {
+  const { service, deps } = build();
+  const invalid = Object.assign(new Error('x'), { status: 400, code: 'INVITATION_INVALID' });
+  deps.activationService.prepareExternal.mock.mockImplementation(async () => { throw invalid; });
+  await assert.rejects(service.startActivation({ token: TOKEN }, CTX), { code: 'INVITATION_INVALID' });
+  assert.equal(deps.oidcClient.createAuthorizationRequest.mock.callCount(), 0);
+});
+
+test('AA07: startActivation for a provider disabled in this deployment -> PROVIDER_NOT_FOUND', async () => {
+  const { service, deps } = build();
+  deps.activationService.prepareExternal.mock.mockImplementation(async () => ({
+    provider: 'microsoft', invitationHash: 'hash-1',
+  }));
+  await assert.rejects(service.startActivation({ token: TOKEN }, CTX), { status: 404, code: 'PROVIDER_NOT_FOUND' });
+});
+
+test('AA07: an activation callback activates through the activation service, never logs in nor creates', async () => {
+  const { service, deps } = build({ linked: { userId: 'u1' }, user: { _id: 'u1', status: 'inactive' } });
+  const out = await service.completeLogin(activationInput, CTX);
+  assert.equal(out.outcome, ExternalLoginOutcome.ACTIVATED);
+  const [args] = deps.activationService.completeExternal.mock.calls[0].arguments;
+  assert.deepEqual(args, {
+    invitationHash: 'hash-1',
+    identity: { provider: 'google', issuer: 'https://accounts.google.com', subject: 'g-1' },
+  });
+  assert.equal(deps.authService.establishSession.mock.callCount(), 0);
+  assert.equal(deps.usersRepository.create.mock.callCount(), 0);
+  assert.equal(deps.externalIdentitiesRepository.create.mock.callCount(), 0);
+});
+
+test('AA07: an activation callback with another identity propagates INVITATION_MISMATCH, no account created', async () => {
+  const { service, deps } = build();
+  const mismatch = Object.assign(new Error('x'), { status: 403, code: 'INVITATION_MISMATCH' });
+  deps.activationService.completeExternal.mock.mockImplementation(async () => { throw mismatch; });
+  await assert.rejects(service.completeLogin(activationInput, CTX), { code: 'INVITATION_MISMATCH' });
+  assert.equal(deps.usersRepository.create.mock.callCount(), 0);
+  assert.equal(deps.authService.establishSession.mock.callCount(), 0);
+});
+
+test('AA07: a failed provider login during activation activates nothing', async () => {
+  const { service, deps } = build({ exchange: async () => { throw new Error('denied'); } });
+  await assert.rejects(service.completeLogin(activationInput, CTX), { code: 'AUTH_FAILED' });
+  assert.equal(deps.activationService.completeExternal.mock.callCount(), 0);
 });

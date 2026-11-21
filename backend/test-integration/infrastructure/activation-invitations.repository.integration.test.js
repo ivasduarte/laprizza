@@ -59,3 +59,14 @@ test('a replaced or expired invitation is unusable', async () => {
   assert.equal(await invitationsRepository.consume('hash-1', NOW), null);
   assert.equal(await invitationsRepository.consume('hash-2', NOW), null);
 });
+
+test('AA07: findByTokenHash reads an invitation without using it', async () => {
+  await invitation();
+  const found = await invitationsRepository.findByTokenHash('hash-1');
+  assert.equal(found.email, 'new@laprizza.pt');
+  assert.equal(found.usedAt, null);
+  assert.ok(found.expiresAt instanceof Date);
+  assert.equal(await invitationsRepository.findByTokenHash('unknown'), null);
+  // Still usable after the read.
+  assert.ok(await invitationsRepository.consume('hash-1', NOW));
+});

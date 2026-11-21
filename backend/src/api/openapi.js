@@ -7,6 +7,7 @@ import {
 } from './api-versions.js';
 import { planningPaths } from './planning/planning.openapi.js';
 import { externalAuthPaths } from './auth/external-auth.openapi.js';
+import { activationPaths } from './auth/activation.openapi.js';
 import { usersPaths, adminUserSchema } from './users/users.openapi.js';
 
 const errorResponse = (description) => ({
@@ -164,6 +165,7 @@ const baseSpec = {
       },
     },
     ...externalAuthPaths,
+    ...activationPaths,
     ...usersPaths,
     '/customers': {
       get: {

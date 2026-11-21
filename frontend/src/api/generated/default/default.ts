@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminUser,
   Allergen,
   AssemblyLineConfiguration,
   AssemblyLineConfigurationInput,
@@ -48,6 +49,8 @@ import type {
   GetProductCategoriesParams,
   GetProductsParams,
   GetStockParams,
+  GetUsersAssignableRoles200,
+  GetUsersIdRoleHistory200Item,
   KitchenConfiguration,
   PatchAssemblyLineConfigurationsIdBody,
   PatchCustomersIdBody,
@@ -55,11 +58,16 @@ import type {
   PatchPizzaSizeIdBody,
   PatchProductsIdBody,
   PatchStockProductIdBody,
+  PatchUsersIdBody,
   PizzaComponentType,
   PizzaSize,
   PostAllergensBody,
   PostAssemblyLineConfigurationsValidate200,
   PostAssemblyLineConfigurationsValidateBody,
+  PostAuthActivationInspect200,
+  PostAuthActivationInspectBody,
+  PostAuthActivationLocalBody,
+  PostAuthExternalActivateBody,
   PostAuthLogin200,
   PostAuthLoginBody,
   PostCustomersBody,
@@ -73,7 +81,9 @@ import type {
   PostProductsBody,
   PostProductsProductIdSizeConfigurationsBody,
   PostSupplierScenariosValidate200,
+  PostUsers201,
   PostUsersBody,
+  PostUsersIdInvitation201,
   PredefinedPizza,
   PredefinedPizzaDetails,
   Product,
@@ -741,7 +751,7 @@ export function useGetAuthExternalProviderLogin<TData = Awaited<ReturnType<typeo
 
 
 /**
- * Always answers with a redirect to the SPA (`/auth/callback`). Success: `?status=success` and the refresh cookie is set; the SPA then calls POST /auth/refresh. Failure: `?status=error&code=<code>` with no session. Codes: ACCESS_DENIED, AUTH_FAILED, EMAIL_MISSING, EMAIL_NOT_VERIFIED, ACCOUNT_LINK_REQUIRED, ACCOUNT_PENDING_ACTIVATION, ACCOUNT_INACTIVE, ACCOUNT_DISABLED.
+ * Always answers with a redirect to the SPA (`/auth/callback`). Success: `?status=success` and the refresh cookie is set; the SPA then calls POST /auth/refresh. Failure: `?status=error&code=<code>` with no session. Codes: ACCESS_DENIED, AUTH_FAILED, EMAIL_MISSING, EMAIL_NOT_VERIFIED, ACCOUNT_LINK_REQUIRED, ACCOUNT_PENDING_ACTIVATION, ACCOUNT_INACTIVE, ACCOUNT_DISABLED, NO_ACTIVE_ROLE, ROLES_UNAVAILABLE, INVITATION_INVALID, INVITATION_MISMATCH. Activation (AA07): `?status=activated` and no session.
  * @summary Redirect URI of the identity provider
  */
 export const getAuthExternalProviderCallback = (
@@ -842,7 +852,306 @@ export function useGetAuthExternalProviderCallback<TData = Awaited<ReturnType<ty
 
 
 /**
- * @summary Create user (MANAGER only)
+ * Form POST from the activation page (browser navigation, `application/x-www-form-urlencoded`), so the token never goes in a URL. The provider is the one linked to the invited account. The transaction cookie is marked as an activation: the callback then only activates the account if the authenticated identity is the one linked to it, and never opens a session. Any failure redirects to the SPA (`/auth/callback?status=error&code=INVITATION_INVALID` or `AUTH_FAILED`).
+ * @summary Start the activation of an external account (AA07): redirects to its provider
+ */
+export const postAuthExternalActivate = (
+    postAuthExternalActivateBody: PostAuthExternalActivateBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+      const formUrlEncoded = new URLSearchParams();
+formUrlEncoded.append(`token`, postAuthExternalActivateBody.token);
+
+      return axiosInstance<unknown>(
+      {url: `/auth/external/activate`, method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', },
+       data: formUrlEncoded, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostAuthExternalActivateMutationKey = () => ['postAuthExternalActivate'] as const;
+
+export const getPostAuthExternalActivateMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthExternalActivate>>, TError,PostAuthExternalActivateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthExternalActivate>>, TError,PostAuthExternalActivateMutationVariables, TContext> => {
+
+const mutationKey = getPostAuthExternalActivateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthExternalActivate>>, PostAuthExternalActivateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postAuthExternalActivate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthExternalActivateMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthExternalActivate>>>
+    export type PostAuthExternalActivateMutationBody = PostAuthExternalActivateBody
+    export type PostAuthExternalActivateMutationError = void
+    export type PostAuthExternalActivateMutationVariables = {data: PostAuthExternalActivateBody}
+
+    /**
+ * @summary Start the activation of an external account (AA07): redirects to its provider
+ */
+export const usePostAuthExternalActivate = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthExternalActivate>>, TError,PostAuthExternalActivateMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthExternalActivate>>,
+        TError,
+        PostAuthExternalActivateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthExternalActivateMutationOptions(options), queryClient);
+    }
+    /**
+ * Tells the activation page which step to show. `method` is `local` (the user sets the password) or `external` (the user signs in at `provider`, the provider linked to the account). The e-mail is masked. Never cached.
+ * @summary Check an activation link before activating (public, the link is not used)
+ */
+export const postAuthActivationInspect = (
+    postAuthActivationInspectBody: PostAuthActivationInspectBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<PostAuthActivationInspect200>(
+      {url: `/auth/activation/inspect`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postAuthActivationInspectBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostAuthActivationInspectMutationKey = () => ['postAuthActivationInspect'] as const;
+
+export const getPostAuthActivationInspectMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationInspect>>, TError,PostAuthActivationInspectMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationInspect>>, TError,PostAuthActivationInspectMutationVariables, TContext> => {
+
+const mutationKey = getPostAuthActivationInspectMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthActivationInspect>>, PostAuthActivationInspectMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postAuthActivationInspect(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthActivationInspectMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthActivationInspect>>>
+    export type PostAuthActivationInspectMutationBody = PostAuthActivationInspectBody
+    export type PostAuthActivationInspectMutationError = Error
+    export type PostAuthActivationInspectMutationVariables = {data: PostAuthActivationInspectBody}
+
+    /**
+ * @summary Check an activation link before activating (public, the link is not used)
+ */
+export const usePostAuthActivationInspect = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationInspect>>, TError,PostAuthActivationInspectMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthActivationInspect>>,
+        TError,
+        PostAuthActivationInspectMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthActivationInspectMutationOptions(options), queryClient);
+    }
+    /**
+ * Uses the invitation (single use) and activates the account with the password chosen by the user. No session is opened and the roles are not changed: the user logs in afterwards with POST /auth/login. A password that breaks the policy is refused before the link is used.
+ * @summary Activate a local account by setting its password (public)
+ */
+export const postAuthActivationLocal = (
+    postAuthActivationLocalBody: PostAuthActivationLocalBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<void>(
+      {url: `/auth/activation/local`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postAuthActivationLocalBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostAuthActivationLocalMutationKey = () => ['postAuthActivationLocal'] as const;
+
+export const getPostAuthActivationLocalMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationLocal>>, TError,PostAuthActivationLocalMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationLocal>>, TError,PostAuthActivationLocalMutationVariables, TContext> => {
+
+const mutationKey = getPostAuthActivationLocalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postAuthActivationLocal>>, PostAuthActivationLocalMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postAuthActivationLocal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostAuthActivationLocalMutationResult = NonNullable<Awaited<ReturnType<typeof postAuthActivationLocal>>>
+    export type PostAuthActivationLocalMutationBody = PostAuthActivationLocalBody
+    export type PostAuthActivationLocalMutationError = Error
+    export type PostAuthActivationLocalMutationVariables = {data: PostAuthActivationLocalBody}
+
+    /**
+ * @summary Activate a local account by setting its password (public)
+ */
+export const usePostAuthActivationLocal = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postAuthActivationLocal>>, TError,PostAuthActivationLocalMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postAuthActivationLocal>>,
+        TError,
+        PostAuthActivationLocalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostAuthActivationLocalMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List users (Administrator)
+ */
+export const getUsers = (
+
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AdminUser[]>(
+      {url: `/users`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetUsersQueryKey = () => {
+    return [
+    `/users`
+    ] as const;
+    }
+
+
+export const getGetUsersQueryOptions = <TData = Awaited<ReturnType<typeof getUsers>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsers>>> = ({ signal }) => getUsers(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getUsers>>>
+export type GetUsersQueryError = Error
+
+
+export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsers>>,
+          TError,
+          Awaited<ReturnType<typeof getUsers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsers>>,
+          TError,
+          Awaited<ReturnType<typeof getUsers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List users (Administrator)
+ */
+
+export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * The account starts INACTIVE with CUSTOMER plus the requested roles (AA03). No password is accepted: the user sets it while activating the account (AA07).
+ * @summary Create an inactive account and send its activation invitation (Administrator)
  */
 export const postUsers = (
     postUsersBody: PostUsersBody,
@@ -850,7 +1159,7 @@ export const postUsers = (
 ) => {
 
 
-      return axiosInstance<void>(
+      return axiosInstance<PostUsers201>(
       {url: `/users`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: postUsersBody, signal
@@ -863,7 +1172,7 @@ export const postUsers = (
 
 export const getPostUsersMutationKey = () => ['postUsers'] as const;
 
-export const getPostUsersMutationOptions = <TError = void,
+export const getPostUsersMutationOptions = <TError = Error,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsers>>, TError,PostUsersMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof postUsers>>, TError,PostUsersMutationVariables, TContext> => {
 
@@ -892,13 +1201,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PostUsersMutationResult = NonNullable<Awaited<ReturnType<typeof postUsers>>>
     export type PostUsersMutationBody = PostUsersBody
-    export type PostUsersMutationError = void
+    export type PostUsersMutationError = Error
     export type PostUsersMutationVariables = {data: PostUsersBody}
 
     /**
- * @summary Create user (MANAGER only)
+ * @summary Create an inactive account and send its activation invitation (Administrator)
  */
-export const usePostUsers = <TError = void,
+export const usePostUsers = <TError = Error,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsers>>, TError,PostUsersMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof postUsers>>,
@@ -909,16 +1218,16 @@ export const usePostUsers = <TError = void,
       return useMutation(getPostUsersMutationOptions(options), queryClient);
     }
     /**
- * @summary List users
+ * @summary Roles the current Administrator may assign
  */
-export const getUsers = (
+export const getUsersAssignableRoles = (
 
  options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
 ) => {
 
 
-      return axiosInstance<void>(
-      {url: `/users`, method: 'GET', signal
+      return axiosInstance<GetUsersAssignableRoles200>(
+      {url: `/users/assignable-roles`, method: 'GET', signal
     },
       options);
     }
@@ -926,69 +1235,69 @@ export const getUsers = (
 
 
 
-export const getGetUsersQueryKey = () => {
+export const getGetUsersAssignableRolesQueryKey = () => {
     return [
-    `/users`
+    `/users/assignable-roles`
     ] as const;
     }
 
 
-export const getGetUsersQueryOptions = <TData = Awaited<ReturnType<typeof getUsers>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+export const getGetUsersAssignableRolesQueryOptions = <TData = Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUsersQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersAssignableRolesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsers>>> = ({ signal }) => getUsers(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersAssignableRoles>>> = ({ signal }) => getUsersAssignableRoles(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof getUsers>>>
-export type GetUsersQueryError = void
+export type GetUsersAssignableRolesQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersAssignableRoles>>>
+export type GetUsersAssignableRolesQueryError = Error
 
 
-export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = void>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>> & Pick<
+export function useGetUsersAssignableRoles<TData = Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getUsers>>,
+          Awaited<ReturnType<typeof getUsersAssignableRoles>>,
           TError,
-          Awaited<ReturnType<typeof getUsers>>
+          Awaited<ReturnType<typeof getUsersAssignableRoles>>
         > , 'initialData'
       >, request?: SecondParameter<typeof axiosInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = void>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>> & Pick<
+export function useGetUsersAssignableRoles<TData = Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getUsers>>,
+          Awaited<ReturnType<typeof getUsersAssignableRoles>>,
           TError,
-          Awaited<ReturnType<typeof getUsers>>
+          Awaited<ReturnType<typeof getUsersAssignableRoles>>
         > , 'initialData'
       >, request?: SecondParameter<typeof axiosInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = void>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+export function useGetUsersAssignableRoles<TData = Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List users
+ * @summary Roles the current Administrator may assign
  */
 
-export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError = void>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsers>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+export function useGetUsersAssignableRoles<TData = Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersAssignableRoles>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetUsersQueryOptions(options)
+  const queryOptions = getGetUsersAssignableRolesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -1001,6 +1310,459 @@ export function useGetUsers<TData = Awaited<ReturnType<typeof getUsers>>, TError
 
 
 /**
+ * @summary Get a user (Administrator)
+ */
+export const getUsersId = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AdminUser>(
+      {url: `/users/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetUsersIdQueryKey = (id: string,) => {
+    return [
+    `/users/${id}`
+    ] as const;
+    }
+
+
+export const getGetUsersIdQueryOptions = <TData = Awaited<ReturnType<typeof getUsersId>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersId>>> = ({ signal }) => getUsersId(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsersIdQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersId>>>
+export type GetUsersIdQueryError = Error
+
+
+export function useGetUsersId<TData = Awaited<ReturnType<typeof getUsersId>>, TError = Error>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersId>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersId<TData = Awaited<ReturnType<typeof getUsersId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersId>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersId>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersId<TData = Awaited<ReturnType<typeof getUsersId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get a user (Administrator)
+ */
+
+export function useGetUsersId<TData = Awaited<ReturnType<typeof getUsersId>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersId>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsersIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Disabling ends the sessions and the pending invitations. An account that was never activated cannot be enabled here (409 ACTIVATION_REQUIRED).
+ * @summary Enable, disable or set the password of an account (Administrator)
+ */
+export const patchUsersId = (
+    id: string,
+    patchUsersIdBody: PatchUsersIdBody,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AdminUser>(
+      {url: `/users/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchUsersIdBody, signal
+    },
+      options);
+    }
+
+
+
+
+export const getPatchUsersIdMutationKey = () => ['patchUsersId'] as const;
+
+export const getPatchUsersIdMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchUsersId>>, TError,PatchUsersIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchUsersId>>, TError,PatchUsersIdMutationVariables, TContext> => {
+
+const mutationKey = getPatchUsersIdMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchUsersId>>, PatchUsersIdMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchUsersId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchUsersIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchUsersId>>>
+    export type PatchUsersIdMutationBody = PatchUsersIdBody
+    export type PatchUsersIdMutationError = Error
+    export type PatchUsersIdMutationVariables = {id: string;data: PatchUsersIdBody}
+
+    /**
+ * @summary Enable, disable or set the password of an account (Administrator)
+ */
+export const usePatchUsersId = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchUsersId>>, TError,PatchUsersIdMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof patchUsersId>>,
+        TError,
+        PatchUsersIdMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPatchUsersIdMutationOptions(options), queryClient);
+    }
+    /**
+ * Idempotent. Takes effect on the next request and never requires a new activation. The assignment is recorded with the Administrator and the time.
+ * @summary Assign a role (Administrator)
+ */
+export const putUsersIdRolesRole = (
+    id: string,
+    role: 'ADMINISTRATOR' | 'MANAGER' | 'EMPLOYEE' | 'CUSTOMER',
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AdminUser>(
+      {url: `/users/${id}/roles/${role}`, method: 'PUT', signal
+    },
+      options);
+    }
+
+
+
+
+export const getPutUsersIdRolesRoleMutationKey = () => ['putUsersIdRolesRole'] as const;
+
+export const getPutUsersIdRolesRoleMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersIdRolesRole>>, TError,PutUsersIdRolesRoleMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof putUsersIdRolesRole>>, TError,PutUsersIdRolesRoleMutationVariables, TContext> => {
+
+const mutationKey = getPutUsersIdRolesRoleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putUsersIdRolesRole>>, PutUsersIdRolesRoleMutationVariables> = (props) => {
+          const {id,role} = props ?? {};
+
+          return  putUsersIdRolesRole(id,role,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutUsersIdRolesRoleMutationResult = NonNullable<Awaited<ReturnType<typeof putUsersIdRolesRole>>>
+
+    export type PutUsersIdRolesRoleMutationError = Error
+    export type PutUsersIdRolesRoleMutationVariables = {id: string;role: 'ADMINISTRATOR' | 'MANAGER' | 'EMPLOYEE' | 'CUSTOMER'}
+
+    /**
+ * @summary Assign a role (Administrator)
+ */
+export const usePutUsersIdRolesRole = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersIdRolesRole>>, TError,PutUsersIdRolesRoleMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof putUsersIdRolesRole>>,
+        TError,
+        PutUsersIdRolesRoleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutUsersIdRolesRoleMutationOptions(options), queryClient);
+    }
+    /**
+ * Idempotent. The withdrawn permissions stop on the next request.
+ * @summary Remove a role (Administrator)
+ */
+export const deleteUsersIdRolesRole = (
+    id: string,
+    role: 'ADMINISTRATOR' | 'MANAGER' | 'EMPLOYEE' | 'CUSTOMER',
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<AdminUser>(
+      {url: `/users/${id}/roles/${role}`, method: 'DELETE', signal
+    },
+      options);
+    }
+
+
+
+
+export const getDeleteUsersIdRolesRoleMutationKey = () => ['deleteUsersIdRolesRole'] as const;
+
+export const getDeleteUsersIdRolesRoleMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUsersIdRolesRole>>, TError,DeleteUsersIdRolesRoleMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteUsersIdRolesRole>>, TError,DeleteUsersIdRolesRoleMutationVariables, TContext> => {
+
+const mutationKey = getDeleteUsersIdRolesRoleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteUsersIdRolesRole>>, DeleteUsersIdRolesRoleMutationVariables> = (props) => {
+          const {id,role} = props ?? {};
+
+          return  deleteUsersIdRolesRole(id,role,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteUsersIdRolesRoleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUsersIdRolesRole>>>
+
+    export type DeleteUsersIdRolesRoleMutationError = Error
+    export type DeleteUsersIdRolesRoleMutationVariables = {id: string;role: 'ADMINISTRATOR' | 'MANAGER' | 'EMPLOYEE' | 'CUSTOMER'}
+
+    /**
+ * @summary Remove a role (Administrator)
+ */
+export const useDeleteUsersIdRolesRole = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUsersIdRolesRole>>, TError,DeleteUsersIdRolesRoleMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteUsersIdRolesRole>>,
+        TError,
+        DeleteUsersIdRolesRoleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteUsersIdRolesRoleMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Role assignments and removals of a user, newest first (Administrator)
+ */
+export const getUsersIdRoleHistory = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<GetUsersIdRoleHistory200Item[]>(
+      {url: `/users/${id}/role-history`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetUsersIdRoleHistoryQueryKey = (id: string,) => {
+    return [
+    `/users/${id}/role-history`
+    ] as const;
+    }
+
+
+export const getGetUsersIdRoleHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersIdRoleHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersIdRoleHistory>>> = ({ signal }) => getUsersIdRoleHistory(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsersIdRoleHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersIdRoleHistory>>>
+export type GetUsersIdRoleHistoryQueryError = Error
+
+
+export function useGetUsersIdRoleHistory<TData = Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError = Error>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersIdRoleHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersIdRoleHistory>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersIdRoleHistory<TData = Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersIdRoleHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersIdRoleHistory>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersIdRoleHistory<TData = Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Role assignments and removals of a user, newest first (Administrator)
+ */
+
+export function useGetUsersIdRoleHistory<TData = Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersIdRoleHistory>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsersIdRoleHistoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * The previous link stops working. Only for accounts that were never activated.
+ * @summary Issue a replacement activation invitation (Administrator)
+ */
+export const postUsersIdInvitation = (
+    id: string,
+ options?: SecondParameter<typeof axiosInstance>,signal?: AbortSignal
+) => {
+
+
+      return axiosInstance<PostUsersIdInvitation201>(
+      {url: `/users/${id}/invitation`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getPostUsersIdInvitationMutationKey = () => ['postUsersIdInvitation'] as const;
+
+export const getPostUsersIdInvitationMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersIdInvitation>>, TError,PostUsersIdInvitationMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersIdInvitation>>, TError,PostUsersIdInvitationMutationVariables, TContext> => {
+
+const mutationKey = getPostUsersIdInvitationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersIdInvitation>>, PostUsersIdInvitationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  postUsersIdInvitation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersIdInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersIdInvitation>>>
+
+    export type PostUsersIdInvitationMutationError = Error
+    export type PostUsersIdInvitationMutationVariables = {id: string}
+
+    /**
+ * @summary Issue a replacement activation invitation (Administrator)
+ */
+export const usePostUsersIdInvitation = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersIdInvitation>>, TError,PostUsersIdInvitationMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersIdInvitation>>,
+        TError,
+        PostUsersIdInvitationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostUsersIdInvitationMutationOptions(options), queryClient);
+    }
+    /**
  * @summary List customers (MANAGER only)
  */
 export const getCustomers = (
@@ -4494,7 +5256,7 @@ export const usePatchStockProductId = <TError = Error,
       return useMutation(getPatchStockProductIdMutationOptions(options), queryClient);
     }
     /**
- * @summary List kitchen configurations (MANAGER and EMPLOYEE)
+ * @summary List kitchen configurations (MANAGER)
  */
 export const getKitchenConfigurations = (
 
@@ -4565,7 +5327,7 @@ export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof ge
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List kitchen configurations (MANAGER and EMPLOYEE)
+ * @summary List kitchen configurations (MANAGER)
  */
 
 export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof getKitchenConfigurations>>, TError = Error>(
@@ -4586,7 +5348,7 @@ export function useGetKitchenConfigurations<TData = Awaited<ReturnType<typeof ge
 
 
 /**
- * @summary Create kitchen configuration (MANAGER only)
+ * @summary Create kitchen configuration (MANAGER)
  */
 export const postKitchenConfigurations = (
     postKitchenConfigurationsBody: PostKitchenConfigurationsBody,
@@ -4640,7 +5402,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type PostKitchenConfigurationsMutationVariables = {data: PostKitchenConfigurationsBody}
 
     /**
- * @summary Create kitchen configuration (MANAGER only)
+ * @summary Create kitchen configuration (MANAGER)
  */
 export const usePostKitchenConfigurations = <TError = Error,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postKitchenConfigurations>>, TError,PostKitchenConfigurationsMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
@@ -4653,7 +5415,7 @@ export const usePostKitchenConfigurations = <TError = Error,
       return useMutation(getPostKitchenConfigurationsMutationOptions(options), queryClient);
     }
     /**
- * @summary Get active kitchen configuration (MANAGER and EMPLOYEE)
+ * @summary Get active kitchen configuration (MANAGER)
  */
 export const getKitchenConfigurationsActive = (
 
@@ -4724,7 +5486,7 @@ export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typ
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get active kitchen configuration (MANAGER and EMPLOYEE)
+ * @summary Get active kitchen configuration (MANAGER)
  */
 
 export function useGetKitchenConfigurationsActive<TData = Awaited<ReturnType<typeof getKitchenConfigurationsActive>>, TError = Error>(
@@ -4877,7 +5639,7 @@ export const usePostKitchenConfigurationsValidate = <TError = Error,
       return useMutation(getPostKitchenConfigurationsValidateMutationOptions(options), queryClient);
     }
     /**
- * @summary Get kitchen configuration by ID (MANAGER and EMPLOYEE)
+ * @summary Get kitchen configuration by ID (MANAGER)
  */
 export const getKitchenConfigurationsId = (
     id: string,
@@ -4948,7 +5710,7 @@ export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof 
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get kitchen configuration by ID (MANAGER and EMPLOYEE)
+ * @summary Get kitchen configuration by ID (MANAGER)
  */
 
 export function useGetKitchenConfigurationsId<TData = Awaited<ReturnType<typeof getKitchenConfigurationsId>>, TError = Error>(
@@ -5103,7 +5865,7 @@ export const useDeleteKitchenConfigurationsId = <TError = Error,
     }
     /**
  * Library of line definitions, sorted by creation date, most recent first.
- * @summary List assembly line configurations (MANAGER and EMPLOYEE)
+ * @summary List assembly line configurations (MANAGER)
  */
 export const getAssemblyLineConfigurations = (
 
@@ -5174,7 +5936,7 @@ export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<type
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List assembly line configurations (MANAGER and EMPLOYEE)
+ * @summary List assembly line configurations (MANAGER)
  */
 
 export function useGetAssemblyLineConfigurations<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurations>>, TError = Error>(
@@ -5331,7 +6093,7 @@ export const usePostAssemblyLineConfigurationsValidate = <TError = Error,
       return useMutation(getPostAssemblyLineConfigurationsValidateMutationOptions(options), queryClient);
     }
     /**
- * @summary Get assembly line configuration by ID (MANAGER and EMPLOYEE)
+ * @summary Get assembly line configuration by ID (MANAGER)
  */
 export const getAssemblyLineConfigurationsId = (
     id: string,
@@ -5402,7 +6164,7 @@ export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<ty
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get assembly line configuration by ID (MANAGER and EMPLOYEE)
+ * @summary Get assembly line configuration by ID (MANAGER)
  */
 
 export function useGetAssemblyLineConfigurationsId<TData = Awaited<ReturnType<typeof getAssemblyLineConfigurationsId>>, TError = Error>(
@@ -6269,7 +7031,7 @@ export const usePutSupplierScenariosId = <TError = Error,
     }
     /**
  * Files in the shared folder (SHARED_DIR on the server). Every access is recorded in the security log.
- * @summary List shared resources (any authenticated user)
+ * @summary List shared resources (MANAGER, EMPLOYEE and CUSTOMER)
  */
 export const getSharedResources = (
 
@@ -6340,7 +7102,7 @@ export function useGetSharedResources<TData = Awaited<ReturnType<typeof getShare
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List shared resources (any authenticated user)
+ * @summary List shared resources (MANAGER, EMPLOYEE and CUSTOMER)
  */
 
 export function useGetSharedResources<TData = Awaited<ReturnType<typeof getSharedResources>>, TError = Error>(
@@ -6361,7 +7123,7 @@ export function useGetSharedResources<TData = Awaited<ReturnType<typeof getShare
 
 
 /**
- * @summary Download a shared resource (any authenticated user)
+ * @summary Download a shared resource (MANAGER, EMPLOYEE and CUSTOMER)
  */
 export const getSharedResourcesName = (
     name: string,
@@ -6433,7 +7195,7 @@ export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getS
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Download a shared resource (any authenticated user)
+ * @summary Download a shared resource (MANAGER, EMPLOYEE and CUSTOMER)
  */
 
 export function useGetSharedResourcesName<TData = Awaited<ReturnType<typeof getSharedResourcesName>>, TError = Error>(

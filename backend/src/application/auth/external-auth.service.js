@@ -16,6 +16,13 @@ export const ExternalAuthCode = Object.freeze({
 export const ExternalLoginOutcome = Object.freeze({
   SESSION: 'SESSION',
   PENDING_ACTIVATION: 'PENDING_ACTIVATION',
+  ACTIVATED: 'ACTIVATED',
+});
+
+/** Why the OIDC transaction was started: a normal login or an account activation (AA07). */
+export const ExternalFlowPurpose = Object.freeze({
+  LOGIN: 'login',
+  ACTIVATION: 'activation',
 });
 
 const externalError = (code, status, message) =>
@@ -31,6 +38,8 @@ const externalError = (code, status, message) =>
  * @param {{establishSession: Function}} deps.authService - shared session creation (AA01/AA04).
  * @param {{recordInitialRoles: Function}} deps.roleChangeRecorder - AA06 role change records.
  * @param {{issue: Function}} deps.invitationService - AA06 activation invitations.
+ * @param {{prepareExternal: Function, completeExternal: Function}} [deps.activationService] -
+ *   AA07 account activation.
  * @param {{log: Function}} deps.securityLogger
  * @param {{providers: Record<string, object>}} deps.config - config.external.
  */
@@ -41,6 +50,7 @@ export function createExternalAuthService({
   authService,
   roleChangeRecorder,
   invitationService,
+  activationService,
   securityLogger,
   config,
 }) {
@@ -98,6 +108,33 @@ export function createExternalAuthService({
     },
 
     /**
+     * AA07: starts the activation of an external account. The invitation decides the provider
+     * (the one linked to the account); the transaction keeps the hash of the invitation token,
+     * never the token, and is marked as an activation so the callback cannot create accounts
+     * or open a session with it.
+     *
+     * @param {{token: string}} input
+     * @throws {AppError} 400 INVITATION_INVALID, 404 PROVIDER_NOT_FOUND.
+     */
+    async startActivation({ token }, context = {}) {
+      const { provider: providerName, invitationHash } = await activationService.prepareExternal(
+        { token },
+        context,
+      );
+      const provider = providerOf(providerName);
+      const { authorizationUrl, transaction } = await oidcClient.createAuthorizationRequest(provider);
+      return {
+        authorizationUrl,
+        transaction: {
+          ...transaction,
+          provider: provider.name,
+          purpose: ExternalFlowPurpose.ACTIVATION,
+          invitationHash,
+        },
+      };
+    },
+
+    /**
      * Completes the login after the IdP redirect.
      * - Linked identity: creates a session through authService.establishSession
      *   (inactive/disabled accounts are refused there).
@@ -128,6 +165,15 @@ export function createExternalAuthService({
         identity = createExternalIdentity({ provider: provider.name, issuer: claims.iss, subject });
       } catch {
         throw deny(provider, context, ExternalAuthCode.AUTH_FAILED, 401);
+      }
+
+      // AA07: an activation never creates an account nor opens a session.
+      if (transaction?.purpose === ExternalFlowPurpose.ACTIVATION) {
+        await activationService.completeExternal(
+          { invitationHash: transaction.invitationHash, identity },
+          { ...context, provider: provider.name },
+        );
+        return { outcome: ExternalLoginOutcome.ACTIVATED };
       }
 
       const linked = await externalIdentitiesRepository.findByIssuerAndSubject(

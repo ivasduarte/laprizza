@@ -26,6 +26,7 @@
     "migrate:status": "node --env-file-if-exists=.env node_modules/migrate-mongo/bin/migrate-mongo.js status",
     "seed:ai01-demo": "node --env-file-if-exists=.env scripts/seed-ai01-demo.js",
     "seed:dev-users": "node --env-file-if-exists=.env scripts/seed-dev-users.js",
+    "reset:external-account": "node --env-file-if-exists=.env scripts/reset-external-account.js",
     "openapi:export": "node scripts/export-openapi.js"
   },
   "dependencies": {

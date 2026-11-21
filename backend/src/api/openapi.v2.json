@@ -279,7 +279,7 @@
     "/auth/external/{provider}/callback": {
       "get": {
         "summary": "Redirect URI of the identity provider",
-        "description": "Always answers with a redirect to the SPA (`/auth/callback`). Success: `?status=success` and the refresh cookie is set; the SPA then calls POST /auth/refresh. Failure: `?status=error&code=<code>` with no session. Codes: ACCESS_DENIED, AUTH_FAILED, EMAIL_MISSING, EMAIL_NOT_VERIFIED, ACCOUNT_LINK_REQUIRED, ACCOUNT_PENDING_ACTIVATION, ACCOUNT_INACTIVE, ACCOUNT_DISABLED.",
+        "description": "Always answers with a redirect to the SPA (`/auth/callback`). Success: `?status=success` and the refresh cookie is set; the SPA then calls POST /auth/refresh. Failure: `?status=error&code=<code>` with no session. Codes: ACCESS_DENIED, AUTH_FAILED, EMAIL_MISSING, EMAIL_NOT_VERIFIED, ACCOUNT_LINK_REQUIRED, ACCOUNT_PENDING_ACTIVATION, ACCOUNT_INACTIVE, ACCOUNT_DISABLED, NO_ACTIVE_ROLE, ROLES_UNAVAILABLE, INVITATION_INVALID, INVITATION_MISMATCH. Activation (AA07): `?status=activated` and no session.",
         "parameters": [
           {
             "name": "provider",
@@ -331,6 +331,191 @@
                 "description": "lp_rt refresh cookie, only on success",
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/external/activate": {
+      "post": {
+        "summary": "Start the activation of an external account (AA07): redirects to its provider",
+        "description": "Form POST from the activation page (browser navigation, `application/x-www-form-urlencoded`), so the token never goes in a URL. The provider is the one linked to the invited account. The transaction cookie is marked as an activation: the callback then only activates the account if the authenticated identity is the one linked to it, and never opens a session. Any failure redirects to the SPA (`/auth/callback?status=error&code=INVITATION_INVALID` or `AUTH_FAILED`).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "303": {
+            "description": "Redirect to the identity provider, or to the SPA with an error code",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "Set-Cookie": {
+                "description": "lp_oidc transaction cookie, only when going to the provider",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/activation/inspect": {
+      "post": {
+        "summary": "Check an activation link before activating (public, the link is not used)",
+        "description": "Tells the activation page which step to show. `method` is `local` (the user sets the password) or `external` (the user signs in at `provider`, the provider linked to the account). The e-mail is masked. Never cached.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "description": "Token of the activation link (the value after \"#token=\" in the e-mail)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The link can activate its account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "method",
+                    "email",
+                    "expiresAt"
+                  ],
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "local",
+                        "external"
+                      ]
+                    },
+                    "provider": {
+                      "type": "string",
+                      "example": "google"
+                    },
+                    "email": {
+                      "type": "string",
+                      "example": "m***a@laprizza.pt"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (malformed token) or INVITATION_INVALID (unknown, used, replaced or expired link, or account not waiting for activation)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: too many failed attempts from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/activation/local": {
+      "post": {
+        "summary": "Activate a local account by setting its password (public)",
+        "description": "Uses the invitation (single use) and activates the account with the password chosen by the user. No session is opened and the roles are not changed: the user logs in afterwards with POST /auth/login. A password that breaks the policy is refused before the link is used.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "description": "Token of the activation link (the value after \"#token=\" in the e-mail)."
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "maxLength": 256,
+                    "description": "8 to 64 characters, at least one uppercase letter and one of ! @ # $ % ^ & * . , - _ ?"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Account activated"
+          },
+          "400": {
+            "description": "VALIDATION_FAILED, PASSWORD_POLICY_VIOLATION or INVITATION_INVALID (also for an account that must be activated at its identity provider)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: too many failed attempts from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

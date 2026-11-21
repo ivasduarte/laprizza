@@ -57,6 +57,13 @@ export const features = [
     load: () => import('./reset-password/reset-password-page.jsx'),
   },
   {
+    id: 'activate-account',
+    path: '/activate',
+    labelKey: 'nav.activateAccount',
+    showInNav: false,
+    load: () => import('./activate-account/activate-account-page.jsx'),
+  },
+  {
     id: 'kitchen-configuration',
     path: '/kitchen-configurations',
     labelKey: 'nav.kitchenConfig',

@@ -1,4 +1,5 @@
 import Users from './users.model.js';
+import { AccountStatus } from '../../domain/users/users.domain.js';
 
 /**
  * Creates and saves a new user document in the database.
@@ -104,4 +105,24 @@ export async function removeRoleIfPresent(id, role, { clearCustomerId = false } 
 /** Removes a user. Only used to undo a creation whose role records could not be written. */
 export async function deleteById(id) {
   return Users.deleteOne({ _id: id });
+}
+
+/**
+ * Activates an account that is still waiting for its first activation (atomic).
+ * Only the status, the activation date, the login counters and, for a local account, the
+ * password change: the roles assigned before (AA06) and every other field stay as they are.
+ *
+ * @param {string} id
+ * @param {{activatedAt: Date, passwordHash?: string}} data - passwordHash only for local accounts.
+ * @returns {Promise<Object|null>} The activated user, or null when the account is unknown,
+ *   already activated or disabled in the meantime.
+ */
+export async function activateAccount(id, { activatedAt, passwordHash }) {
+  const set = { status: AccountStatus.ACTIVE, activatedAt, failedLoginCount: 0, lockedUntil: null };
+  if (passwordHash) set.passwordHash = passwordHash;
+  return Users.findOneAndUpdate(
+    { _id: id, status: AccountStatus.INACTIVE, activatedAt: null },
+    { $set: set },
+    { returnDocument: 'after' },
+  );
 }

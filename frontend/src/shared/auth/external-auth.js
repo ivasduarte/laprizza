@@ -16,6 +16,8 @@ export const CALLBACK_ERROR_CODES = Object.freeze([
   'ACCOUNT_DISABLED',
   'NO_ACTIVE_ROLE',
   'ROLES_UNAVAILABLE',
+  'INVITATION_INVALID',
+  'INVITATION_MISMATCH',
 ]);
 
 /**
@@ -39,10 +41,12 @@ export function externalLoginUrl(apiBaseUrl, provider) {
  * an unknown status or code becomes a generic failure.
  *
  * @param {URLSearchParams} params
- * @returns {{status: 'success'|'error', code: string|null}}
+ * @returns {{status: 'success'|'activated'|'error', code: string|null}}
+ *   `activated` (AA07): the account was activated at the provider; no session was opened.
  */
 export function parseCallbackParams(params) {
   if (params.get('status') === 'success') return { status: 'success', code: null };
+  if (params.get('status') === 'activated') return { status: 'activated', code: null };
   const code = params.get('code');
   return { status: 'error', code: CALLBACK_ERROR_CODES.includes(code) ? code : 'AUTH_FAILED' };
 }

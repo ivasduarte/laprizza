@@ -6,10 +6,11 @@
  * OpenAPI spec version: 2.0.0
  */
 
-export type PostUsersBodyRole = typeof PostUsersBodyRole[keyof typeof PostUsersBodyRole];
+export type AdminUserRolesItem = typeof AdminUserRolesItem[keyof typeof AdminUserRolesItem];
 
 
-export const PostUsersBodyRole = {
+export const AdminUserRolesItem = {
+  ADMINISTRATOR: 'ADMINISTRATOR',
   MANAGER: 'MANAGER',
   EMPLOYEE: 'EMPLOYEE',
   CUSTOMER: 'CUSTOMER',

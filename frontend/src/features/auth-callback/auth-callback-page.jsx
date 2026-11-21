@@ -24,6 +24,22 @@ function Failure({ code }) {
   );
 }
 
+/** AA07: the account was activated at the provider. No session was opened. */
+function Activated() {
+  const { t } = useTranslation();
+  return (
+    <section className="login-panel">
+      <h1>{t('activation.title')}</h1>
+      <p className="message message-success" role="status">
+        {t('auth.external.activated')}
+      </p>
+      <p>
+        <Link to="/login">{t('activation.goToLogin')}</Link>
+      </p>
+    </section>
+  );
+}
+
 /**
  * Landing page of the external login (AA02). The back end already set the refresh cookie
  * (success) or appended an error code to the URL. No token ever travels in the URL: the
@@ -43,6 +59,7 @@ export default function AuthCallbackPage() {
   }, [navigate]);
 
   if (result.status === 'error') return <Failure code={result.code} />;
+  if (result.status === 'activated') return <Activated />;
   if (status === 'authenticated') return <Navigate to="/" replace />;
   if (status === 'anonymous') return <Failure code="AUTH_FAILED" />; // cookie was not accepted
   return <p role="status">{t('auth.external.completing')}</p>;

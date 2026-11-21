@@ -17,6 +17,7 @@ import * as defaultRoleChangesRepository from '../../infrastructure/users/role-c
 import { createActivationInvitationService } from '../../application/users/activation-invitation.service.js';
 import { createRoleChangeRecorder } from '../../application/users/role-change-recorder.js';
 import { createUsersService } from '../../application/users/users.service.js';
+import { createAccountActivationService } from '../../application/auth/account-activation.service.js';
 
 export function createAuthModule(config, repos = {}) {
   const securityLogger =
@@ -43,9 +44,13 @@ export function createAuthModule(config, repos = {}) {
     config: config.auth,
   });
 
+  const invitationsRepository = repos.invitationsRepository ?? defaultInvitationsRepository;
+  const externalIdentitiesRepository =
+    repos.externalIdentitiesRepository ?? defaultExternalIdentitiesRepository;
+
   // AA06: activation invitations and role change records, shared by local and external accounts.
   const invitationService = createActivationInvitationService({
-    invitationsRepository: repos.invitationsRepository ?? defaultInvitationsRepository,
+    invitationsRepository,
     tokenService,
     emailService,
     clock,
@@ -64,15 +69,26 @@ export function createAuthModule(config, repos = {}) {
     passwordHasher,
   });
 
+  // AA07: the invited user activates the account with the AA06 invitation.
+  const activationService = createAccountActivationService({
+    invitationsRepository,
+    usersRepository,
+    externalIdentitiesRepository,
+    passwordHasher,
+    tokenService,
+    securityLogger,
+    clock,
+  });
+
   const externalAuthService = config.external.enabled
     ? createExternalAuthService({
         usersRepository,
-        externalIdentitiesRepository:
-          repos.externalIdentitiesRepository ?? defaultExternalIdentitiesRepository,
+        externalIdentitiesRepository,
         oidcClient: repos.oidcClient ?? createOidcClient(),
         authService,
         roleChangeRecorder,
         invitationService,
+        activationService,
         securityLogger,
         config: config.external,
       })
@@ -81,6 +97,7 @@ export function createAuthModule(config, repos = {}) {
     authService,
     externalAuthService,
     usersService,
+    activationService,
     securityLogger,
     config,
     authenticate: createAuthenticate({ authService, securityLogger }),

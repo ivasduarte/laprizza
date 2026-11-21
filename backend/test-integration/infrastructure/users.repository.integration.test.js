@@ -115,3 +115,49 @@ test('AA06: deleteById removes the user', async () => {
   await usersRepository.deleteById(user._id);
   assert.equal(await usersRepository.findById(user._id), null);
 });
+
+test('AA07: activateAccount activates an inactive account once, keeping its roles', async () => {
+  const user = await createUser({
+    passwordHash: undefined,
+    roles: [Roles.CUSTOMER, Roles.EMPLOYEE],
+    status: AccountStatus.INACTIVE,
+    activatedAt: null,
+  });
+  const now = new Date('2026-11-20T10:00:00Z');
+
+  const activated = await usersRepository.activateAccount(user._id, {
+    activatedAt: now,
+    passwordHash: 'new-hash',
+  });
+  assert.equal(activated.status, AccountStatus.ACTIVE);
+  assert.deepEqual(activated.activatedAt, now);
+  assert.deepEqual([...activated.roles], [Roles.CUSTOMER, Roles.EMPLOYEE]);
+  const stored = await usersRepository.findByIdWithPasswordHash(user._id);
+  assert.equal(stored.passwordHash, 'new-hash');
+
+  // Second activation: nothing changes.
+  assert.equal(await usersRepository.activateAccount(user._id, { activatedAt: new Date() }), null);
+});
+
+test('AA07: activateAccount never activates a disabled or already activated account', async () => {
+  const disabled = await createUser({ email: 'd@laprizza.pt', status: AccountStatus.DISABLED });
+  const reactivated = await createUser({
+    email: 'r@laprizza.pt',
+    status: AccountStatus.INACTIVE,
+    activatedAt: new Date('2026-01-01T00:00:00Z'),
+  });
+  for (const user of [disabled, reactivated]) {
+    assert.equal(
+      await usersRepository.activateAccount(user._id, { activatedAt: new Date() }),
+      null,
+    );
+  }
+  assert.equal((await usersRepository.findById(disabled._id)).status, AccountStatus.DISABLED);
+});
+
+test('AA07: activateAccount also matches accounts created before activatedAt existed', async () => {
+  const user = await createUser({ email: 'old@laprizza.pt', status: AccountStatus.INACTIVE });
+  await Users.updateOne({ _id: user._id }, { $unset: { activatedAt: '' } });
+  const activated = await usersRepository.activateAccount(user._id, { activatedAt: new Date() });
+  assert.equal(activated.status, AccountStatus.ACTIVE);
+});

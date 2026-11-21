@@ -19,6 +19,8 @@ export const AuthErrorCode = Object.freeze({
   FORBIDDEN: 'FORBIDDEN',
   NO_ACTIVE_ROLE: 'NO_ACTIVE_ROLE',
   ROLES_UNAVAILABLE: 'ROLES_UNAVAILABLE',
+  INVITATION_INVALID: 'INVITATION_INVALID',
+  INVITATION_MISMATCH: 'INVITATION_MISMATCH',
 });
 
 const DEFAULT_MESSAGES = {
@@ -38,6 +40,8 @@ const DEFAULT_MESSAGES = {
   FORBIDDEN: 'Forbidden.',
   NO_ACTIVE_ROLE: 'The account has no active role.',
   ROLES_UNAVAILABLE: 'The account roles could not be confirmed. Try again later.',
+  INVITATION_INVALID: 'Invalid, expired or already used activation link.',
+  INVITATION_MISMATCH: 'The authenticated identity is not the one this invitation was sent to.',
 };
 
 export function authError(code, status, message = DEFAULT_MESSAGES[code] ?? code) {

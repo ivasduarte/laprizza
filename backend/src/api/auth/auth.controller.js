@@ -4,9 +4,9 @@ import { GUEST_PERMISSIONS } from "../../domain/auth/permissions.domain.js";
  * Auth controller: HTTP <-> use cases. Manages the refresh token cookie;
  * the refresh token never goes in the response body.
  *
- * @param {{authService: object, config: object}} deps
+ * @param {{authService: object, activationService?: object, config: object}} deps
  */
-export function createAuthController({ authService, config }) {
+export function createAuthController({ authService, activationService, config }) {
   // The cookie is scoped to the auth path of the API version that issued it
   // (e.g. /api/v2/auth), so each version refreshes its own session cookie.
   const cookieOptionsFor = (req) => ({
@@ -94,6 +94,25 @@ export function createAuthController({ authService, config }) {
           { ...req.body, userId: req.user.userId, sessionId: req.user.sessionId },
           contextOf(req),
         );
+        res.status(204).end();
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    /** AA07: checks an activation link (nothing is used). */
+    async inspectActivation(req, res, next) {
+      try {
+        res.status(200).json(await activationService.inspect(req.body, contextOf(req)));
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    /** AA07: local activation. No session is opened: the user logs in afterwards (AA01). */
+    async activateLocal(req, res, next) {
+      try {
+        await activationService.activateLocal(req.body, contextOf(req));
         res.status(204).end();
       } catch (err) {
         next(err);

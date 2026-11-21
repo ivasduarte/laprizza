@@ -12,14 +12,26 @@ const PERMISSIONS = {
   CUSTOMER: ['catalogue:read', 'customers:read:own', 'resources:read'],
   EMPLOYEE: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
   MANAGER: [
+    'allergens:read',
+    'allergens:write',
     'catalogue:read',
+    'categories:write',
+    'customers:read',
+    'customers:write',
+    'forecasts:read',
+    'forecasts:write',
     'kitchen:read',
     'kitchen:write',
+    'pizzas:write',
     'planning:execute',
     'products:read',
+    'products:write',
     'resources:read',
     'stock:read',
+    'stock:read:inactive',
     'stock:write',
+    'suppliers:import',
+    'suppliers:read',
   ],
   // AA06: user administration only
   ADMINISTRATOR: [
@@ -45,20 +57,35 @@ const menuOf = (persona) =>
   }).map((feature) => feature.id);
 
 describe('Dynamic navigation menu (WEB03)', () => {
-  it('a Guest only sees the public pages', () => {
-    assert.deepEqual(menuOf('GUEST'), ['home']);
+  it('a Guest only sees the public pages (WEB05: the catalogue is public)', () => {
+    assert.deepEqual(menuOf('GUEST'), ['home', 'catalogue']);
   });
 
   it('a Customer also sees the shared resources (team decision)', () => {
-    assert.deepEqual(menuOf('CUSTOMER'), ['home', 'shared-resources']);
+    assert.deepEqual(menuOf('CUSTOMER'), [
+      'home',
+      'shared-resources',
+      'catalogue',
+      'my-data',
+    ]);
   });
 
   it('a user without roles sees what a Guest sees', () => {
-    assert.deepEqual(menuOf('NO_ROLES'), ['home']);
+    assert.deepEqual(menuOf('NO_ROLES'), ['home', 'catalogue']);
   });
 
-  it('an Employee sees the shared resources but nothing of the kitchen (MANAGER only)', () => {
-    assert.deepEqual(menuOf('EMPLOYEE'), ['home', 'shared-resources']);
+  it('an Employee sees the shared resources and the read-only catalogue pages, but nothing of the kitchen (MANAGER only)', () => {
+    assert.deepEqual(menuOf('EMPLOYEE'), [
+      'home',
+      'shared-resources',
+      'product-categories',
+      'pizza-sizes',
+      'pizza-component-types',
+      'products',
+      'stock',
+      'predefined-pizzas',
+      'catalogue',
+    ]);
   });
 
   it('a Manager also sees planning (AI)', () => {
@@ -68,6 +95,15 @@ describe('Dynamic navigation menu (WEB03)', () => {
       'ai',
       'kitchen-configuration',
       'shared-resources',
+      'product-categories',
+      'allergens',
+      'pizza-sizes',
+      'pizza-component-types',
+      'products',
+      'stock',
+      'predefined-pizzas',
+      'catalogue',
+      'customers',
     ]);
   });
 
@@ -76,6 +112,7 @@ describe('Dynamic navigation menu (WEB03)', () => {
       'home',
       'shared-resources',
       'users',
+      'catalogue',
     ]);
   });
 
@@ -131,13 +168,13 @@ describe('Dynamic navigation menu (WEB03)', () => {
     );
   });
 
-  it('fails closed with an empty or invalid permission list', () => {
+  it('fails closed with an empty or invalid permission list (only public pages)', () => {
     for (const permissions of [[], undefined, null]) {
       const ids = visibleFeatures(features, {
         permissions,
         authenticated: true,
       }).map((f) => f.id);
-      assert.deepEqual(ids, ['home'], String(permissions));
+      assert.deepEqual(ids, ['home', 'catalogue'], String(permissions));
     }
   });
 });

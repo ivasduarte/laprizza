@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { createExternalAuthController } from './external-auth.controller.js';
 import { createTransactionCodec } from '../../infrastructure/oidc/oidc-transaction.js';
 import { AppError } from '../../application/app-error.js';
@@ -31,5 +31,11 @@ export default function externalAuthRouterFactory({ externalAuthService, config 
   router.get('/providers', controller.providers);
   router.get('/:provider/login', validateProvider, controller.login);
   router.get('/:provider/callback', validateProvider, controller.callback);
+  // AA07: form POST from the activation page (urlencoded body with the invitation token).
+  router.post(
+    '/activate',
+    express.urlencoded({ extended: false, limit: '1kb' }),
+    controller.activate,
+  );
   return router;
 }

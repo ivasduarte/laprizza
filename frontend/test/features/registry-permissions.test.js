@@ -15,15 +15,30 @@ const EXPECTED_PERMISSIONS = {
   'shared-resources': 'resources:read',
   // AA06: user administration (GET /users), Administrator only
   users: 'users:read',
+  // WEB05: Sprint 1 management pages (GET of each resource)
+  'product-categories': 'products:read',
+  allergens: 'allergens:read',
+  'pizza-sizes': 'products:read',
+  'pizza-component-types': 'products:read',
+  products: 'products:read',
+  stock: 'stock:read',
+  'predefined-pizzas': 'products:read',
+  customers: 'customers:read',
+  // WEB05: the customer's own record (GET /customers/me)
+  'my-data': 'customers:read:own',
 };
 const SESSION_ONLY = ['change-password'];
 // auth-callback (AA02): landing page of the external login; the session does not exist yet.
+// activate-account (AA07): the account is not active yet, so there is no session to require.
+// catalogue (WEB05): the sellable catalogue is open to Guests (catalogue:read, Table 1).
 const PUBLIC = [
   'home',
   'login',
   'forgot-password',
   'reset-password',
   'auth-callback',
+  'activate-account',
+  'catalogue',
 ];
 
 describe('Registry permissions (WEB03)', () => {

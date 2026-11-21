@@ -126,3 +126,86 @@ test('providers: lists enabled providers', () => {
   controller.providers(req(), r);
   assert.deepEqual(r.json.mock.calls[0].arguments[0], [{ name: 'google', label: 'Google' }]);
 });
+
+// ---------- AA07: activation of external accounts ----------
+
+const TOKEN = 'A'.repeat(43);
+const ACTIVATION_TX = { ...TX, purpose: 'activation', invitationHash: 'hash-1' };
+const CONFIG_WITH_ORIGINS = { ...CONFIG, corsOrigins: ['https://app.pt'] };
+const buildWithOrigins = (overrides = {}) => {
+  const { service } = build({
+    startActivation: mock.fn(async () => ({ authorizationUrl: 'https://idp/auth', transaction: ACTIVATION_TX })),
+    ...overrides,
+  });
+  return {
+    service,
+    controller: createExternalAuthController({
+      externalAuthService: service,
+      transactionCodec: codec,
+      config: CONFIG_WITH_ORIGINS,
+    }),
+  };
+};
+const activationReq = (body, origin = 'https://app.pt') =>
+  req({ body, get: (h) => (h.toLowerCase() === 'origin' ? origin : 'ua') });
+
+test('AA07 activate: keeps the activation transaction in the cookie and goes to the IdP (303)', async () => {
+  const { controller, service } = buildWithOrigins();
+  const r = res();
+  await controller.activate(activationReq({ token: TOKEN }), r);
+  assert.deepEqual(service.startActivation.mock.calls[0].arguments[0], { token: TOKEN });
+  const [name, value, opts] = r.cookie.mock.calls[0].arguments;
+  assert.equal(name, TRANSACTION_COOKIE);
+  assert.equal(codec.verify(value).purpose, 'activation');
+  assert.equal(codec.verify(value).invitationHash, 'hash-1');
+  assert.ok(!value.includes(TOKEN));
+  assert.equal(opts.sameSite, 'lax');
+  assert.deepEqual(r.redirect.mock.calls[0].arguments, [303, 'https://idp/auth']);
+});
+
+test('AA07 activate: a malformed or missing token goes back to the SPA with INVITATION_INVALID', async () => {
+  for (const body of [{}, { token: 'short' }, { token: ['x'] }, undefined]) {
+    const { controller, service } = buildWithOrigins();
+    const r = res();
+    await controller.activate(activationReq(body), r);
+    assert.equal(r.redirect.mock.calls[0].arguments[0], 303);
+    assert.equal(location(r).searchParams.get('code'), 'INVITATION_INVALID');
+    assert.equal(service.startActivation.mock.callCount(), 0);
+    assert.equal(r.cookie.mock.callCount(), 0);
+  }
+});
+
+test('AA07 activate: a form posted from another origin is refused', async () => {
+  const { controller, service } = buildWithOrigins();
+  const r = res();
+  await controller.activate(activationReq({ token: TOKEN }, 'https://evil.example'), r);
+  assert.equal(location(r).searchParams.get('code'), 'AUTH_FAILED');
+  assert.equal(service.startActivation.mock.callCount(), 0);
+});
+
+test('AA07 activate: a refused invitation goes back to the SPA with its public code, no cookie', async () => {
+  const invalid = Object.assign(new Error('x'), { status: 400, code: 'INVITATION_INVALID' });
+  const { controller } = buildWithOrigins({ startActivation: async () => { throw invalid; } });
+  const r = res();
+  await controller.activate(activationReq({ token: TOKEN }), r);
+  assert.equal(location(r).searchParams.get('code'), 'INVITATION_INVALID');
+  assert.equal(r.cookie.mock.callCount(), 0);
+});
+
+test('AA07 callback: an activation redirects with status=activated and sets no refresh cookie', async () => {
+  const { controller } = build({ completeLogin: mock.fn(async () => ({ outcome: 'ACTIVATED' })) });
+  const r = res();
+  await controller.callback(req({ cookies: { [TRANSACTION_COOKIE]: codec.sign(ACTIVATION_TX) } }), r, () => {});
+  assert.equal(location(r).searchParams.get('status'), 'activated');
+  assert.equal(r.cookie.mock.callCount(), 0);
+});
+
+test('AA07 callback: INVITATION_MISMATCH and INVITATION_INVALID are public codes', async () => {
+  for (const code of ['INVITATION_MISMATCH', 'INVITATION_INVALID']) {
+    const err = Object.assign(new Error('x'), { code });
+    const { controller } = build({ completeLogin: async () => { throw err; } });
+    const r = res();
+    await controller.callback(req({ cookies: { [TRANSACTION_COOKIE]: codec.sign(ACTIVATION_TX) } }), r, () => {});
+    assert.equal(location(r).searchParams.get('code'), code);
+  }
+});

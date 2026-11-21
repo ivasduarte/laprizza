@@ -2,7 +2,10 @@
 @aiUrl = http://localhost:5000
 @managerEmail = admin@laprizza.pt
 @managerPassword = LaPrizzaAdmin_013DI!
-@employeePassword = Ai01Employee123!
+# Conta EMPLOYEE do seed (AA06: o POST /users já não aceita password):
+# npm run seed:dev-users -- --confirm com SEED_DEV_PASSWORD=LaPrizzaDev_013DI!
+@employeeEmail = employee@laprizza.pt
+@employeePassword = LaPrizzaDev_013DI!
 
 @massa = de01b0000000000000000001
 @molho = de01b0000000000000000002
@@ -157,25 +160,9 @@ Content-Type: application/json
 ?? status == 401
 ?? js response.parsedBody.error.code == TOKEN_MISSING
 
-### 9 - Criar um EMPLOYEE temporário para o teste de permissões (201)
-# @name createEmployee
-POST {{backendUrl}}/users
-Authorization: Bearer {{token}}
-Content-Type: application/json
+### 9 - Conta EMPLOYEE: usa a employee@laprizza.pt do seed (desde a AA06 não se criam contas com password por API)
 
-{
-  "email": "ai01_employee_{{$timestamp}}@laprizza.pt",
-  "password": "{{employeePassword}}",
-  "roles": ["EMPLOYEE"]
-}
-
-?? status == 201
-
-### Dados do EMPLOYEE criado
-@employeeId = {{createEmployee.id}}
-@employeeEmail = {{createEmployee.email}}
-
-### 10 - Login do EMPLOYEE (200)
+### 10 - Login do EMPLOYEE do seed (200)
 # @name loginEmployee
 POST {{backendUrl}}/auth/login
 Content-Type: application/json
@@ -218,14 +205,3 @@ Content-Type: application/json
 ?? js response.parsedBody.error.code == VALIDATION_ERROR
 ?? js response.parsedBody.error.details[0].field == stockMode
 ?? js response.parsedBody.error.details[0].type == any.required
-
-### 14 - Desativar o EMPLOYEE temporário (200)
-PATCH {{backendUrl}}/users/{{employeeId}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "isActive": false
-}
-
-?? status == 200

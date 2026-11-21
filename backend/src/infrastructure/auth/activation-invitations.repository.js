@@ -24,3 +24,13 @@ export async function consume(tokenHash, now) {
     { returnDocument: 'after' },
   ).lean();
 }
+
+/**
+ * Reads an invitation without using it (The activation page checks the link before the
+ * user submits).
+ *
+ * @returns {Promise<Object|null>}
+ */
+export async function findByTokenHash(tokenHash) {
+  return ActivationInvitation.findOne({ tokenHash }).lean();
+}

@@ -145,6 +145,9 @@ export const PUBLIC_ENTRY_POINTS = Object.freeze([
   ['POST', '/auth/refresh'],
   ['POST', '/auth/password/forgot'],
   ['POST', '/auth/password/reset'],
+  // AA07: the account is not active yet, so activation cannot require a session.
+  ['POST', '/auth/activation/inspect'],
+  ['POST', '/auth/activation/local'],
 ]);
 
 /** Sample values for route parameters (well-formed ids that do not exist). */

@@ -10,6 +10,8 @@ The Authentication aggregate covers how a user proves their identity (login), ho
 
 > The Administrator role, role changes with their records and the activation invitations (AA06) are documented in [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md). Since AA06, `POST /users` is for the Administrator and creates an inactive account without a password.
 
+> How an invited user activates the account with the invitation, by setting the password (local account) or by signing in at the linked identity provider (external account) (AA07), is documented in [Account Activation (AA07)](../account-activation/README.md).
+
 Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end API** container (2 diagrams). They were converted from the original PlantUML sequence diagrams.
 
 ## Diagrams
@@ -21,6 +23,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 | [Session Handling (AA04)](./session-handling.md) | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Public (login, refresh), authenticated (logout) | 200 OK, 204 No Content | - |
 | [External Authentication (AA02)](./external-authentication.md) | `GET /auth/external/providers`, `GET /auth/external/{provider}/login`, `GET /auth/external/{provider}/callback` | Public (no authentication) | 302 to the SPA (`status=success`, cookie `lp_rt`) | - |
 | [Role Assignment and Activation Invitation (AA06)](./role-assignment-and-invitations.md) | `/users`, `/users/{id}`, `/users/{id}/roles/{role}`, `/users/{id}/role-history`, `/users/{id}/invitation` | ADMINISTRATOR | 200 OK, 201 Created | - |
+| [Account Activation (AA07)](../account-activation/README.md) | `POST /auth/activation/inspect`, `POST /auth/activation/local`, `POST /auth/external/activate` | Public (no authentication) | 200 OK, 204 No Content, 303 to the identity provider | - |
 | [Role Resolution (AA03)](./role-resolution.md) | `POST /users`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, external callback | As in each endpoint | 403 `NO_ACTIVE_ROLE`, 503 `ROLES_UNAVAILABLE` on failure | - |
 
 ## Business rules shown in the diagrams

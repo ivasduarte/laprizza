@@ -8,6 +8,7 @@ import { guestPermissionStore } from './guest-permissions.js';
 import { sessionStore } from './session-store.js';
 import { getApiBaseUrl } from '../../health.js';
 import { externalLoginUrl } from './external-auth.js';
+import { externalActivationForm, submitForm } from './account-activation.js';
 
 export const authApi = {
   async restoreSession() {
@@ -77,6 +78,29 @@ export const authApi = {
       { token, newPassword },
       { auth: false, credentials: 'include' }
     );
+  },
+
+  /** AA07: checks the activation link; nothing is used. Errors are shown by the page. */
+  inspectActivation(token, signal) {
+    return api.post(
+      '/auth/activation/inspect',
+      { token },
+      { auth: false, feedback: 'silent', signal }
+    );
+  },
+
+  /** AA07: local activation. No session is opened: the user logs in afterwards. */
+  activateLocal(token, newPassword) {
+    return api.post(
+      '/auth/activation/local',
+      { token, newPassword },
+      { auth: false }
+    );
+  },
+
+  /** AA07: full-page form POST; the back end redirects to the account's identity provider. */
+  startExternalActivation(token) {
+    submitForm(externalActivationForm(getApiBaseUrl(), token));
   },
 
   changePassword(currentPassword, newPassword) {

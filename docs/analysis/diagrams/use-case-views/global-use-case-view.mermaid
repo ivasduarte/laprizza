@@ -5,6 +5,8 @@ flowchart LR
     Customer([Customer])
     Viz3D([3D Visualization Module])
     AI([AI Scheduling Module])
+    InvitedUser([Invited User])
+    IdP([External Identity Provider])
 
     subgraph System [LaPrizza Information System]
         subgraph Auth [BCK01: Auth & Users]
@@ -45,6 +47,10 @@ flowchart LR
         subgraph PlanningData [AI06: Planning Data]
             UC_Snapshot(Provide Planning Snapshot)
             UC_KB(Build Knowledge Base)
+        end
+        subgraph Activation [AA07: Account Activation]
+            UC_CheckLink(Check Activation Link)
+            UC_Activate(Activate Local or External Account)
         end
     end
 
@@ -88,3 +94,8 @@ flowchart LR
     AI -->|pulls| UC_Snapshot
     AI --> UC_KB
     UC_Planning -.->|uses| UC_Snapshot
+
+    InvitedUser --> UC_CheckLink
+    InvitedUser --> UC_Activate
+    UC_Activate -.->|include| UC_CheckLink
+    UC_Activate -->|verifies identity at| IdP

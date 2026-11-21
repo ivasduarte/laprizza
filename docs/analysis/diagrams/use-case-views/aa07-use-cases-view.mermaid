@@ -1,0 +1,18 @@
+flowchart LR
+    User([Invited User])
+    IdP([External Identity Provider])
+
+    subgraph AA07 [AA07: Secure Account Activation]
+        direction TB
+        UC1([UC1: Check Activation Link])
+        UC2([UC2: Activate Local Account])
+        UC3([UC3: Activate External Account])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+
+    UC2 -.->|<< include >>| UC1
+    UC3 -.->|<< include >>| UC1
+    UC3 -->|<< authenticates at >>| IdP

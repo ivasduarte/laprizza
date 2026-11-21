@@ -14,7 +14,12 @@ const PUBLIC_ERROR_CODES = new Set([
   'ACCOUNT_DISABLED',
   'NO_ACTIVE_ROLE',
   'ROLES_UNAVAILABLE',
+  'INVITATION_INVALID',
+  'INVITATION_MISMATCH',
 ]);
+
+/** Activation invitation token (AA07): 256 bits in base64url. */
+const INVITATION_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 /**
  * HTTP <-> external-authentication use cases.
@@ -71,6 +76,35 @@ export function createExternalAuthController({ externalAuthService, transactionC
       }
     },
 
+    /**
+     * AA07: starts the activation of an external account. The SPA submits the invitation token
+     * in a form POST (top-level navigation, so the token never goes in a URL); the answer
+     * keeps the OIDC transaction in the cookie and sends the browser to the provider linked
+     * to the account. Every failure goes back to the SPA with a public error code.
+     */
+    async activate(req, res) {
+      const origin = req.get('origin');
+      if (origin && !(config.corsOrigins ?? []).includes(origin)) {
+        return res.redirect(303, spaError('AUTH_FAILED'));
+      }
+      const token = typeof req.body?.token === 'string' ? req.body.token : '';
+      if (!INVITATION_TOKEN.test(token)) return res.redirect(303, spaError('INVITATION_INVALID'));
+
+      try {
+        const { authorizationUrl, transaction } = await externalAuthService.startActivation(
+          { token },
+          contextOf(req),
+        );
+        res.cookie(TRANSACTION_COOKIE, transactionCodec.sign(transaction), {
+          ...transactionCookie,
+          maxAge: external.transactionTtlMs,
+        });
+        return res.redirect(303, authorizationUrl);
+      } catch (err) {
+        return res.redirect(303, spaError(err?.code));
+      }
+    },
+
     async callback(req, res) {
       const providerName = req.params.provider;
       const transaction = transactionCodec.verify(req.cookies?.[TRANSACTION_COOKIE]);
@@ -97,6 +131,10 @@ export function createExternalAuthController({ externalAuthService, transactionC
             expires: new Date(result.session.refreshTokenExpiresAt),
           });
           return res.redirect(302, spaUrl({ status: 'success' }));
+        }
+        if (result.outcome === ExternalLoginOutcome.ACTIVATED) {
+          // AA07: the account is active, but no session was opened: the user signs in next.
+          return res.redirect(302, spaUrl({ status: 'activated' }));
         }
         return res.redirect(302, spaError('ACCOUNT_PENDING_ACTIVATION'));
       } catch (err) {

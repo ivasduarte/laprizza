@@ -5,13 +5,18 @@
  * Current API version. Application version 0.1.0.
  * OpenAPI spec version: 2.0.0
  */
-import type { PostUsersBodyRole } from './postUsersBodyRole';
+import type { PostUsersBodyRolesItem } from './postUsersBodyRolesItem';
 
 export type PostUsersBody = {
-  /** @minLength 3 */
+  /**
+     * @minLength 3
+     * @maxLength 30
+     * @pattern ^[A-Za-z0-9]+$
+     */
   username?: string;
-  email?: string;
-  password: string;
-  role: PostUsersBodyRole;
+  /** @maxLength 254 */
+  email: string;
+  roles?: PostUsersBodyRolesItem[];
+  /** @pattern ^[0-9a-fA-F]{24}$ */
   customerId?: string;
 };

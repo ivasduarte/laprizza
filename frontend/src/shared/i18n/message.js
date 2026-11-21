@@ -35,6 +35,7 @@ const baseMessages = {
       kitchenConfig: 'Kitchen Configuration',
       sharedResources: 'Shared resources',
       authCallback: 'External sign-in',
+      activateAccount: 'Account activation',
     },
     home: {
       welcome: 'Welcome to LaPrizza',
@@ -98,6 +99,10 @@ const baseMessages = {
           'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
         ROLES_UNAVAILABLE:
           'Your access could not be confirmed right now. Please try again in a moment.',
+        INVITATION_INVALID:
+          'The activation link is invalid, was already used or has expired. Ask the administrator for a new invitation.',
+        INVITATION_MISMATCH:
+          'You signed in with an account that is not the one this invitation was sent to. Nothing was activated.',
         NETWORK_ERROR: 'Could not reach the server. Check your connection.',
         UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
       },
@@ -106,6 +111,7 @@ const baseMessages = {
         or: 'or',
         continueWith: 'Continue with {{provider}}',
         completing: 'Completing sign-in...',
+        activated: 'Your account is active. Log in to continue.',
         errors: {
           ACCESS_DENIED: 'Sign-in was cancelled.',
           AUTH_FAILED: 'External sign-in failed. Please try again.',
@@ -125,8 +131,29 @@ const baseMessages = {
             'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
           ROLES_UNAVAILABLE:
             'Your access could not be confirmed right now. Please try again in a moment.',
+          INVITATION_INVALID:
+            'The activation link is invalid, was already used or has expired. Ask the administrator for a new invitation.',
+          INVITATION_MISMATCH:
+            'You signed in with an account that is not the one this invitation was sent to. Nothing was activated: try again with the right account.',
         },
       },
+    },
+    activation: {
+      title: 'Activate your account',
+      checking: 'Checking the activation link…',
+      invalidLink:
+        'This activation link is invalid, was already used, was replaced or has expired. Ask the administrator for a new invitation.',
+      retry: 'Try again',
+      localIntro:
+        'Choose the password of the account {{email}}. Nobody else knows it: it is never sent by e-mail.',
+      externalIntro:
+        'The account {{email}} signs in with {{provider}}. Continue with the {{provider}} account this invitation was sent to, to confirm it is you.',
+      continueWith: 'Continue with {{provider}}',
+      submit: 'Activate account',
+      noConsent:
+        'Activating the account does not subscribe you to marketing communications. You can choose that later.',
+      done: 'Your account is active. Log in to continue.',
+      goToLogin: 'Go to login',
     },
     feedback: {
       loading: 'Loading...',
@@ -553,6 +580,7 @@ const baseMessages = {
       kitchenConfig: 'Configuração da Cozinha',
       sharedResources: 'Recursos partilhados',
       authCallback: 'Início de sessão externo',
+      activateAccount: 'Ativação de conta',
     },
     home: {
       welcome: 'Bem-vindo à LaPrizza',
@@ -619,6 +647,10 @@ const baseMessages = {
           'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gerente do restaurante.',
         ROLES_UNAVAILABLE:
           'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
+        INVITATION_INVALID:
+          'O link de ativação é inválido, já foi usado ou expirou. Peça um novo convite ao administrador.',
+        INVITATION_MISMATCH:
+          'Entrou com uma conta que não é aquela para a qual o convite foi enviado. Nada foi ativado.',
         NETWORK_ERROR:
           'Não foi possível contactar o servidor. Verifique a ligação.',
         UNKNOWN_ERROR: 'Ocorreu um erro inesperado. Tente novamente.',
@@ -628,6 +660,7 @@ const baseMessages = {
         or: 'ou',
         continueWith: 'Continuar com {{provider}}',
         completing: 'A concluir o início de sessão...',
+        activated: 'A sua conta está ativa. Inicie sessão para continuar.',
         errors: {
           ACCESS_DENIED: 'O início de sessão foi cancelado.',
           AUTH_FAILED: 'O início de sessão externo falhou. Tente novamente.',
@@ -647,8 +680,29 @@ const baseMessages = {
             'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gestor do restaurante.',
           ROLES_UNAVAILABLE:
             'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
+          INVITATION_INVALID:
+            'O link de ativação é inválido, já foi usado ou expirou. Peça um novo convite ao administrador.',
+          INVITATION_MISMATCH:
+            'Entrou com uma conta que não é aquela para a qual o convite foi enviado. Nada foi ativado: tente novamente com a conta certa.',
         },
       },
+    },
+    activation: {
+      title: 'Ativar a sua conta',
+      checking: 'A verificar o link de ativação…',
+      invalidLink:
+        'Este link de ativação é inválido, já foi usado, foi substituído ou expirou. Peça um novo convite ao administrador.',
+      retry: 'Tentar novamente',
+      localIntro:
+        'Escolha a palavra-passe da conta {{email}}. Só o utilizador a conhece: nunca é enviada por email.',
+      externalIntro:
+        'A conta {{email}} entra com {{provider}}. Continue com a conta {{provider}} para a qual este convite foi enviado, para confirmar que é o próprio.',
+      continueWith: 'Continuar com {{provider}}',
+      submit: 'Ativar conta',
+      noConsent:
+        'Ativar a conta não subscreve comunicações de marketing. Pode escolher isso mais tarde.',
+      done: 'A sua conta está ativa. Inicie sessão para continuar.',
+      goToLogin: 'Ir para o login',
     },
     feedback: {
       loading: 'A carregar...',

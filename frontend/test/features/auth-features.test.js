@@ -7,6 +7,8 @@ const AUTH_PAGES = {
   'change-password': '/change-password',
   'forgot-password': '/forgot-password',
   'reset-password': '/reset-password',
+  // AA07: link of the activation invitation ({APP_BASE_URL}/activate#token=...)
+  'activate-account': '/activate',
 };
 
 describe('Authentication pages in the registry', () => {

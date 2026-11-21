@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning and Scene Lighting user stories (WEB06, WEB07, VIS05) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting and Account Activation user stories (WEB06, WEB07, VIS05, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -34,6 +34,9 @@ This document shows who uses the LaPrizza information system and which business 
     - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
       - [Use Case Descriptions](#use-case-descriptions-1)
       - [Flow Mapping](#flow-mapping-12)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+      - [Use Case Descriptions](#use-case-descriptions-5)
+      - [Flow Mapping](#flow-mapping-16)
     - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
@@ -54,6 +57,8 @@ This document shows who uses the LaPrizza information system and which business 
 | **Customer**         | External client interacting with the system to consult the catalog or register their data.                        |
 | **3D Visualization Module** | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting. |
 | **AI Scheduling Module** | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser. |
+| **Invited User** | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07). |
+| **External Identity Provider** | Secondary (external) actor. OpenID Connect provider (Google, Microsoft) that authenticates external users (AA02) and confirms the identity of an invited external user (AA07). |
 
 ## Use Cases Diagram
 
@@ -331,6 +336,50 @@ flowchart LR
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md); the container interactions of the execution are in the Level 2 Process View of [Views](../design/views.md).
 
+### AA07: Secure Account Activation
+
+The activation page lets an invited user complete the activation of an inactive account with the single-use invitation sent by AA06 (`{APP_BASE_URL}/activate#token=...`). The page first checks the link and then shows one of two steps. An account created by an Administrator is a local account: the user chooses its password. An account created by a first external login (AA02) is an external account: the user signs in at the identity provider linked to it, and the account is activated only if the authenticated identity is that one. Activation never opens a session, never changes the roles assigned by AA06 and never grants an optional consent: the user signs in afterwards with the normal login (AA01 or AA02). The page and its endpoints are public, because the account is not active yet; the token of the link is what protects them.
+
+```mermaid
+flowchart LR
+    User([Invited User])
+    IdP([External Identity Provider])
+
+    subgraph AA07 [AA07: Secure Account Activation]
+        direction TB
+        UC1([UC1: Check Activation Link])
+        UC2([UC2: Activate Local Account])
+        UC3([UC3: Activate External Account])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+
+    UC2 -.->|<< include >>| UC1
+    UC3 -.->|<< include >>| UC1
+    UC3 -->|<< authenticates at >>| IdP
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :------- | :------------ | :---------- | :--------- | :--- |
+| **UC1: Check Activation Link** | Invited User | Opens the link of the invitation e-mail. The page reads the token from the fragment, removes it from the address bar and asks the back end which step to show, with the masked e-mail of the account and the expiry of the link. | Nothing is used or changed. Unknown, used, replaced or expired links, and accounts that are not waiting for their first activation (active, disabled or activated before), all answer the same `INVITATION_INVALID`, so the answer never tells whether an account exists. Only the hash of the token is looked up. Failed attempts are rate limited per IP. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| **UC2: Activate Local Account** | Invited User | Chooses and confirms the password of an account created by an Administrator and activates it. | Same password policy as AA01, checked before the link is used, so a weak password does not spend it. The invitation is used atomically (single use) and the account is activated with a conditional update (only if it is still inactive and was never activated). Only status, activation date, login counters and the password hash change: roles stay as assigned. No session and no cookie: 204, then the normal login. An external account cannot be activated this way. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| **UC3: Activate External Account** | Invited User | Presses "Continue with <provider>", signs in at the provider linked to the account and comes back with the account activated. | The token goes in a form POST, never in a URL. The OIDC transaction cookie keeps the hash of the token and is marked as an activation, so the callback can neither create an account nor open a session. The authenticated identity must have the same issuer and subject as the identity linked to the account; another identity answers `INVITATION_MISMATCH`, leaves the link unused and the account inactive. | [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AA07**   | UC1: Check Activation Link | Invited User | [Check Activation Link](../flows/account-activation/inspect-activation-link.md) |
+| **AA07**   | UC2: Activate Local Account | Invited User | [Activate Local Account](../flows/account-activation/activate-local-account.md) |
+| **AA07**   | UC3: Activate External Account | Invited User | [Activate External Account](../flows/account-activation/activate-external-account.md) |
+
+The REST API summary, the business rules and the element catalogue of the feature are in the [Account Activation README](../flows/account-activation/README.md).
+
+
 ### VIS05: Scene Lighting
 
 The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager and Employee).
@@ -454,4 +503,3 @@ flowchart LR
 | **AI06**   | UC3: Refresh Data per Calculation | AI Scheduling Module | [Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) |
 
 The REST API summary, the snapshot format, the facts of the knowledge base and the element catalogue are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
-
