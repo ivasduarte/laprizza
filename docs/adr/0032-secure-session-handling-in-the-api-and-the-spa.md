@@ -37,7 +37,8 @@ After ADR 0011, the following gaps remained:
 | D6 | Logout requires a valid access token and revokes the session identified by its `sid`. If the token is expired, the HTTP client refreshes it and retries before the logout request. | Back end routes, SPA `http-client.js` |
 | D7 | Disabling an account or changing its password increments `tokenVersion`, and the persisted sessions of the user are revoked. Roles are read from the database on every request, so role changes apply immediately without touching sessions. | Back end, users and auth services |
 | D8 | The `sessionId` is kept in security log events. It identifies a record but grants nothing without the signed token. Values whose key matches `pass`, `token`, `secret`, `cookie`, `authorization` or `hash` are dropped by the security logger. | Back end, security logger |
-| D9 | No idle timeout. The refresh token has an absolute lifetime (`REFRESH_TOKEN_TTL_DAYS`, 7 by default) and the access token 60 minutes. | Back end configuration |
+| D9 | Idle timeout on top of the absolute expiry (revised 2026-11-21, see below). A session not used for `SESSION_IDLE_TIMEOUT_MINUTES` (30 by default, 0 disables it) is refused: `rotateRefreshToken` only matches sessions with `lastUsedAt` inside the window and `isSessionUsable` applies the same rule to every protected request. Protected requests refresh `lastUsedAt` at most once per minute. The refresh token keeps its absolute lifetime (`REFRESH_TOKEN_TTL_DAYS`, 7 by default) and the access token 60 minutes. | Back end, `auth.domain.js`, `auth.service.js`, `auth-sessions.repository.js` |
+| D10 | Staging and production are served over HTTPS (nginx, port 80 redirects). The `Secure` refresh cookie and the Web Locks of D2 need a secure context; outside `localhost`, HTTP would end the session on every reload. | `deploy/nginx/laprizza.conf`, [HTTPS](../sys-admin/https.md) |
 
 ## Considered Options
 
@@ -60,7 +61,7 @@ Chosen option: "Keep the ADR 0011 model and close the gaps", because the model a
 * `no-store` disables HTTP caching of API reads. Server-side caching is covered by [ADR 0015](./0015-introduce-redis-for-caching.md).
 * Every protected request reads the user and the session from the database.
 * Web Locks and `BroadcastChannel` don't exist in old browsers or insecure contexts. The SPA degrades to the previous behaviour in that case.
-* Without an idle timeout, an abandoned, but still valid, session lasts the absolute expiry or an explicit logout.
+* A user who leaves the application open without any request for longer than the idle window must sign in again (no warning is shown before it ends).
 
 ## Pros and Cons of the Options
 
@@ -81,5 +82,8 @@ Chosen option: "Keep the ADR 0011 model and close the gaps", because the model a
 
 ### Add an idle timeout on top of the absolute expiry
 
-* Good, because it would shorten the exposure of abandoned sessions.
-* Bad, because AA04 doens't require it and it needs a sliding `expiredAt`, plus UX for the warning. To be revisited if the risk assessment asks for it.
+* Good, because it shortens the exposure of abandoned sessions.
+* Good, because it reuses `lastUsedAt` (already stored): no sliding `expiresAt` is needed.
+* Bad, because it adds one write per minute per active session.
+
+**Revision 2026-11-21:** the AA04 clarification requires the session to survive a reload or a new tab "as long as it has not expired through inactivity", so this option was added to the chosen one (D9). The idle timeout complements, and does not replace, the model kept above.

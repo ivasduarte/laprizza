@@ -31,8 +31,8 @@ Guest is not a role: it applies automatically when there is no session ([AA05](.
 ### New accounts
 
 * `POST /users` creates the account **inactive**, with `CUSTOMER` (automatic, AA03) and the requested roles. No password is accepted: the user sets it while activating the account (AA07).
-* The first external login creates an inactive account with `CUSTOMER` only ([AA02](./external-authentication.md)).
-* In both cases the back end sends a **unique activation invitation** to the account e-mail. Automatic `CUSTOMER` does not replace activation.
+* The first external login creates an **active** account with `CUSTOMER` only and opens the session: the verified identity at the provider validates the account ([AA02](./external-authentication.md), clarification of 2026-11-21). No invitation is sent.
+* For `POST /users` the back end sends a **unique activation invitation** to the account e-mail. Automatic `CUSTOMER` does not replace activation.
 
 ### Invitations
 
@@ -164,8 +164,9 @@ A removal is never undone, because undoing it would give back a permission that 
 title: "AA06 - Account states"
 ---
 flowchart LR
-    N(["POST /users or first external login"]) --> I["inactive (pendingActivation)"]
-    I -- "invitation used (AA07)" --> A["active"]
+    N(["POST /users"]) --> I["inactive (pendingActivation)"]
+    E(["first external login"]) --> A
+    I -- "invitation used (AA07) or login at the linked provider" --> A["active"]
     I -- "replacement invitation" --> I
     I -- "disable" --> D0["disabled (never activated)"]
     A -- "disable: sessions and invitations revoked" --> D["disabled"]

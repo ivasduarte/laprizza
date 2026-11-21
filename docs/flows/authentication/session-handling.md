@@ -292,7 +292,7 @@ The lockout is stored per account (and per email hash for unknown accounts), so 
 |---|---|---|
 | `/auth/refresh` and `/auth/logout` share the login rate limiter (10 requests per 15 minutes per IP) | Many reloads can block refresh and look like a logout | Use a separate, more permissive limiter for refresh and logout |
 | A network error during refresh ends the session in the SPA | An offline user is logged out | Only end the session on a `401` from the refresh endpoint |
-| No idle timeout | Abandoned sessions live up to 7 days | Decide with the risk assessment (SYS06) |
+| Idle timeout without warning | A session unused for `SESSION_IDLE_TIMEOUT_MINUTES` (30) ends silently; the next reload or request asks for login ([ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) D9) | Show a warning before it expires if users find it abrupt |
 | External authentication (AA02) uses the same session, but only the cases that need no provider account are in `external-auth-test-flow.http` | The full login is validated by hand | See the manual validation table in [External Authentication](./external-authentication.md) |
 | In-memory rate limiter | Not shared between instances | Redis store if the API is replicated |
 | No Content-Security-Policy | Weaker XSS containment | Add the header at the web server or with `helmet` |

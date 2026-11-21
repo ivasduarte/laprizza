@@ -17,6 +17,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 - On registration the domain validates the address through the external postal code validator (the postal code must match the city) and normalizes the phone number.
 - The email and the phone number must be unique, otherwise the request fails with 409.
 - Updates are partial. The address and the phone number are validated again only when they are provided.
+- Field rules (WEB04), checked by Joi and repeated in the SPA: the name has only letters (any alphabet, with accents) with one space, apostrophe or hyphen between words, never a digit or symbol at the start or end (`PERSON_NAME_PATTERN`); city and district follow `PLACE_NAME_PATTERN` (dots also allowed between words); every text field has a maximum length (`CUSTOMER_FIELD_LIMITS`: name 50, email 254, phone 20, street 100, house number 10, complement 100, city 60, district 40).
 - All operations are restricted to Manager.
 
 ## Notation key

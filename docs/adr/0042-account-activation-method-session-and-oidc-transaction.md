@@ -78,3 +78,11 @@ AA06 creates inactive accounts and sends each one a unique, expiring, single-use
 
 * Good, because it is simpler to call.
 * Bad, because a query string ends up in server and proxy logs and in the `Referer`; an XHR cannot follow the redirect to the provider in the same navigation.
+
+## Revision 2026-11-21 (AA02/AA07 clarification)
+
+The clarification states that an account linked to an external provider is validated by a successful authentication at that provider, and that the first external login creates an active account. Consequently:
+
+* `ExternalAuthService` creates new external accounts `active` (with `activatedAt`) and opens the session; no invitation is issued for them.
+* A linked account still `inactive` and never activated is activated atomically (`activateAccount`) by its next external login, which then opens the session. Accounts deactivated after activation, or disabled, are never reactivated by a login (AA03).
+* The external activation of this ADR (marked OIDC transaction, no session) is kept only for those older accounts and their valid invitations. Local accounts are unchanged.
