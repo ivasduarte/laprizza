@@ -3,6 +3,7 @@ flowchart LR
     SystemUser([System User])
     Employee([Employee])
     Customer([Customer])
+    Guest([Guest])
     Viz3D([3D Visualization Module])
     AI([AI Scheduling Module])
     InvitedUser([Invited User])
@@ -55,6 +56,11 @@ flowchart LR
             UC_RecoverPwd(Recover Password)
             UC_ChangePwd(Change Password)
         end
+        subgraph Authorization [AA05: Authorization Enforcement]
+            UC_Authorize(Check Permissions on Every Request)
+            UC_Permissions(Consult Own Permissions)
+            UC_OwnData(Consult Own Customer Data)
+        end
         subgraph Activation [AA07: Account Activation]
             UC_CheckLink(Check Activation Link)
             UC_Activate(Activate Local or External Account)
@@ -87,16 +93,20 @@ flowchart LR
     SystemUser --> UC_RecoverPwd
     SystemUser --> UC_ChangePwd
 
-    Employee -.->|read-only| UC_Allergens
     Employee -.->|read-only| UC_Prod
     Employee -.->|read-only| UC_Configs
     Employee -.->|read-only| UC_Predef
-    Employee -.->|read-only| UC_Kitchen
-    Employee --> UC_ActiveKitchen
-    Employee --> UC_Stock
+    Employee -.->|read-only, active products| UC_Stock
     Employee --> UC_Catalog
 
     Customer --> UC_Catalog
+    Customer --> UC_OwnData
+
+    Guest --> UC_Catalog
+    Guest --> UC_Authorize
+    SystemUser --> UC_Authorize
+    SystemUser --> UC_Permissions
+    UC_OwnData -.->|include| UC_Authorize
 
     Viz3D -->|consumes| UC_ActiveKitchen
     Viz3D -->|renders| UC_Lit

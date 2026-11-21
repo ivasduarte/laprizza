@@ -1,0 +1,22 @@
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+    Customer([Customer])
+
+    subgraph AA05 [AA05: Authorization Enforcement]
+        direction TB
+        UC3([UC3: Consult Guest Permissions])
+        UC1([UC1: Access Protected Functionality])
+        UC2([UC2: Consult Session Permissions])
+        UC4([UC4: Consult Own Customer Data])
+        UC5([UC5: Record Unauthorized Attempt])
+    end
+
+    Guest --> UC3
+    Guest --> UC1
+    SystemUser --> UC1
+    SystemUser --> UC2
+    Customer --> UC4
+
+    UC4 -.->|<< include >>| UC1
+    UC5 -.->|<< extend >>| UC1

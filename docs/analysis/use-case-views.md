@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, AA01, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, Scene Lighting, Local Authentication, Authorization Enforcement and Account Activation user stories (WEB06, WEB07, VIS05, AA01, AA05, AA07) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -37,27 +37,31 @@ This document shows who uses the LaPrizza information system and which business 
     - [AA01: Local Authentication](#aa01-local-authentication)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
-    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
       - [Use Case Descriptions](#use-case-descriptions-3)
       - [Flow Mapping](#flow-mapping-14)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
       - [Use Case Descriptions](#use-case-descriptions-4)
       - [Flow Mapping](#flow-mapping-15)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-7)
+      - [Flow Mapping](#flow-mapping-18)
 
 ## Actors
 
 | Actor                          | Description                                                                                                                                                                                                                                                    |
 | :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **System User**                | Any registered entity capable of authenticating into the system. Acts as the base role.                                                                                                                                                                        |
-| **LaPrizza Manager**           | Administrator with full back-office access to manage users, customers, products, stock, and configurations.                                                                                                                                                    |
-| **Employee**                   | Restaurant staff member with operational access (e.g., consult catalogs, adjust stock, manage predefined pizzas).                                                                                                                                              |
-| **Customer**                   | External client interacting with the system to consult the catalog or register their data.                                                                                                                                                                     |
+| **LaPrizza Manager**           | Back-office user who manages customers, products, categories, allergens, pizza configurations, stock, kitchen configurations, forecasts, supplier scenarios and planning. User administration is not part of this role (AA06).                                 |
+| **Employee**                   | Restaurant staff member with read-only operational access: the catalogue, products and pizza configurations, and the stock of active products (AA05).                                                                                                          |
+| **Customer**                   | External client interacting with the system to consult the catalog and their own customer data.                                                                                                                                                                |
+| **Guest**                      | Person without a session. Has only the Guest permissions: browse the public catalogue (with the allergens of each product) and use the authentication entry points (AA05).                                                                                     |
 | **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting.                                                                                                               |
 | **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the requirements planning of a forecast. It is called only by the Back-End Application, never by the Manager's browser.                                                                       |
 | **Invited User**               | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07).                                                                                                                                   |
@@ -394,6 +398,57 @@ flowchart LR
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [Authentication README](../flows/authentication/README.md). The session renewal, the restore after a reload and the route guard of the SPA are in [Session Handling (AA04)](../flows/authentication/session-handling.md).
 
+### AA05: Authorization Enforcement
+
+The back end checks the permissions of the requester whenever protected information or functionality is requested. Permissions come from a single role → permission matrix (Table 1, least privilege): a user with several roles gets the union of their permissions, and a request without a session is a Guest with only the Guest permissions (the public catalogue and the authentication entry points). An authentication failure answers `401` and a lack of permission answers `403`, and every refused attempt is recorded without passwords or session secrets. The Web Application reads the same permissions from the back end and shows only the sections and actions the user may use (WEB03), but the API still checks every request. A customer reads only their own personal data, through an endpoint that takes the customer from the session.
+
+```mermaid
+flowchart LR
+    Guest([Guest])
+    SystemUser([System User])
+    Customer([Customer])
+
+    subgraph AA05 [AA05: Authorization Enforcement]
+        direction TB
+        UC3([UC3: Consult Guest Permissions])
+        UC1([UC1: Access Protected Functionality])
+        UC2([UC2: Consult Session Permissions])
+        UC4([UC4: Consult Own Customer Data])
+        UC5([UC5: Record Unauthorized Attempt])
+    end
+
+    Guest --> UC3
+    Guest --> UC1
+    SystemUser --> UC1
+    SystemUser --> UC2
+    Customer --> UC4
+
+    UC4 -.->|<< include >>| UC1
+    UC5 -.->|<< extend >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case                                | Primary Actor      | Description                                                                                                                                | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ADRs                                                                                                                                        |
+| :-------------------------------------- | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| **UC1: Access Protected Functionality** | Guest, System User | Requests a protected page, list, record or action. The back end checks the permission of the route before any business logic runs.         | Routes check permissions, never role names. Roles are read from the database on every request and turned into permissions (union of the roles plus the Guest set), so role changes apply without a new login. No session or an invalid, expired or revoked one answers `401`; a valid session without the permission answers `403 FORBIDDEN`, without naming the permission. Every route is either guarded or a listed public entry point, checked by automated tests. | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
+| **UC2: Consult Session Permissions**    | System User        | The Web Application asks for the current user, roles and permissions after the session is restored and when the tab becomes visible again. | Any authenticated user, whatever the roles. Read from the database, never from the token. No secrets in the answer, never cached, not rate limited.                                                                                                                                                                                                                                                                                                                    | [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../adr/0043-permission-based-authorization-matrix.md) |
+| **UC3: Consult Guest Permissions**      | Guest              | The Web Application asks what a user without a session may use, to build the public menu.                                                  | Public, the same for everyone, no user data. The Web Application keeps no copy of the matrix.                                                                                                                                                                                                                                                                                                                                                                          | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
+| **UC4: Consult Own Customer Data**      | Customer           | Reads their own customer record.                                                                                                           | The customer comes from the session, never from a parameter. The generic `/customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. An account without a linked customer gets `404`.                                                                                                                                                                                                                                                        | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
+| **UC5: Record Unauthorized Attempt**    | - (extends UC1)    | Every `401` and `403` is written to the security log.                                                                                      | User and roles (when known), IP, method, path, route, user agent, required permission and reason. Fields named like a secret are dropped and values that look like a token or a password hash are redacted.                                                                                                                                                                                                                                                            | [ADR-0043](../adr/0043-permission-based-authorization-matrix.md)                                                                            |
+
+#### Flow Mapping
+
+| User Story | Use Case                            | Primary Actor      | Flow Document (SAD)                                                                                 |
+| :--------- | :---------------------------------- | :----------------- | :-------------------------------------------------------------------------------------------------- |
+| **AA05**   | UC1: Access Protected Functionality | Guest, System User | [Access Protected Functionality](../flows/authorization/access-protected-functionality.md)          |
+| **AA05**   | UC2: Consult Session Permissions    | System User        | [Consult Session Permissions](../flows/authorization/consult-session-permissions.md)                |
+| **AA05**   | UC3: Consult Guest Permissions      | Guest              | [Consult Guest Permissions](../flows/authorization/consult-guest-permissions.md)                    |
+| **AA05**   | UC4: Consult Own Customer Data      | Customer           | [Consult Own Customer Data](../flows/authorization/consult-own-customer-data.md)                    |
+| **AA05**   | UC5: Record Unauthorized Attempt    | -                  | Shown in [Access Protected Functionality](../flows/authorization/access-protected-functionality.md) |
+
+The permission matrix, the permission of each resource, the business rules and the element catalogue of the feature are in the [Authorization README](../flows/authorization/README.md).
+
 ### AA07: Secure Account Activation
 
 The activation page lets an invited user complete the activation of an inactive account with the single-use invitation sent by AA06 (`{APP_BASE_URL}/activate#token=...`). The page first checks the link and then shows one of two steps. An account created by an Administrator is a local account: the user chooses its password. An account created by a first external login (AA02) is an external account: the user signs in at the identity provider linked to it, and the account is activated only if the authenticated identity is that one. Activation never opens a session, never changes the roles assigned by AA06 and never grants an optional consent: the user signs in afterwards with the normal login (AA01 or AA02). The page and its endpoints are public, because the account is not active yet; the token of the link is what protects them.
@@ -439,7 +494,7 @@ The REST API summary, the business rules and the element catalogue of the featur
 
 ### VIS05: Scene Lighting
 
-The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager and Employee).
+The 3D viewer lights the kitchen so that every object is visible, realistically rendered and easy to read from any viewpoint. The lighting is client-side only: it lives in the 3D Visualization module embedded in the Web Application and needs no endpoint of its own, since the layout comes from the active kitchen configuration (WEB06 UC3). It has five light sources at fixed positions in world space, derived only from the kitchen dimensions and the assembly line placement: an ambient light, a hemisphere light, a directional light that casts shadows, a spotlight over the kitchen that casts shadows and a spotlight over the assembly line. The viewer is shown on the 3D Visualization page and on the Kitchen Configuration page, which require the `kitchen:read` permission (Manager).
 
 ```mermaid
 flowchart LR

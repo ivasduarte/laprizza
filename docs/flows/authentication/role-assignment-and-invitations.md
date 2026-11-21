@@ -26,7 +26,7 @@ The website roles follow Table 1. `ADMINISTRATOR` is a new base role that manage
 | `roles:assign:<role>` | ADMINISTRATOR (the four roles) | Checked by the service for each role added or removed |
 | `resources:write` | ADMINISTRATOR | Upload, replace and delete in the shared folder ([SYS04](../../sys-admin/shared-resources.md)). Every role keeps `resources:read` |
 
-Guest is not a role: it applies automatically when there is no session ([AA05](./session-handling.md)).
+Guest is not a role: it applies automatically when there is no session ([AA05](../authorization/README.md)).
 
 ### New accounts
 
