@@ -16,6 +16,7 @@ import KitchenConfigurationForm from './kitchen-configuration-form.jsx';
 import KitchenViewer from './kitchen-viewer.jsx';
 import AssemblyLineConfigurationSection from '../assembly-line-configuration/assembly-line-configuration-section.jsx';
 import './kitchen-configuration.css';
+import Loading from '../../shared/ui/feedback/loading.jsx';
 
 export default function KitchenConfigurationPage() {
   const { t } = useTranslation();
@@ -160,7 +161,7 @@ export default function KitchenConfigurationPage() {
       {!isFormOpen && !viewingJson && (
         <>
           {loading ? (
-            <p role="status">{t('layout.loading')}</p>
+            <Loading />
           ) : configs.length === 0 && !listError ? (
             <p>{t('kitchenConfig.noConfigs')}</p>
           ) : (

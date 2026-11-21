@@ -103,6 +103,13 @@ export const authApi = {
     submitForm(externalActivationForm(getApiBaseUrl(), token));
   },
 
+  /** AA02: contact phone asked after the first external login; refreshes the session user. */
+  async setContactPhone(phoneNumber) {
+    const user = await api.put('/auth/me/phone', { phoneNumber });
+    sessionStore.updateUser(user);
+    return user;
+  },
+
   changePassword(currentPassword, newPassword) {
     return api.post('/auth/password/change', { currentPassword, newPassword });
   },

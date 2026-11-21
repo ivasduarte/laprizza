@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKitchenConfiguration } from './use-kitchen-configuration.js';
 import KitchenScene from '../visualization3d/kitchen-scene.jsx';
+import Loading from '../../shared/ui/feedback/loading.jsx';
 
 /**
  * Integration point of the 3D Visualization module (VIS01-VIS07).
@@ -31,7 +32,7 @@ export default function KitchenViewer() {
     loadActive().catch(() => {});
   }, [loadActive]);
 
-  if (loading) return <p role="status">{t('layout.loading')}</p>;
+  if (loading) return <Loading />;
 
   if (error || !activeConfig) {
     return (

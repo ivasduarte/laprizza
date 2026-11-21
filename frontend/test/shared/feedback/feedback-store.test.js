@@ -32,7 +32,7 @@ describe('feedback store', () => {
     assert.equal(store.getState(), store.getState());
   });
 
-  it('adds toasts with type-specific auto-dismiss and dedupes by key', () => {
+  it('adds toasts that close after 3 s and dedupes by key', () => {
     const store = createFeedbackStore();
     const success = store.notify({ type: 'success', messageKey: 'a.saved' });
     const again = store.notify({ type: 'success', messageKey: 'a.saved' });
@@ -40,8 +40,8 @@ describe('feedback store', () => {
 
     assert.equal(success, again);
     const [first, second] = store.getState().toasts;
-    assert.equal(first.autoDismissMs, 5000);
-    assert.equal(second.autoDismissMs, null); // errors stay until dismissed
+    assert.equal(first.autoDismissMs, 3000);
+    assert.equal(second.autoDismissMs, 3000); // every type closes after 3 s
     assert.equal(store.getState().toasts.length, 2);
     assert.notEqual(success, error);
   });

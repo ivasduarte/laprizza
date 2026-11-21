@@ -1,7 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { features } from '../../src/features/registry.js';
-import { visibleFeatures } from '../../src/features/navigation.js';
+import {
+  breadcrumbTrail,
+  groupFeatures,
+  NAV_GROUPS,
+  visibleFeatures,
+} from '../../src/features/navigation.js';
 
 /**
  * Permissions granted by the back end to each base role (AA05 matrix, Table 1), written by hand:
@@ -10,7 +15,13 @@ import { visibleFeatures } from '../../src/features/navigation.js';
 const PERMISSIONS = {
   GUEST: ['catalogue:read'],
   CUSTOMER: ['catalogue:read', 'customers:read:own', 'resources:read'],
-  EMPLOYEE: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
+  EMPLOYEE: [
+    'catalogue:read',
+    'kitchen:read',
+    'products:read',
+    'resources:read',
+    'stock:read',
+  ],
   MANAGER: [
     'allergens:read',
     'allergens:write',
@@ -74,9 +85,11 @@ describe('Dynamic navigation menu (WEB03)', () => {
     assert.deepEqual(menuOf('NO_ROLES'), ['home', 'catalogue']);
   });
 
-  it('an Employee sees the shared resources and the read-only catalogue pages, but nothing of the kitchen (MANAGER only)', () => {
+  it('an Employee sees the shared resources, the read-only catalogue pages and the kitchen viewer (Table 1)', () => {
     assert.deepEqual(menuOf('EMPLOYEE'), [
       'home',
+      'visualization3d',
+      'kitchen-configuration',
       'shared-resources',
       'product-categories',
       'pizza-sizes',
@@ -175,6 +188,105 @@ describe('Dynamic navigation menu (WEB03)', () => {
         authenticated: true,
       }).map((f) => f.id);
       assert.deepEqual(ids, ['home', 'catalogue'], String(permissions));
+    }
+  });
+});
+
+describe('Menu sections (☰ panel)', () => {
+  const visible = (persona) =>
+    visibleFeatures(features, {
+      permissions: PERMISSIONS[persona],
+      authenticated: true,
+    });
+
+  it('every menu feature belongs to a known section (only Home is untitled)', () => {
+    const known = new Set(NAV_GROUPS.map((g) => g.id));
+    const menu = features.filter((f) => f.showInNav !== false);
+    const untitled = menu
+      .filter((f) => !known.has(f.navGroup))
+      .map((f) => f.id);
+    assert.deepEqual(untitled, ['home']);
+  });
+
+  it('keeps every visible link exactly once, Home first', () => {
+    for (const persona of Object.keys(PERMISSIONS)) {
+      const flat = groupFeatures(visible(persona)).flatMap((s) =>
+        s.items.map((f) => f.id)
+      );
+      assert.deepEqual(
+        [...flat].sort(),
+        visible(persona)
+          .map((f) => f.id)
+          .sort(),
+        persona
+      );
+      assert.equal(flat[0], 'home', persona);
+    }
+  });
+
+  it('drops empty sections, so no title appears without links', () => {
+    for (const persona of Object.keys(PERMISSIONS)) {
+      for (const section of groupFeatures(visible(persona))) {
+        assert.ok(section.items.length > 0, `${persona}:${section.id}`);
+      }
+    }
+    const guest = groupFeatures(
+      visibleFeatures(features, {
+        permissions: ['catalogue:read'],
+        authenticated: false,
+      })
+    );
+    assert.deepEqual(
+      guest.map((s) => s.id),
+      [null, 'menu']
+    );
+  });
+
+  it('section titles are translated', async () => {
+    const { messages } = await import('../../src/shared/i18n/message.js');
+    for (const language of Object.keys(messages)) {
+      for (const { labelKey } of NAV_GROUPS) {
+        const text = labelKey
+          .split('.')
+          .reduce((n, k) => n?.[k], messages[language]);
+        assert.ok(text, `${language}:${labelKey}`);
+      }
+    }
+  });
+});
+
+describe('Breadcrumbs (WEB02)', () => {
+  const trail = (path, query = '') =>
+    breadcrumbTrail(path, new URLSearchParams(query), features).map(({ labelKey, to }) =>
+      to ? `${labelKey}->${to}` : labelKey
+    );
+
+  it('shows Home > Section > Page, the page not being a link', () => {
+    assert.deepEqual(trail('/stock'), ['nav.home->/', 'nav.groups.kitchen', 'nav.stock']);
+  });
+
+  it('adds the detail and the form levels, each one linking back to the previous', () => {
+    assert.deepEqual(trail('/products', 'id=abc&mode=edit'), [
+      'nav.home->/',
+      'nav.groups.menu',
+      'nav.products->/products',
+      'breadcrumbs.detail->/products?id=abc',
+      'breadcrumbs.edit',
+    ]);
+    assert.deepEqual(trail('/customers', 'mode=new').at(-1), 'breadcrumbs.new');
+  });
+
+  it('is empty on the home page and on unknown paths', () => {
+    assert.deepEqual(trail('/'), []);
+    assert.deepEqual(trail('/nope'), []);
+  });
+
+  it('has translated labels in both languages', async () => {
+    const { messages } = await import('../../src/shared/i18n/message.js');
+    for (const language of Object.keys(messages)) {
+      for (const key of ['label', 'new', 'detail', 'edit']) {
+        assert.ok(messages[language].breadcrumbs[key], `${language}:${key}`);
+      }
     }
   });
 });

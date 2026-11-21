@@ -391,13 +391,20 @@ export const web05Messages = {
       viewProduct: 'View product',
       increase: 'Stock in',
       decrease: 'Stock out',
+      set: 'Stock count',
       form: {
         increaseTitle: 'Stock in of {{name}}',
         decreaseTitle: 'Stock out of {{name}}',
+        setTitle: 'Stock count of {{name}}',
         increaseAmount: 'Units to add',
         decreaseAmount: 'Units to remove',
+        setAmount: 'Counted quantity',
         amount: 'Units',
       },
+      confirmUnusualTitle: 'Unusual quantity',
+      confirmUnusual:
+        'The stock of "{{name}}" will change from {{from}} to {{to}} units. This is far from a usual movement: please confirm the value.',
+      counted: 'Stock of "{{name}}" set to {{amount}} unit(s).',
       confirmDecreaseTitle: 'Stock out',
       confirmDecrease:
         'Remove {{amount}} unit(s) of "{{name}}"? Current stock: {{quantity}}.',
@@ -409,6 +416,10 @@ export const web05Messages = {
         insufficient:
           'There is not enough stock: this stock out would leave a negative quantity (current stock: {{quantity}}).',
         invalid: 'Check the units: they must be a whole number greater than 0.',
+        invalidCount:
+          'Check the counted quantity: it must be a whole number, 0 or greater.',
+        aboveMaximum:
+          'The stock of a product cannot exceed {{max}} units. Check the value.',
       },
     },
     predefinedPizzas: {
@@ -547,6 +558,7 @@ export const web05Messages = {
         contacts: 'Contacts',
         email: 'Email',
         phoneNumber: 'Phone number',
+        nameHint: 'Letters only (accents allowed), e.g. Ana Sá-Pereira.',
         phoneHint: 'Portuguese number, e.g. 912 345 678 or +351 212 345 678.',
         address: 'Address',
         street: 'Street',
@@ -964,13 +976,20 @@ export const web05Messages = {
       viewProduct: 'Ver produto',
       increase: 'Entrada',
       decrease: 'Saída',
+      set: 'Contagem',
       form: {
         increaseTitle: 'Entrada de stock de {{name}}',
         decreaseTitle: 'Saída de stock de {{name}}',
+        setTitle: 'Contagem de stock de {{name}}',
         increaseAmount: 'Unidades a adicionar',
         decreaseAmount: 'Unidades a retirar',
+        setAmount: 'Quantidade contada',
         amount: 'Unidades',
       },
+      confirmUnusualTitle: 'Quantidade fora do normal',
+      confirmUnusual:
+        'O stock de "{{name}}" vai passar de {{from}} para {{to}} unidades. É um movimento muito acima do habitual: confirme o valor.',
+      counted: 'O stock de "{{name}}" passou a {{amount}} unidade(s).',
       confirmDecreaseTitle: 'Saída de stock',
       confirmDecrease:
         'Retirar {{amount}} unidade(s) de "{{name}}"? Stock atual: {{quantity}}.',
@@ -983,6 +1002,10 @@ export const web05Messages = {
           'Não há stock suficiente: esta saída deixaria o stock negativo (stock atual: {{quantity}}).',
         invalid:
           'Verifique as unidades: têm de ser um número inteiro maior do que 0.',
+        invalidCount:
+          'Verifique a quantidade contada: tem de ser um número inteiro igual ou maior do que 0.',
+        aboveMaximum:
+          'O stock de um produto não pode ultrapassar {{max}} unidades. Verifique o valor.',
       },
     },
     predefinedPizzas: {
@@ -1121,6 +1144,7 @@ export const web05Messages = {
         contacts: 'Contactos',
         email: 'Email',
         phoneNumber: 'Telefone',
+        nameHint: 'Apenas letras (com acentos), p. ex. Ana Sá-Pereira.',
         phoneHint:
           'Número português, por exemplo 912 345 678 ou +351 212 345 678.',
         address: 'Morada',

@@ -234,7 +234,7 @@ function SceneElementModel({ element, material }) {
         {/* Base metálica da estrutura (cinzento metálico) */}
         <mesh position={[0, -0.2, 0]}>
           <boxGeometry args={[1, 0.4, 0.8]} />
-          <meshStandardMaterial color="#708090" />
+          <Surface material={material} color="#708090" />
         </mesh>
         {/* Tapete rolante (borracha escura) */}
         <mesh position={[0, 0.05, 0]}>

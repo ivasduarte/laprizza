@@ -1,6 +1,8 @@
 /**
  * requiresAuth: needs a session (any user)
  * permission: needs this permission, granted by backend
+ * navGroup: section of the ☰ menu (features/navigation.js NAV_GROUPS); none = top of the menu
+ * requiresContactPhone: customer page; asks for the phone first when the account has none (AA02)
  * Pages without either of the above are public.
  */
 
@@ -15,6 +17,7 @@ export const features = [
     id: 'visualization3d',
     path: '/visualization3d',
     labelKey: 'nav.visualization3d',
+    navGroup: 'kitchen',
     requiresAuth: true,
     permission: 'kitchen:read',
     load: () => import('./visualization3d/visualization3d-page.jsx'),
@@ -23,6 +26,7 @@ export const features = [
     id: 'ai',
     path: '/ai',
     labelKey: 'nav.ai',
+    navGroup: 'kitchen',
     requiresAuth: true,
     permission: 'planning:execute',
     load: () => import('./ai/ai-page.jsx'),
@@ -67,6 +71,7 @@ export const features = [
     id: 'kitchen-configuration',
     path: '/kitchen-configurations',
     labelKey: 'nav.kitchenConfig',
+    navGroup: 'kitchen',
     requiresAuth: true,
     permission: 'kitchen:read',
     load: () =>
@@ -76,6 +81,7 @@ export const features = [
     id: 'shared-resources',
     path: '/shared-resources',
     labelKey: 'nav.sharedResources',
+    navGroup: 'administration',
     requiresAuth: true,
     permission: 'resources:read',
     load: () => import('./shared-resources/shared-resources-page.jsx'),
@@ -84,6 +90,7 @@ export const features = [
     id: 'users',
     path: '/users',
     labelKey: 'nav.users',
+    navGroup: 'administration',
     requiresAuth: true,
     permission: 'users:read',
     load: () => import('./users/users-page.jsx'),
@@ -99,6 +106,7 @@ export const features = [
     id: 'product-categories',
     path: '/product-categories',
     labelKey: 'nav.productCategories',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'products:read',
     load: () => import('./product-categories/product-categories-page.jsx'),
@@ -107,6 +115,7 @@ export const features = [
     id: 'allergens',
     path: '/allergens',
     labelKey: 'nav.allergens',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'allergens:read',
     load: () => import('./allergens/allergens-page.jsx'),
@@ -115,6 +124,7 @@ export const features = [
     id: 'pizza-sizes',
     path: '/pizza-sizes',
     labelKey: 'nav.pizzaSizes',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'products:read',
     load: () => import('./pizza-sizes/pizza-sizes-page.jsx'),
@@ -123,6 +133,7 @@ export const features = [
     id: 'pizza-component-types',
     path: '/pizza-component-types',
     labelKey: 'nav.pizzaComponentTypes',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'products:read',
     load: () =>
@@ -132,6 +143,7 @@ export const features = [
     id: 'products',
     path: '/products',
     labelKey: 'nav.products',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'products:read',
     load: () => import('./products/products-page.jsx'),
@@ -140,6 +152,7 @@ export const features = [
     id: 'stock',
     path: '/stock',
     labelKey: 'nav.stock',
+    navGroup: 'kitchen',
     requiresAuth: true,
     permission: 'stock:read',
     load: () => import('./stock/stock-page.jsx'),
@@ -148,6 +161,7 @@ export const features = [
     id: 'predefined-pizzas',
     path: '/predefined-pizzas',
     labelKey: 'nav.predefinedPizzas',
+    navGroup: 'menu',
     requiresAuth: true,
     permission: 'products:read',
     load: () => import('./predefined-pizzas/predefined-pizzas-page.jsx'),
@@ -156,12 +170,14 @@ export const features = [
     id: 'catalogue',
     path: '/catalogue',
     labelKey: 'nav.catalogue',
+    navGroup: 'menu',
     load: () => import('./catalogue/catalogue-page.jsx'),
   },
   {
     id: 'customers',
     path: '/customers',
     labelKey: 'nav.customers',
+    navGroup: 'customers',
     requiresAuth: true,
     permission: 'customers:read',
     load: () => import('./customers/customers-page.jsx'),
@@ -170,8 +186,19 @@ export const features = [
     id: 'my-data',
     path: '/my-data',
     labelKey: 'nav.myData',
+    navGroup: 'customers',
     requiresAuth: true,
+    requiresContactPhone: true,
     permission: 'customers:read:own',
     load: () => import('./customers/my-customer-page.jsx'),
+  },
+  {
+    // AA02: asked once after the first external login (providers do not supply the phone).
+    id: 'complete-profile',
+    path: '/complete-profile',
+    labelKey: 'nav.completeProfile',
+    showInNav: false,
+    requiresAuth: true,
+    load: () => import('./complete-profile/complete-profile-page.jsx'),
   },
 ];

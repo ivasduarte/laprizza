@@ -13,11 +13,13 @@
  * @property {number|null} autoDismissMs - `null` keeps it until dismissed.
  */
 
+/** Every toast closes after 3 s (paused while hovered or focused, see toast-region.jsx). */
+export const DEFAULT_AUTO_DISMISS_MS = 3000;
 const AUTO_DISMISS_MS = {
-  success: 5000,
-  info: 6000,
-  warning: null,
-  error: null,
+  success: DEFAULT_AUTO_DISMISS_MS,
+  info: DEFAULT_AUTO_DISMISS_MS,
+  warning: DEFAULT_AUTO_DISMISS_MS,
+  error: DEFAULT_AUTO_DISMISS_MS,
 };
 const MAX_TOASTS = 4;
 

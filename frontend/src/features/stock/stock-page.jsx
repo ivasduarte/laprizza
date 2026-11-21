@@ -150,6 +150,21 @@ export default function StockPage() {
                               >
                                 {t('stock.decrease')}
                               </button>
+                              {/* WEB04: record a physical count directly. */}
+                              <button
+                                type="button"
+                                className="secondary small"
+                                onClick={() =>
+                                  setEditing({
+                                    productId: stock.productId,
+                                    operation: 'set',
+                                  })
+                                }
+                                disabled={editing !== null}
+                                aria-label={`${t('stock.set')}: ${name}`}
+                              >
+                                {t('stock.set')}
+                              </button>
                             </>
                           )}
                         </div>

@@ -27,7 +27,8 @@ const EXPECTED_PERMISSIONS = {
   // WEB05: the customer's own record (GET /customers/me)
   'my-data': 'customers:read:own',
 };
-const SESSION_ONLY = ['change-password'];
+// complete-profile (AA02): contact phone of the signed-in account, before any customer permission.
+const SESSION_ONLY = ['change-password', 'complete-profile'];
 // auth-callback (AA02): landing page of the external login; the session does not exist yet.
 // activate-account (AA07): the account is not active yet, so there is no session to require.
 // catalogue (WEB05): the sellable catalogue is open to Guests (catalogue:read, Table 1).

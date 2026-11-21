@@ -7,7 +7,7 @@
  */
 
 /**
- * Type of adjustment. Cannot decrease below 0.
+ * Type of adjustment. The result must stay between 0 and 100000 units.
  */
 export type PatchStockProductIdBodyOperation = typeof PatchStockProductIdBodyOperation[keyof typeof PatchStockProductIdBodyOperation];
 
@@ -15,4 +15,5 @@ export type PatchStockProductIdBodyOperation = typeof PatchStockProductIdBodyOpe
 export const PatchStockProductIdBodyOperation = {
   increase: 'increase',
   decrease: 'decrease',
+  set: 'set',
 } as const;

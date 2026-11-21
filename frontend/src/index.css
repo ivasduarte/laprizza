@@ -2,6 +2,8 @@
  * Light is the default; [data-theme='dark'] is set on <html> by index.html / theme-store.js. */
 :root {
   color-scheme: light;
+  /* The only typeface of the application (system UI font): one font for daily use. */
+  --font-app: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --color-primary: #c8231a;
   --color-primary-dark: #9e1a13;
   --color-on-primary: #fff;
@@ -92,11 +94,7 @@
 
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-app);
   line-height: 1.5;
   color: var(--color-text);
   background-color: var(--color-bg);
@@ -184,13 +182,14 @@ textarea:focus-visible {
 }
 
 .layout-nav {
-  flex: 1;
-  min-width: 0;
+  flex: none;
+  order: 3; /* ☰ at the far right, after the language/theme/account controls */
 }
 
 .layout-actions {
   display: flex;
   flex: none;
+  order: 2;
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
@@ -299,31 +298,67 @@ textarea:focus-visible {
   color: var(--color-accent);
 }
 
-/* Navigation */
+/* Navigation: always behind ☰, as a panel under the header with one column per section. */
+
+.nav-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  align-items: start;
+  gap: 1rem 1.5rem;
+  max-height: calc(100dvh - var(--header-h));
+  margin-top: 3px; /* below the header border */
+  padding: 1rem max(var(--space-page), env(safe-area-inset-right)) 1.25rem
+    max(var(--space-page), env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-bottom: 3px solid var(--color-outline);
+  background: var(--color-surface);
+  box-shadow: 0 6px 0 var(--color-accent);
+}
+
+.layout-nav[data-open='true'] .nav-panel {
+  display: grid;
+}
+
+/* Home (no section) spans the whole first row. */
+.nav-group-top {
+  grid-column: 1 / -1;
+}
+
+.nav-group-title {
+  margin: 0 0 0.35rem;
+  padding-inline: 1rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 
 .nav-list {
   display: flex;
-  flex-wrap: nowrap;
+  flex-direction: column;
   gap: 0.25rem;
   margin: 0;
-  padding: 0.25rem 0;
-  overflow-x: auto; /* safety net: a long translation scrolls instead of wrapping */
+  padding: 0;
   list-style: none;
-  scrollbar-width: none;
 }
 
-.nav-list::-webkit-scrollbar {
-  display: none;
+.nav-group-top .nav-list {
+  flex-flow: row wrap;
 }
 
 .nav-list a {
   display: block;
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
+  padding: 0.65rem 1rem; /* ≥ 44px touch target */
+  border-radius: 12px;
   color: var(--color-ink);
   font-weight: 700;
   text-decoration: none;
-  white-space: nowrap;
 }
 
 .nav-list a:hover {
@@ -335,8 +370,10 @@ textarea:focus-visible {
   color: var(--color-on-primary);
 }
 
-.layout-nav .nav-toggle {
-  display: none;
+@media (prefers-reduced-motion: no-preference) {
+  .layout-nav[data-open='true'] .nav-panel {
+    animation: nav-drop 0.18s ease-out;
+  }
 }
 
 /* Round header controls (theme, account, menu): same size in every state. */
@@ -965,59 +1002,10 @@ th {
 }
 
 /* ───────────── Responsive ─────────────
- * ≥ 80rem  desktop  : full inline navigation
- * < 80rem  tablet   : navigation collapses into the ☰ dropdown
+ * every width      : navigation behind the ☰ panel (sections side by side when they fit)
  * < 48rem  phone    : single-column content
  * < 30rem  small    : brand name hidden, compact controls
  */
-
-@media (max-width: 80rem) {
-  .layout-nav {
-    flex: none;
-    order: 3; /* the ☰ button sits at the far right */
-  }
-
-  .layout-nav .nav-toggle {
-    display: inline-grid;
-  }
-
-  .nav-list {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    left: 0;
-    display: none;
-    flex-direction: column;
-    gap: 0.25rem;
-    max-height: calc(100dvh - var(--header-h));
-    margin-top: 3px; /* below the header border */
-    padding: 0.75rem var(--space-page) 1rem;
-    overflow-y: auto;
-    border-bottom: 3px solid var(--color-outline);
-    background: var(--color-surface);
-    box-shadow: 0 6px 0 var(--color-accent);
-  }
-
-  .layout-nav[data-open='true'] .nav-list {
-    display: flex;
-  }
-
-  .nav-list a {
-    padding: 0.75rem 1rem; /* ≥ 44px touch target */
-    border-radius: 12px;
-    font-size: 1.05rem;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .layout-nav[data-open='true'] .nav-list {
-      animation: nav-drop 0.18s ease-out;
-    }
-  }
-
-  .layout-actions {
-    order: 2;
-  }
-}
 
 @keyframes nav-drop {
   from {
@@ -1151,4 +1139,33 @@ th {
   .layout-header {
     position: static;
   }
+}
+
+/* VIS06 lighting panel (lil-gui ships its own font stacks): same typeface as the app.
+   Doubled class: lil-gui injects its stylesheet after this one. */
+.lil-gui.lil-gui {
+  --font-family: var(--font-app);
+  --font-family-mono: var(--font-app);
+}
+
+/* WEB02: breadcrumbs above the page content; one line, same height on every page. */
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.breadcrumbs li + li::before {
+  content: '›';
+  margin-right: 0.25rem;
+  color: var(--color-muted);
+}
+
+.breadcrumbs [aria-current='page'] {
+  font-weight: 700;
 }

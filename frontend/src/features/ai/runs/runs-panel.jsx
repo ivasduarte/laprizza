@@ -6,6 +6,7 @@ import { LoadError, VersionLabel } from '../shared/ai-ui.jsx';
 import { dash, useFormat } from '../shared/ai-format.js';
 import { groupForecasts } from '../forecasts/forecast-model.js';
 import { BomResult, RequirementsResult } from '../planning/planning-result.jsx';
+import Loading from '../../../shared/ui/feedback/loading.jsx';
 
 /**
  * WEB07 saved results (`/planning/runs`). Every run keeps the forecast version, the supplier
@@ -67,7 +68,7 @@ export default function RunsPanel({ openRunId = null }) {
         <LoadError error={runs.error} onRetry={() => runs.refetch()} />
 
         {runs.isPending ? (
-          <p role="status">{t('layout.loading')}</p>
+          <Loading />
         ) : (runs.data ?? []).length === 0 && !runs.error ? (
           <p className="message">{t('ai.run.empty')}</p>
         ) : (
@@ -173,7 +174,7 @@ function RunDetail({ id, onClose }) {
     staleTime: Infinity, // a saved run never changes
   });
 
-  if (run.isPending) return <p role="status">{t('layout.loading')}</p>;
+  if (run.isPending) return <Loading />;
   if (run.error)
     return (
       <div className="ai-card">

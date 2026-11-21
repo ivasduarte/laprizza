@@ -1,0 +1,83 @@
+/* JSON editor with line numbers (WEB04). Gutter, highlights and text share one line height. */
+.json-editor-frame {
+  --json-line-height: 1.5rem;
+  --json-padding: 0.5rem;
+  position: relative;
+  display: flex;
+  height: 300px;
+  overflow: hidden;
+  border: 2px solid var(--color-outline);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.json-editor-frame:focus-within {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.json-editor-gutter {
+  flex: none;
+  min-width: 3.25rem;
+  margin: 0;
+  padding: var(--json-padding) 0.5rem;
+  list-style: none;
+  border-right: 1px solid var(--color-outline);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--json-line-height);
+  text-align: right;
+  user-select: none;
+  will-change: transform;
+}
+
+.json-editor-gutter .is-error {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.json-editor-gutter .is-error::before {
+  content: '● ';
+}
+
+.json-editor-body {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.json-editor-highlights {
+  position: absolute;
+  inset: var(--json-padding) 0 auto;
+  pointer-events: none;
+}
+
+.json-editor-highlight {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: var(--json-line-height);
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.json-editor-frame .json-editor {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--json-padding);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: var(--json-line-height);
+  white-space: pre;
+  overflow: auto;
+  resize: none;
+}
+
+.json-editor-frame .json-editor:focus {
+  outline: none;
+}

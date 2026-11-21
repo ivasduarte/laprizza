@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { normalizeError } from '../../api/error-normalizer.js';
 import { errorMessage } from '../../api/error-text.js';
+import Loading from '../feedback/loading.jsx';
 
 export default function QueryState({
   query,
@@ -23,7 +24,7 @@ export default function QueryState({
     </div>
   );
 
-  if (query.isPending) return <p role="status">{t('layout.loading')}</p>;
+  if (query.isPending) return <Loading />;
 
   if (query.isError) {
     const error = normalizeError(query.error);
@@ -75,4 +76,4 @@ export default function QueryState({
   }
 
   return children;
-}
+}

@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CALLBACK_ERROR_CODES,
+  callbackTarget,
   externalLoginUrl,
   parseCallbackParams,
 } from '../../../src/shared/auth/external-auth.js';
@@ -23,6 +24,27 @@ describe('externalLoginUrl', () => {
     ['', 'Google', '../x', 'google?x=1', 'a/b', undefined].forEach((name) => {
       assert.throws(() => externalLoginUrl('/api/v2', name), /Invalid provider/, String(name));
     });
+  });
+});
+
+describe('callbackTarget', () => {
+  const success = { status: 'success', code: null };
+
+  it('waits while the session is being restored', () => {
+    assert.equal(callbackTarget(success, 'loading', null), null);
+    assert.equal(callbackTarget(success, 'unknown', null), null);
+  });
+
+  it('goes home once authenticated, or to the phone form on a first external login', () => {
+    assert.equal(callbackTarget(success, 'authenticated', { phoneRequired: false }), '/');
+    assert.equal(callbackTarget(success, 'authenticated', { phoneRequired: true }), '/complete-profile');
+  });
+
+  it('never leaves an error, an activation or a refused session', () => {
+    const authenticated = { phoneRequired: false };
+    assert.equal(callbackTarget({ status: 'error', code: 'AUTH_FAILED' }, 'authenticated', authenticated), null);
+    assert.equal(callbackTarget({ status: 'activated', code: null }, 'authenticated', authenticated), null);
+    assert.equal(callbackTarget(success, 'anonymous', null), null);
   });
 });
 

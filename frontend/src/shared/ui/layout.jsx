@@ -11,7 +11,9 @@ import GlobalProgress from './feedback/global-progress.jsx';
 import ToastRegion from './feedback/toast-region.jsx';
 import ConfirmDialogHost from './feedback/confirm-dialog-host.jsx';
 import { useDismiss } from './use-dismiss.js';
-import { visibleFeatures } from '../../features/navigation.js';
+import { groupFeatures, visibleFeatures } from '../../features/navigation.js';
+import Loading from './feedback/loading.jsx';
+import Breadcrumbs from './breadcrumbs.jsx';
 import { usePermissions } from '../auth/use-can.js';
 import { useSession } from '../auth/use-session.js';
 
@@ -20,10 +22,12 @@ export default function Layout() {
 
   const permissions = usePermissions();
   const { status } = useSession();
-  const navFeatures = visibleFeatures(features, {
-    permissions,
-    authenticated: status === 'authenticated',
-  });
+  const navSections = groupFeatures(
+    visibleFeatures(features, {
+      permissions,
+      authenticated: status === 'authenticated',
+    })
+  );
 
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef(null);
@@ -55,7 +59,7 @@ export default function Layout() {
             aria-label={t('layout.primaryNav')}
             data-open={menuOpen}
           >
-            {/* Only visible below the desktop breakpoint (see index.css). */}
+            {/* The menu always sits behind ☰: the header keeps the same layout at any width. */}
             <button
               ref={toggleRef}
               type="button"
@@ -67,19 +71,41 @@ export default function Layout() {
             >
               <span className="nav-toggle-bars" aria-hidden="true" />
             </button>
-            <ul id={navListId} className="nav-list">
-              {navFeatures.map((feature) => (
-                <li key={feature.id}>
-                  <NavLink
-                    to={feature.path}
-                    end={feature.path === '/'}
-                    onClick={closeMenu}
+            <div id={navListId} className="nav-panel">
+              {navSections.map((section) => {
+                const titleId = section.id && `${navListId}-${section.id}`;
+                return (
+                  <div
+                    key={section.id ?? 'top'}
+                    className={
+                      section.id ? 'nav-group' : 'nav-group nav-group-top'
+                    }
                   >
-                    {t(feature.labelKey)}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+                    {section.labelKey && (
+                      <p id={titleId} className="nav-group-title">
+                        {t(section.labelKey)}
+                      </p>
+                    )}
+                    <ul
+                      className="nav-list"
+                      aria-labelledby={titleId || undefined}
+                    >
+                      {section.items.map((feature) => (
+                        <li key={feature.id}>
+                          <NavLink
+                            to={feature.path}
+                            end={feature.path === '/'}
+                            onClick={closeMenu}
+                          >
+                            {t(feature.labelKey)}
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </nav>
 
           <div className="layout-actions">
@@ -90,7 +116,8 @@ export default function Layout() {
         </div>
       </header>
       <main id="main-content" className="layout-main" tabIndex={-1}>
-        <Suspense fallback={<p role="status">{t('layout.loading')}</p>}>
+        <Breadcrumbs features={features} />
+        <Suspense fallback={<Loading variant="page" />}>
           <Outlet />
         </Suspense>
       </main>

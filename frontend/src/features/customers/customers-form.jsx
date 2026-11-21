@@ -17,6 +17,9 @@ import {
   maxLength,
   minLength,
   pattern,
+  personName,
+  placeName,
+  portuguesePhone,
   required,
   validateForm,
 } from '../../shared/forms/validators.js';
@@ -28,33 +31,36 @@ import {
   getCustomerErrorKey,
 } from './customers-errors.js';
 
-/** Portuguese phone number, same rule as the back end (9 digits, optional +351 / 00351). */
-const isPortuguesePhone = () => (value) => {
-  if (!value) return null;
-  let digits = String(value).replace(/[\s\-().]/g, '');
-  if (digits.startsWith('+351')) digits = digits.slice(4);
-  else if (digits.startsWith('00351')) digits = digits.slice(5);
-  else if (digits.startsWith('351') && digits.length === 12) {
-    digits = digits.slice(3);
-  }
-  return /^(2[1-9]|9[1236])\d{7}$/.test(digits)
-    ? null
-    : { type: 'customer.phone' };
+/** WEB04: same limits as the back end (customers.domain.js CUSTOMER_FIELD_LIMITS). */
+const LIMITS = {
+  name: 50,
+  email: 254,
+  phoneNumber: 20,
+  'address.street': 100,
+  'address.houseNumber': 10,
+  'address.complement': 100,
+  'address.city': 60,
+  'address.district': 40,
 };
 
 // Formats checked in the browser; uniqueness and postal code/city match stay in the back end.
 const SCHEMA = {
-  name: [required(), minLength(3), maxLength(50)],
-  email: [required(), email()],
-  phoneNumber: [required(), isPortuguesePhone()],
-  'address.street': [required()],
-  'address.houseNumber': [required()],
+  name: [required(), minLength(3), maxLength(LIMITS.name), personName()],
+  email: [required(), maxLength(LIMITS.email), email()],
+  phoneNumber: [required(), portuguesePhone()],
+  'address.street': [required(), maxLength(LIMITS['address.street'])],
+  'address.houseNumber': [required(), maxLength(LIMITS['address.houseNumber'])],
+  'address.complement': [maxLength(LIMITS['address.complement'])],
   'address.postalCode': [
     required(),
     pattern(/^\d{4}-\d{3}$/, 'customer.postalCode'),
   ],
-  'address.city': [required()],
-  'address.district': [required()],
+  'address.city': [required(), maxLength(LIMITS['address.city']), placeName()],
+  'address.district': [
+    required(),
+    maxLength(LIMITS['address.district']),
+    placeName(),
+  ],
 };
 const ADDRESS_FIELDS = [
   'street',
@@ -195,6 +201,7 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
         type={type}
         value={values[field]}
         required={requiredField}
+        maxLength={LIMITS[field]}
         onChange={(event) => change(field, event.target.value)}
         {...input}
         {...fieldProps(field, errors, idFor)}
@@ -231,7 +238,10 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
         </p>
       )}
 
-      {textField('name', { maxLength: 50, autoComplete: 'off' })}
+      {textField('name', {
+        autoComplete: 'off',
+        hint: t('customers.form.nameHint'),
+      })}
 
       <fieldset className="entity-form">
         <legend>{t('customers.form.contacts')}</legend>

@@ -12,6 +12,7 @@ import {
   validateUpload,
 } from './shared-resources.utils.js';
 import './shared-resources-page.css';
+import Loading from '../../shared/ui/feedback/loading.jsx';
 
 export default function SharedResourcesPage() {
   const { t, i18n } = useTranslation();
@@ -134,7 +135,7 @@ export default function SharedResourcesPage() {
     files.some((f) => f.name === trimmedName.normalize('NFC'));
 
   if (status === 'unknown' || status === 'loading') {
-    return <p role="status">{t('layout.loading')}</p>;
+    return <Loading />;
   }
 
   if (!authenticated) {

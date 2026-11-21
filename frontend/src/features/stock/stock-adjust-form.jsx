@@ -7,20 +7,40 @@ import { useConfirm } from '../../shared/feedback/use-feedback.js';
 import { useSubmit } from '../../shared/forms/use-submit.js';
 import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
 import { fieldProps, makeIdFor } from '../../shared/forms/field-props.js';
-import {
-  hasErrors,
-  integer,
-  minValue,
-  required,
-  validateForm,
-} from '../../shared/forms/validators.js';
+import { hasErrors, validateForm } from '../../shared/forms/validators.js';
 import FieldError from '../../shared/ui/feedback/field-error.jsx';
 import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
 import Spinner from '../../shared/ui/feedback/spinner.jsx';
 import { getStockErrorKey } from './stock-errors.js';
+import {
+  isUnusualChange,
+  MAX_STOCK_QUANTITY,
+  resultingQuantity,
+  StockOperation,
+  stockSchema,
+} from './stock-rules.js';
 
-// Same rule as the API: a whole number greater than 0.
-const SCHEMA = { amount: [required(), integer(), minValue(1)] };
+/** Texts per operation (WEB04: `set` records a physical count, without mental arithmetic). */
+const TEXTS = {
+  [StockOperation.INCREASE]: {
+    title: 'stock.form.increaseTitle',
+    label: 'stock.form.increaseAmount',
+    action: 'stock.increase',
+    success: 'stock.increased',
+  },
+  [StockOperation.DECREASE]: {
+    title: 'stock.form.decreaseTitle',
+    label: 'stock.form.decreaseAmount',
+    action: 'stock.decrease',
+    success: 'stock.decreased',
+  },
+  [StockOperation.SET]: {
+    title: 'stock.form.setTitle',
+    label: 'stock.form.setAmount',
+    action: 'stock.set',
+    success: 'stock.counted',
+  },
+};
 
 export default function StockAdjustForm({
   stock,
@@ -34,7 +54,9 @@ export default function StockAdjustForm({
   const confirm = useConfirm();
   const idFor = makeIdFor(`stock-${stock.productId}`);
   const name = stock.product?.name ?? '';
-  const isDecrease = operation === 'decrease';
+  const isDecrease = operation === StockOperation.DECREASE;
+  const isSet = operation === StockOperation.SET;
+  const texts = TEXTS[operation];
 
   const [amount, setAmount] = useState('');
   const { submit, submitting, error } = useSubmit();
@@ -44,12 +66,23 @@ export default function StockAdjustForm({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const clientErrors = validateForm({ amount }, SCHEMA);
+    const clientErrors = validateForm({ amount }, stockSchema(operation));
     setErrors(clientErrors);
     if (hasErrors(clientErrors)) return;
 
     const value = Number(amount);
-    if (isDecrease) {
+    const next = resultingQuantity(stock.quantity, value, operation);
+    if (isUnusualChange(stock.quantity, value, operation)) {
+      // WEB04: values far from the usual movements are shown back before they are sent.
+      const confirmed = await confirm({
+        titleKey: 'stock.confirmUnusualTitle',
+        messageKey: 'stock.confirmUnusual',
+        params: { name, from: stock.quantity, to: next },
+        confirmKey: texts.action,
+        tone: 'danger',
+      });
+      if (!confirmed) return;
+    } else if (isDecrease) {
       const confirmed = await confirm({
         titleKey: 'stock.confirmDecreaseTitle',
         messageKey: 'stock.confirmDecrease',
@@ -67,7 +100,7 @@ export default function StockAdjustForm({
           data: { amount: value, operation },
         }),
       {
-        successKey: isDecrease ? 'stock.decreased' : 'stock.increased',
+        successKey: texts.success,
         successParams: { amount: value, name },
       }
     );
@@ -93,10 +126,7 @@ export default function StockAdjustForm({
       className="entity-form"
       noValidate
       aria-busy={submitting}
-      aria-label={t(
-        isDecrease ? 'stock.form.decreaseTitle' : 'stock.form.increaseTitle',
-        { name }
-      )}
+      aria-label={t(texts.title, { name })}
     >
       <FormErrors
         errors={errors}
@@ -107,25 +137,19 @@ export default function StockAdjustForm({
       {errorKey && (
         <p className="message message-error" role="alert">
           {/* The quantity comes from the refreshed row. */}
-          {t(errorKey, { quantity: stock.quantity })}
+          {t(errorKey, { quantity: stock.quantity, max: MAX_STOCK_QUANTITY })}
         </p>
       )}
 
       <div className="entity-actions">
         <div>
-          <label htmlFor={idFor('amount')}>
-            {t(
-              isDecrease
-                ? 'stock.form.decreaseAmount'
-                : 'stock.form.increaseAmount'
-            )}{' '}
-            *
-          </label>
+          <label htmlFor={idFor('amount')}>{t(texts.label)} *</label>
           <input
             type="number"
             inputMode="numeric"
             step="1"
-            min={1}
+            min={isSet ? 0 : 1}
+            max={MAX_STOCK_QUANTITY}
             value={amount}
             required
             onChange={(event) => {
@@ -153,7 +177,7 @@ export default function StockAdjustForm({
           disabled={submitting}
         >
           {submitting && <Spinner />}
-          {t(isDecrease ? 'stock.decrease' : 'stock.increase')}
+          {t(texts.action)}
         </button>
       </div>
     </form>

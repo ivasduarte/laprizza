@@ -45,8 +45,29 @@ export function externalLoginUrl(apiBaseUrl, provider) {
  *   `activated` (AA07): the account was activated at the provider; no session was opened.
  */
 export function parseCallbackParams(params) {
-  if (params.get('status') === 'success') return { status: 'success', code: null };
-  if (params.get('status') === 'activated') return { status: 'activated', code: null };
+  if (params.get('status') === 'success')
+    return { status: 'success', code: null };
+  if (params.get('status') === 'activated')
+    return { status: 'activated', code: null };
   const code = params.get('code');
-  return { status: 'error', code: CALLBACK_ERROR_CODES.includes(code) ? code : 'AUTH_FAILED' };
+  return {
+    status: 'error',
+    code: CALLBACK_ERROR_CODES.includes(code) ? code : 'AUTH_FAILED',
+  };
+}
+
+/**
+ * Where the callback page sends the user once the session is known (AA02), or null to stay
+ * (still loading, failure, activation message).
+ * A first external login without a phone goes to /complete-profile.
+ *
+ * @param {{status: string}} result - parseCallbackParams result.
+ * @param {string} sessionStatus - 'unknown' | 'loading' | 'authenticated' | 'anonymous'.
+ * @param {{phoneRequired?: boolean}|null} user
+ * @returns {string|null}
+ */
+export function callbackTarget(result, sessionStatus, user) {
+  if (result.status !== 'success' || sessionStatus !== 'authenticated')
+    return null;
+  return user?.phoneRequired ? '/complete-profile' : '/';
 }

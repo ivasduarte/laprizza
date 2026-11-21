@@ -17,6 +17,7 @@ import {
 import FieldError from '../../shared/ui/feedback/field-error.jsx';
 import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
 import Spinner from '../../shared/ui/feedback/spinner.jsx';
+import Loading from '../../shared/ui/feedback/loading.jsx';
 
 const IDS = {
   currentPassword: 'change-current',
@@ -49,7 +50,7 @@ export default function ChangePasswordPage() {
 
   if (status === 'anonymous') return <Navigate to="/login" replace />;
   if (status !== 'authenticated') {
-    return <p role="status">{t('layout.loading')}</p>;
+    return <Loading />;
   }
 
   async function handleSubmit(event) {
