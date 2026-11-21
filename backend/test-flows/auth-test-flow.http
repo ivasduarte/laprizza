@@ -421,7 +421,29 @@ Content-Type: application/json
 ### 9: ESPERA PROGRESSIVA (falhas consecutivas)
 ### ==========================================
 
-# 9.1 A conta do teste de bloqueio é a noroles@laprizza.pt do seed (@lockUserEmail).
+### 9.1 Repor a conta do teste de bloqueio (200 OK - limpa as falhas e a espera de execuções anteriores)
+# A conta é a noroles@laprizza.pt do seed (@lockUserEmail). Sem isto, uma segunda execução do flow
+# encontra a conta ainda em espera (429) e os passos 9.2 a 9.4 falham.
+# @name usersForLock
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+?? status == 200
+?? js response.parsedBody.some((u) => u.email === lockUserEmail) == true
+
+@lockUserId = {{usersForLock.find((u) => u.email === lockUserEmail).id}}
+
+### 9.1b PATCH password pelo Admin (200 OK - repõe failedLoginCount e lockedUntil)
+PATCH {{baseUrl}}/users/{{lockUserId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "password": "{{devPassword}}"
+}
+
+?? status == 200
+
 
 ### 9.2 1.ª falha (401)
 POST {{baseUrl}}/auth/login
