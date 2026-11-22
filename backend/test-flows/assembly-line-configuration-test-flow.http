@@ -75,10 +75,10 @@ Content-Type: application/json
 }
 ?? status == 403
 
-### 2.4 Token de Employee não tem acesso (403 Forbidden - a cozinha é só do Manager)
+### 2.4 Token de Employee consegue LER (200 OK - kitchen:read, o Employee vê a cozinha em modo de leitura)
 GET {{baseUrl}}/assembly-line-configurations
 Authorization: Bearer {{empToken}}
-?? status == 403
+?? status == 200
 
 
 ### ==========================================
