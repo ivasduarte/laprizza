@@ -1,0 +1,21 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS07 [VIS07: Perspective Camera Interaction]
+        direction TB
+        UC1([UC1: Pan the Camera])
+        UC2([UC2: Orbit the Camera])
+        UC3([UC3: Dolly the Camera])
+        UC4([UC4: Reset the View])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Viz3D -->|<< re-renders >>| UC1
+    Viz3D -->|<< re-renders >>| UC2
+    Viz3D -->|<< re-renders >>| UC3
+    Viz3D -->|<< re-renders >>| UC4

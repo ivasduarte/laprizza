@@ -103,8 +103,21 @@ classDiagram
             <<ValueObject>>
             +double minDistance
             +double maxDistance
+            +double minPolarAngle
             +double maxPolarAngle
-            +double maxPanOffset
+            +double minAzimuthAngle
+            +double maxAzimuthAngle
+            +double near
+            +double far
+            +PanBounds panBounds
+        }
+        class PanBounds {
+            <<ValueObject>>
+            +double minX
+            +double maxX
+            +double minZ
+            +double maxZ
+            +double y
         }
     }
 
@@ -124,4 +137,6 @@ classDiagram
     LightSource "1" *-- "0..1" SpotlightCone : spotlight
     LightingSetup "*" .. "1" KitchenDimensions : positions derived from
     PerspectiveCamera "1" *-- "1" CameraLimits : constrained by
+    CameraLimits "1" *-- "1" PanBounds : target kept within
     PerspectiveCamera "*" .. "1" KitchenDimensions : target at floor centre
+    CameraLimits "*" .. "1" KitchenDimensions : derived from

@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Bill of Materials, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI01, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Bill of Materials, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Perspective Camera Interaction, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, VIS07, AA01, AA07, AI01, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -52,15 +52,18 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
-    - [AI01: Prolog Bill of Materials and Stock Requirements](#ai01-prolog-bill-of-materials-and-stock-requirements)
+    - [VIS07: Perspective Camera Interaction](#vis07-perspective-camera-interaction)
       - [Use Case Descriptions](#use-case-descriptions-8)
       - [Flow Mapping](#flow-mapping-19)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+    - [AI01: Prolog Bill of Materials and Stock Requirements](#ai01-prolog-bill-of-materials-and-stock-requirements)
       - [Use Case Descriptions](#use-case-descriptions-9)
       - [Flow Mapping](#flow-mapping-20)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
       - [Use Case Descriptions](#use-case-descriptions-10)
       - [Flow Mapping](#flow-mapping-21)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-11)
+      - [Flow Mapping](#flow-mapping-22)
 
 ## Actors
 
@@ -71,7 +74,7 @@ This document shows who uses the LaPrizza information system and which business 
 | **Employee**                   | Restaurant staff member with read-only operational access: the catalogue, products and pizza configurations, and the stock of active products (AA05).                                                                                                          |
 | **Customer**                   | External client interacting with the system to consult the catalog and their own customer data.                                                                                                                                                                |
 | **Guest**                      | Person without a session. Has only the Guest permissions: browse the public catalogue (with the allergens of each product) and use the authentication entry points (AA05).                                                                                     |
-| **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, and renders its lighting.                                                                                                               |
+| **3D Visualization Module**    | Secondary (system) actor. The embedded 3D viewer that consumes the active kitchen configuration to render the kitchen, renders its lighting and moves the camera.                                                                                                               |
 | **AI Scheduling Module**       | Secondary (system) actor. The SWI-Prolog service that calculates the Bill of Materials and the requirements planning (AI05). The Web Application reaches it only through the Back-End Application, which calls it with a service key; direct calls with a Manager token are used for tests and demos.                                                                       |
 | **Invited User**               | Person with an inactive account and an activation invitation (AA06), not yet authenticated. Completes the activation (AA07).                                                                                                                                   |
 | **E-mail Server**              | Secondary (system) actor. SMTP server that delivers the e-mails sent by the back end: password recovery links (AA01) and activation invitations (AA06). Mailpit in every environment ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)). |
@@ -631,6 +634,54 @@ flowchart LR
 | **VIS06**  | UC4: Reset Lighting                             | LaPrizza Manager / Employee | [Reset Lighting](../flows/scene-lighting/reset-lighting.md)                                                  |
 
 The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+
+### VIS07: Perspective Camera Interaction
+
+The Manager explores the 3D kitchen with a perspective camera and the mouse. The initial target is the centre of the kitchen floor (the origin, since the kitchen is centred on it). Left-click and drag pans parallel to the floor, right-click and drag orbits around the current target and the mouse wheel dollies in and out. A "Reset view" button returns to the initial view. Every limit (distance, angles, pan bounds, `near`/`far`) is derived from the dimensions of the active kitchen configuration, the camera never sees above its own height nor enters the configuration elements, and the movement is smoothed by damping. The interaction is client-side only: it lives in the 3D Visualization module, calls no endpoint and is not stored. Like the viewer, it is available to users with the `kitchen:read` permission (Manager).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS07 [VIS07: Perspective Camera Interaction]
+        direction TB
+        UC1([UC1: Pan the Camera])
+        UC2([UC2: Orbit the Camera])
+        UC3([UC3: Dolly the Camera])
+        UC4([UC4: Reset the View])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    Manager --> UC3
+    Manager --> UC4
+
+    Viz3D -->|<< re-renders >>| UC1
+    Viz3D -->|<< re-renders >>| UC2
+    Viz3D -->|<< re-renders >>| UC3
+    Viz3D -->|<< re-renders >>| UC4
+```
+
+#### Use Case Descriptions
+
+| Use Case                    | Primary Actor    | Description                                                                                  | Main Rules                                                                                                                                                                                                                                                                       | ADRs                                                                                                     |
+| :-------------------------- | :--------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| **UC1: Pan the Camera**     | LaPrizza Manager | Left-click and drag slides the camera and its target parallel to the floor.                  | The target stays on the floor (`y = 0`), within the floor plus a margin of 5% of the largest side; the camera moves by the same offset, so there is no jump. The camera cannot enter a configuration element (bounding box plus 0.25 m) nor go under 0.3 m.                        | [ADR-0054](../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md)               |
+| **UC2: Orbit the Camera**   | LaPrizza Manager | Right-click and drag turns the camera around the current target; no browser context menu.    | Polar angle between 6° (never exactly vertical) and `90° − fov / 2` = 65° (the camera never sees above its own height and stays above the floor). Azimuth limited to ±135°: the orbit never makes a full turn.                                                                   | [ADR-0054](../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md)               |
+| **UC3: Dolly the Camera**   | LaPrizza Manager | The mouse wheel moves the perspective camera towards or away from the target.                | Distance between `max(1, 0.1 × largest side)` and 1.5 × the initial distance (which frames the floor in the 50° field of view). Dolly towards the target, not towards the cursor; `near` and `far` fitted to the kitchen.                                                        | [ADR-0054](../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md)               |
+| **UC4: Reset the View**     | LaPrizza Manager | The "Reset view" button ("Repor vista") returns to the initial position and target.          | Target at the centre of the floor and the initial position (polar angle 55°). The pending inertia is flushed first, so the camera stops exactly there. The same view is used on mount and when the active configuration changes.                                                 | [ADR-0054](../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md), [ADR-0018](../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case                | Primary Actor    | Flow Document (SAD)                                              |
+| :--------- | :---------------------- | :--------------- | :--------------------------------------------------------------- |
+| **VIS07**  | UC1: Pan the Camera     | LaPrizza Manager | [Pan the Camera](../flows/camera-interaction/pan-camera.md)       |
+| **VIS07**  | UC2: Orbit the Camera   | LaPrizza Manager | [Orbit the Camera](../flows/camera-interaction/orbit-camera.md)   |
+| **VIS07**  | UC3: Dolly the Camera   | LaPrizza Manager | [Dolly the Camera](../flows/camera-interaction/dolly-camera.md)   |
+| **VIS07**  | UC4: Reset the View     | LaPrizza Manager | [Reset the View](../flows/camera-interaction/reset-view.md)       |
+
+The camera limits, the mouse mapping, the element catalogue and the notes of the feature are in the [Camera Interaction README](../flows/camera-interaction/README.md).
 
 ### AI01: Prolog Bill of Materials and Stock Requirements
 
