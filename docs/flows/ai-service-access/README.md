@@ -138,6 +138,7 @@ The user token never reaches the Prolog service in the push path, and the Prolog
 | Arrow to the same participant | Work done inside that component |
 | Number on an arrow | Order of the interaction (autonumber) |
 | `alt` / `else` frame | Alternative flows, only one of them runs |
+| `opt` frame | Optional flow |
 | `Note` | Reference to another diagram or a remark |
 
 ## Element catalogue

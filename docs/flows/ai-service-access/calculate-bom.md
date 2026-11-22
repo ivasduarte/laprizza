@@ -38,12 +38,12 @@ The page shows `BomResult`: the simulation tag and "stock not changed", the scen
 
 ```mermaid
 ---
-title: "AI05 UC1 - Calculate Bill of Materials - C4 Dynamic, Level 3 (Component)"
+title: "UC1 - Calculate Bill of Materials - C4 Dynamic, Level 3 (Component)"
 ---
 sequenceDiagram
     autonumber
     actor manager as Manager<br/>[Person]
-    box rgba(120,180,120,0.15) Web Application [Container: React]
+    box rgba(150,180,120,0.15) Web Application [Container: React, Vite]
         participant panel as PlanningPanel<br/>[Component: React form]
         participant errors as planning-errors<br/>[Component: JS module]
     end
