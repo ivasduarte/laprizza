@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph AI01 [AI01: Prolog Bill of Materials and Stock Requirements]
+        direction TB
+        UC1([UC1: Define Product Aggregates])
+        UC2([UC2: Calculate Bill of Materials])
+        UC3([UC3: Simulate with Scenario Stock])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    UC3 -.->|<< extend >>| UC2
+    UC2 -->|<< executes >>| AI

@@ -1,5 +1,51 @@
 # AI04 - IARTI Technical Report
 
+## AI01 - Prolog Bill of Materials and Stock Requirements
+
+### 1. Data and simulated inputs
+
+- The calculation uses only the planning snapshot of the back end (`GET /api/v2/ai-data/snapshot?scenarioId&stockMode`, AI06): products, sizes, the BOM of each pizza and size in abstract stock units, the aggregates, the stock and the ordered pizzas.
+- **Aggregates** belong to the product and are classified by the back end as **produced** (with items and quantities, e.g. dough = 2 flour + 1 water + 1 yeast) or **purchased** (no composition, e.g. sauce). Only one level is allowed, so recipes cannot be cyclic.
+- **AI scenarios** hold the simulated orders and, optionally, a simulated stock. No ordering workflow is needed, and the calculation is independent of pending or confirmed orders.
+- **Stock mode:** `live` uses the real stock at the time of the execution; `scenario` uses the stock stored in the scenario, for reproducible evaluations. Both follow the same rules and format, so real and simulated data can replace each other without changing the calculation.
+- Every result identifies the scenario (`id`, `name`, `version`, `stockMode`) and the inputs (`snapshotId`, origin and version of the catalogue, stock and orders), and is marked `simulation: true`.
+
+### 2. Calculation rules (`bom.pl`)
+
+1. **Validation first.** Unknown or non-predefined pizzas, sizes not allowed, incomplete recipes (missing or invalid consumptions, unknown components, a produced aggregate without a measured consumption) and missing stock entries are all reported together. With any problem there is no calculation: `422 AI_INVALID_DATA`, without quantities.
+2. **Direct demand:** ordered quantity × consumption of each component for that pizza and size.
+3. **Pass 1, aggregates:** the stock of the aggregate is used first. Only the missing part of a **produced** aggregate is expanded into its ingredients; the missing part of a **purchased** aggregate is a replenishment need.
+4. **Pass 2, simple products:** each one is counted once, with its direct demand plus the demand derived from the produced aggregates.
+
+This avoids counting both an aggregate and the ingredients it already represents.
+
+### 3. Results
+
+| Field | Content |
+| --- | --- |
+| `items` | Per product: required (direct and from aggregates), available, used, hypothetical remaining stock (never negative) and shortage |
+| `shortages` | Replenishment needs of the stock-controlled products that are not produced internally |
+| `production` | Produced aggregates to make, and whether their ingredients are available |
+| `feasible` | `true` when there is no shortage; a shortage is a result, not an error |
+| `warnings` | Non-blocking remarks (e.g. a component without stock control or consumption) |
+
+### 4. Demonstration (initial data and expected results)
+
+The demo seed (`npm run seed:ai01-demo -- --confirm`) creates the `[Demo]` products, pizzas, real stock and four scenarios. Running it again resets them.
+
+| Scenario | Order | Stock of the scenario | Expected result |
+| --- | --- | --- | --- |
+| `DEMO-BASIC` | 3 Funghi Simples M | Base 5, Mozzarella 6, Mushrooms 4 | Feasible; only simple products |
+| `DEMO-SUFFICIENT` | 2 Margherita M + 1 Prosciutto M | Dough 5, Sauce 5, Mozzarella 10, Ham 3, Mushrooms 3 | Feasible; the dough comes from stock (remaining 2), no ingredients needed |
+| `DEMO-INSUFFICIENT` | 2 Prosciutto L + 1 Margherita M + 1 Funghi Simples L | Dough 0, Sauce 2, Mozzarella 5, Ham 4, Mushrooms 1, Base 1 | Not feasible: replenish sauce 3, mozzarella 6, mushrooms 5, base 1; produce 5 doughs (flour 10) |
+| `DEMO-PARTIAL` | 3 Margherita M | Dough 1, Sauce 5, Mozzarella 4 | Not feasible: 1 dough from stock, **only 2 produced** (flour 4, not 6); mozzarella short 2, remaining 0 |
+
+### 5. Calculation separate from stock
+
+- Calculations only read the knowledge base. Balances are results only: the real stock and the stock of the scenarios are never changed, and no purchase order is created.
+- The real stock changes only through an explicit stock operation of the back end (BCK09).
+- The automated flow `bom-demo-test-flow.http` checks the four scenarios and that the real stock is the same before and after a `live` calculation.
+
 ## AI03 - Artificial Neural Networks Study
 
 The study looked at how artificial neural networks could support LaPrizza's management. Three applications were analysed:

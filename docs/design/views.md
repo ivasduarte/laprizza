@@ -600,6 +600,15 @@ The context, container and component views of the feature, for the Back-End Appl
 
 The REST API summary, the business rules and the element catalogue of the feature are in the [AI Planning README](../flows/ai-planning/README.md).
 
+#### AI Bill of Materials Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :------- | :---------- | :------------------ | :--- |
+| [UC1 - Define Product Aggregates](../flows/ai-bill-of-materials/define-product-aggregates.md) | The aggregate is validated with Joi and the domain rules (one level, items active and not pizzas) and saved with the product; the planning caches are invalidated | Back-End Application, Database | [ADR-0052](../adr/0052-product-aggregates-and-stock-first-bom-expansion.md) |
+| [UC2 / UC3 - Calculate Bill of Materials](../flows/ai-bill-of-materials/calculate-bill-of-materials.md) | The AI Scheduling Module fetches the scenario snapshot with the Manager token (live or scenario stock), loads it and expands the orders with the aggregate stock first; nothing is written | AI Scheduling Module, Back-End Application, Database | [ADR-0052](../adr/0052-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0053](../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md), [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) |
+
+The calculation rules, the demonstration scenarios and the element catalogue are in the [AI Bill of Materials README](../flows/ai-bill-of-materials/README.md).
+
 #### AI Knowledge Base Flows
 
 | Use Case | Interaction | Containers involved | ADRs |

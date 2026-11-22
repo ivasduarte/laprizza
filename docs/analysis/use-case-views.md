@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Bill of Materials, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI01, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -52,12 +52,15 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
-      - [Use Case Descriptions](#use-case-descriptions-6)
-      - [Flow Mapping](#flow-mapping-17)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [AI01: Prolog Bill of Materials and Stock Requirements](#ai01-prolog-bill-of-materials-and-stock-requirements)
       - [Use Case Descriptions](#use-case-descriptions-8)
       - [Flow Mapping](#flow-mapping-19)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+      - [Use Case Descriptions](#use-case-descriptions-9)
+      - [Flow Mapping](#flow-mapping-20)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-10)
+      - [Flow Mapping](#flow-mapping-21)
 
 ## Actors
 
@@ -628,6 +631,46 @@ flowchart LR
 | **VIS06**  | UC4: Reset Lighting                             | LaPrizza Manager / Employee | [Reset Lighting](../flows/scene-lighting/reset-lighting.md)                                                  |
 
 The light sources, the GUI controls, the element catalogue and the notes of the feature are in the [Scene Lighting README](../flows/scene-lighting/README.md).
+
+### AI01: Prolog Bill of Materials and Stock Requirements
+
+The AI Scheduling Module calculates the Bill of Materials of the pizzas ordered in an AI scenario: the aggregates and raw materials they need, the stock available, the hypothetical remaining stock and the replenishment needs. The orders are simulated and stored in the scenario, so no ordering workflow is needed. The stock is either the real stock at the time of the calculation (`live`) or the stock stored in the scenario (`scenario`), with the same rules and data format. The back end classifies each aggregate as produced or purchased: the stock of an aggregate is used first, only the missing part of a produced aggregate is expanded into its ingredients, and a purchased aggregate is replenished directly, so nothing is counted twice. Every calculation is a simulation: it never changes the real stock nor the stock of a scenario, and problems in the data are reported instead of an apparently valid result. The initial data and the expected results are in [Demonstration Scenarios](../flows/ai-bill-of-materials/demonstration-scenarios.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph AI01 [AI01: Prolog Bill of Materials and Stock Requirements]
+        direction TB
+        UC1([UC1: Define Product Aggregates])
+        UC2([UC2: Calculate Bill of Materials])
+        UC3([UC3: Simulate with Scenario Stock])
+    end
+
+    Manager --> UC1
+    Manager --> UC2
+    UC3 -.->|<< extend >>| UC2
+    UC2 -->|<< executes >>| AI
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Define Product Aggregates** | LaPrizza Manager | Marks a product, when creating or updating it, as an aggregate produced from a list of items with quantities or purchased ready-made. | `POST /products`, `PATCH /products/{id}` with `aggregate` (`products:write`, Manager only). A produced aggregate needs items and a purchased one has none; items exist, are active and are neither pizzas nor other aggregates (one level, no cycles); a pizza or an item of another aggregate cannot be an aggregate. Violations answer 400 with an `AGGREGATE_*` code. | [ADR-0052](../adr/0052-product-aggregates-and-stock-first-bom-expansion.md) |
+| **UC2: Calculate Bill of Materials** | LaPrizza Manager | Asks for the BOM of an AI scenario and gets, per item, the quantity required, the stock available and used, the remaining stock and the shortage, plus the replenishment needs, the aggregates to produce and the warnings. | `POST /bom` on the AI Scheduling Module with `{ scenarioId, stockMode }` and the Manager token, forwarded to `GET /ai-data/snapshot` (`planning:execute`); from the Web Application through AI05 UC1. Fresh snapshot, never cached. Aggregate stock first; only the shortage of a produced aggregate is expanded; simple products counted once. The remaining stock is never negative; shortages give `feasible: false`. Unknown items, invalid quantities and incomplete recipes answer 422 `AI_INVALID_DATA` without quantities. Nothing is written. | [ADR-0052](../adr/0052-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+| **UC3: Simulate with Scenario Stock** | LaPrizza Manager | Runs the same calculation with the stock stored in the scenario instead of the real stock, for reproducible demonstrations. | `stockMode: "scenario"`. A scenario without its own stock answers 400 `SCENARIO_WITHOUT_STOCK` (422 through the AI service); a stock-controlled item missing from the scenario stock is `MISSING_SCENARIO_STOCK`. Scenarios are prepared and reset by the idempotent seed `npm run seed:ai01-demo -- --confirm`; a calculation never changes their stock. | [ADR-0053](../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AI01** | UC1: Define Product Aggregates | LaPrizza Manager | [Define Product Aggregates](../flows/ai-bill-of-materials/define-product-aggregates.md) |
+| **AI01** | UC2: Calculate Bill of Materials | LaPrizza Manager | [Calculate Bill of Materials](../flows/ai-bill-of-materials/calculate-bill-of-materials.md) |
+| **AI01** | UC3: Simulate with Scenario Stock | LaPrizza Manager | [Calculate Bill of Materials](../flows/ai-bill-of-materials/calculate-bill-of-materials.md) (`stockMode: "scenario"`) |
+
+The REST API summary, the calculation rules, the result format and the element catalogue are in the [AI Bill of Materials README](../flows/ai-bill-of-materials/README.md).
 
 ### AI05: Artificial Intelligence Service Access
 
