@@ -1,5 +1,7 @@
 # List Users
 
+> **Sprint 1 diagram (BCK01).** Since AA05 and AA06 this endpoint requires a permission of the `ADMINISTRATOR` role (`requirePermission`, not `requireRole([MANAGER])`), and the Manager no longer manages users. The current behaviour is in [Role Assignment and Activation Invitation (AA06)](../authentication/role-assignment-and-invitations.md).
+
 | Attribute | Value |
 |---|---|
 | C4 view | Dynamic diagram, Level 3 (Component) |

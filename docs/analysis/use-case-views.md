@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Kitchen Configuration, AI Planning, AI Service Access, AI Knowledge Base, Scene Lighting, Light Controls, Local Authentication and Account Activation user stories (WEB06, WEB07, VIS05, VIS06, AA01, AA07, AI05, AI06) of Sprint 2. The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01, VIS02, VIS05, VIS06, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -46,39 +46,46 @@ This document shows who uses the LaPrizza information system and which business 
     - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
+    - [AA03: Internal Role Resolution](#aa03-internal-role-resolution)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
-    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
+    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
-    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
       - [Use Case Descriptions](#use-case-descriptions-8)
       - [Flow Mapping](#flow-mapping-19)
-    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
+    - [AA06: Role Assignment and Activation Invitation](#aa06-role-assignment-and-activation-invitation)
       - [Use Case Descriptions](#use-case-descriptions-9)
       - [Flow Mapping](#flow-mapping-20)
-    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
       - [Use Case Descriptions](#use-case-descriptions-10)
       - [Flow Mapping](#flow-mapping-21)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
       - [Use Case Descriptions](#use-case-descriptions-11)
       - [Flow Mapping](#flow-mapping-22)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
       - [Use Case Descriptions](#use-case-descriptions-12)
       - [Flow Mapping](#flow-mapping-23)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-13)
       - [Flow Mapping](#flow-mapping-24)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-14)
       - [Flow Mapping](#flow-mapping-25)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+      - [Use Case Descriptions](#use-case-descriptions-15)
+      - [Flow Mapping](#flow-mapping-26)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-16)
+      - [Flow Mapping](#flow-mapping-27)
 
 ## Actors
 
 | Actor                          | Description                                                                                                                                                                                                                                                                                           |
 | :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **System User**                | Any registered entity capable of authenticating into the system. Acts as the base role.                                                                                                                                                                                                               |
+| **Administrator**              | Website role that manages user accounts, their roles and their activation invitations (AA06). Grants no restaurant management: a person who also manages the restaurant needs the Manager role too. |
 | **LaPrizza Manager**           | Back-office user who manages customers, products, categories, allergens, pizza configurations, stock, kitchen configurations, forecasts, supplier scenarios and planning. User administration is not part of this role (AA06).                                                                        |
 | **Employee**                   | Restaurant staff member with read-only operational access: the catalogue, products and pizza configurations, and the stock of active products (AA05).                                                                                                                                                 |
 | **Customer**                   | External client interacting with the system to consult the catalog and their own customer data.                                                                                                                                                                                                       |
@@ -316,10 +323,10 @@ flowchart LR
 
 | Use Case                              | Primary Actor | Description                                                        | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                        | ADRs                                                                                                                                                                                        |
 | :------------------------------------ | :------------ | :----------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **UC1: Submit a Form**                | System User   | Fills a form and saves it.                                         | Rules are checked in the browser first (`validators.js`) and again by the API (Joi and domain). Each violation is shown on its field and in a summary with links to the fields; the text explains how to correct it (e.g. the password policy, the name rule, the stock limits). A second submission is ignored while one is running (`useSubmit`, submit guard). On failure the inputs keep their values; success is confirmed by a toast that closes after 3 s. | [ADR-0018](<../adr/0018-internationalization-of-the-web-application-(english-and-portuguese).md>), [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
-| **UC2: Confirm a Significant Action** | System User   | Deactivates, deletes, removes stock or enters an unusual quantity. | A confirmation dialog (`useConfirm`) states what will happen before the request is sent; stock movements of 1000 units or more show the change (from → to).                                                                                                                                                                                                                                                                                                       | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
-| **UC3: Wait for Information**         | System User   | Opens a page or a list.                                            | A global progress bar follows the pending requests; pages and lists show a placeholder that keeps the room of the content, so the layout does not move when the data arrives.                                                                                                                                                                                                                                                                                     | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
-| **UC4: Recover from a Failure**       | System User   | A request fails (network, timeout, server error).                  | Errors are normalized by kind and translated by code (`error-normalizer.js`, `error-text.js`); messages never show server text, stack traces or session data; 5xx answers carry no details. Lists offer "Retry"; a failed operation is never shown as completed.                                                                                                                                                                                                  | [ADR-0043](../adr/0043-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+| **UC1: Submit a Form**                | System User   | Fills a form and saves it.                                         | Rules are checked in the browser first (`validators.js`) and again by the API (Joi and domain). Each violation is shown on its field and in a summary with links to the fields; the text explains how to correct it (e.g. the password policy, the name rule, the stock limits). A second submission is ignored while one is running (`useSubmit`, submit guard). On failure the inputs keep their values; success is confirmed by a toast that closes after 3 s. | [ADR-0018](<../adr/0018-internationalization-of-the-web-application-(english-and-portuguese).md>), [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC2: Confirm a Significant Action** | System User   | Deactivates, deletes, removes stock or enters an unusual quantity. | A confirmation dialog (`useConfirm`) states what will happen before the request is sent; stock movements of 1000 units or more show the change (from → to).                                                                                                                                                                                                                                                                                                       | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+| **UC3: Wait for Information**         | System User   | Opens a page or a list.                                            | A global progress bar follows the pending requests; pages and lists show a placeholder that keeps the room of the content, so the layout does not move when the data arrives.                                                                                                                                                                                                                                                                                     | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
+| **UC4: Recover from a Failure**       | System User   | A request fails (network, timeout, server error).                  | Errors are normalized by kind and translated by code (`error-normalizer.js`, `error-text.js`); messages never show server text, stack traces or session data; 5xx answers carry no details. Lists offer "Retry"; a failed operation is never shown as completed.                                                                                                                                                                                                  | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md)                                                                                                    |
 
 #### Flow Mapping
 
@@ -535,8 +542,8 @@ flowchart LR
 
 | Use Case                                   | Primary Actor | Description                                                                                                 | Main Rules                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | ADRs                                                                                                                                                                                                                                 |
 | :----------------------------------------- | :------------ | :---------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UC1: Sign In with an External Provider** | System User   | Presses "Continue with <provider>", authenticates at the provider and returns to the application signed in. | Only enabled providers are shown. `state`, `nonce` and PKCE in a signed transaction cookie; the ID token is validated by the library; the identity is `(issuer, sub)`. New identity: a verified, unused e-mail creates an active `CUSTOMER` account (if the identity link fails, the account is removed); an e-mail of another account is refused (`ACCOUNT_LINK_REQUIRED`). A never-activated linked account is activated by the login; disabled accounts are refused. Cancelled or failed logins show a translated code and grant nothing. The session is the same as the local one (AA04). | [ADR-0044](../adr/0044-external-authentication-with-openid-connect.md), [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
-| **UC2: Complete the Contact Phone**        | System User   | After the first external login, enters the phone number before using the customer pages.                    | `phoneRequired` in the session user while a `CUSTOMER` has neither a phone nor a Customer record; the back end withholds the customer permissions until then. Portuguese number, stored normalized (`PUT /auth/me/phone`).                                                                                                                                                                                                                                                                                                                                                                    | [ADR-0045](../adr/0045-external-identity-model-and-account-resolution.md)                                                                                                                                                            |
+| **UC1: Sign In with an External Provider** | System User   | Presses "Continue with <provider>", authenticates at the provider and returns to the application signed in. | Only enabled providers are shown. `state`, `nonce` and PKCE in a signed transaction cookie; the ID token is validated by the library; the identity is `(issuer, sub)`. New identity: a verified, unused e-mail creates an active `CUSTOMER` account (if the identity link fails, the account is removed); an e-mail of another account is refused (`ACCOUNT_LINK_REQUIRED`). A never-activated linked account is activated by the login; disabled accounts are refused. Cancelled or failed logins show a translated code and grant nothing. The session is the same as the local one (AA04). | [ADR-0053](../adr/0053-external-authentication-with-openid-connect.md), [ADR-0054](../adr/0054-external-identity-model-and-account-resolution.md), [ADR-0042](../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| **UC2: Complete the Contact Phone**        | System User   | After the first external login, enters the phone number before using the customer pages.                    | `phoneRequired` in the session user while a `CUSTOMER` has neither a phone nor a Customer record; the back end withholds the customer permissions until then. Portuguese number, stored normalized (`PUT /auth/me/phone`).                                                                                                                                                                                                                                                                                                                                                                    | [ADR-0054](../adr/0054-external-identity-model-and-account-resolution.md)                                                                                                                                                            |
 
 #### Flow Mapping
 
@@ -544,6 +551,43 @@ flowchart LR
 | :--------- | :------------------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------- |
 | **AA02**   | UC1: Sign In with an External Provider | System User   | [External Authentication](../flows/authentication/external-authentication.md#diagrams)                                                     |
 | **AA02**   | UC2: Complete the Contact Phone        | System User   | [External Authentication - Contact phone](../flows/authentication/external-authentication.md#contact-phone-after-the-first-external-login) |
+
+### AA03: Internal Role Resolution
+
+Roles are internal to LaPrizza: they are stored with the account and always read by the back end, never taken from the request, the access token, the identity provider or the browser. Every new account receives the role Customer automatically, without an Administrator and without activating the account. After a local or an external login, and on every refresh and protected request, the back end reads the current roles again, so a role change applies without a new login. An account without an active role, or an inactive or disabled one, gets a clear access-denied message and no session; when the roles cannot be read, the request fails closed.
+
+```mermaid
+flowchart LR
+    BE([Back-End Application])
+    SystemUser([System User])
+
+    subgraph AA03 [AA03: Internal Role Resolution]
+        direction TB
+        UC1([UC1: Assign the Initial Customer Role])
+        UC2([UC2: Resolve Roles When Signing In])
+        UC3([UC3: Resolve Roles on Every Request])
+    end
+
+    BE --> UC1
+    SystemUser --> UC2
+    SystemUser --> UC3
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Assign the Initial Customer Role** | Back-End Application (automatic) | Every new account gets `CUSTOMER`: an account created by an Administrator (AA06), the first external login (AA02) and the initial account of the seeder. | One rule for every creation path (`withInitialCustomerRole`). `CUSTOMER` does not change the account status nor grant staff, Manager or Administrator permissions: an account created by an Administrator stays inactive until activated (AA07). Roles sent by the identity provider or the client are ignored. The assignment is recorded as the system process `initial-customer-role` (AA06). | [ADR-0004](../adr/0004-authentication-and-authorization.md), [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) |
+| **UC2: Resolve Roles When Signing In** | System User | Signs in with a local account or an external provider and gets the session with the current roles and permissions. | Local and external logins end in the same `establishSession`: the status is checked first (`ACCOUNT_INACTIVE`, `ACCOUNT_DISABLED`), then the stored roles are read and only the known roles kept. No active role: `403 NO_ACTIVE_ROLE` and no session. Roles that cannot be read: `503 ROLES_UNAVAILABLE`. A returning user is never created again, keeps the stored roles (a removed `CUSTOMER` is not added back) and the account status. | [ADR-0004](../adr/0004-authentication-and-authorization.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| **UC3: Resolve Roles on Every Request** | System User | Uses the application: every refresh, protected request and `GET /auth/me` works with the roles stored at that moment. | Permissions come from the current roles (AA05), never from the token. Without an active role the session ends on the next refresh. Roles that cannot be read: `503 ROLES_UNAVAILABLE`, nothing granted (fail closed). The Web Application updates its menu from `GET /auth/me`. | [ADR-0046](../adr/0046-permission-based-authorization-matrix.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AA03** | UC1: Assign the Initial Customer Role | Back-End Application | [Role Resolution - New accounts](../flows/authentication/role-resolution.md#new-accounts) |
+| **AA03** | UC2: Resolve Roles When Signing In | System User | [Role Resolution - Opening a session](../flows/authentication/role-resolution.md#opening-a-session) |
+| **AA03** | UC3: Resolve Roles on Every Request | System User | [Role Resolution - Refresh and protected requests](../flows/authentication/role-resolution.md#refresh-and-protected-requests) |
 
 ### AA04: Secure Session Handling
 
@@ -631,6 +675,55 @@ flowchart LR
 | **AA05**   | UC5: Record Unauthorized Attempt    | -                  | Shown in [Access Protected Functionality](../flows/authorization/access-protected-functionality.md) |
 
 The permission matrix, the permission of each resource, the business rules and the element catalogue of the feature are in the [Authorization README](../flows/authorization/README.md).
+
+### AA06: Role Assignment and Activation Invitation
+
+The Administrator manages the website accounts: creates them, assigns and removes the roles of Table 1, enables and disables them, consults the history of role changes and issues activation invitations. Administrator is a website role of its own and grants no restaurant management. Except for the automatic Customer of AA03, only an Administrator changes roles, and every assignment and removal is recorded with the responsible user or system process and the time. A new account is inactive and receives a unique, expiring, single-use invitation at its e-mail; adding a role to an active account never requires a new activation. Guest is not assigned: it applies to every request without a session. Website roles are independent of the administration of the infrastructure.
+
+```mermaid
+flowchart LR
+    Admin([Administrator])
+    Mail([E-mail Server])
+
+    subgraph AA06 [AA06: Role Assignment and Activation Invitation]
+        direction TB
+        UC1([UC1: Create Account and Send Invitation])
+        UC2([UC2: Assign or Remove a Role])
+        UC3([UC3: Consult Role History])
+        UC4([UC4: Issue a Replacement Invitation])
+        UC5([UC5: Enable or Disable an Account])
+    end
+
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC3
+    Admin --> UC4
+    Admin --> UC5
+    UC1 -->|<< sends >>| Mail
+    UC4 -->|<< sends >>| Mail
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Create Account and Send Invitation** | Administrator | Creates an account with an e-mail and roles in the Users page; the back end sends the activation invitation. | `users:create` and `roles:assign:<role>` for each role. The account is `inactive`, with `CUSTOMER` plus the chosen roles and no password (set in AA07). Invitation: 256 random bits, only the SHA-256 stored, valid 72 h, link with the token in the URL fragment, never a password in the e-mail. If the record of the initial roles fails, the account is removed (503). If the e-mail fails, the answer says `sent: false`. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md) |
+| **UC2: Assign or Remove a Role** | Administrator | Adds or removes Administrator, Manager, Employee or Customer of an account. | Only an Administrator, and never on their own account (`403 SELF_ROLE_CHANGE`), so the system always keeps an active Administrator. Atomic change; recorded in `Role Changes` with the actor and time. An assignment that cannot be recorded is undone (503); a removal is never undone. A removed role stops working on the next request (AA03). An active account keeps its status. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0046](../adr/0046-permission-based-authorization-matrix.md) |
+| **UC3: Consult Role History** | Administrator | Opens the history of role changes of an account. | Append-only records: role, action, actor (`USER` with the Administrator, or `SYSTEM` with the process: `initial-customer-role`, `external-first-login`, `initial-account-seed`, `migration-aa06`) and time. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) |
+| **UC4: Issue a Replacement Invitation** | Administrator | Sends a new invitation to an account that was never activated. | `users:invite`. The previous pending invitation is revoked. Refused for an activated account (`409 ACCOUNT_ALREADY_ACTIVATED`), a disabled one (`409 ACCOUNT_DISABLED`) or one without e-mail (`409 EMAIL_MISSING`). | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) |
+| **UC5: Enable or Disable an Account** | Administrator | Disables an account, or enables it again. | `users:manage`, never on their own account. Disabling increments `tokenVersion` and revokes the sessions and the pending invitations. An account never activated cannot be enabled (`409 ACTIVATION_REQUIRED`): only its invitation activates it. | [ADR-0041](../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AA06** | UC1: Create Account and Send Invitation | Administrator | [Role Assignment and Activation Invitation - Create an account and send the invitation](../flows/authentication/role-assignment-and-invitations.md#create-an-account-and-send-the-invitation) |
+| **AA06** | UC2: Assign or Remove a Role | Administrator | [Role Assignment and Activation Invitation - Assign or remove a role](../flows/authentication/role-assignment-and-invitations.md#assign-or-remove-a-role) |
+| **AA06** | UC3: Consult Role History | Administrator | [Role Assignment and Activation Invitation - Role changes](../flows/authentication/role-assignment-and-invitations.md#role-changes) |
+| **AA06** | UC4: Issue a Replacement Invitation | Administrator | [Role Assignment and Activation Invitation - Invitations](../flows/authentication/role-assignment-and-invitations.md#invitations) |
+| **AA06** | UC5: Enable or Disable an Account | Administrator | [Role Assignment and Activation Invitation - Account states](../flows/authentication/role-assignment-and-invitations.md#account-states) |
+
+The endpoints, permissions, error codes and acceptance criteria are in [Role Assignment and Activation Invitation (AA06)](../flows/authentication/role-assignment-and-invitations.md).
 
 ### AA07: Secure Account Activation
 

@@ -16,18 +16,18 @@
 
 Roles are internal to LaPrizza. They are stored in `users.roles` and always read by the back end. They never come from the request body, the access token, the identity provider or the browser storage.
 
-Every account starts with the role `CUSTOMER`. A Manager may add other roles when creating a local account. Assigning `CUSTOMER` never changes the account status and grants only the Customer permissions.
+Every account starts with the role `CUSTOMER`. An Administrator may add other roles when creating a local account (AA06). Assigning `CUSTOMER` never changes the account status and grants only the Customer permissions.
 
 On every login (local or external), refresh and protected request, the back end reads the stored roles again and keeps only the known base roles (`activeRoles`). An account without an active role cannot open a session. When the roles cannot be read, the request fails closed: nothing is granted.
 
-A returning user is never created again. Login does not add a `CUSTOMER` role that a Manager removed, and does not change the account status.
+A returning user is never created again. Login does not add a `CUSTOMER` role that an Administrator removed, and does not change the account status.
 
 ## New accounts
 
 | Creation path | Roles stored | Status |
 |:---|:---|:---|
 | Local account (`POST /users`, permission `users:create`, Administrator) | `CUSTOMER` and the requested roles, without duplicates | `inactive`, with an activation invitation ([AA06](./role-assignment-and-invitations.md)) |
-| First login with a verified external identity ([AA02](./external-authentication.md)) | `CUSTOMER` only. Roles or groups sent by the identity provider are ignored | `inactive`, no session (activation by a Manager) |
+| First login with a verified external identity ([AA02](./external-authentication.md)) | `CUSTOMER` only. Roles or groups sent by the identity provider are ignored | `active`, with a session: the verified identity validates the account (clarification of 2026-11-21); no invitation |
 | Initial account (seeder) | `CUSTOMER`, `MANAGER`, `ADMINISTRATOR` (AA06) | `active` |
 
 `withInitialCustomerRole()` (`domain/users/users.domain.js`) is the single rule used by the three creation paths.
@@ -80,7 +80,7 @@ flowchart TD
 
 | Code | When | Raised by | Message in the SPA |
 |:---|:---|:---|:---|
-| `NO_ACTIVE_ROLE` | The account has no active role on login, external login or refresh | `establishSession`, `refresh` | Access denied: the account has no active role, contact the manager |
+| `NO_ACTIVE_ROLE` | The account has no active role on login, external login or refresh | `establishSession`, `refresh` | Access denied: the account has no active role in LaPrizza, contact the LaPrizza administrator |
 | `ROLES_UNAVAILABLE` | The stored roles could not be read | `resolveRoles` | Access could not be confirmed, try again later |
 | `ACCOUNT_INACTIVE`, `ACCOUNT_DISABLED` | Unchanged ([Session Handling](./session-handling.md)) | `establishSession` | Unchanged |
 
@@ -95,6 +95,8 @@ Both codes are on the closed list of the external login callback, so they can ap
 | Customer grants no staff access | Permissions come from the role matrix (AA05). Customer has no staff permission | Authorization matrix tests (AA05) |
 | A returning user keeps the stored roles and status | Login only reads the account. A removed `CUSTOMER` role is not added back | `auth.service.test.js` |
 | Inactive or disabled accounts stay blocked | `establishSession` checks the status before the roles | `auth.service.test.js` |
+| After a local or external login the application obtains the active roles from the back end | The login answer and `GET /auth/me` carry the roles and permissions read from the database; the SPA builds its menu from them and keeps no role of its own | `auth.service.test.js`, `api.auth.test.js` |
+| Authentication alone grants no protected functionality | Every protected route checks a permission of the current roles (AA05); an account without roles has only the Guest permissions | `api.authorization-matrix.test.js` |
 | The same rule applies to local and external login | Both end in `establishSession` | `auth.service.test.js`, `external-auth.service.test.js` |
 | An account without an active role is denied with a clear message | `403 NO_ACTIVE_ROLE`, no session, translated message | `auth.service.test.js`, `aa03-role-errors.test.js` |
 | A role change applies without a new login | Roles read on every request and refresh. Without roles the session ends on the next refresh | `auth.service.test.js` |
@@ -123,10 +125,10 @@ The development accounts of `npm run seed:dev-users` include `customer@laprizza.
 | 3. Login with `customer@laprizza.pt` | No staff entries in the menu, staff route shows access denied, staff endpoint answers 403 | |
 | 4. Login with `noroles@laprizza.pt` | Message `NO_ACTIVE_ROLE`, no session | |
 | 5. Login body with `"roles": ["MANAGER"]` | Request refused (400) or answered with the stored roles only | |
-| 6. A Manager removes a role of a logged-in user | Next request to a route of that role answers 403, without a new login | |
+| 6. An Administrator removes a role of a logged-in user | Next request to a route of that role answers 403, without a new login | |
 | 7. All roles removed from a logged-in user | Next refresh answers `NO_ACTIVE_ROLE` and the SPA logs out | |
 | 8. Remove `CUSTOMER` from a user, then log in again | `CUSTOMER` is not added back | |
-| 9. First external login with a new account | `ACCOUNT_PENDING_ACTIVATION`, database with `roles: ["CUSTOMER"]` and `status: "inactive"` | |
+| 9. First external login with a new account | Session opened with the Customer permissions only; database with `roles: ["CUSTOMER"]` and `status: "active"`, no invitation | |
 
 ## Known limitations and follow-ups
 

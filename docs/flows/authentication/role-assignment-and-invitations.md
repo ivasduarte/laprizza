@@ -26,7 +26,7 @@ The website roles follow Table 1. `ADMINISTRATOR` is a new base role that manage
 | `roles:assign:<role>` | ADMINISTRATOR (the four roles) | Checked by the service for each role added or removed |
 | `resources:write` | ADMINISTRATOR | Upload, replace and delete in the shared folder ([SYS04](../../sys-admin/shared-resources/shared-resources.md)). Every role keeps `resources:read` |
 
-Guest is not a role: it applies automatically when there is no session ([AA05](./session-handling.md)).
+Guest is not a role: it applies automatically when there is no session ([AA05](../authorization/README.md)).
 
 ### New accounts
 
@@ -209,7 +209,7 @@ flowchart LR
 | An Administrator assigns, updates and removes the authenticated-user roles of Table 1; Guest is automatic | `ADMINISTRATOR` role with `roles:assign:*` for the four roles; role endpoints; Users page. Guest has no assignment | `permissions.domain.test.js`, `api.auth.test.js`, `users.service.test.js`, `users-api.test.js` |
 | Role changes limited to authorized administrators, except the automatic Customer; responsible user or process and time recorded | Permission checks per role, `Role Changes` records with actor and time, `GET /users/{id}/role-history` | `users.service.test.js`, `role-changes.domain.test.js`, `api.auth.test.js`, `api.authorization-matrix.test.js` |
 | No administrative role by registering, changing profile information or selecting an authentication method | Only an Administrator assigns roles; external accounts get `CUSTOMER` only, whatever the provider sends; password changes and profile routes never touch roles | `external-auth.service.test.js`, `users.service.test.js`, `permissions.domain.test.js` |
-| A new inactive account receives a unique invitation at its intended e-mail; Customer does not replace activation; adding a role to an active account needs no reactivation | Invitation issued on local and external creation; `ACTIVATION_REQUIRED`; role assignment never touches the status | `activation-invitation.service.test.js`, `users.service.test.js`, `external-auth.service.test.js` |
+| A new inactive account receives a unique invitation at its intended e-mail; Customer does not replace activation; adding a role to an active account needs no reactivation | Invitation issued on `POST /users` (the first external login creates an active account, validated by the provider, so it needs none); `ACTIVATION_REQUIRED`; role assignment never touches the status | `activation-invitation.service.test.js`, `users.service.test.js`, `external-auth.service.test.js` |
 | Invitations expire, become unusable after activation, and can be replaced | TTL, atomic `consume`, revocation on replacement | `activation-invitation.domain.test.js`, `activation-invitation.service.test.js`, `activation-invitations.repository.integration.test.js` |
 | Removing a role or disabling an account stops the withdrawn permissions | Roles read on every request (AA03); disabling revokes sessions and invitations | `auth.service.test.js` (AA03), `users.service.test.js`, `api.auth.test.js` |
 | Website permissions independent of infrastructure administration | No website permission concerns infrastructure; Linux groups are managed separately | This document, [SSH security](../../sys-admin/ssh-security.md) |
@@ -223,7 +223,7 @@ Accounts of `npm run seed:dev-users`. Use Mailpit (`http://localhost:8025`) to s
 | 1. Log in as `manager@laprizza.pt` | No "Users" entry; `GET /users` answers 403 | |
 | 2. Log in as `administrator@laprizza.pt`, open "Users" | List of accounts, form without password | |
 | 3. Create an account with role Employee | Status "Waiting for activation", roles Customer and Employee, e-mail in Mailpit with a link and no password | |
-| 4. "Send new invitation" for that account | A new e-mail; the link of step 3 no longer works (after AA07) | |
+| 4. "Send new invitation" for that account | A new e-mail; the link of step 3 no longer works ([AA07](../account-activation/README.md)) | |
 | 5. "Role history" of that account | Customer by the automatic process, Employee by `administrator@laprizza.pt`, with dates | |
 | 6. Add Manager to `employee@laprizza.pt`, then remove it | Both changes in its history; no new invitation; the user keeps working | |
 | 7. With `employee@laprizza.pt` signed in elsewhere, remove Employee | Its next request to a staff page answers 403 | |
@@ -235,7 +235,6 @@ Accounts of `npm run seed:dev-users`. Use Mailpit (`http://localhost:8025`) to s
 
 | Item | Impact | Proposal |
 |:---|:---|:---|
-| Activation is AA07 | Until AA07 exists, new accounts cannot be activated: the invitation is issued but there is no `/activate` page or endpoint | AA07: page `/activate` and endpoint that `consume()` the invitation, set the password or check the external identity, and set `activatedAt` |
 | User creation is not atomic (no transactions on the standalone MongoDB) | If the role record fails, the account is deleted (compensation) | Use a transaction if MongoDB runs as a replica set |
 | An Administrator may still set a password with `PATCH /users/{id}` | Sprint 1 behaviour kept for existing accounts | Remove it once AA07 and password recovery cover every case |
 

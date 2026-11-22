@@ -91,7 +91,7 @@ const baseMessages = {
         ACCOUNT_INACTIVE:
           'The account is not active yet. Use the activation invitation you received by email.',
         ACCOUNT_DISABLED:
-          'The account is disabled. Contact the restaurant manager.',
+          'The account is disabled. Contact the LaPrizza administrator.',
         TOO_MANY_ATTEMPTS: 'Too many failed attempts.',
         RATE_LIMITED: 'Too many requests.',
         VALIDATION_FAILED: 'Please check the data you entered.',
@@ -103,7 +103,7 @@ const baseMessages = {
         SESSION_REVOKED: 'Your session has ended. Please log in again.',
         REFRESH_INVALID: 'Your session has ended. Please log in again.',
         NO_ACTIVE_ROLE:
-          'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+          'Access denied: your account has no active role in LaPrizza. Contact the LaPrizza administrator.',
         ROLES_UNAVAILABLE:
           'Your access could not be confirmed right now. Please try again in a moment.',
         INVITATION_INVALID:
@@ -127,15 +127,15 @@ const baseMessages = {
           EMAIL_NOT_VERIFIED:
             'Your email address is not verified at the provider.',
           ACCOUNT_LINK_REQUIRED:
-            'An account with this email already exists. Contact the restaurant manager.',
+            'An account with this email already exists. Contact the LaPrizza administrator.',
           ACCOUNT_PENDING_ACTIVATION:
-            'Your account was created but must be activated before you can use it. Contact the restaurant manager.',
+            'Your account was created but must be activated before you can use it. Contact the LaPrizza administrator.',
           ACCOUNT_INACTIVE:
-            'The account is not active yet. Contact the restaurant manager.',
+            'The account is not active yet. Contact the LaPrizza administrator.',
           ACCOUNT_DISABLED:
-            'The account is disabled. Contact the restaurant manager.',
+            'The account is disabled. Contact the LaPrizza administrator.',
           NO_ACTIVE_ROLE:
-            'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+            'Access denied: your account has no active role in LaPrizza. Contact the LaPrizza administrator.',
           ROLES_UNAVAILABLE:
             'Your access could not be confirmed right now. Please try again in a moment.',
           INVITATION_INVALID:
@@ -653,7 +653,7 @@ const baseMessages = {
         ACCOUNT_INACTIVE:
           'A conta ainda não está ativa. Use o convite de ativação que recebeu por email.',
         ACCOUNT_DISABLED:
-          'A conta está desativada. Contacte o gerente do restaurante.',
+          'A conta está desativada. Contacte o administrador da LaPrizza.',
         TOO_MANY_ATTEMPTS: 'Demasiadas tentativas falhadas.',
         RATE_LIMITED: 'Demasiados pedidos.',
         VALIDATION_FAILED: 'Verifique os dados introduzidos.',
@@ -665,7 +665,7 @@ const baseMessages = {
         SESSION_REVOKED: 'A sua sessão terminou. Inicie sessão novamente.',
         REFRESH_INVALID: 'A sua sessão terminou. Inicie sessão novamente.',
         NO_ACTIVE_ROLE:
-          'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gerente do restaurante.',
+          'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o administrador da LaPrizza.',
         ROLES_UNAVAILABLE:
           'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
         INVITATION_INVALID:
@@ -690,15 +690,15 @@ const baseMessages = {
           EMAIL_NOT_VERIFIED:
             'O seu endereço de email não está verificado no fornecedor.',
           ACCOUNT_LINK_REQUIRED:
-            'Já existe uma conta com este email. Contacte o gestor do restaurante.',
+            'Já existe uma conta com este email. Contacte o administrador da LaPrizza.',
           ACCOUNT_PENDING_ACTIVATION:
-            'A sua conta foi criada, mas tem de ser ativada antes de a poder usar. Contacte o gestor do restaurante.',
+            'A sua conta foi criada, mas tem de ser ativada antes de a poder usar. Contacte o administrador da LaPrizza.',
           ACCOUNT_INACTIVE:
-            'A conta ainda não está ativa. Contacte o gestor do restaurante.',
+            'A conta ainda não está ativa. Contacte o administrador da LaPrizza.',
           ACCOUNT_DISABLED:
-            'A conta está desativada. Contacte o gestor do restaurante.',
+            'A conta está desativada. Contacte o administrador da LaPrizza.',
           NO_ACTIVE_ROLE:
-            'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gestor do restaurante.',
+            'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o administrador da LaPrizza.',
           ROLES_UNAVAILABLE:
             'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
           INVITATION_INVALID:

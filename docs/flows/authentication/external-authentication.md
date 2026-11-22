@@ -11,7 +11,7 @@
 | Allowed roles | Public (no authentication) |
 | Success response | 302 to the SPA with `status=success` and the refresh cookie `lp_rt` |
 | Error handling | 404 `PROVIDER_NOT_FOUND` (login) and 302 to the SPA with `status=error&code=<CODE>` (callback) |
-| Decision records | [ADR 0044](../../adr/0044-external-authentication-with-openid-connect.md), [ADR 0045](../../adr/0045-external-identity-model-and-account-resolution.md), builds on [ADR 0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| Decision records | [ADR 0053](../../adr/0053-external-authentication-with-openid-connect.md), [ADR 0054](../../adr/0054-external-identity-model-and-account-resolution.md), builds on [ADR 0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 
@@ -24,7 +24,7 @@ When the ID token is valid, the back end identifies the user by `(issuer, sub)`:
 * **Known identity and account deactivated after activation, or disabled:** no session, `ACCOUNT_INACTIVE` or `ACCOUNT_DISABLED` (a login never reactivates it, AA03).
 * **Unknown identity with a verified e-mail that no user has:** an `active` account with the role `CUSTOMER` is created and linked to the identity, and the session is created (AA02 clarification). No invitation is sent. If the identity link fails, the new account is deleted, so the e-mail is never left blocked.
 * **Contact phone:** the providers do not supply it. While a `CUSTOMER` account has neither a phone nor a Customer record, the session user has `phoneRequired: true` and the customer permissions (`CUSTOMER_CONTACT_PERMISSIONS`, today `customers:read:own`) are withheld by the back end. The SPA sends the user to `/complete-profile`, which calls `PUT /auth/me/phone`.
-* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0045](../../adr/0045-external-identity-model-and-account-resolution.md)).
+* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0054](../../adr/0054-external-identity-model-and-account-resolution.md)).
 
 A cancelled or failed login never creates a session. Logout is the existing `POST /auth/logout`.
 
@@ -326,7 +326,7 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | Criterion | How it is met | Evidence |
 |---|---|---|
 | The user can choose an external provider in addition to local authentication | Buttons on the login page, from `GET /auth/external/providers`, shown only for enabled providers | `external-login-buttons.jsx`, flow 1.1 in `external-auth-test-flow.http` |
-| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0044](../../adr/0044-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
+| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0053](../../adr/0053-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
 | The user is sent to the provider and returned to the application | `GET /login` redirects (302), `GET /callback` redirects to the SPA | `external-auth.controller.test.js`, flows 1.4 to 1.6 |
 | A verified identity exists before protected functionality is available | ID token validated by the library. The identity is `(issuer, sub)`. The session is only created after that validation; customer features also need the contact phone | `external-auth.service.test.js`, `external-identity.domain.test.js` |
 | (Clarification) The account is created active after a successful external login; a missing phone is asked before the customer features | `active` account and session on the first login; `phoneRequired` + `PUT /auth/me/phone`; `/complete-profile` in the SPA | `external-auth.service.test.js`, `auth.session-policy.test.js`, `guard.test.js` |
