@@ -150,7 +150,12 @@ Content-Type: application/json
         "modelReference": "models/conveyor.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
     ]
   }
@@ -173,7 +178,12 @@ Content-Type: application/json
         "modelReference": "https://cdn.laprizza.pt/models/conveyor.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
     ]
   }
@@ -188,181 +198,114 @@ Content-Type: application/json
 
 {
   "content": {
-    "dimensions": {
-      "width": 9,
-      "length": 1.4,
-      "height": 2.6
-    },
+    "dimensions": { "width": 9, "length": 1.4, "height": 2.6 },
     "elements": [
       {
         "id": "counter-01",
         "type": "counter",
-        "position": {
-          "x": 0,
-          "y": 0,
-          "z": 0.7
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 9,
-          "y": 1,
-          "z": 1.2
+        "position": { "x": 0, "y": 0, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 9, "y": 1, "z": 1.2 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "platform-01",
         "type": "receiving-platform",
-        "position": {
-          "x": -3.8,
-          "y": 0.9,
-          "z": 0.7
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": -3.8, "y": 0.9, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "dispenser-01",
         "type": "crust-dispenser",
-        "position": {
-          "x": -3.8,
-          "y": 0.9,
-          "z": 0.7
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": -3.8, "y": 0.9, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "conveyor-01",
         "type": "conveyor-belt",
-        "position": {
-          "x": 0,
-          "y": 0.9,
-          "z": 0.7
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 6.4,
-          "y": 1,
-          "z": 1
+        "position": { "x": 0, "y": 0.9, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 6.4, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "arm-01",
         "type": "robotic-arm",
-        "position": {
-          "x": -2.2,
-          "y": 0.9,
-          "z": 0.15
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": -2.2, "y": 0.9, "z": 0.15 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "arm-02",
         "type": "robotic-arm",
-        "position": {
-          "x": -0.8,
-          "y": 0.9,
-          "z": 0.15
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": -0.8, "y": 0.9, "z": 0.15 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "arm-03",
         "type": "robotic-arm",
-        "position": {
-          "x": 0.6,
-          "y": 0.9,
-          "z": 0.15
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": 0.6, "y": 0.9, "z": 0.15 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "arm-04",
         "type": "robotic-arm",
-        "position": {
-          "x": 2.0,
-          "y": 0.9,
-          "z": 0.15
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": 2.0, "y": 0.9, "z": 0.15 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       },
       {
         "id": "oven-01",
         "type": "wood-fired-oven",
-        "position": {
-          "x": 3.9,
-          "y": 0.9,
-          "z": 0.7
-        },
-        "rotation": {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        "scale": {
-          "x": 1,
-          "y": 1,
-          "z": 1
+        "position": { "x": 3.9, "y": 0.9, "z": 0.7 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
         }
       }
     ]
@@ -443,7 +386,12 @@ Content-Type: application/json
         "modelReference": "/assets/models/conveyor.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
     ]
   }
@@ -563,6 +511,14 @@ Content-Type: application/json
       "configurationId": "{{configB_Id}}",
       "position": { "x": 0, "y": 0, "z": -15 },
       "rotation": { "x": 0, "y": 0, "z": 0 }
+    },
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
     }
   }
 }

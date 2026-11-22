@@ -116,7 +116,15 @@ Content-Type: application/json
 {
   "content": {
     "dimensions": { "width": 10, "length": 15, "height": 3 },
-    "elements": []
+    "elements": [],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 200
@@ -151,9 +159,22 @@ Content-Type: application/json
         "modelReference": "models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 400
@@ -174,9 +195,22 @@ Content-Type: application/json
         "modelReference": "https://cdn.laprizza.pt/models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 200
@@ -203,9 +237,22 @@ Content-Type: application/json
         "modelReference": "/assets/models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 201
@@ -221,7 +268,15 @@ Content-Type: application/json
   "name": "Automated Line {{dynamicSuffix}}",
   "content": {
     "dimensions": { "width": 12, "length": 20, "height": 4 },
-    "elements": []
+    "elements": [],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 201
@@ -283,4 +338,4 @@ Authorization: Bearer {{adminToken}}
 ### 5.7 Obter a Configuração A (404 Not Found)
 GET {{baseUrl}}/kitchen-configurations/{{configA_Id}}
 Authorization: Bearer {{adminToken}}
-?? status == 404
+?? status == 404
