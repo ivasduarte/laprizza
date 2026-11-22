@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01, VIS02, VIS05, VIS06, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB01, WEB02, WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01, VIS02, VIS05, VIS06, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -28,57 +28,63 @@ This document shows who uses the LaPrizza information system and which business 
       - [Flow Mapping](#flow-mapping-9)
     - [BCK11: Product Catalogue and Product Information](#bck11-product-catalogue-and-product-information)
       - [Flow Mapping](#flow-mapping-10)
-    - [WEB03: Role-Based Navigation](#web03-role-based-navigation)
+    - [WEB01: SPA Setup and Integration](#web01-spa-setup-and-integration)
       - [Use Case Descriptions](#use-case-descriptions)
       - [Flow Mapping](#flow-mapping-11)
-    - [WEB04: User Feedback and Validation](#web04-user-feedback-and-validation)
+    - [WEB02: Consistent Layout and Navigation](#web02-consistent-layout-and-navigation)
       - [Use Case Descriptions](#use-case-descriptions-1)
       - [Flow Mapping](#flow-mapping-12)
-    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
+    - [WEB03: Role-Based Navigation](#web03-role-based-navigation)
       - [Use Case Descriptions](#use-case-descriptions-2)
       - [Flow Mapping](#flow-mapping-13)
-    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
+    - [WEB04: User Feedback and Validation](#web04-user-feedback-and-validation)
       - [Use Case Descriptions](#use-case-descriptions-3)
       - [Flow Mapping](#flow-mapping-14)
-    - [AA01: Local Authentication](#aa01-local-authentication)
+    - [WEB06: Kitchen Configuration and 3D Integration](#web06-kitchen-configuration-and-3d-integration)
       - [Use Case Descriptions](#use-case-descriptions-4)
       - [Flow Mapping](#flow-mapping-15)
-    - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
+    - [WEB07: Artificial Intelligence Configuration and Execution](#web07-artificial-intelligence-configuration-and-execution)
       - [Use Case Descriptions](#use-case-descriptions-5)
       - [Flow Mapping](#flow-mapping-16)
-    - [AA03: Internal Role Resolution](#aa03-internal-role-resolution)
+    - [AA01: Local Authentication](#aa01-local-authentication)
       - [Use Case Descriptions](#use-case-descriptions-6)
       - [Flow Mapping](#flow-mapping-17)
-    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
+    - [AA02: External Identity Provider Integration](#aa02-external-identity-provider-integration)
       - [Use Case Descriptions](#use-case-descriptions-7)
       - [Flow Mapping](#flow-mapping-18)
-    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
+    - [AA03: Internal Role Resolution](#aa03-internal-role-resolution)
       - [Use Case Descriptions](#use-case-descriptions-8)
       - [Flow Mapping](#flow-mapping-19)
-    - [AA06: Role Assignment and Activation Invitation](#aa06-role-assignment-and-activation-invitation)
+    - [AA04: Secure Session Handling](#aa04-secure-session-handling)
       - [Use Case Descriptions](#use-case-descriptions-9)
       - [Flow Mapping](#flow-mapping-20)
-    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
+    - [AA05: Authorization Enforcement](#aa05-authorization-enforcement)
       - [Use Case Descriptions](#use-case-descriptions-10)
       - [Flow Mapping](#flow-mapping-21)
-    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
+    - [AA06: Role Assignment and Activation Invitation](#aa06-role-assignment-and-activation-invitation)
       - [Use Case Descriptions](#use-case-descriptions-11)
       - [Flow Mapping](#flow-mapping-22)
-    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
+    - [AA07: Secure Account Activation](#aa07-secure-account-activation)
       - [Use Case Descriptions](#use-case-descriptions-12)
       - [Flow Mapping](#flow-mapping-23)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [VIS01: 3D Module Integration](#vis01-3d-module-integration)
       - [Use Case Descriptions](#use-case-descriptions-13)
       - [Flow Mapping](#flow-mapping-24)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
       - [Use Case Descriptions](#use-case-descriptions-14)
       - [Flow Mapping](#flow-mapping-25)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-15)
       - [Flow Mapping](#flow-mapping-26)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-16)
       - [Flow Mapping](#flow-mapping-27)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+      - [Use Case Descriptions](#use-case-descriptions-17)
+      - [Flow Mapping](#flow-mapping-28)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-18)
+      - [Flow Mapping](#flow-mapping-29)
 
 ## Actors
 
@@ -244,6 +250,85 @@ This document shows who uses the LaPrizza information system and which business 
 | :--------- | :-------------------------- | :--------------- | :---------------------------------------------------------------------------- |
 | **BCK11**  | UC1: List Product Catalogue | LaPrizza Manager | [List Product Catalogue](../flows/product-catalogue/list-search-catalogue.md) |
 | **BCK11**  | UC2: Get Catalogue Item     | LaPrizza Manager | [Get Catalogue Item](../flows/product-catalogue/get-catalogue-item.md)        |
+
+### WEB01: SPA Setup and Integration
+
+One single-page application gives every role access to the LaPrizza services. It is a React application built with Vite, organized as a registry of features that are developed and loaded independently but share one layout, one session, one route guard and one HTTP client. All business data is read and changed through the REST API of the back end, with the identifiers the back end returns; part of the client is generated from the OpenAPI document. The 3D viewer and the AI pages are features like any other, so they keep the common navigation, authentication and visual identity. The application is installed, configured and run from the common repository, and the configuration of each environment is documented; no credential is placed in the public files of the application.
+
+```mermaid
+flowchart LR
+    User([Guest / System User])
+    Dev([Developer / System Administrator])
+    BE([Back-End Application])
+
+    subgraph WEB01 [WEB01: SPA Setup and Integration]
+        direction TB
+        UC1([UC1: Open a Page of the Web Application])
+        UC2([UC2: Install, Configure and Run the Web Application])
+    end
+
+    User --> UC1
+    Dev --> UC2
+    UC1 -->|<< REST, JSON >>| BE
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Open a Page of the Web Application** | Guest, System User | Opens a URL of the application (menu, link or typed) and works with the page and its data. | Every path returns the SPA; the page is rendered inside the common layout after the route guard allows it (WEB03), and only then its code and data are loaded. Data comes only from the REST API (`/api/v2`) through the shared client (access token in memory, one refresh retry on `401`, timeouts, translated errors). The 3D viewer and the AI pages use the same layout, guard and client. | [ADR-0007](../adr/0007-web-application-%28spa%29-technology-and-structure.md), [ADR-0009](../adr/0009-generate-dynamic-http-client-with-orval.md), [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| **UC2: Install, Configure and Run the Web Application** | Developer, System Administrator | Installs the dependencies, configures the environment and runs or builds the application from the repository. | `npm ci` with the lock file; `.env` from `.env.example` (not committed); `VITE_API_BASE_URL` is the only setting that changes between environments (`http://localhost:3000/api/v2` in development, `/api/v2` behind nginx in staging and production). `VITE_*` values are public, so they never hold secrets. Staging and production builds are made by the deployment pipeline after lint and tests (SYS01). | [ADR-0007](../adr/0007-web-application-%28spa%29-technology-and-structure.md), [ADR-0017](../adr/0017-secrets-management-strategy.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **WEB01** | UC1: Open a Page of the Web Application | Guest, System User | [Open a Page of the Web Application](../flows/web-application/open-web-application.md) |
+| **WEB01** | UC2: Install, Configure and Run the Web Application | Developer, System Administrator | [Web Application - Installation and configuration](../flows/web-application/README.md#installation-and-configuration-web01), [frontend README](../../frontend/README.md) |
+
+The structure of the application, the element catalogue and the acceptance criteria are in the [Web Application README](../flows/web-application/README.md).
+
+### WEB02: Consistent Layout and Navigation
+
+Every page shares one layout: a header with the LaPrizza logo, the ☰ primary navigation, the language switcher, the theme and the account menu; breadcrumbs; the main content; and a footer. The header stays at the top while scrolling, so the restaurant identification and the navigation remain visible. Menus, forms, buttons and messages use shared components, so they look and behave the same everywhere. The interface is in English and Portuguese, and the chosen language is kept on every page and after a reload. The layout is designed for desktop and adapts to smaller screens without hiding sections or actions, and it can be used with the keyboard.
+
+```mermaid
+flowchart LR
+    User([Guest / System User])
+
+    subgraph WEB02 [WEB02: Consistent Layout and Navigation]
+        direction TB
+        UC1([UC1: Navigate with the Common Layout])
+        UC2([UC2: Identify the Current Section and Go Back])
+        UC3([UC3: Change the Language])
+        UC4([UC4: Use the Application with the Keyboard])
+        UC5([UC5: Use the Application on Different Screen Sizes])
+    end
+
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    User --> UC5
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Navigate with the Common Layout** | Guest, System User | Opens the ☰ menu and chooses a section. | Same header on every page (logo, ☰ menu, language, theme, account), sticky and with a fixed height. Menu grouped in sections (Kitchen, Menu, Customers, Administration) and filtered by permission (WEB03); empty sections are not shown. Shared buttons, forms, messages and dialogs (WEB04). | [ADR-0047](../adr/0047-permission-driven-navigation-in-the-web-application.md), [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC2: Identify the Current Section and Go Back** | Guest, System User | Sees where they are and returns to a previous level or to the home page. | The active menu link is marked (`aria-current="page"`); breadcrumbs Home › Section › Page › Detail › Edit link back to every level; the logo leads to Home, as do the access-denied and not-found pages. | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC3: Change the Language** | Guest, System User | Switches between English and Portuguese. | Every text exists in both languages (checked by tests). The choice is saved in the browser and kept on every page and after a reload; the first visit follows the browser language, otherwise English; `<html lang>` follows the choice. | [ADR-0018](../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
+| **UC4: Use the Application with the Keyboard** | Guest, System User | Moves through the menu, the pages and the forms with the keyboard. | Skip link to the main content; native links, buttons and radio buttons; the menu button announces its state and closes with Escape, returning the focus; labelled navigation, breadcrumbs and fields, with the error text bound to its field. | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| **UC5: Use the Application on Different Screen Sizes** | Guest, System User | Uses the application on a desktop, a tablet or a phone. | Desktop first; below 48rem and 30rem the header and the pages are compacted, and the menu is behind ☰ at every width, so nothing essential is hidden. On short landscape screens the header scrolls with the page. | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **WEB02** | UC1-UC5 | Guest, System User | Client-side behaviour, no flow of its own: [Web Application - Common layout](../flows/web-application/README.md#common-layout-web02) |
+
+Evidence: `navigation.test.js` (menu sections and breadcrumbs), `registry.test.js`, `i18n.test.js`, `used-keys.test.js`, `theme-store.test.js` (front end); `web03-role-navigation.spec.js`, `web04-feedback.spec.js` (end-to-end).
 
 ### WEB03: Role-Based Navigation
 
