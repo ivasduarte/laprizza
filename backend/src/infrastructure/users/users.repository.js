@@ -102,6 +102,19 @@ export async function removeRoleIfPresent(id, role, { clearCustomerId = false } 
   return Users.findOneAndUpdate({ _id: id, roles: role }, update, { returnDocument: 'after' });
 }
 
+/**
+ * Links a customer record to an account that has none yet (atomic: a concurrent link wins once).
+ *
+ * @returns {Promise<Object|null>} The updated user, or null when the account already has one.
+ */
+export async function linkCustomerIfUnlinked(id, customerId) {
+  return Users.findOneAndUpdate(
+    { _id: id, $or: [{ customerId: null }, { customerId: { $exists: false } }] },
+    { $set: { customerId } },
+    { returnDocument: 'after' },
+  );
+}
+
 /** Removes a user. Only used to undo a creation whose role records could not be written. */
 export async function deleteById(id) {
   return Users.deleteOne({ _id: id });

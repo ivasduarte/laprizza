@@ -81,6 +81,7 @@ export const AUTHORIZATION_MATRIX = Object.freeze([
   ['POST', '/customers', MANAGER_ONLY],
   ['PATCH', '/customers/:id', MANAGER_ONLY],
   ['GET', '/customers/me', [CUSTOMER]],
+  ['POST', '/customers/me', [CUSTOMER]],
 
   // Kitchen viewer and configurations: read by the staff (Table 1), changed by the MANAGER only
   ['GET', '/kitchen-configurations', STAFF],

@@ -50,7 +50,7 @@ The use cases are described in the [Use Case Views](../../analysis/use-case-view
 | Permission | Guest | Customer | Employee | Manager | Administrator |
 |---|---|---|---|---|---|
 | `catalogue:read` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `customers:read:own` | - | ✅ | - | - | - |
+| `customers:read:own`, `customers:write:own` | - | ✅ | - | - | - |
 | `customers:read`, `customers:write` | - | - | - | ✅ | - |
 | `products:read` | - | - | ✅ | ✅ | - |
 | `products:write`, `categories:write`, `pizzas:write` | - | - | - | ✅ | - |
@@ -73,7 +73,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 |---|---|---|
 | `/catalogue` | `catalogue:read` (public, rate limited per IP for Guests) | - |
 | `/customers`, `/customers/{id}` | `customers:read` | `customers:write` |
-| `/customers/me` | `customers:read:own` | - |
+| `/customers/me` | `customers:read:own` | `customers:write:own` (`POST`, create the own record once) |
 | `/products`, `/product-categories`, `/pizza-size`, `/pizza-component-type`, `/predefined-pizzas`, `/products/{productId}/size-configurations` | `products:read` | `products:write`, `categories:write`, `pizzas:write` |
 | `/allergens` | `allergens:read` | `allergens:write` |
 | `/stock` | `stock:read` (active products); `stock:read:inactive` with `includeInactive=true` | `stock:write` |
@@ -92,7 +92,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 - **Guest.** A request without `Authorization` gets the Guest principal (`GUEST_PERMISSIONS`) without touching the database. If the route is not public for Guests, the answer is `401 TOKEN_MISSING`, never `403`, so the Web Application can send the user to the login.
 - **401 versus 403.** `401` for a missing, malformed, invalid or expired token and for a revoked session or inactive account (`TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`). `403 FORBIDDEN` for a valid session without the permission. `503 ROLES_UNAVAILABLE` when the roles cannot be read (fail closed).
 - **Refused before the business logic.** A refused request never reaches the controller, the service or the business repositories, and the answer never says which permission was missing.
-- **Data ownership.** A customer reads their own record through `GET /customers/me`, which uses the `customerId` of the session; `GET /customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. `canReadCustomer` (`ownership.domain.js`) accepts the record only with `customers:read`, or with `customers:read:own` and the same `customerId`. An account without a linked customer gets `404 CUSTOMER_PROFILE_NOT_FOUND`.
+- **Data ownership.** A customer reads their own record through `GET /customers/me`, which uses the `customerId` of the session; `GET /customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. `canReadCustomer` (`ownership.domain.js`) accepts the record only with `customers:read`, or with `customers:read:own` and the same `customerId`. An account without a linked customer gets `404 CUSTOMER_PROFILE_NOT_FOUND` and can create its own record once with `POST /customers/me` (`customers:write:own`): the e-mail is always the one of the account, the record is linked to the account, a second creation answers `409 CUSTOMER_PROFILE_EXISTS`, and a record that already uses the e-mail of the account is never linked automatically (`409 CUSTOMER_EMAIL_IN_USE`). Both own-data permissions are withheld until the account has a contact phone (AA02).
 - **Inactive stock.** `GET /stock` returns only active products; `includeInactive=true` also needs `stock:read:inactive` (Manager), checked after the query is validated.
 - **Recorded attempts.** Every `401` and `403` writes `ACCESS_DENIED` with user id and roles (when known), IP, method, path, route pattern, user agent (200 characters at most), required permission and reason (`TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`, `MISSING_PERMISSION`). The security logger drops fields named like a secret (`pass`, `token`, `secret`, `cookie`, `authorization`, `hash`) and redacts values that look like a Bearer token, a JWT or an Argon2 hash.
 - **Public routes limited.** Guest requests to `/catalogue` go through the `public` rate limiter (per IP, `PUBLIC_RATE_LIMIT_WINDOW_MINUTES`, `PUBLIC_RATE_LIMIT_MAX`, default 120 per minute). Requests with a token skip it. `429 RATE_LIMITED` is logged as `RATE_LIMITED`.

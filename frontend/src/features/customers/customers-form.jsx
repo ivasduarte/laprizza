@@ -7,6 +7,8 @@ import {
   usePostCustomers,
 } from '../../api/generated/default/default';
 import { invalidateResource } from '../../shared/api/invalidate.js';
+import { api } from '../../shared/api/index.js';
+import { useSession } from '../../shared/auth/use-session.js';
 import { useCan } from '../../shared/auth/use-can.js';
 import { useSubmit } from '../../shared/forms/use-submit.js';
 import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
@@ -62,6 +64,17 @@ const SCHEMA = {
     placeName(),
   ],
 };
+/**
+ * Self-service (My data): the e-mail is the one of the account and is not edited; the phone is
+ * optional and, when empty, the contact phone of the account is used.
+ */
+const SELF_SCHEMA = {
+  ...Object.fromEntries(
+    Object.entries(SCHEMA).filter(([field]) => field !== 'email' && field !== 'phoneNumber')
+  ),
+  phoneNumber: [portuguesePhone()],
+};
+
 const ADDRESS_FIELDS = [
   'street',
   'houseNumber',
@@ -85,12 +98,16 @@ function initialValues(customer) {
   return values;
 }
 
-function toPayload(values) {
+function toPayload(values, self = false) {
   const address = {};
   ADDRESS_FIELDS.forEach((field) => {
     const value = values[`address.${field}`].trim();
-    if (value) address[field] = value; 
+    if (value) address[field] = value;
   });
+  if (self) {
+    const phoneNumber = values.phoneNumber.trim();
+    return { name: values.name.trim(), ...(phoneNumber ? { phoneNumber } : {}), address };
+  }
   return {
     name: values.name.trim(),
     email: values.email.trim(),
@@ -100,11 +117,27 @@ function toPayload(values) {
   };
 }
 
-export default function CustomerForm({ customer, onSaved, onCancel }) {
+/** Field errors of the self-service creation (POST /customers/me), from the error code. */
+function selfFieldErrors(error) {
+  if (error.code === 'PHONE_IN_USE') return { phoneNumber: { type: 'customer.phoneTaken' } };
+  if (error.code === 'PHONE_INVALID') return { phoneNumber: { type: 'customer.phone' } };
+  if (error.status === 400 && error.fieldErrors.length === 0) {
+    const mismatch = { type: 'customer.postalCodeCity' };
+    return { 'address.postalCode': mismatch, 'address.city': mismatch };
+  }
+  return null;
+}
+
+/**
+ * @param {{customer?: object, onSaved: Function, onCancel?: Function, self?: boolean}} props
+ *   `self`: the signed-in Customer creates their own record (My data).
+ */
+export default function CustomerForm({ customer, onSaved, onCancel, self = false }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const formRef = useRef(null);
   const isEdit = Boolean(customer?.id);
+  const { user } = useSession();
   const canReadAllergens = useCan('allergens:read');
   const allergens = useGetAllergens(undefined, {
     query: { enabled: canReadAllergens },
@@ -137,11 +170,26 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const clientErrors = validateForm(values, SCHEMA);
+    const clientErrors = validateForm(values, self ? SELF_SCHEMA : SCHEMA);
     setErrors(clientErrors);
     if (hasErrors(clientErrors)) return;
 
-    const data = toPayload(values);
+    const data = toPayload(values, self);
+    if (self) {
+      const result = await submit(() => api.post('/customers/me', data), {
+        successKey: 'myData.created',
+      });
+      if (result.ok || result.error?.code === 'CUSTOMER_PROFILE_EXISTS') {
+        await invalidateResource(queryClient, '/customers/me');
+        onSaved(result.value);
+      } else if (result.error) {
+        const fieldErrors = selfFieldErrors(result.error);
+        if (fieldErrors) setErrors(fieldErrors);
+        else fromApi(result.error); // the inputs keep their values
+      }
+      return;
+    }
+
     const result = await submit(
       () =>
         isEdit
@@ -174,7 +222,10 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
     }
   };
 
-  const errorKey = getCustomerErrorKey('save', error);
+  const errorKey =
+    self && error?.code === 'CUSTOMER_EMAIL_IN_USE'
+      ? 'myData.errors.emailInUse'
+      : getCustomerErrorKey('save', error);
   const labels = {
     name: t('customers.form.name'),
     email: t('customers.form.email'),
@@ -220,10 +271,13 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
       aria-busy={submitting}
     >
       <h2>
-        {isEdit
-          ? t('customers.form.editTitle', { name: customer.name })
-          : t('customers.form.createTitle')}
+        {self
+          ? t('myData.createTitle')
+          : isEdit
+            ? t('customers.form.editTitle', { name: customer.name })
+            : t('customers.form.createTitle')}
       </h2>
+      {self && <p>{t('myData.createIntro')}</p>}
       <p className="entity-hint">{t('entity.required')}</p>
 
       <FormErrors
@@ -245,11 +299,19 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
 
       <fieldset className="entity-form">
         <legend>{t('customers.form.contacts')}</legend>
-        {textField('email', { type: 'email', autoComplete: 'off' })}
+        {self ? (
+          <p>
+            {labels.email}: <strong>{user?.email}</strong>
+            <span className="entity-hint"> {t('myData.emailFromAccount')}</span>
+          </p>
+        ) : (
+          textField('email', { type: 'email', autoComplete: 'off' })
+        )}
         {textField('phoneNumber', {
           type: 'tel',
-          autoComplete: 'off',
-          hint: t('customers.form.phoneHint'),
+          autoComplete: self ? 'tel' : 'off',
+          requiredField: !self,
+          hint: self ? t('myData.phoneHint') : t('customers.form.phoneHint'),
         })}
       </fieldset>
 
@@ -294,14 +356,16 @@ export default function CustomerForm({ customer, onSaved, onCancel }) {
       )}
 
       <div className="entity-actions entity-form-actions">
-        <button
-          type="button"
-          className="secondary"
-          onClick={onCancel}
-          disabled={submitting}
-        >
-          {t('entity.cancel')}
-        </button>
+        {onCancel && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            {t('entity.cancel')}
+          </button>
+        )}
         <button type="submit" disabled={submitting}>
           {submitting && <Spinner />}
           {submitting ? t('entity.saving') : t('entity.save')}

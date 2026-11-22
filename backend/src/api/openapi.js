@@ -368,6 +368,46 @@ const baseSpec = {
           404: errorResponse('No customer linked to this account (CUSTOMER_PROFILE_NOT_FOUND)'),
         },
       },
+      post: {
+        summary: 'Create the own customer record of a Customer account that has none (self-service)',
+        description:
+          'The e-mail is the one of the account (an email in the body is ignored) and the record is linked to the account. ' +
+          'Without phoneNumber the contact phone of the account is used. Allowed once per account.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'address'],
+                properties: {
+                  name: { type: 'string', example: 'Ana Costa' },
+                  phoneNumber: { type: 'string', example: '912345678' },
+                  address: { $ref: '#/components/schemas/Address' },
+                  dietaryRestrictions: {
+                    type: 'array',
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                    description: 'Allergen ids',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Customer record created and linked to the account. Never cached.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Customer' } } },
+          },
+          400: errorResponse('Validation failed, invalid address or PHONE_INVALID'),
+          401: errorResponse('No valid session'),
+          403: errorResponse('Missing permission customers:write:own (FORBIDDEN; also while the contact phone is missing)'),
+          409: errorResponse(
+            'CUSTOMER_PROFILE_EXISTS (already linked), CUSTOMER_EMAIL_IN_USE (a record already uses the e-mail of the account) or PHONE_IN_USE',
+          ),
+        },
+      },
     },
     '/pizza-size': {
       get: {

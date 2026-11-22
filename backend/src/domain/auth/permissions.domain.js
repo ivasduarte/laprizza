@@ -3,6 +3,7 @@ import { Roles } from '../users/users.domain.js';
 export const Permission = Object.freeze({
   CATALOGUE_READ: 'catalogue:read',
   CUSTOMERS_READ_OWN: 'customers:read:own',
+  CUSTOMERS_WRITE_OWN: 'customers:write:own',
   CUSTOMERS_READ: 'customers:read',
   CUSTOMERS_WRITE: 'customers:write',
   PRODUCTS_READ: 'products:read',
@@ -54,7 +55,8 @@ export const ADMIN_PERMISSIONS = Object.freeze([
 ]);
 
 export const ROLE_PERMISSIONS = Object.freeze({
-  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN, P.RESOURCES_READ]),
+  // The own customer record: read it, and create it once when the account has none.
+  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN, P.CUSTOMERS_WRITE_OWN, P.RESOURCES_READ]),
 
   // Table 1 (Restaurant Staff): catalogue, products and the kitchen viewer, read-only.
   [Roles.EMPLOYEE]: Object.freeze([
@@ -94,7 +96,7 @@ export const ROLE_PERMISSIONS = Object.freeze({
  * AA02: customer features withheld while the account has no contact phone. Add here every new
  * permission that only a Customer uses (e.g. placing orders).
  */
-export const CUSTOMER_CONTACT_PERMISSIONS = Object.freeze([P.CUSTOMERS_READ_OWN]);
+export const CUSTOMER_CONTACT_PERMISSIONS = Object.freeze([P.CUSTOMERS_READ_OWN, P.CUSTOMERS_WRITE_OWN]);
 
 /**
  * @param {string[]} [roles=[]]

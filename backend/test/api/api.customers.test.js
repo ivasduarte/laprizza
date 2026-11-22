@@ -19,7 +19,12 @@ const USERS = [
     roles: ['CUSTOMER'],
     customerId: 'c0c0c0000000000000000001',
   },
-  { _id: 'abcdef000000000000000004', email: 'unlinked@laprizza.pt', roles: ['CUSTOMER'] },
+  {
+    _id: 'abcdef000000000000000004',
+    email: 'unlinked@laprizza.pt',
+    roles: ['CUSTOMER'],
+    phoneNumber: '933333333', // AA02: contact phone given, so the own-data permission applies
+  },
 ].map((user) => ({
   ...user,
   status: 'active',
@@ -38,6 +43,11 @@ function createAuthMocks() {
         async (email) => USERS.find((u) => u.email === email) ?? null,
       ),
       findById: mock.fn(async (id) => userById(id)),
+      // Self-service customer record: links when the account has none (nothing is stored).
+      linkCustomerIfUnlinked: mock.fn(async (id, customerId) => {
+        const user = userById(id);
+        return user && !user.customerId ? { ...user, customerId } : null;
+      }),
     },
     // One always-active session per user (session id = user id).
     sessionsRepository: {
@@ -521,4 +531,61 @@ test('API /customers/me: customers read only their own record (no IDOR)', async 
   // /me is a customer endpoint: the manager uses /customers/:id; Guests are not authenticated
   assert.equal((await manager('GET', '/customers/me')).status, 403);
   assert.equal((await fetch(`http://127.0.0.1:${port}/api/v1/customers/me`)).status, 401);
+});
+
+test('API POST /customers/me: a Customer account without a record creates its own, once', async (t) => {
+  const { server, port, customersRepo } = await setupTestServer();
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const loginAs = async (email) => {
+    const res = await fetch(`http://127.0.0.1:${port}/api/v2/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: PASSWORD }),
+    });
+    const { accessToken } = await res.json();
+    return (body) =>
+      fetch(`http://127.0.0.1:${port}/api/v2/customers/me`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+  };
+  const address = {
+    street: 'Rua Direita',
+    houseNumber: '10',
+    postalCode: '4000-001',
+    city: 'Porto',
+    district: 'Porto',
+  };
+
+  // Invalid body: nothing is created
+  const unlinked = await loginAs('unlinked@laprizza.pt');
+  const invalid = await unlinked({ name: 'Ana Costa' });
+  assert.equal(invalid.status, 400);
+  assert.equal(customersRepo.create.mock.callCount(), 0);
+
+  // Created with the e-mail and the phone of the account; an e-mail in the body is ignored
+  const created = await unlinked({ name: 'Ana Costa', email: 'other@x.pt', address });
+  assert.equal(created.status, 201);
+  assert.equal(created.headers.get('cache-control'), 'no-store');
+  const saved = customersRepo.create.mock.calls[0].arguments[0];
+  assert.equal(saved.email, 'unlinked@laprizza.pt');
+  assert.equal(saved.phoneNumber, '933333333');
+
+  // An account that already has a record cannot create another one
+  const linked = await loginAs('customer@laprizza.pt');
+  const again = await linked({ name: 'Other Name', address });
+  assert.equal(again.status, 409);
+  assert.equal((await again.json()).error.code, 'CUSTOMER_PROFILE_EXISTS');
+
+  // Not a Customer: 403; no session: 401
+  const manager = await loginAsManager(port);
+  assert.equal((await manager('POST', '/customers/me', { name: 'Ana Costa', address })).status, 403);
+  const guest = await fetch(`http://127.0.0.1:${port}/api/v2/customers/me`, { method: 'POST' });
+  assert.equal(guest.status, 401);
+  assert.equal(customersRepo.create.mock.callCount(), 1);
 });

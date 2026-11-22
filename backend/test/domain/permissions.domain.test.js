@@ -64,6 +64,7 @@ test('base roles follow Table 1', () => {
   assert.deepEqual(permissionsFor([Roles.CUSTOMER]), [
     'catalogue:read',
     'customers:read:own',
+    'customers:write:own',
     'resources:read',
   ]);
 

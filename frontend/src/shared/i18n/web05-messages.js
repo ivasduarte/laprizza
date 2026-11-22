@@ -582,6 +582,16 @@ export const web05Messages = {
       contactsTitle: 'Contacts and address',
       readOnly: 'To change your data, please contact LaPrizza.',
       noProfile: 'Your account does not have customer data yet.',
+      createTitle: 'Complete your customer data',
+      createIntro:
+        'Your account does not have customer data yet. Fill in your name and address to use the customer features.',
+      emailFromAccount: '(the e-mail of your account)',
+      phoneHint: 'Leave empty to use the phone number of your account.',
+      created: 'Your customer data was saved.',
+      errors: {
+        emailInUse:
+          'There is already a customer record with the e-mail of your account. Please contact LaPrizza.',
+      },
     },
   },
   pt: {
@@ -1169,6 +1179,16 @@ export const web05Messages = {
       contactsTitle: 'Contactos e morada',
       readOnly: 'Para alterar os seus dados, contacte a LaPrizza.',
       noProfile: 'A sua conta ainda não tem dados de cliente associados.',
+      createTitle: 'Complete os seus dados de cliente',
+      createIntro:
+        'A sua conta ainda não tem dados de cliente. Indique o seu nome e a sua morada para usar as funcionalidades de cliente.',
+      emailFromAccount: '(o email da sua conta)',
+      phoneHint: 'Deixe vazio para usar o telefone da sua conta.',
+      created: 'Os seus dados de cliente foram guardados.',
+      errors: {
+        emailInUse:
+          'Já existe um registo de cliente com o email da sua conta. Contacte a LaPrizza.',
+      },
     },
   },
 };

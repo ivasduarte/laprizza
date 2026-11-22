@@ -14,7 +14,7 @@ import {
  */
 const PERMISSIONS = {
   GUEST: ['catalogue:read'],
-  CUSTOMER: ['catalogue:read', 'customers:read:own', 'resources:read'],
+  CUSTOMER: ['catalogue:read', 'customers:read:own', 'customers:write:own', 'resources:read'],
   EMPLOYEE: [
     'catalogue:read',
     'kitchen:read',

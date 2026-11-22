@@ -8,6 +8,7 @@ import {
   updateCustomer,
   listCustomers,
   getOwnCustomer,
+  createOwnCustomer,
 } from '../../src/application/customers/customers.service.js';
 
 const CUSTOMER_ID = 'c0c0c0000000000000000001';
@@ -306,4 +307,131 @@ test('getOwnCustomer answers 404 CUSTOMER_PROFILE_NOT_FOUND without a linked cus
     });
   }
   assert.equal(customersRepository.findById.mock.callCount(), 0);
+});
+
+/* ===================== Self-service customer record ===================== */
+
+const USER_ID = 'abcdef000000000000000099';
+const OWN_ADDRESS = {
+  street: 'Rua Direita',
+  houseNumber: '10',
+  postalCode: '4000-001',
+  city: 'Porto',
+  district: 'Porto',
+};
+
+/** Dependencies of createOwnCustomer: an account without a customer record and with a phone. */
+const ownDeps = ({ user = {}, link = true, create } = {}) => {
+  const account = { _id: USER_ID, email: 'ana@laprizza.pt', phoneNumber: '912345678', customerId: null, ...user };
+  return {
+    customersRepository: {
+      create: create ?? mock.fn(async (data) => ({ _id: CUSTOMER_ID, isActive: true, ...data })),
+      deleteById: mock.fn(async () => ({})),
+    },
+    usersRepository: {
+      findById: mock.fn(async () => account),
+      linkCustomerIfUnlinked: mock.fn(async () => (link ? { ...account, customerId: CUSTOMER_ID } : null)),
+    },
+    postalCodeValidator: createValidator(),
+  };
+};
+const rejectsWithCode = (promise, status, code) =>
+  assert.rejects(promise, (err) => {
+    assert.equal(err.status, status);
+    assert.equal(err.code, code);
+    return true;
+  });
+
+test('createOwnCustomer creates the record with the account e-mail and phone, and links it', async () => {
+  const deps = ownDeps();
+
+  const created = await createOwnCustomer(
+    { userId: USER_ID, customerId: null },
+    { name: 'Ana Costa', email: 'other@x.pt', address: OWN_ADDRESS },
+    deps,
+  );
+
+  assert.equal(created.id, CUSTOMER_ID);
+  const [saved] = deps.customersRepository.create.mock.calls[0].arguments;
+  assert.equal(saved.email, 'ana@laprizza.pt'); // never from the body
+  assert.equal(saved.phoneNumber, '912345678'); // the contact phone of the account
+  assert.deepEqual(saved.dietaryRestrictions, []);
+  assert.deepEqual(deps.usersRepository.linkCustomerIfUnlinked.mock.calls[0].arguments, [USER_ID, CUSTOMER_ID]);
+});
+
+test('createOwnCustomer uses the phone of the body when given, normalized', async () => {
+  const deps = ownDeps();
+  await createOwnCustomer(
+    { userId: USER_ID },
+    { name: 'Ana Costa', phoneNumber: '+351 932 222 222', address: OWN_ADDRESS },
+    deps,
+  );
+  assert.equal(deps.customersRepository.create.mock.calls[0].arguments[0].phoneNumber, '932222222');
+});
+
+test('createOwnCustomer refuses an account that already has a customer record (409)', async () => {
+  const fromSession = ownDeps();
+  await rejectsWithCode(
+    createOwnCustomer({ userId: USER_ID, customerId: CUSTOMER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, fromSession),
+    409,
+    'CUSTOMER_PROFILE_EXISTS',
+  );
+  const fromDatabase = ownDeps({ user: { customerId: CUSTOMER_ID } });
+  await rejectsWithCode(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, fromDatabase),
+    409,
+    'CUSTOMER_PROFILE_EXISTS',
+  );
+  assert.equal(fromSession.customersRepository.create.mock.callCount(), 0);
+  assert.equal(fromDatabase.customersRepository.create.mock.callCount(), 0);
+});
+
+test('createOwnCustomer never links an existing record by e-mail (409 CUSTOMER_EMAIL_IN_USE)', async () => {
+  const deps = ownDeps({ create: mock.fn(async () => Promise.reject(duplicateKeyError('email'))) });
+  await rejectsWithCode(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, deps),
+    409,
+    'CUSTOMER_EMAIL_IN_USE',
+  );
+  assert.equal(deps.usersRepository.linkCustomerIfUnlinked.mock.callCount(), 0);
+});
+
+test('createOwnCustomer reports a phone used by another customer on the phone field', async () => {
+  const deps = ownDeps({ create: mock.fn(async () => Promise.reject(duplicateKeyError('phoneNumber'))) });
+  await assert.rejects(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, deps),
+    (err) => {
+      assert.equal(err.status, 409);
+      assert.equal(err.code, 'PHONE_IN_USE');
+      assert.equal(err.details[0].field, 'phoneNumber');
+      return true;
+    },
+  );
+});
+
+test('createOwnCustomer validates the phone and the address before saving', async () => {
+  const deps = ownDeps({ user: { phoneNumber: null } });
+  await rejectsWithCode(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, deps),
+    400,
+    'PHONE_INVALID',
+  );
+  const badAddress = ownDeps();
+  badAddress.postalCodeValidator = createValidator(false);
+  await assert.rejects(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, badAddress),
+    (err) => err instanceof AppError && err.status === 400,
+  );
+  assert.equal(deps.customersRepository.create.mock.callCount(), 0);
+  assert.equal(badAddress.customersRepository.create.mock.callCount(), 0);
+});
+
+test('createOwnCustomer undoes the creation when another request linked a record first', async () => {
+  const deps = ownDeps({ link: false });
+  await rejectsWithCode(
+    createOwnCustomer({ userId: USER_ID }, { name: 'Ana Costa', address: OWN_ADDRESS }, deps),
+    409,
+    'CUSTOMER_PROFILE_EXISTS',
+  );
+  assert.deepEqual(deps.customersRepository.deleteById.mock.calls[0].arguments, [CUSTOMER_ID]);
 });

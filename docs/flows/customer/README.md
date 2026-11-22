@@ -11,8 +11,11 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 | [UC1 - Register Customer](./register-customer.md) | `POST /customers` | MANAGER | 201 Created | `register-customer.puml` |
 | [UC2 - List and Search Customers](./list-search-customer.md) | `GET /customers?search={term}` | MANAGER | 200 OK | `list-search-customer.puml` |
 | [UC4 - Update Customer](./update-customer.md) | `PATCH /customers/:id` | MANAGER | 200 OK | `update-customer.puml` |
+| Create Own Customer Record (self-service, no diagram) | `POST /customers/me` | CUSTOMER (`customers:write:own`) | 201 Created | - |
 
 ## Business rules shown in the diagrams
+
+- **Own record (self-service).** An account with the Customer role is only an account: it has no customer record until one is linked. A Customer account without a record creates its own on the My data page (`POST /customers/me`): name, address and, optionally, a phone (the contact phone of the account when empty); the e-mail is always the one of the account. The record is created and then linked to the account (`linkCustomerIfUnlinked`, atomic); if another request linked one first, the new record is removed (`409 CUSTOMER_PROFILE_EXISTS`). A record that already uses the e-mail of the account is never linked automatically (`409 CUSTOMER_EMAIL_IN_USE`, contact LaPrizza). Dietary restrictions are managed by the Manager.
 
 - On registration the domain validates the address through the external postal code validator (the postal code must match the city) and normalizes the phone number.
 - The email and the phone number must be unique, otherwise the request fails with 409.

@@ -251,6 +251,7 @@ test('WEB04: positions, sizes and the assembly line placement must be inside the
 test('kitchen furniture model (VIS03): known models are accepted, unknown ones rejected', () => {
   const content = (model) => ({
     dimensions: { width: 10, length: 15, height: 3 },
+    floor: { material: TEXTURED }, // VIS04: every object is textured
     elements: [
       {
         id: 'fridge-01',
@@ -259,6 +260,7 @@ test('kitchen furniture model (VIS03): known models are accepted, unknown ones r
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 90, z: 0 },
         scale: { x: 0.9, y: 2, z: 0.8 },
+        material: TEXTURED,
       },
     ],
   });

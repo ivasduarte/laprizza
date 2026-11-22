@@ -269,6 +269,7 @@ export function createApp(config = loadConfig(), repos = {}) {
     customersRouterFactory(
       repos.customersRepository,
       repos.postalCodeValidator ?? dummyPostalCodeValidator,
+      repos.usersRepository,
     ),
   );
   api.use(

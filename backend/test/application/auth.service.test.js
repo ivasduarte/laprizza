@@ -461,7 +461,7 @@ test('login rejects inactive and disabled accounts only after a correct password
 test('establishSession is reusable and loads roles through the extension point', async () => {
   const loadRoles = mock.fn(async () => ['CUSTOMER', 'BETA']); // BETA is not an internal role
   const ctx = createAuthTestContext({ loadRoles });
-  const user = storedUser();
+  const user = storedUser({ phoneNumber: '+351912345678' }); // AA02: with a contact phone
 
   const result = await ctx.service.establishSession(user, { method: 'oidc', ip: '10.0.0.1' });
 
@@ -470,6 +470,7 @@ test('establishSession is reusable and loads roles through the extension point',
   assert.deepEqual(result.user.permissions, [
     'catalogue:read',
     'customers:read:own',
+    'customers:write:own',
     'resources:read',
   ]);
   assert.equal(loadRoles.mock.calls[0].arguments[0], user);
@@ -1084,7 +1085,7 @@ test('getCurrentUser returns the session DTO read from the database', async () =
     email: 'user@laprizza.pt',
     status: 'active',
     roles: ['CUSTOMER'],
-    permissions: ['catalogue:read', 'customers:read:own', 'resources:read'],
+    permissions: ['catalogue:read', 'customers:read:own', 'customers:write:own', 'resources:read'],
     customerId: '65231abcd345678901234567',
     phoneRequired: false,
   });
@@ -1162,9 +1163,17 @@ test('AA03: the same role rule applies to external authentication (establishSess
     403,
     AuthErrorCode.NO_ACTIVE_ROLE,
   );
-  const ok = await ctx.service.establishSession(storedUser({ roles: ['CUSTOMER'] }), { method: 'oidc' });
+  const ok = await ctx.service.establishSession(
+    storedUser({ roles: ['CUSTOMER'], phoneNumber: '+351912345678' }), // AA02: with a contact phone
+    { method: 'oidc' },
+  );
   assert.deepEqual(ok.user.roles, ['CUSTOMER']);
-  assert.deepEqual(ok.user.permissions, ['catalogue:read', 'customers:read:own', 'resources:read']);
+  assert.deepEqual(ok.user.permissions, [
+    'catalogue:read',
+    'customers:read:own',
+    'customers:write:own',
+    'resources:read',
+  ]);
 });
 
 test('AA03: roles supplied in the request are ignored; only the stored roles count', async () => {
