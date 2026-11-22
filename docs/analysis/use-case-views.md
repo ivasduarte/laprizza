@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB01, WEB02, WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01 to VIS06, AI01, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB01, WEB02, WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01 to VIS06, AI01, AI02, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -88,12 +88,15 @@ This document shows who uses the LaPrizza information system and which business 
     - [AI01: Prolog Bill of Materials and Stock Requirements](#ai01-prolog-bill-of-materials-and-stock-requirements)
       - [Use Case Descriptions](#use-case-descriptions-19)
       - [Flow Mapping](#flow-mapping-30)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+    - [AI02: Prolog Requirements Planning and Supplier Selection](#ai02-prolog-requirements-planning-and-supplier-selection)
       - [Use Case Descriptions](#use-case-descriptions-20)
       - [Flow Mapping](#flow-mapping-31)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
       - [Use Case Descriptions](#use-case-descriptions-21)
       - [Flow Mapping](#flow-mapping-32)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-22)
+      - [Flow Mapping](#flow-mapping-33)
 
 ## Actors
 
@@ -426,7 +429,12 @@ flowchart LR
 
 | User Story | Use Case | Primary Actor | Flow Document (SAD)                                                                                                                                                                                                                                                                                    |
 | :--------- | :------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WEB04**  | UC1-UC4  | System User   | Client-side behaviour, no flow of its own. Examples in the feature flows: [Adjust Stock](../flows/stock/adjust-stock.md), [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04), [Customer](../flows/customer/README.md) |
+| **WEB04**  | UC1: Submit a Form | System User | [Submit a Form](../flows/user-feedback/submit-form.md) |
+| **WEB04**  | UC2: Confirm a Significant Action | System User | [Confirm a Significant Action](../flows/user-feedback/confirm-significant-action.md) |
+| **WEB04**  | UC3: Wait for Information | System User | [Wait for Information](../flows/user-feedback/wait-for-information.md) |
+| **WEB04**  | UC4: Recover from a Failure | System User | [Recover from a Failure](../flows/user-feedback/recover-from-failure.md) |
+
+The error contract, the shared components and the element catalogue are in the [User Feedback and Validation README](../flows/user-feedback/README.md). Domain-specific examples are in the feature flows: [Adjust Stock](../flows/stock/adjust-stock.md), [Kitchen Configuration JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04), [Customer](../flows/customer/README.md).
 
 Evidence: `submit-guard.test.js`, `validators.test.js`, `name-rules.test.js`, `feedback-store.test.js`, `confirm-store.test.js`, `error-normalizer.test.js`, `error-text.test.js`, `http-client-feedback.test.js`, `stock-rules.test.js`, `json-locations.test.js` (front end); `error-handler.test.js` (back end).
 
@@ -914,15 +922,17 @@ flowchart LR
 
 | Use Case                         | Primary Actor               | Description                                         | Main Rules                                                                                                                                                                                                                                                                           | ADRs                                                                                                                                                                                                       |
 | :------------------------------- | :-------------------------- | :-------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UC1: View the Kitchen Layout** | LaPrizza Manager / Employee | Sees the kitchen of the active configuration in 3D. | Dimensions, positions, orientations, scales, materials and model references come from `GET /kitchen-configurations/active`. Elements are drawn procedurally by type (`equipment`: stone/dome wood-fired oven; other types: a box) inside the kitchen bounds checked by the back end. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+| **UC1: View the Kitchen Layout** | LaPrizza Manager / Employee | Sees the kitchen of the active configuration in 3D. | Dimensions, positions, orientations, scales, materials and model references come from `GET /kitchen-configurations/active`. Elements are drawn procedurally inside the kitchen bounds checked by the back end: the furniture of the optional `model` (work table, fridge, shelves, cabinet, ingredient bins, dough trays) built at its real size, the stone/dome wood-fired oven for `equipment`, and a box for the other elements. Floor and four walls come from the dimensions. | [ADR-0020](../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
 
-Known gaps (Sprint 2 review): `modelReference` is validated and stored but the viewer does not load imported models yet (the `Model` component of `kitchen-scene.jsx` is not used), and only the oven has a procedural model; tables, counters, fryer, griddle, grill, refrigerator, dishwasher, exhaust hood and cooking tools are drawn as boxes.
+Known gaps: `modelReference` is validated and stored but the viewer does not load imported models yet (the `Model` component of `kitchen-scene.jsx` is not used); deep fryer, griddle, grill, dishwasher, exhaust hood and cooking tools have no procedural model of their own and are drawn as boxes of their size and material.
 
 #### Flow Mapping
 
 | User Story | Use Case                     | Primary Actor               | Flow Document (SAD)                                                                                                                                                                        |
 | :--------- | :--------------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) |
+| **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [View the Kitchen Layout](../flows/kitchen-layout/view-kitchen-layout.md) (configuration read with [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), format in [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md)) |
+
+The layout properties, the models of each element and the element catalogue are in the [Kitchen Layout README](../flows/kitchen-layout/README.md).
 
 ### VIS03: Automated Pizza Assembly Line Representation
 
@@ -1109,6 +1119,46 @@ flowchart LR
 | **AI01** | UC3: Simulate with Scenario Stock | LaPrizza Manager | [Calculate Bill of Materials](../flows/ai-bill-of-materials/calculate-bill-of-materials.md) (`stockMode: "scenario"`) |
 
 The REST API summary, the calculation rules, the result format and the element catalogue are in the [AI Bill of Materials README](../flows/ai-bill-of-materials/README.md).
+
+### AI02: Prolog Requirements Planning and Supplier Selection
+
+The AI Scheduling Module plans the requirements of a daily consumption forecast over its period: the forecast of sellable products (pizzas with a size, and directly sold products) becomes daily material needs through the pizza BOM; produced aggregates use their stock first and only what is produced is expanded into ingredients; the stock is consumed in date order to give the daily net needs; and each product with needs gets a purchase plan from the confirmed supplier scenario. The supplier is the cheapest one, on a common stock-unit price in EUR, among those that deliver on time; when none does, the earliest delivery covers what is left and is flagged as late. The plan shows the reference date on which the orders are placed, the expected delivery dates, the costs and the needs that stay uncovered. Missing capacity information is flagged, never read as zero or as verified. Every plan is a simulation: it never changes stock nor creates purchase orders. The selection criteria are justified in [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md).
+
+```mermaid
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph AI02 [AI02: Prolog Requirements Planning and Supplier Selection]
+        direction TB
+        UC1([UC1: Calculate Requirements Planning])
+        UC2([UC2: Select Suppliers])
+        UC3([UC3: Simulate with Scenario Stock])
+    end
+
+    Manager --> UC1
+    UC1 -.->|<< include >>| UC2
+    UC3 -.->|<< extend >>| UC1
+    UC1 -->|<< executes >>| AI
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: Calculate Requirements Planning** | LaPrizza Manager | Asks for the requirements planning of a forecast and gets the daily needs per product, the aggregates to produce, the purchases by supplier with order and delivery dates and costs, the unmet needs and the warnings. | `POST /requirements` on the AI Scheduling Module with `{ scenarioId, stockMode }` and the Manager token, forwarded to `GET /ai-data/snapshot` (`planning:execute`), which carries the active forecast and supplier scenario; from the Web Application with a chosen forecast version and supplier scenario through WEB07 UC9 (`POST /planning/requirements`, recorded as a planning run). Fresh snapshot, never cached. Forecast lines with a size go through the BOM; lines without a size are direct demand. Produced aggregates use their stock first; stock is consumed in date order. A missing forecast, invalid forecast lines, incomplete recipes or missing stock answer 422 `AI_INVALID_DATA` without quantities. Nothing is written. | [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md), [ADR-0052](../adr/0052-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
+| **UC2: Select Suppliers** | AI Scheduling Module | Chooses, for each product with net needs, the offers of the confirmed supplier scenario that cover them. | Orders are placed on the reference date (execution date, `plan.referenceDate`); an offer arrives `ceiling(leadTimeDays)` calendar days later and is on time when it arrives by the day of the need. Unit price `priceEur / stockUnits`, cost pro rata. Pass 1: cheapest on-time offer, earliest need first; pass 2: earliest arrival for what is left (`onTime: false`). `supplyLimit` is a total for the plan; without it the capacity is unbounded and flagged `capacityStated: false`. Uncovered quantities are `unmet` (`NO_SUPPLIER_OFFER`, `INSUFFICIENT_SUPPLY`); status `on_time`, `late`, `partial` or `unavailable`; `feasible` only when everything is on time. | [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) |
+| **UC3: Simulate with Scenario Stock** | LaPrizza Manager | Runs the same planning with the stock stored in an AI scenario instead of the real stock, for reproducible results. | `stockMode: "scenario"`. A scenario without its own stock answers 400 `SCENARIO_WITHOUT_STOCK` (422 through the AI service). A calculation never changes the stock of the scenario. | [ADR-0053](../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **AI02** | UC1: Calculate Requirements Planning | LaPrizza Manager | [Calculate Requirements Planning](../flows/ai-requirements-planning/calculate-requirements-planning.md), from the Web Application [Execute Forecast (WEB07 UC9)](../flows/ai-planning/execute-forecast.md) |
+| **AI02** | UC2: Select Suppliers | AI Scheduling Module | [Select Suppliers](../flows/ai-requirements-planning/select-suppliers.md) |
+| **AI02** | UC3: Simulate with Scenario Stock | LaPrizza Manager | [Calculate Requirements Planning](../flows/ai-requirements-planning/calculate-requirements-planning.md) (`stockMode: "scenario"`) |
+
+The REST API summary, the calculation and supplier selection rules, a worked example, the result format and the element catalogue are in the [AI Requirements Planning README](../flows/ai-requirements-planning/README.md).
 
 ### AI05: Artificial Intelligence Service Access
 

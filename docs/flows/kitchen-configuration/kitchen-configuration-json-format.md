@@ -39,6 +39,7 @@ classDiagram
     class Element {
         id : string, min length 1, unique [required]
         type : one of equipment, assembly-line, decoration, tool [required]
+        model : one of work-table, fridge, shelves, cabinet, ingredient-bins, dough-trays [optional]
         modelReference : URL or path [optional, procedural without it]
         position : Vector3, inside the kitchen [required]
         rotation : Vector3 [required]
@@ -77,6 +78,7 @@ classDiagram
 | `assemblyLine.position` | `{x, y, z}` | Inside the kitchen (domain rule, see below) |
 | `elements[].id` | string | Required, at least 1 character, **unique** within the configuration (domain rule) |
 | `elements[].type` | string | Required, one of `equipment`, `assembly-line`, `decoration`, `tool` |
+| `elements[].model` | string | Optional; one of `work-table`, `fridge`, `shelves`, `cabinet`, `ingredient-bins`, `dough-trays`: procedural kitchen furniture for `decoration` and `tool` elements, built at the size given by `scale` ([VIS02](../kitchen-layout/README.md#models-by-element)) |
 | `elements[].modelReference` | string | Optional; when present, absolute `http(s)` URL or root-relative path. Without it the element is drawn procedurally |
 | `elements[].position` | `{x, y, z}` | Required, inside the kitchen (domain rule) |
 | `elements[].rotation` | `{x, y, z}` | Required, numbers (degrees) |

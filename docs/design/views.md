@@ -31,6 +31,12 @@ These views are:
       - [Interfaces](#interfaces-3)
     - [Level 3 Process View](#level-3-process-view)
       - [Kitchen Configuration Flows](#kitchen-configuration-flows)
+      - [Kitchen Layout Flows](#kitchen-layout-flows)
+      - [AI Planning Flows](#ai-planning-flows)
+      - [AI Bill of Materials Flows](#ai-bill-of-materials-flows)
+      - [AI Requirements Planning Flows](#ai-requirements-planning-flows)
+      - [AI Knowledge Base Flows](#ai-knowledge-base-flows)
+      - [User Feedback Flows](#user-feedback-flows)
   - [Non-Functional View](#non-functional-view)
 
 ## Level 1
@@ -118,7 +124,7 @@ flowchart TB
 | System User          | Person    | Customer, Employee, or Manager (LaPrizza Staff). Consults the catalogue, customizes pizzas, places orders and manages the business information. |                           |
 | Web Application      | Container | Main user interface for customers and staff; hosts the 3D Visualization                                                                | React, Vite, React Router |
 | 3D Visualization     | Container | Interactive 3D pizza configuration and kitchen view, using data obtained from the Back-End Application                                 | WebGL, Three.js           |
-| AI Scheduling Module | Container | Plans and schedules food-preparation activities on the available kitchen resources                                                     | Prolog                    |
+| AI Scheduling Module | Container | Calculates the Bill of Materials and the requirements planning with supplier selection (AI01, AI02); food-preparation scheduling is not part of Sprint 2 | Prolog                    |
 | Back-End Application | Container | Exposes the REST API, enforces business rules and invariants, handles authentication and authorization, and persists the business data | Node.js, Express          |
 | Database             | Container | Persistent store of the business data; accessed only by the Back-End Application                                                       | MongoDB                   |
 | Asset Host           | External System | Serves the 3D models and textures referenced by the kitchen configurations; used only by the 3D Visualization (ADR-0021)             | HTTPS                     |
@@ -210,9 +216,9 @@ flowchart TB
 | Element              | Type      | Responsibility                                                                                  | May Use                                  |
 | :------------------- | :-------- | :---------------------------------------------------------------------------------------------- | :--------------------------------------- |
 | Web Application      | Container | Provides the main SPA user interface and hosts the 3D Visualization                             | 3D Visualization, Back-End Application   |
-| 3D Visualization     | Container | Interactive 3D pizza configuration, using data obtained from the Back-End Application           | Back-End Application                     |
+| 3D Visualization     | Container | Interactive 3D kitchen and assembly line, drawn from the active kitchen configuration of the Back-End Application | Back-End Application                     |
 | Back-End Application | Container | Exposes the REST API under `/api/v1`, enforces the business rules and persists the business data | AI Scheduling Module, Database           |
-| AI Scheduling Module | Container | Calculates the Bill of Materials (BOM) and plans the food-preparation requirements              | nothing                                  |
+| AI Scheduling Module | Container | Calculates the Bill of Materials (BOM) and the requirements planning with supplier selection   | nothing                                  |
 | Database             | Container | Persistent store of the business data                                                           | nothing                                  |
 
 #### Constraints
@@ -583,6 +589,14 @@ This view shows how the components of the containers interact in each use case. 
 
 The context, container and component views of the feature, for the Back-End Application module and for the Web Application page, are in the [Kitchen Configuration C4 Views](../flows/kitchen-configuration/c4-views.md).
 
+#### Kitchen Layout Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :------- | :---------- | :------------------ | :--- |
+| [VIS02 UC1 - View the Kitchen Layout](../flows/kitchen-layout/view-kitchen-layout.md) | The viewer reads the active configuration and draws the floor, the walls and each element at its position, rotation and size, with the furniture model of the element; without an active configuration nothing is drawn | Web Application, 3D Visualization, Back-End Application, Database | [ADR-0025](../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+
+The layout properties, the models of each element and the element catalogue are in the [Kitchen Layout README](../flows/kitchen-layout/README.md).
+
 #### AI Planning Flows
 
 | Use Case | Interaction | Containers involved | ADRs |
@@ -609,6 +623,15 @@ The REST API summary, the business rules and the element catalogue of the featur
 
 The calculation rules, the demonstration scenarios and the element catalogue are in the [AI Bill of Materials README](../flows/ai-bill-of-materials/README.md).
 
+#### AI Requirements Planning Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :------- | :---------- | :------------------ | :--- |
+| [UC1 / UC3 - Calculate Requirements Planning](../flows/ai-requirements-planning/calculate-requirements-planning.md) | The AI Scheduling Module fetches the scenario snapshot (forecast, supplier scenario, live or scenario stock) with the Manager token, derives the daily needs through the BOM and the stock, and plans the purchases; nothing is written | AI Scheduling Module, Back-End Application, Database | [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md), [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) |
+| [UC2 - Select Suppliers](../flows/ai-requirements-planning/select-suppliers.md) | For each product with needs: cheapest on-time offer on a stock-unit price, then the earliest late delivery; limits cumulative, missing limits flagged | AI Scheduling Module | [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) |
+
+The calculation and supplier selection rules, a worked example and the element catalogue are in the [AI Requirements Planning README](../flows/ai-requirements-planning/README.md).
+
 #### AI Knowledge Base Flows
 
 | Use Case | Interaction | Containers involved | ADRs |
@@ -618,6 +641,17 @@ The calculation rules, the demonstration scenarios and the element catalogue are
 | [UC3 - Refresh Data per Calculation](../flows/ai-knowledge-base/refresh-per-calculation.md) | Each calculation gets a new snapshot; the knowledge base is serialized by a mutex and cleared after use | Web Application, Back-End Application, Database, AI Scheduling Module | [ADR-0039](../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../adr/0040-knowledge-base-loaded-per-calculation.md) |
 
 The REST API summary, the snapshot format and the facts of the knowledge base are in the [AI Knowledge Base README](../flows/ai-knowledge-base/README.md).
+
+#### User Feedback Flows
+
+| Use Case | Interaction | Containers involved | ADRs |
+| :------- | :---------- | :------------------ | :--- |
+| [WEB04 UC1 - Submit a Form](../flows/user-feedback/submit-form.md) | Client rules first, one submission at a time; the API answers 400 with structured details shown on the fields, typed values kept, success toast | Web Application, Back-End Application, Database | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| [WEB04 UC2 - Confirm a Significant Action](../flows/user-feedback/confirm-significant-action.md) | A dialog states the consequence; cancelling sends nothing | Web Application, Back-End Application, Database | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| [WEB04 UC3 - Wait for Information](../flows/user-feedback/wait-for-information.md) | Every request feeds the progress bar; lists keep their room while loading | Web Application, Back-End Application, Database | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| [WEB04 UC4 - Recover from a Failure](../flows/user-feedback/recover-from-failure.md) | Errors translated by kind without internal details; global failures as one toast; "Try again" on lists; a write without answer is reported as possibly done | Web Application, Back-End Application | [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+
+The error contract and the shared components are in the [User Feedback and Validation README](../flows/user-feedback/README.md).
 
 ## Non-Functional View
 

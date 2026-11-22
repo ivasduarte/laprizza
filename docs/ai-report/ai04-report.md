@@ -128,6 +128,8 @@ A forecast version (daily quantities of sellable products; pizzas with a size), 
 
 ### 4.4 Supplier selection criteria and rationale
 
+The decision and the alternatives considered are recorded in [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md); the flows are in [AI Requirements Planning](../flows/ai-requirements-planning/README.md).
+
 | Pass | Needs | Choice | Why |
 | --- | --- | --- | --- |
 | 1 - on time | Every need, earliest first | Cheapest unit price among the offers that arrive on time; ties by earliest arrival, then supplier id | Meeting the date is a hard requirement; among the offers that meet it, cost is minimized. Serving the earliest need first is also the cheapest, because an offer on time for an earlier need is also on time for a later one |
@@ -399,8 +401,8 @@ From the Prolog top level, the same calculation with an explicit reference date:
 
 - SWI-Prolog Reference Manual: HTTP server (`library(http/thread_httpd)`), JSON (`library(http/json)`), unit tests (`library(plunit)`).
 - LaPrizza Sprint 2 user stories AI01-AI06 (`04 sprint 2.pdf`).
-- Project documentation: [AI Bill of Materials](../flows/ai-bill-of-materials/README.md), [AI Planning](../flows/ai-planning/README.md), [Supplier JSON format](../flows/ai-planning/supplier-json-format.md), [AI Service Access](../flows/ai-service-access/README.md), [AI Service Interface](../flows/ai-service-access/service-interface.md), [AI Knowledge Base](../flows/ai-knowledge-base/README.md), [Snapshot format](../flows/ai-knowledge-base/snapshot-format.md).
-- ADRs: 0014 (API versioning), 0033 (immutable forecasts and supplier scenarios), 0034 (planning runs), 0036 (synchronous execution with duplicate-submission guard), 0039 (planning snapshot), 0040 (knowledge base per calculation), 0052 (product aggregates and stock-first BOM expansion), 0053 (simulated BOM scenarios and resettable demo seed).
+- Project documentation: [AI Bill of Materials](../flows/ai-bill-of-materials/README.md), [AI Requirements Planning](../flows/ai-requirements-planning/README.md), [AI Planning](../flows/ai-planning/README.md), [Supplier JSON format](../flows/ai-planning/supplier-json-format.md), [AI Service Access](../flows/ai-service-access/README.md), [AI Service Interface](../flows/ai-service-access/service-interface.md), [AI Knowledge Base](../flows/ai-knowledge-base/README.md), [Snapshot format](../flows/ai-knowledge-base/snapshot-format.md).
+- ADRs: 0014 (API versioning), 0033 (immutable forecasts and supplier scenarios), 0034 (planning runs), 0036 (synchronous execution with duplicate-submission guard), 0039 (planning snapshot), 0040 (knowledge base per calculation), 0052 (product aggregates and stock-first BOM expansion), 0053 (simulated BOM scenarios and resettable demo seed), 0055 (requirements planning with chronological net needs and the cheapest on-time supplier).
 - Neural networks study: [report](../artifical-neural-networks/report.md) and its sources (section 8).
 
 ## 12. Use of AI-generated content

@@ -1,0 +1,15 @@
+flowchart LR
+    Manager([LaPrizza Manager])
+    AI([AI Scheduling Module])
+
+    subgraph AI02 [AI02: Prolog Requirements Planning and Supplier Selection]
+        direction TB
+        UC1([UC1: Calculate Requirements Planning])
+        UC2([UC2: Select Suppliers])
+        UC3([UC3: Simulate with Scenario Stock])
+    end
+
+    Manager --> UC1
+    UC1 -.->|<< include >>| UC2
+    UC3 -.->|<< extend >>| UC1
+    UC1 -->|<< executes >>| AI
