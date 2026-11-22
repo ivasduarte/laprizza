@@ -1,6 +1,6 @@
 # Use Case Views
 
-This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB01, WEB02, WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01, VIS02, VIS05, VIS06, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
+This document shows who uses the LaPrizza information system and which business capabilities are available to each actor in Sprint 1, plus the Sprint 2 user stories that have use cases of their own (WEB01, WEB02, WEB03, WEB04, WEB06, WEB07, AA01 to AA07, VIS01 to VIS06, AI05, AI06). The system is treated as a black box: only actors and use cases are represented, with no internal components.
 
 - [Use Case Views](#use-case-views)
   - [Actors](#actors)
@@ -73,18 +73,24 @@ This document shows who uses the LaPrizza information system and which business 
     - [VIS02: Kitchen Layout and Equipment](#vis02-kitchen-layout-and-equipment)
       - [Use Case Descriptions](#use-case-descriptions-14)
       - [Flow Mapping](#flow-mapping-25)
-    - [VIS05: Scene Lighting](#vis05-scene-lighting)
+    - [VIS03: Automated Pizza Assembly Line Representation](#vis03-automated-pizza-assembly-line-representation)
       - [Use Case Descriptions](#use-case-descriptions-15)
       - [Flow Mapping](#flow-mapping-26)
-    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
+    - [VIS04: Textures and Materials](#vis04-textures-and-materials)
       - [Use Case Descriptions](#use-case-descriptions-16)
       - [Flow Mapping](#flow-mapping-27)
-    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+    - [VIS05: Scene Lighting](#vis05-scene-lighting)
       - [Use Case Descriptions](#use-case-descriptions-17)
       - [Flow Mapping](#flow-mapping-28)
-    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+    - [VIS06: Interactive Light Controls](#vis06-interactive-light-controls)
       - [Use Case Descriptions](#use-case-descriptions-18)
       - [Flow Mapping](#flow-mapping-29)
+    - [AI05: Artificial Intelligence Service Access](#ai05-artificial-intelligence-service-access)
+      - [Use Case Descriptions](#use-case-descriptions-19)
+      - [Flow Mapping](#flow-mapping-30)
+    - [AI06: Back-End Data and Prolog Knowledge Base](#ai06-back-end-data-and-prolog-knowledge-base)
+      - [Use Case Descriptions](#use-case-descriptions-20)
+      - [Flow Mapping](#flow-mapping-31)
 
 ## Actors
 
@@ -914,6 +920,72 @@ Known gaps (Sprint 2 review): `modelReference` is validated and stored but the v
 | User Story | Use Case                     | Primary Actor               | Flow Document (SAD)                                                                                                                                                                        |
 | :--------- | :--------------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **VIS02**  | UC1: View the Kitchen Layout | LaPrizza Manager / Employee | [Get Active Kitchen Configuration](../flows/kitchen-configuration/get-active-kitchen-configuration.md), [JSON Format](../flows/kitchen-configuration/kitchen-configuration-json-format.md) |
+
+### VIS03: Automated Pizza Assembly Line Representation
+
+The viewer draws the automated pizza assembly line on one wall of the kitchen: a large counter, a rectangular receiving platform on the left fed by an overhead crust dispenser, a conveyor belt that connects it to the wood-fired oven on the right, and several articulated robotic arms along the line. The line is an assembly line configuration of its own, read from the back end as JSON and placed in the kitchen by the kitchen configuration (`content.assemblyLine`). Its components are procedural models chosen by type; each one is a 3D group named after its element id, with the parts of the dispenser, the belt and the arms that will be animated in Sprint 3 as named groups pivoting at their joints.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS03 [VIS03: Automated Pizza Assembly Line Representation]
+        direction TB
+        UC1([UC1: View the Automated Assembly Line])
+    end
+
+    Staff --> UC1
+    Viz3D -->|<< renders >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: View the Automated Assembly Line** | LaPrizza Manager / Employee | Sees the assembly line of the active kitchen on its wall and inspects its arrangement from any angle. | The kitchen stores only the line id and its placement; the viewer reads the line with `GET /assembly-line-configurations/{id}` (`kitchen:read`). Arrangement, types, positions (line frame, x left to right, z from the wall), materials and optional model URLs come from the back end. A line that cannot be loaded is reported and never replaced; a line referenced by a kitchen cannot be deleted (409). Components: counter, receiving platform, crust dispenser, conveyor belt, robotic arms, wood-fired oven, ready for the Sprint 3 animations. | [ADR-0031](../adr/0031-assembly-line-referenced-by-kitchen.md), [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0030](../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+
+Known gap: `modelReference` is validated and stored, but imported models are not drawn yet; every component is procedural, which VIS03 allows.
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS03** | UC1: View the Automated Assembly Line | LaPrizza Manager / Employee | [View the Automated Assembly Line](../flows/assembly-line/view-assembly-line.md) |
+
+The assembly line format, the endpoints, the procedural models and the element catalogue are in the [Assembly Line README](../flows/assembly-line/README.md).
+
+### VIS04: Textures and Materials
+
+Every object of the 3D scene is drawn with its own textured material: the floor, the kitchen elements and each component of the assembly line. The material comes from the back end in the JSON of the configuration: a colour map and at least one of a roughness, bump or normal map, with optional colour, roughness, metalness and repeat; the texture files are referenced by URL. The back end refuses a material without textures, and the viewer loads the textures without degrading the loading time.
+
+```mermaid
+flowchart LR
+    Staff([LaPrizza Manager / Employee])
+    Viz3D([3D Visualization Module])
+
+    subgraph VIS04 [VIS04: Textures and Materials]
+        direction TB
+        UC1([UC1: View Textured Models])
+    end
+
+    Staff --> UC1
+    Viz3D -->|<< renders >>| UC1
+```
+
+#### Use Case Descriptions
+
+| Use Case | Primary Actor | Description | Main Rules | ADRs |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC1: View Textured Models** | LaPrizza Manager / Employee | Sees every object of the kitchen and of the assembly line with a realistic, distinct texture. | Material in the JSON of each object (`colorMap` plus `roughnessMap`, `bumpMap` or `normalMap`), checked by the back end with the property path of each violation; texture URLs are absolute `http(s)` URLs or root-relative paths. Performance: only referenced maps are loaded, each file once and shared; 1k JPG textures; anisotropy capped at 4; the plain material is shown while textures load and kept if one fails; materials are disposed when objects leave the scene. | [ADR-0021](../adr/0021-asset-references-strategy.md), [ADR-0052](../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+
+#### Flow Mapping
+
+| User Story | Use Case | Primary Actor | Flow Document (SAD) |
+| :--------- | :------- | :------------ | :------------------ |
+| **VIS04** | UC1: View Textured Models | LaPrizza Manager / Employee | [View Textured Models](../flows/textures-and-materials/view-textured-models.md), [JSON Format - Textures are mandatory](../flows/kitchen-configuration/kitchen-configuration-json-format.md#textures-are-mandatory-vis04-web04) |
+
+The material format, the textures delivered with the application and the element catalogue are in the [Textures and Materials README](../flows/textures-and-materials/README.md).
 
 ### VIS05: Scene Lighting
 

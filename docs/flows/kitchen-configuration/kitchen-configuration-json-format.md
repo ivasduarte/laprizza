@@ -90,7 +90,7 @@ classDiagram
 
 ### Textures are mandatory (VIS04, WEB04)
 
-Every object of the scene, the floor included, is drawn with image textures loaded from the URLs of this JSON: a `colorMap` and at least one of `roughnessMap`, `bumpMap` or `normalMap`. A missing material, or one without textures, is refused (`collectRequiredTextureViolations` in `material.domain.js`). No texture is generated in code. The SPA proposes a new configuration with a textured floor.
+Every object of the scene, the floor included, is drawn with image textures loaded from the URLs of this JSON: a `colorMap` and at least one of `roughnessMap`, `bumpMap` or `normalMap`. A missing material, or one without textures, is refused (`collectRequiredTextureViolations` in `material.domain.js`). No texture is generated in code. The SPA proposes a new configuration with a textured floor. How the viewer loads and applies the textures is in [Textures and Materials (VIS04)](../textures-and-materials/README.md); the assembly line, which follows the same material rules, is in [Assembly Line (VIS03)](../assembly-line/README.md).
 
 ### Positions and sizes inside the kitchen (WEB04)
 
