@@ -8,6 +8,7 @@
 | **Address** | **Morada** | A customer's address, storing details such as street, house number, complement, postal code, city, and district. |
 | **Aggregate Classification** | **Classificação do Agregado** | Indicates whether a product aggregate is produced internally from its items (Produced) or bought ready-made (Purchased). |
 | **Aggregate Item** | **Item do Agregado** | A product, with its quantity, that is part of the composition of a product aggregate. |
+| **AI Scenario** | **Cenário de IA** | A versioned set of simulated order lines and, optionally, a simulated stock, used to calculate the Bill of Materials before real orders exist. |
 | **Allergen** | **Alergénio** | An allergen recognized by the restaurant, used to inform customers and staff about potential dietary risks. |
 | **Assembly Line Configuration** | **Configuração da Linha de Montagem** | A reusable definition of the automated pizza assembly line (dimensions and elements), placed in the kitchen by a kitchen configuration. |
 | **Assembly Order** | **Ordem de Montagem** | The required sequence in which a specific pizza component type is added during the preparation of a pizza. |
@@ -49,6 +50,7 @@
 | **Simulation** | **Simulação** | A calculation that uses simulated inputs and only produces results; it never changes stored stock nor creates purchase orders. |
 | **Stock Controlled** | **Sujeito a Controlo de Stock** | A property indicating whether a specific product's inventory levels are actively tracked by the system. |
 | **Stock Information** | **Informação de Stock** | A record tracking the current available physical quantity of a specific product subject to stock control. |
+| **Stock Mode** | **Modo de Stock** | The stock used by a calculation: the real stock at the time of the execution (live) or the stock stored in the AI scenario (scenario). |
 | **Supplier** | **Fornecedor** | A company listed in a supplier scenario that can sell products to LaPrizza. |
 | **Supplier Offer** | **Oferta de Fornecedor** | The conditions under which a supplier sells a product: price in euros, abstract stock units covered by that price, lead time, and an optional supply limit. |
 | **Supplier Scenario** | **Cenário de Fornecedores** | An imported, versioned set of suppliers and their offers for each product, always marked as simulated. |
