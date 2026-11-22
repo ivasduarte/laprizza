@@ -60,6 +60,10 @@ flowchart LR
             UC_Lit(View Lit Kitchen Scene)
             UC_AdjustLight(Adjust Scene Lighting)
         end
+        subgraph Camera [VIS07: Perspective Camera Interaction]
+            UC_Explore(Explore the Scene with the Camera)
+            UC_ResetView(Reset the View)
+        end
         subgraph BillOfMaterials [AI01: Bill of Materials]
             UC_Aggregates(Define Product Aggregates)
             UC_BOM(Calculate Bill of Materials)
@@ -112,6 +116,8 @@ flowchart LR
     Manager --> UC_Layout
     Manager --> UC_Lit
     Manager --> UC_AdjustLight
+    Manager --> UC_Explore
+    Manager --> UC_ResetView
 
     SystemUser --> UC_Auth
     SystemUser --> UC_LocalLogin
@@ -152,6 +158,8 @@ flowchart LR
     UC_Layout -.->|uses| UC_ActiveKitchen
     Viz3D -->|renders| UC_Lit
     Viz3D -->|re-renders| UC_AdjustLight
+    Viz3D -->|re-renders| UC_Explore
+    Viz3D -->|re-renders| UC_ResetView
     UC_BOM -->|executes| AI
     UC_BOM -.->|uses| UC_Snapshot
     UC_Requirements -->|executes| AI
