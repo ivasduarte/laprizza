@@ -181,6 +181,14 @@ describe('Dynamic navigation menu (WEB03)', () => {
     );
   });
 
+  it('AA02: My data stays in the menu while the contact phone is missing (the guard asks for it)', () => {
+    const withheld = ['catalogue:read', 'resources:read']; // customer without a phone
+    const shown = (options) => visibleFeatures(features, options).map((f) => f.id);
+    assert.ok(shown({ permissions: withheld, authenticated: true, phoneRequired: true }).includes('my-data'));
+    assert.ok(!shown({ permissions: withheld, authenticated: true }).includes('my-data'));
+    assert.ok(!shown({ permissions: withheld, authenticated: false, phoneRequired: true }).includes('my-data'));
+  });
+
   it('fails closed with an empty or invalid permission list (only public pages)', () => {
     for (const permissions of [[], undefined, null]) {
       const ids = visibleFeatures(features, {

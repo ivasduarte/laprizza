@@ -11,12 +11,18 @@ export const NAV_GROUPS = Object.freeze([
   { id: 'administration', labelKey: 'nav.groups.administration' },
 ]);
 
-export function visibleFeatures(features, { permissions, authenticated }) {
+/**
+ * @param {{permissions: string[], authenticated: boolean, phoneRequired?: boolean}} options
+ *   phoneRequired (AA02): the back end withholds the customer permissions until the account has
+ *   a contact phone; the customer pages stay in the menu so the guard can ask for it.
+ */
+export function visibleFeatures(features, { permissions, authenticated, phoneRequired = false }) {
   return features.filter(
     (feature) =>
       feature.showInNav !== false &&
       (!feature.requiresAuth || authenticated) &&
-      can(permissions, feature.permission)
+      (can(permissions, feature.permission) ||
+        (authenticated && phoneRequired && Boolean(feature.requiresContactPhone)))
   );
 }
 

@@ -35,9 +35,18 @@ describe('callbackTarget', () => {
     assert.equal(callbackTarget(success, 'unknown', null), null);
   });
 
-  it('goes home once authenticated, or to the phone form on a first external login', () => {
+  it('goes home once authenticated, or to the customer data on a first external login', () => {
     assert.equal(callbackTarget(success, 'authenticated', { phoneRequired: false }), '/');
-    assert.equal(callbackTarget(success, 'authenticated', { phoneRequired: true }), '/complete-profile');
+    // A new customer account: My data asks for the phone first, then for the customer data.
+    assert.equal(
+      callbackTarget(success, 'authenticated', { phoneRequired: true, customerId: null, permissions: ['catalogue:read'] }),
+      '/my-data',
+    );
+    // Staff without a phone (phone gate) still goes to the phone form.
+    assert.equal(
+      callbackTarget(success, 'authenticated', { phoneRequired: true, permissions: ['catalogue:read', 'stock:read'] }),
+      '/complete-profile',
+    );
   });
 
   it('never leaves an error, an activation or a refused session', () => {

@@ -8,12 +8,13 @@ import { usePermissions } from '../../shared/auth/use-can.js';
 
 export default function HomePage() {
   const { t } = useTranslation();
-  const { status } = useSession();
+  const { status, user } = useSession();
 
   const permissions = usePermissions();
   const quickLinks = visibleFeatures(features, {
     permissions,
     authenticated: status === 'authenticated',
+    phoneRequired: Boolean(user?.phoneRequired),
   }).filter((feature) => feature.path !== '/');
 
   return (

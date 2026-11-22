@@ -21,11 +21,12 @@ export default function Layout() {
   const { t } = useTranslation();
 
   const permissions = usePermissions();
-  const { status } = useSession();
+  const { status, user } = useSession();
   const navSections = groupFeatures(
     visibleFeatures(features, {
       permissions,
       authenticated: status === 'authenticated',
+      phoneRequired: Boolean(user?.phoneRequired),
     })
   );
 

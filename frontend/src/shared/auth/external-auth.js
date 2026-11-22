@@ -1,3 +1,5 @@
+import { afterLoginPath } from './redirect.js';
+
 /** Provider names accepted by the back end (lower-case letters only). */
 const PROVIDER_PATTERN = /^[a-z]{2,20}$/;
 
@@ -69,5 +71,6 @@ export function parseCallbackParams(params) {
 export function callbackTarget(result, sessionStatus, user) {
   if (result.status !== 'success' || sessionStatus !== 'authenticated')
     return null;
-  return user?.phoneRequired ? '/complete-profile' : '/';
+  if (user?.phoneRequired) return afterLoginPath(user) === '/my-data' ? '/my-data' : '/complete-profile';
+  return afterLoginPath(user);
 }
