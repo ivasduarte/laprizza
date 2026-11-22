@@ -44,11 +44,11 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams. The BCK01 diagra
 - Logout revokes the current session; logout on all devices also increments `tokenVersion`. A revoked session is refused on the next request, even before the access token expires.
 - Password recovery always answers `202` with the same body and does the work afterwards. Only active accounts receive the e-mail, with a single-use link valid for 30 minutes; only the SHA-256 of the token is stored and the token travels in the URL fragment. A reset ends every session of the user and opens none.
 - A password change requires the current password, keeps the current session and ends every other one. The same password policy applies everywhere a password is chosen (8 to 64 characters, one uppercase letter, one special character).
-- Registering a user is restricted to Manager. The domain validates the password strength, the service hashes the password with Argon2 and a duplicated email or username results in 409.
+- Registering a user (BCK01 diagram) was restricted to Manager, with a password. Since AA06 `POST /users` belongs to the Administrator, accepts no password and creates an inactive account with an invitation; a duplicated e-mail or username still results in 409.
 - External login is public and uses OpenID Connect (Authorization Code with PKCE). The user is identified by `(issuer, sub)`, never by e-mail alone.
-- A new external user gets an inactive account with the role `CUSTOMER` and no session. An e-mail that already belongs to another user is refused (no automatic linking).
+- A new external user gets an active account with the role `CUSTOMER` only and a session: the verified identity validates the account (clarification of 2026-11-21), so no invitation is sent. An e-mail that already belongs to another user is refused (no automatic linking).
 - A successful external login creates the same session as the local login (`establishSession`). The token never appears in a URL.
-- Every new account gets the role `CUSTOMER`, in addition to the roles requested by the Manager. Roles are never taken from the identity provider or the client.
+- Every new account gets the role `CUSTOMER`, in addition to the roles requested by the Administrator (AA06). Roles are never taken from the identity provider or the client.
 - User administration belongs to the `ADMINISTRATOR` role (AA06). New accounts are inactive and receive a unique, expiring, single-use activation invitation; every role change is recorded with its responsible user or system process and time.
 - Roles are read from the database on every login, refresh and protected request. An account without an active role gets 403 `NO_ACTIVE_ROLE` and no session. If the roles cannot be read, the request fails closed with 503 `ROLES_UNAVAILABLE`.
 
@@ -56,13 +56,15 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams. The BCK01 diagra
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0004](../../adr/0004-authentication-and-authorization.md) | Authentication and authorization | Accepted, amended |
-| [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md) | Rate limiting policies (`login` and `forgot` limiters) | Accepted, amended |
-| [ADR-0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) | Refresh tokens for secure sessions | Accepted |
-| [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
-| [ADR-0043](../../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md) | Local login without account enumeration and with progressive lockout | Accepted |
-| [ADR-0044](../../adr/0044-password-recovery-with-single-use-hashed-tokens.md) | Password recovery with single-use hashed tokens | Accepted |
-| [ADR-0045](../../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md) | E-mail delivery with Nodemailer and Mailpit | Accepted |
+| [ADR-0003](../../adr/0003-authentication-and-authorization.md) | Authentication and authorization | Accepted, amended |
+| [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md) | Rate limiting policies (`login` and `forgot` limiters) | Accepted, amended |
+| [ADR-0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md) | Refresh tokens for secure sessions | Accepted |
+| [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
+| [ADR-0022](../../adr/0022-local-login-without-account-enumeration-and-with-progressive-lockout.md) | Local login without account enumeration and with progressive lockout | Accepted |
+| [ADR-0023](../../adr/0023-password-recovery-with-single-use-hashed-tokens.md) | Password recovery with single-use hashed tokens | Accepted |
+| [ADR-0024](../../adr/0024-e-mail-delivery-with-nodemailer-and-mailpit.md) | E-mail delivery with Nodemailer and Mailpit | Accepted |
+| [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations (AA06) | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization matrix (AA05; roles resolved per request, AA03) | Accepted |
 
 ## Notation key
 
@@ -114,7 +116,13 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams. The BCK01 diagra
 | AuthSessionsRepository | Component | MongoDB, collection `Auth Sessions` | Creates, rotates and revokes sessions (hash of the refresh token, absolute expiry) | AA01 diagrams except [Request Password Recovery](./request-password-recovery.md) |
 | PasswordResetTokensRepository | Component | MongoDB, collection `Password Reset Tokens` | Stores the SHA-256 of the recovery tokens, invalidates the previous ones and consumes a token atomically | [Request Password Recovery](./request-password-recovery.md), [Reset Password](./reset-password.md) |
 | EmailService | Component | Nodemailer | Sends the plain-text e-mails through SMTP | [Request Password Recovery](./request-password-recovery.md) |
-| E-mail Server | External System | Mailpit (SMTP) | Receives the e-mails and shows them in its web interface (port 8025) | [Request Password Recovery](./request-password-recovery.md) |
+| E-mail Server | External System | Mailpit (SMTP) | Receives the e-mails and shows them in its web interface (port 8025) | [Request Password Recovery](./request-password-recovery.md), [AA06](./role-assignment-and-invitations.md) |
+| Administrator | Person | - | User with the ADMINISTRATOR role: manages accounts, roles and activation invitations | [AA06](./role-assignment-and-invitations.md) |
+| UsersRouter | Component | Express router and middleware | `requirePermission(users:read / users:create / users:manage / users:invite)` and Joi (no password on creation) | [AA06](./role-assignment-and-invitations.md) |
+| UsersService | Component | Node.js module | `createUser`, `updateUser`, `addRole`, `removeRole`, `getRoleHistory`, `reissueInvitation`, `listAssignableRoles`; `assertRoleChangeAllowed` and the compensation when a record fails | [AA06](./role-assignment-and-invitations.md) |
+| RoleChangeRecorder | Component | Node.js module | Writes the append-only `Role Changes` records with the actor (`USER` or `SYSTEM` process) and the time | [AA06](./role-assignment-and-invitations.md), [AA03](./role-resolution.md) |
+| ActivationInvitationService | Component | Node.js module | Issues an invitation (revokes the pending one, stores the SHA-256 and expiry, sends the e-mail) and revokes pending invitations | [AA06](./role-assignment-and-invitations.md) |
+| Role resolution rules | Component | Domain, pure functions | `withInitialCustomerRole`, `activeRoles`, `evaluateRoleAuthorization`; `AuthService.resolveRoles` reads the stored roles and fails closed | [AA03](./role-resolution.md) |
 
 ## Conversion notes
 

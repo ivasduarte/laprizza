@@ -1,6 +1,7 @@
 import { mergeMessages, web07Messages } from './web07-messages.js';
 import { web05Messages } from './web05-messages.js';
 import { aa06Messages } from './aa06-messages.js';
+import { aa02Messages } from './aa02-messages.js';
 
 const baseMessages = {
   en: {
@@ -36,6 +37,12 @@ const baseMessages = {
       sharedResources: 'Shared resources',
       authCallback: 'External sign-in',
       activateAccount: 'Account activation',
+      groups: {
+        kitchen: 'Kitchen',
+        menu: 'Menu',
+        customers: 'Customers',
+        administration: 'Administration',
+      },
     },
     home: {
       welcome: 'Welcome to LaPrizza',
@@ -84,19 +91,19 @@ const baseMessages = {
         ACCOUNT_INACTIVE:
           'The account is not active yet. Use the activation invitation you received by email.',
         ACCOUNT_DISABLED:
-          'The account is disabled. Contact the restaurant manager.',
+          'The account is disabled. Contact the LaPrizza administrator.',
         TOO_MANY_ATTEMPTS: 'Too many failed attempts.',
         RATE_LIMITED: 'Too many requests.',
         VALIDATION_FAILED: 'Please check the data you entered.',
         PASSWORD_POLICY_VIOLATION:
-          'The new password does not meet the security rules.',
+          'The new password does not meet the security rules: between 8 and 64 characters, with at least one uppercase letter and one of these symbols: ! @ # $ % ^ & * . , - _ ?',
         CURRENT_PASSWORD_INCORRECT: 'The current password is incorrect.',
         RESET_TOKEN_INVALID:
           'The recovery link is invalid, was already used or has expired. Request a new one.',
         SESSION_REVOKED: 'Your session has ended. Please log in again.',
         REFRESH_INVALID: 'Your session has ended. Please log in again.',
         NO_ACTIVE_ROLE:
-          'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+          'Access denied: your account has no active role in LaPrizza. Contact the LaPrizza administrator.',
         ROLES_UNAVAILABLE:
           'Your access could not be confirmed right now. Please try again in a moment.',
         INVITATION_INVALID:
@@ -120,15 +127,15 @@ const baseMessages = {
           EMAIL_NOT_VERIFIED:
             'Your email address is not verified at the provider.',
           ACCOUNT_LINK_REQUIRED:
-            'An account with this email already exists. Contact the restaurant manager.',
+            'An account with this email already exists. Contact the LaPrizza administrator.',
           ACCOUNT_PENDING_ACTIVATION:
-            'Your account was created but must be activated before you can use it. Contact the restaurant manager.',
+            'Your account was created but must be activated before you can use it. Contact the LaPrizza administrator.',
           ACCOUNT_INACTIVE:
-            'The account is not active yet. Contact the restaurant manager.',
+            'The account is not active yet. Contact the LaPrizza administrator.',
           ACCOUNT_DISABLED:
-            'The account is disabled. Contact the restaurant manager.',
+            'The account is disabled. Contact the LaPrizza administrator.',
           NO_ACTIVE_ROLE:
-            'Access denied: your account has no active role in LaPrizza. Contact the restaurant manager.',
+            'Access denied: your account has no active role in LaPrizza. Contact the LaPrizza administrator.',
           ROLES_UNAVAILABLE:
             'Your access could not be confirmed right now. Please try again in a moment.',
           INVITATION_INVALID:
@@ -212,6 +219,11 @@ const baseMessages = {
         boolean_base: 'Choose yes or no.',
         date_base: 'Enter a valid date.',
         custom_mismatch: 'The values do not match.',
+        person_name:
+          'Use only letters. Words may be separated by one space, apostrophe or hyphen; no digits or symbols.',
+        place_name:
+          'Use only letters. Words may be separated by spaces, apostrophes, hyphens or dots; no digits.',
+        string_pattern_name: 'Use only letters, without digits or symbols at the start or end.',
         password_uppercase: 'Include at least one uppercase letter.',
         password_symbol:
           'Include at least one of these symbols: ! @ # $ % ^ & * . , - _ ?',
@@ -439,6 +451,9 @@ const baseMessages = {
         saving: 'Saving...',
         invalidJsonFile: 'The selected file is not a valid JSON.',
         parseError: 'Invalid JSON format. Please correct it before saving.',
+        parseErrorAt:
+          'Invalid JSON on line {{line}}, column {{column}} (highlighted in the editor). Please correct it before saving.',
+        onLine: 'Line {{line}}: {{message}}',
       },
       errors: {
         invalid:
@@ -581,6 +596,12 @@ const baseMessages = {
       sharedResources: 'Recursos partilhados',
       authCallback: 'Início de sessão externo',
       activateAccount: 'Ativação de conta',
+      groups: {
+        kitchen: 'Cozinha',
+        menu: 'Ementa',
+        customers: 'Clientes',
+        administration: 'Administração',
+      },
     },
     home: {
       welcome: 'Bem-vindo à LaPrizza',
@@ -632,19 +653,19 @@ const baseMessages = {
         ACCOUNT_INACTIVE:
           'A conta ainda não está ativa. Use o convite de ativação que recebeu por email.',
         ACCOUNT_DISABLED:
-          'A conta está desativada. Contacte o gerente do restaurante.',
+          'A conta está desativada. Contacte o administrador da LaPrizza.',
         TOO_MANY_ATTEMPTS: 'Demasiadas tentativas falhadas.',
         RATE_LIMITED: 'Demasiados pedidos.',
         VALIDATION_FAILED: 'Verifique os dados introduzidos.',
         PASSWORD_POLICY_VIOLATION:
-          'A nova palavra-passe não cumpre as regras de segurança.',
+          'A nova palavra-passe não cumpre as regras de segurança: entre 8 e 64 caracteres, com pelo menos uma letra maiúscula e um destes símbolos: ! @ # $ % ^ & * . , - _ ?',
         CURRENT_PASSWORD_INCORRECT: 'A palavra-passe atual está incorreta.',
         RESET_TOKEN_INVALID:
           'O link de recuperação é inválido, já foi usado ou expirou. Peça um novo link.',
         SESSION_REVOKED: 'A sua sessão terminou. Inicie sessão novamente.',
         REFRESH_INVALID: 'A sua sessão terminou. Inicie sessão novamente.',
         NO_ACTIVE_ROLE:
-          'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gerente do restaurante.',
+          'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o administrador da LaPrizza.',
         ROLES_UNAVAILABLE:
           'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
         INVITATION_INVALID:
@@ -669,15 +690,15 @@ const baseMessages = {
           EMAIL_NOT_VERIFIED:
             'O seu endereço de email não está verificado no fornecedor.',
           ACCOUNT_LINK_REQUIRED:
-            'Já existe uma conta com este email. Contacte o gestor do restaurante.',
+            'Já existe uma conta com este email. Contacte o administrador da LaPrizza.',
           ACCOUNT_PENDING_ACTIVATION:
-            'A sua conta foi criada, mas tem de ser ativada antes de a poder usar. Contacte o gestor do restaurante.',
+            'A sua conta foi criada, mas tem de ser ativada antes de a poder usar. Contacte o administrador da LaPrizza.',
           ACCOUNT_INACTIVE:
-            'A conta ainda não está ativa. Contacte o gestor do restaurante.',
+            'A conta ainda não está ativa. Contacte o administrador da LaPrizza.',
           ACCOUNT_DISABLED:
-            'A conta está desativada. Contacte o gestor do restaurante.',
+            'A conta está desativada. Contacte o administrador da LaPrizza.',
           NO_ACTIVE_ROLE:
-            'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o gestor do restaurante.',
+            'Acesso negado: a sua conta não tem nenhum papel ativo na LaPrizza. Contacte o administrador da LaPrizza.',
           ROLES_UNAVAILABLE:
             'Não foi possível confirmar o seu acesso neste momento. Tente novamente dentro de instantes.',
           INVITATION_INVALID:
@@ -760,6 +781,11 @@ const baseMessages = {
         boolean_base: 'Escolha sim ou não.',
         date_base: 'Introduza uma data válida.',
         custom_mismatch: 'Os valores não coincidem.',
+        person_name:
+          'Use apenas letras. As palavras podem ser separadas por um espaço, apóstrofo ou hífen; sem números nem símbolos.',
+        place_name:
+          'Use apenas letras. As palavras podem ser separadas por espaços, apóstrofos, hífens ou pontos; sem números.',
+        string_pattern_name: 'Use apenas letras, sem números nem símbolos no início ou no fim.',
         password_uppercase: 'Inclua pelo menos uma letra maiúscula.',
         password_symbol:
           'Inclua pelo menos um destes símbolos: ! @ # $ % ^ & * . , - _ ?',
@@ -983,6 +1009,9 @@ const baseMessages = {
         saving: 'A guardar...',
         invalidJsonFile: 'O ficheiro selecionado não é um JSON válido.',
         parseError: 'Formato JSON inválido. Corrija-o antes de guardar.',
+        parseErrorAt:
+          'JSON inválido na linha {{line}}, coluna {{column}} (assinalada no editor). Corrija-o antes de guardar.',
+        onLine: 'Linha {{line}}: {{message}}',
       },
       errors: {
         invalid:
@@ -1097,12 +1126,9 @@ const baseMessages = {
 export const messages = Object.fromEntries(
   Object.entries(baseMessages).map(([language, dictionary]) => [
     language,
-    mergeMessages(
-      mergeMessages(
-        mergeMessages(dictionary, web07Messages[language] ?? {}),
-        web05Messages[language] ?? {}
-      ),
-      aa06Messages[language] ?? {}
+    [web07Messages, web05Messages, aa06Messages, aa02Messages].reduce(
+      (merged, extra) => mergeMessages(merged, extra[language] ?? {}),
+      dictionary
     ),
   ])
 );

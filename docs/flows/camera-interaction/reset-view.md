@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), who see the viewer on `/visualization3d` and `/kitchen-configurations` |
 | Success response | n/a (the camera is back at the initial position, looking at the centre of the floor) |
 | Error handling | None. Before the controls exist (viewer still mounting), the button does nothing. |
-| ADRs | [ADR-0054](../../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md), [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
+| ADRs | [ADR-0050](../../adr/0050-perspective-camera-controls-with-limits-derived-from-the-kitchen.md), [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
 
 ## Description
 

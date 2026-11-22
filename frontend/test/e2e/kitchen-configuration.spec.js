@@ -174,7 +174,7 @@ test.describe('Kitchen Configuration Page E2E', () => {
     await expect(
       page.locator('p[role="status"]').filter({ hasText: 'successfully' })
     ).toBeVisible();
-    // O viewer é remontado (ADR-0027) e volta a pedir a configuração ativa
+    // O viewer é remontado (ADR-0032) e volta a pedir a configuração ativa
     await expect(page.getByTestId('viewer-active-config')).toContainText(
       'Automated Line'
     );

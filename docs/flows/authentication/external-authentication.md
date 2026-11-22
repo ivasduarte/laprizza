@@ -11,7 +11,7 @@
 | Allowed roles | Public (no authentication) |
 | Success response | 302 to the SPA with `status=success` and the refresh cookie `lp_rt` |
 | Error handling | 404 `PROVIDER_NOT_FOUND` (login) and 302 to the SPA with `status=error&code=<CODE>` (callback) |
-| Decision records | [ADR 0033](../../adr/0033-external-authentication-with-openid-connect.md), [ADR 0034](../../adr/0034-external-identity-model-and-account-resolution.md), builds on [ADR 0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| Decision records | [ADR 0056](../../adr/0056-external-authentication-with-openid-connect.md), [ADR 0057](../../adr/0057-external-identity-model-and-account-resolution.md), builds on [ADR 0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 
@@ -20,9 +20,11 @@ A user signs in with Google or Microsoft through OpenID Connect (Authorization C
 When the ID token is valid, the back end identifies the user by `(issuer, sub)`:
 
 * **Known identity and active account:** a session is created by `establishSession`, the same function used by the local login ([Session Handling](./session-handling.md)). The refresh cookie `lp_rt` is set and the browser is redirected to the SPA. The SPA restores the session with `POST /auth/refresh`, as after a reload. No token travels in a URL.
-* **Known identity and inactive or disabled account:** no session, `ACCOUNT_INACTIVE` or `ACCOUNT_DISABLED`.
-* **Unknown identity with a verified e-mail that no user has:** an `inactive` account with the role `CUSTOMER` is created and linked to the identity. No session is created (`ACCOUNT_PENDING_ACTIVATION`). The account receives an activation invitation by e-mail ([AA06](./role-assignment-and-invitations.md)) and is activated through it (AA07).
-* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0034](../../adr/0034-external-identity-model-and-account-resolution.md)).
+* **Known identity and account never activated** (left `inactive` by the flow used before 2026-11-21): the successful login validates it (AA07 clarification). `activateAccount` sets it `active` atomically and the session is created.
+* **Known identity and account deactivated after activation, or disabled:** no session, `ACCOUNT_INACTIVE` or `ACCOUNT_DISABLED` (a login never reactivates it, AA03).
+* **Unknown identity with a verified e-mail that no user has:** an `active` account with the role `CUSTOMER` is created and linked to the identity, and the session is created (AA02 clarification). No invitation is sent. If the identity link fails, the new account is deleted, so the e-mail is never left blocked.
+* **Contact phone:** the providers do not supply it. While a `CUSTOMER` account has neither a phone nor a Customer record, the session user has `phoneRequired: true` and the customer permissions (`CUSTOMER_CONTACT_PERMISSIONS`, today `customers:read:own`) are withheld by the back end. The SPA sends the user to `/complete-profile`, which calls `PUT /auth/me/phone`.
+* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0057](../../adr/0057-external-identity-model-and-account-resolution.md)).
 
 A cancelled or failed login never creates a session. Logout is the existing `POST /auth/logout`.
 
@@ -136,6 +138,10 @@ sequenceDiagram
             alt Identity linked
                 service->>users: findById(userId)
                 users-->>service: User
+                opt status inactive and never activated
+                    service->>users: activateAccount(userId, activatedAt)
+                    users-->>service: User (active)
+                end
                 service->>auth: establishSession(user, context with method oidc)
                 alt Account inactive or disabled
                     auth-->>service: AppError(403, ACCOUNT_INACTIVE or ACCOUNT_DISABLED)
@@ -150,9 +156,16 @@ sequenceDiagram
                 alt E-mail missing, not verified or already used
                     service-->>controller: AppError(403, EMAIL_MISSING, EMAIL_NOT_VERIFIED or ACCOUNT_LINK_REQUIRED)
                 else New user
-                    service->>users: create(email, roles CUSTOMER, status inactive)
+                    service->>users: create(email, roles CUSTOMER, status active, activatedAt)
                     service->>identities: create(userId, provider, issuer, subject)
-                    service-->>controller: Outcome PENDING_ACTIVATION
+                    alt Link failed
+                        service->>users: deleteById(userId)
+                        service-->>controller: Error (AUTH_FAILED on a concurrent link)
+                    else Linked
+                        service->>auth: establishSession(user, context with method oidc)
+                        auth-->>service: Session (refresh token and expiry)
+                        service-->>controller: Outcome SESSION
+                    end
                 end
             end
         end
@@ -160,7 +173,7 @@ sequenceDiagram
 
         alt Outcome SESSION
             controller-->>spa: 302 /auth/callback?status=success and Set-Cookie lp_rt
-        else Outcome PENDING_ACTIVATION or error
+        else Error
             controller-->>spa: 302 /auth/callback?status=error&code=CODE
         end
     end
@@ -185,10 +198,15 @@ flowchart TD
     E -- no --> D2["DENY EMAIL_NOT_VERIFIED"]
     E -- yes --> F{"E-mail already used by a user?"}
     F -- yes --> D3["DENY ACCOUNT_LINK_REQUIRED"]
-    F -- no --> N["CREATE_ACCOUNT: inactive, role CUSTOMER, no session"]
-    L --> G{"Account active?"}
+    F -- no --> N["CREATE_ACCOUNT: active, role CUSTOMER"]
+    N --> OK
+    L --> P{"Inactive and never activated?"}
+    P -- yes --> ACT["activateAccount"] --> OK
+    P -- no --> G{"Account active?"}
     G -- no --> D4["DENY ACCOUNT_INACTIVE or ACCOUNT_DISABLED"]
     G -- yes --> OK["Session created"]
+    OK --> PH{"CUSTOMER without phone?"}
+    PH -- yes --> CP["phoneRequired: SPA asks the phone, customer permissions withheld"]
 ```
 
 ### Landing page in the SPA
@@ -210,8 +228,12 @@ sequenceDiagram
     else status is success
         spa->>api: POST /auth/refresh (cookie lp_rt)
         alt Session restored
-            api-->>spa: Access token (kept in memory)
-            spa-->>user: Redirect to the home page
+            api-->>spa: Access token and session user (kept in memory)
+            alt phoneRequired (first external login)
+                spa-->>user: Redirect to /complete-profile
+            else
+                spa-->>user: Redirect to the home page
+            end
         else Refused (cookie not accepted)
             api-->>spa: 401
             spa-->>user: Message AUTH_FAILED
@@ -220,6 +242,12 @@ sequenceDiagram
 ```
 
 Any status or code that is not on the closed list is shown as `AUTH_FAILED`.
+
+One effect issues every navigation of the callback page (`callbackTarget` in `external-auth.js`): cleaning the URL and leaving the page could otherwise race when the session is already restored when the page mounts, and leave a blank page.
+
+### Contact phone after the first external login
+
+The providers do not supply the phone number. While a `CUSTOMER` account has neither a phone nor a Customer record, `/auth/me` answers `phoneRequired: true` and the back end withholds `CUSTOMER_CONTACT_PERMISSIONS`. `/complete-profile` sends `PUT /auth/me/phone`; the number follows the customer rule (Portuguese, 9 digits) and is stored normalized on the account (`Users.phoneNumber`). Customer pages (`requiresContactPhone` in the registry) send the user to the form until then.
 
 ## Error codes
 
@@ -230,7 +258,7 @@ Any status or code that is not on the closed list is shown as `AUTH_FAILED`.
 | `EMAIL_MISSING` | New identity without e-mail | `resolveExternalLogin` | The provider did not share an e-mail address |
 | `EMAIL_NOT_VERIFIED` | New identity whose e-mail the provider does not vouch for | `resolveExternalLogin` | The e-mail is not verified at the provider |
 | `ACCOUNT_LINK_REQUIRED` | New identity whose e-mail belongs to another user | `resolveExternalLogin` | An account with this e-mail already exists, contact the manager |
-| `ACCOUNT_PENDING_ACTIVATION` | A new inactive account was just created | `ExternalAuthService` | The account must be activated, contact the manager |
+| `ACCOUNT_PENDING_ACTIVATION` | No longer raised since 2026-11-21 (new external accounts are active); kept in the closed list as the controller fallback | `ExternalAuthController` | The account must be activated, contact the manager |
 | `ACCOUNT_INACTIVE` | Linked identity of an inactive account | `establishSession` | The account is not active yet |
 | `ACCOUNT_DISABLED` | Linked identity of a disabled account | `establishSession` | The account is disabled |
 | `PROVIDER_NOT_FOUND` | Unknown or disabled provider (JSON 404 on `/login`, never in the callback URL) | `ExternalAuthService` | - |
@@ -246,13 +274,13 @@ The URL never carries provider messages, tokens or e-mail addresses.
 | `API_PUBLIC_URL` | none, required when a provider is enabled | Public origin of the API, without a path. Used to build the redirect URI | `https://` origin of the API |
 | `APP_BASE_URL` | `http://localhost:4200` | Base of the SPA. The callback redirects to `{APP_BASE_URL}/auth/callback` | Public URL of the SPA |
 | `OIDC_TRANSACTION_TTL_MINUTES` | `10` | Lifetime of the cookie `lp_oidc` | `10` |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Google OAuth client. Both or none | Secret from the secret store ([ADR 0017](../../adr/0017-secrets-management-strategy.md)) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Google OAuth client. Both or none | Secret from the secret store ([ADR 0018](../../adr/0018-secrets-management-strategy.md)) |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Microsoft app registration. Both or none | Secret from the secret store |
 | `MICROSOFT_TENANT` | none, required when Microsoft is enabled | Tenant id, or `consumers`. `common` and `organizations` are refused | The tenant id |
 
 The application does not start if only one of the two credentials of a provider is set, if `API_PUBLIC_URL` is not an `https://` origin (only `localhost` may use `http://`), or if the Microsoft tenant is missing or `common`/`organizations`.
 
-The client secrets are secrets in the sense of ADR 0017: they never go to the repository, to the SPA or to the logs.
+The client secrets are secrets in the sense of ADR 0018: they never go to the repository, to the SPA or to the logs.
 
 ### Redirect URI
 
@@ -285,12 +313,12 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | E2 | Interception of the authorization code | PKCE S256: the code is useless without the `code_verifier`, which stays in the cookie | `oidc-client.js` | The cookie is signed, not encrypted. A script cannot read it (`HttpOnly`) |
 | E3 | Replay of an ID token | `nonce` bound to the transaction. The library also checks `exp` | `oidc-client.js` | None identified |
 | E4 | Token from another provider or tenant (mix-up) | `iss` and `aud` checked by the library. The identity is `(issuer, sub)`. Microsoft `common` and `organizations` are refused | `oidc.config.test.js`, `external-identity.domain.test.js` | None identified |
-| E5 | Account takeover through a provider that reports someone else's e-mail | No linking by e-mail. A new account needs a verified e-mail, and it is inactive. An e-mail already in use is refused | `external-auth.service.test.js` | A provider that lies about `email_verified` can still reserve an unused e-mail on an inactive account |
-| E6 | Privilege escalation through the login | The new account gets only `CUSTOMER` and is inactive. Roles are never taken from the provider | `external-auth.service.test.js` | None identified |
+| E5 | Account takeover through a provider that reports someone else's e-mail | No linking by e-mail. A new account needs a verified e-mail. An e-mail already in use is refused | `external-auth.service.test.js` | A provider that lies about `email_verified` can still reserve an unused e-mail on a `CUSTOMER` account |
+| E6 | Privilege escalation through the login | The new account gets only `CUSTOMER`, without the customer permissions until it has a contact phone. Roles are never taken from the provider | `external-auth.service.test.js`, `auth.session-policy.test.js` | None identified |
 | E7 | Tokens or secrets in URLs, messages and logs | Only a closed list of codes in the URL. The session is restored by cookie. The security logger drops keys that look like secrets. The log of a failed exchange keeps only the error name, never its message. No e-mail in the events of this flow | `external-auth.controller.test.js`, `external-auth.service.test.js` | Events from `establishSession` follow the rules of AA04 |
 | E8 | Open redirect | The target of every redirect is built from configuration (`APP_BASE_URL`), never from a request value. The callback URL used for the exchange comes from `API_PUBLIC_URL`, not from the `Host` header | `external-auth.controller.test.js` | None identified |
 | E9 | Unknown or crafted provider name | Pattern `^[a-z]{2,20}$` and a lookup with `Object.hasOwn` in the configured providers (so `__proto__` is refused) | `external-auth.service.test.js` | None identified |
-| E10 | Abuse of the login endpoints | Per-IP rate limit on `/login` and `/callback` | `auth.routes.js` | In-memory limiter ([ADR 0008](../../adr/0008-implement-rate-limiting-policies.md)) |
+| E10 | Abuse of the login endpoints | Per-IP rate limit on `/login` and `/callback` | `auth.routes.js` | In-memory limiter ([ADR 0009](../../adr/0009-implement-rate-limiting-policies.md)) |
 | E11 | Provider outage or slow discovery | The failure ends in `AUTH_FAILED` and is not cached: the next login tries the discovery again. Local login is not affected | `oidc-client.js` | No timeout is configured for the provider requests beyond the library default |
 
 ## AA02 acceptance criteria
@@ -298,9 +326,10 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | Criterion | How it is met | Evidence |
 |---|---|---|
 | The user can choose an external provider in addition to local authentication | Buttons on the login page, from `GET /auth/external/providers`, shown only for enabled providers | `external-login-buttons.jsx`, flow 1.1 in `external-auth-test-flow.http` |
-| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0033](../../adr/0033-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
+| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0056](../../adr/0056-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
 | The user is sent to the provider and returned to the application | `GET /login` redirects (302), `GET /callback` redirects to the SPA | `external-auth.controller.test.js`, flows 1.4 to 1.6 |
-| A verified identity exists before protected functionality is available | ID token validated by the library. The identity is `(issuer, sub)`. New accounts are inactive and have no session | `external-auth.service.test.js`, `external-identity.domain.test.js` |
+| A verified identity exists before protected functionality is available | ID token validated by the library. The identity is `(issuer, sub)`. The session is only created after that validation; customer features also need the contact phone | `external-auth.service.test.js`, `external-identity.domain.test.js` |
+| (Clarification) The account is created active after a successful external login; a missing phone is asked before the customer features | `active` account and session on the first login; `phoneRequired` + `PUT /auth/me/phone`; `/complete-profile` in the SPA | `external-auth.service.test.js`, `auth.session-policy.test.js`, `guard.test.js` |
 | The application does not collect or store the provider password | The password is typed at the provider. Only `iss`, `sub` and the e-mail are kept | `external-identity.model.js` |
 | Cancelled or failed authentication gives feedback and no access | Closed list of codes, translated in the SPA. No session or cookie is created | `external-auth.controller.test.js`, `external-auth.test.js` (front end), flows 1.5 and 1.6 |
 | The user can log out of the application | The session is the same `AuthSession`: `POST /auth/logout` | [Session Handling](./session-handling.md), `auth.service.test.js` |
@@ -312,13 +341,14 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | Domain | `external-identity.domain.test.js` | Value Object, claim extraction, every branch of `resolveExternalLogin` |
 | Infrastructure | `oidc.config.test.js` | Provider enabling, HTTPS rule, Microsoft tenant, redirect URI per API version |
 | Infrastructure | `oidc-transaction.test.js` | Signature, expiry, tampering and foreign secret of the cookie |
-| Application | `external-auth.service.test.js` | Linked login, new inactive `CUSTOMER` account, refused logins, failed exchange, no e-mail in logs |
+| Application | `external-auth.service.test.js` | Linked login, new active `CUSTOMER` account with session, activation of a pending account, cleanup of a failed link, refused logins, failed exchange, no e-mail in logs |
+| Application | `auth.session-policy.test.js` | `phoneRequired`, withheld customer permissions, `setContactPhone` |
 | API | `external-auth.controller.test.js` | Cookies, redirects, cancelled login, forged or missing cookie, no token or message in the URL |
 | API | `external-auth.openapi.test.js` | The three endpoints are documented |
 | Front end | `external-auth.test.js` | Login URL, callback parameters, texts in English and Portuguese, route not in the menu |
 | Flow | `external-auth-test-flow.http` | Provider list, unknown provider, cancelled login and missing cookie, without a provider account |
 
-The tests use `node:test` with its native `mock` ([ADR 0028](../../adr/0028-mock-based-unit-testing.md)). They do not contact a real provider: the OIDC client is replaced by a mock.
+The tests use `node:test` with its native `mock` ([ADR 0033](../../adr/0033-mock-based-unit-testing.md)). They do not contact a real provider: the OIDC client is replaced by a mock.
 
 ### Manual validation with the real providers
 
@@ -326,10 +356,10 @@ The full login needs a consent screen, so it is validated by hand. The team reco
 
 | Step | Expected | Result |
 |---|---|---|
-| 1. Click "Continue with Google" with an unknown account | Provider login, return to `/auth/callback`, message `ACCOUNT_PENDING_ACTIVATION` | |
-| 2. In the database | One `inactive` user with role `CUSTOMER` and one `External Identities` document | |
-| 3. The user activates the account with the invitation e-mail (AA07; since AA06 an Administrator cannot enable an account that was never activated) | Account `active` | |
-| 4. Repeat step 1 | Return to the home page with a session, cookie `lp_rt` present | |
+| 1. Click "Continue with Google" with an unknown account | Provider login, return to `/auth/callback`, then `/complete-profile` with a session (cookie `lp_rt` present) | |
+| 2. In the database | One `active` user with role `CUSTOMER`, `phoneNumber: null`, and one `External Identities` document; no invitation | |
+| 3. Open `/my-data` before saving the phone | Redirected to `/complete-profile`; `GET /customers/me` answers 403 | |
+| 4. Save a valid phone (e.g. 912345678) | Back to the requested page; `phoneRequired` is false | |
 | 5. Logout | Session ended, the old access token gets 401 | |
 | 6. Cancel at the provider | Message `ACCESS_DENIED`, no cookie | |
 | 7. Existing local user's e-mail | Message `ACCOUNT_LINK_REQUIRED` | |
@@ -339,14 +369,13 @@ The full login needs a consent screen, so it is validated by hand. The team reco
 
 | Item | Impact | Proposal |
 |---|---|---|
-| The deployed site uses `http://` | Google and Microsoft accept `http://` only for `localhost`, so external login does not work on the server until HTTPS is configured | TLS and a reverse proxy in front of the API (ASIST) |
-| No linking of an existing account | An existing local user cannot use a provider | AA07: link the identity at activation, after checking the invited e-mail |
-| New external users need a Manager | A new user cannot work immediately | Intended (AA03 and AA06). Invitation flow in AA06 and AA07 |
+| The deployed site needs HTTPS | Google and Microsoft accept `http://` only for `localhost` | nginx with TLS on the VMs ([HTTPS](../../sys-admin/https.md)) |
+| No linking of an existing account | An existing local user cannot use a provider (`ACCOUNT_LINK_REQUIRED`) | Link from the account page after re-entering the local password (identity confirmed by a mechanism already bound to the account) |
 | Apple is not implemented | One provider less than the three considered | Needs HTTPS, a paid developer account and a different client secret and callback (`form_post`) |
 | No provider logout | Logging out of LaPrizza does not end the provider session | Out of scope for AA02 |
 | After the login the user lands on the home page | The page the user wanted is not restored | Pass a validated target through the transaction, using `safeRedirectPath` |
 | The transaction cookie is not single-use on our side | A replay is harmless because the code is single-use at the provider | Store a transaction id with a TTL if replay must be refused explicitly |
-| User and identity are created in two writes | If the second fails an inactive user without identity remains | Use a transaction if MongoDB runs as a replica set |
+| User and identity are created in two writes | If the second fails, the new account is deleted (compensation in `createLinkedAccount`); a crash between the two writes can still leave it | Use a transaction if MongoDB runs as a replica set |
 | Microsoft verified e-mail depends on an optional claim | Without the claim new Microsoft users are refused | Enable the claim in the app registration and confirm its name |
 
 ## Use of AI
@@ -355,4 +384,4 @@ The full login needs a consent screen, so it is validated by hand. The team reco
 |---|---|---|
 | Claude (Anthropic) | Design options, drafts of the code, tests and documents of AA02 | The team reviews and runs the code and the tests (`npm test`, `npm run lint`). Before submission, confirm against the official documentation: the `openid-client` calls used in `oidc-client.js`, the verification claim of Microsoft (`xms_edov`) and the behaviour of the refresh cookie after the redirect. The manual validation table above is the evidence that the real providers work |
 
-See the [README](./README.md) for the notation key and the element catalogue.
+See the [README](./README.md) for the notation key and the element catalogue.

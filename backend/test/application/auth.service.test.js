@@ -91,6 +91,7 @@ function createAuthTestContext({ accessTokenTtlSeconds = 3600, loadRoles } = {})
     findByRotatedHash: mock.fn(async () => null),
     revoke: mock.fn(async () => {}),
     revokeAllForUser: mock.fn(async () => {}),
+    touch: mock.fn(async () => {}),
   };
   const resetTokensRepository = {
     create: mock.fn(async (data) => ({ usedAt: null, ...data })),
@@ -197,15 +198,16 @@ test('login returns tokens and creates a session storing only the refresh token 
     email: user.email,
     status: 'active',
     roles: ['EMPLOYEE'],
-    permissions: ['catalogue:read', 'products:read', 'resources:read', 'stock:read'],
+    permissions: ['catalogue:read', 'kitchen:read', 'products:read', 'resources:read', 'stock:read'],
     customerId: null,
+    phoneRequired: false,
   });
 
   assert.equal(ctx.sessionsRepository.create.mock.callCount(), 1);
   const session = ctx.sessionsRepository.create.mock.calls[0].arguments[0];
   assert.equal(session.refreshTokenHash, ctx.tokenService.hashOpaqueToken(result.refreshToken));
   assert.notEqual(session.refreshTokenHash, result.refreshToken);
-  assert.equal(session.ip, REQUEST.ip);
+  assert.equal(session.ip, undefined); // GDP01: no IP address is stored
   assert.equal(session.userAgent, REQUEST.userAgent);
   assert.equal(session.expiresAt.getTime(), START.getTime() + TEST_AUTH_CONFIG.refreshTokenTtlMs);
 
@@ -291,7 +293,7 @@ test('login logs failed attempts without the password', async () => {
   const [event] = loggedEvents(ctx, 'LOGIN_FAILED');
   assert.equal(event.reason, 'INVALID_PASSWORD');
   assert.equal(event.email, user.email);
-  assert.equal(event.ip, REQUEST.ip);
+  // GDP01: the IP is removed by the security logger (security-logger.test.js), not here.
   assert.ok(
     !JSON.stringify(ctx.securityLogger.log.mock.calls.map((c) => c.arguments)).includes(
       WRONG_PASSWORD,
@@ -459,7 +461,7 @@ test('login rejects inactive and disabled accounts only after a correct password
 test('establishSession is reusable and loads roles through the extension point', async () => {
   const loadRoles = mock.fn(async () => ['CUSTOMER', 'BETA']); // BETA is not an internal role
   const ctx = createAuthTestContext({ loadRoles });
-  const user = storedUser();
+  const user = storedUser({ phoneNumber: '+351912345678' }); // AA02: with a contact phone
 
   const result = await ctx.service.establishSession(user, { method: 'oidc', ip: '10.0.0.1' });
 
@@ -468,6 +470,7 @@ test('establishSession is reusable and loads roles through the extension point',
   assert.deepEqual(result.user.permissions, [
     'catalogue:read',
     'customers:read:own',
+    'customers:write:own',
     'resources:read',
   ]);
   assert.equal(loadRoles.mock.calls[0].arguments[0], user);
@@ -1082,8 +1085,9 @@ test('getCurrentUser returns the session DTO read from the database', async () =
     email: 'user@laprizza.pt',
     status: 'active',
     roles: ['CUSTOMER'],
-    permissions: ['catalogue:read', 'customers:read:own', 'resources:read'],
+    permissions: ['catalogue:read', 'customers:read:own', 'customers:write:own', 'resources:read'],
     customerId: '65231abcd345678901234567',
+    phoneRequired: false,
   });
   assert.equal(ctx.usersRepository.findById.mock.calls[0].arguments[0], USER_ID);
 });
@@ -1159,9 +1163,17 @@ test('AA03: the same role rule applies to external authentication (establishSess
     403,
     AuthErrorCode.NO_ACTIVE_ROLE,
   );
-  const ok = await ctx.service.establishSession(storedUser({ roles: ['CUSTOMER'] }), { method: 'oidc' });
+  const ok = await ctx.service.establishSession(
+    storedUser({ roles: ['CUSTOMER'], phoneNumber: '+351912345678' }), // AA02: with a contact phone
+    { method: 'oidc' },
+  );
   assert.deepEqual(ok.user.roles, ['CUSTOMER']);
-  assert.deepEqual(ok.user.permissions, ['catalogue:read', 'customers:read:own', 'resources:read']);
+  assert.deepEqual(ok.user.permissions, [
+    'catalogue:read',
+    'customers:read:own',
+    'customers:write:own',
+    'resources:read',
+  ]);
 });
 
 test('AA03: roles supplied in the request are ignored; only the stored roles count', async () => {

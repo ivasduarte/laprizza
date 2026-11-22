@@ -21,6 +21,7 @@ export const AuthErrorCode = Object.freeze({
   ROLES_UNAVAILABLE: 'ROLES_UNAVAILABLE',
   INVITATION_INVALID: 'INVITATION_INVALID',
   INVITATION_MISMATCH: 'INVITATION_MISMATCH',
+  PHONE_INVALID: 'PHONE_INVALID',
 });
 
 const DEFAULT_MESSAGES = {
@@ -42,6 +43,7 @@ const DEFAULT_MESSAGES = {
   ROLES_UNAVAILABLE: 'The account roles could not be confirmed. Try again later.',
   INVITATION_INVALID: 'Invalid, expired or already used activation link.',
   INVITATION_MISMATCH: 'The authenticated identity is not the one this invitation was sent to.',
+  PHONE_INVALID: 'Invalid phone number.',
 };
 
 export function authError(code, status, message = DEFAULT_MESSAGES[code] ?? code) {
@@ -52,4 +54,4 @@ export function tooManyAttempts(code, retryAfterMs) {
     const err = authError(code, 429);
     err.retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
     return err;
-}
+}

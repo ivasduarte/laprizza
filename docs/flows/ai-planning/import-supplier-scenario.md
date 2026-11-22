@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `suppliers:import`) |
 | Success response | 200 OK `{ "valid": true, "nextVersion": n }` (dry-run), 201 Created, supplier scenario DTO with `version` and `simulated: true` (save) |
 | Error handling | 400 `BAD_REQUEST` (Joi: missing field, wrong type, invalid value), 400 `VALIDATION_ERROR` (business rules: `supplierIdDuplicate`, `productUnknown`, `productDuplicate`, `offerSupplierUnknown`, `offerDuplicate`), 409 `CONFLICT` (concurrent save), 401/403. Validation errors carry `details` `[{ field, type, message }]`. |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0035](../../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0048](../../adr/0048-supplier-import-with-client-side-checks-and-server-dry-run.md) |
 
 The accepted JSON format is described in [Supplier Scenario JSON Format](./supplier-json-format.md).
 

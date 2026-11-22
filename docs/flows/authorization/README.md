@@ -50,7 +50,7 @@ The use cases are described in the [Use Case Views](../../analysis/use-case-view
 | Permission | Guest | Customer | Employee | Manager | Administrator |
 |---|---|---|---|---|---|
 | `catalogue:read` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `customers:read:own` | - | ✅ | - | - | - |
+| `customers:read:own`, `customers:write:own` | - | ✅ | - | - | - |
 | `customers:read`, `customers:write` | - | - | - | ✅ | - |
 | `products:read` | - | - | ✅ | ✅ | - |
 | `products:write`, `categories:write`, `pizzas:write` | - | - | - | ✅ | - |
@@ -63,7 +63,7 @@ The use cases are described in the [Use Case Views](../../analysis/use-case-view
 | `resources:write` | - | - | - | - | ✅ |
 | `users:read`, `users:create`, `users:manage`, `users:invite`, `roles:assign:*` | - | - | - | - | ✅ |
 
-The Administrator row was added by AA06 ([ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md)) by changing only this data. Guests and customers see the allergens of each product through the public catalogue; the allergen endpoints are for allergen management.
+The Administrator row was added by AA06 ([ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md)) by changing only this data. Guests and customers see the allergens of each product through the public catalogue; the allergen endpoints are for allergen management.
 
 ## Permission of each resource
 
@@ -73,7 +73,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 |---|---|---|
 | `/catalogue` | `catalogue:read` (public, rate limited per IP for Guests) | - |
 | `/customers`, `/customers/{id}` | `customers:read` | `customers:write` |
-| `/customers/me` | `customers:read:own` | - |
+| `/customers/me` | `customers:read:own` | `customers:write:own` (`POST`, create the own record once) |
 | `/products`, `/product-categories`, `/pizza-size`, `/pizza-component-type`, `/predefined-pizzas`, `/products/{productId}/size-configurations` | `products:read` | `products:write`, `categories:write`, `pizzas:write` |
 | `/allergens` | `allergens:read` | `allergens:write` |
 | `/stock` | `stock:read` (active products); `stock:read:inactive` with `includeInactive=true` | `stock:write` |
@@ -87,12 +87,12 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 
 ## Business rules shown in the diagrams
 
-- **Permissions, never role names.** Routes use `requirePermission(Permission.X)` (or `requireAuthenticated` for the session routes). Services that need a finer rule (ownership, inactive stock) also use permissions ([ADR-0046](../../adr/0046-permission-based-authorization-matrix.md)).
+- **Permissions, never role names.** Routes use `requirePermission(Permission.X)` (or `requireAuthenticated` for the session routes). Services that need a finer rule (ownership, inactive stock) also use permissions ([ADR-0053](../../adr/0053-permission-based-authorization-matrix.md)).
 - **Server-side roles.** The access token carries only the user, the session and the token version. On every protected request the user and the session are read from the database, the active roles are resolved (AA03) and turned into permissions (`permissionsFor`). A role change, a deactivation or a revoked session applies on the next request.
 - **Guest.** A request without `Authorization` gets the Guest principal (`GUEST_PERMISSIONS`) without touching the database. If the route is not public for Guests, the answer is `401 TOKEN_MISSING`, never `403`, so the Web Application can send the user to the login.
 - **401 versus 403.** `401` for a missing, malformed, invalid or expired token and for a revoked session or inactive account (`TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`). `403 FORBIDDEN` for a valid session without the permission. `503 ROLES_UNAVAILABLE` when the roles cannot be read (fail closed).
 - **Refused before the business logic.** A refused request never reaches the controller, the service or the business repositories, and the answer never says which permission was missing.
-- **Data ownership.** A customer reads their own record through `GET /customers/me`, which uses the `customerId` of the session; `GET /customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. `canReadCustomer` (`ownership.domain.js`) accepts the record only with `customers:read`, or with `customers:read:own` and the same `customerId`. An account without a linked customer gets `404 CUSTOMER_PROFILE_NOT_FOUND`.
+- **Data ownership.** A customer reads their own record through `GET /customers/me`, which uses the `customerId` of the session; `GET /customers/{id}` needs `customers:read` (Manager), so changing the id answers `403`. `canReadCustomer` (`ownership.domain.js`) accepts the record only with `customers:read`, or with `customers:read:own` and the same `customerId`. An account without a linked customer gets `404 CUSTOMER_PROFILE_NOT_FOUND` and can create its own record once with `POST /customers/me` (`customers:write:own`): the e-mail is always the one of the account, the record is linked to the account, a second creation answers `409 CUSTOMER_PROFILE_EXISTS`, and a record that already uses the e-mail of the account is never linked automatically (`409 CUSTOMER_EMAIL_IN_USE`). Both own-data permissions are withheld until the account has a contact phone (AA02).
 - **Inactive stock.** `GET /stock` returns only active products; `includeInactive=true` also needs `stock:read:inactive` (Manager), checked after the query is validated.
 - **Recorded attempts.** Every `401` and `403` writes `ACCESS_DENIED` with user id and roles (when known), IP, method, path, route pattern, user agent (200 characters at most), required permission and reason (`TOKEN_MISSING`, `TOKEN_INVALID`, `TOKEN_EXPIRED`, `SESSION_REVOKED`, `MISSING_PERMISSION`). The security logger drops fields named like a secret (`pass`, `token`, `secret`, `cookie`, `authorization`, `hash`) and redacts values that look like a Bearer token, a JWT or an Argon2 hash.
 - **Public routes limited.** Guest requests to `/catalogue` go through the `public` rate limiter (per IP, `PUBLIC_RATE_LIMIT_WINDOW_MINUTES`, `PUBLIC_RATE_LIMIT_MAX`, default 120 per minute). Requests with a token skip it. `429 RATE_LIMITED` is logged as `RATE_LIMITED`.
@@ -102,14 +102,14 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0004](../../adr/0004-authentication-and-authorization.md) | Authentication and authorization (Argon2 with JWT) | Accepted, amended |
-| [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md) | Rate limiting policies | Accepted |
-| [ADR-0014](../../adr/0014-api-uri-routing-versioning-strategy.md) | API URI versioning (`/api/v2`, `/api/v1` deprecated alias) | Accepted |
-| [ADR-0016](../../adr/0016-implement-structured-logging-and-monitoring.md) | Structured logging and monitoring | Accepted |
-| [ADR-0028](../../adr/0028-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
-| [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
-| [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations | Accepted |
-| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
+| [ADR-0003](../../adr/0003-authentication-and-authorization.md) | Authentication and authorization (Argon2 with JWT) | Accepted, amended |
+| [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md) | Rate limiting policies | Accepted |
+| [ADR-0015](../../adr/0015-api-uri-routing-versioning-strategy.md) | API URI versioning (`/api/v2`, `/api/v1` deprecated alias) | Accepted |
+| [ADR-0017](../../adr/0017-implement-structured-logging-and-monitoring.md) | Structured logging and monitoring | Accepted |
+| [ADR-0033](../../adr/0033-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
+| [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
+| [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
 
 ## Notation key
 
@@ -155,7 +155,7 @@ All paths are under `/api/v2` (current version). `/api/v1` is a deprecated alias
 - Migration `migrations/aa05-user-roles.js` turns the single `role` of each user into the array `roles`; the server refuses to start while a user still has the old field (`npm run migrate:up`). The rollback keeps the most privileged role and warns about accounts with more than one role or none.
 - Development helper: `npm run seed:dev-users` creates one account per base role, one with two roles and one without roles, to try the matrix by hand.
 - Tests:
-  - Unit tests with `node:test` mocks ([ADR-0028](../../adr/0028-mock-based-unit-testing.md)): `test/domain/permissions.domain.test.js`, `test/domain/ownership.domain.test.js`, `test/middleware/authorization.middleware.test.js`, `test/middleware/auth.middleware.test.js`, `test/infrastructure/security-logger.test.js`, `test/application/auth.service.test.js` (roles read on every request, `getCurrentUser`), `test/application/customers.service.test.js` (`getOwnCustomer`), `test/application/stock.service.test.js` (inactive products), `test/api/auth.controller.test.js` (`/auth/me`).
+  - Unit tests with `node:test` mocks ([ADR-0033](../../adr/0033-mock-based-unit-testing.md)): `test/domain/permissions.domain.test.js`, `test/domain/ownership.domain.test.js`, `test/middleware/authorization.middleware.test.js`, `test/middleware/auth.middleware.test.js`, `test/infrastructure/security-logger.test.js`, `test/application/auth.service.test.js` (roles read on every request, `getCurrentUser`), `test/application/customers.service.test.js` (`getOwnCustomer`), `test/application/stock.service.test.js` (inactive products), `test/api/auth.controller.test.js` (`/auth/me`).
   - Guard rails: `test/api/api.route-permissions.test.js` lists every route of the app and fails on a route without a guard that is not in `PUBLIC_ENTRY_POINTS`, on a guarded route without a row in the expected matrix, and on an unknown permission.
   - Authorization matrix: `test/api/api.authorization-matrix.test.js` sends every protected route as every persona (Guest, Customer, Employee, Manager, Administrator, Administrator + Manager, Manager + Employee, Customer + Employee, user without roles) and checks allowed, `401 TOKEN_MISSING` or `403 FORBIDDEN`, and the `ACCESS_DENIED` event without credentials. The expected access (`test/support/authorization-matrix.js`) is written by hand from Table 1, never derived from `ROLE_PERMISSIONS`.
   - API tests: `api.auth.test.js` (`/auth/me`, role changes without a new login), `api.customers.test.js` (data ownership), `api.stock.test.js` (inactive stock), `api.public-rate-limit.test.js` (Guest limit on the catalogue, `/auth/me` before the `/auth` limiter), `api.shared-resources.test.js`.

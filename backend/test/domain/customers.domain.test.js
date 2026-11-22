@@ -1,6 +1,13 @@
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePhoneNumber, validateAddress, normalizePhoneNumber } from '../../src/domain/customers/customers.domain.js';
+import {
+  validatePhoneNumber,
+  validateAddress,
+  normalizePhoneNumber,
+  PERSON_NAME_PATTERN,
+  PLACE_NAME_PATTERN,
+  CUSTOMER_FIELD_LIMITS,
+} from '../../src/domain/customers/customers.domain.js';
 import { DomainError } from '../../src/domain/domain-error.js';
 
 process.env.JWT_SECRET = 'test_secret_key';
@@ -62,4 +69,24 @@ test('validateAddress relies securely on the injected validator', async () => {
       return true;
     },
   );
+});
+
+test('WEB04: a person name has only letters, with single separators between words', () => {
+  for (const name of ['Ana Maria', 'José Saramago', "D'Artagnan", 'Ana-Rita Sá']) {
+    assert.ok(PERSON_NAME_PATTERN.test(name), name);
+  }
+  for (const name of ['Ana2', '1Ana', 'Ana!', '-Ana', 'Ana-', 'Ana  Rita', 'Ana_Rita']) {
+    assert.ok(!PERSON_NAME_PATTERN.test(name), name);
+  }
+});
+
+test('WEB04: place names accept dots between words but no digits', () => {
+  assert.ok(PLACE_NAME_PATTERN.test('Sta. Maria da Feira'));
+  assert.ok(!PLACE_NAME_PATTERN.test('Porto 1'));
+});
+
+test('WEB04: every customer text field has a character limit', () => {
+  for (const field of ['name', 'email', 'phoneNumber', 'street', 'houseNumber', 'complement', 'city', 'district']) {
+    assert.ok(Number.isInteger(CUSTOMER_FIELD_LIMITS[field]) && CUSTOMER_FIELD_LIMITS[field] > 0, field);
+  }
 });

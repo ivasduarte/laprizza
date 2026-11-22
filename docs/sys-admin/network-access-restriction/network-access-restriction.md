@@ -4,7 +4,7 @@ Requirement: development and staging access restricted to the DEI internal netwo
 
 The restriction described here applies to the staging back-end VM `laprizza-backend` (`vs534`, `10.9.22.22`), which hosts the REST API; the staging front-end VM (`vs814`) reaches the API through it.
 
-Decisions: [ADR-0050 – Network Restriction at the nginx Reverse Proxy](../adr/0050-network-restriction-at-the-nginx-reverse-proxy.md) and [ADR-0051 – SSH Restricted to Approved Networks with AllowUsers](../adr/0051-ssh-restricted-to-approved-networks-with-allowusers.md). Use cases: [SYS02 use-case view](sys02/use-case-view.md).
+Decisions: [ADR-0037 – Network Restriction at the nginx Reverse Proxy](../../adr/0037-network-restriction-at-the-nginx-reverse-proxy.md) and [ADR-0038 – SSH Restricted to Approved Networks with AllowUsers](../../adr/0038-ssh-restricted-to-approved-networks-with-allowusers.md).
 
 ## Approved network contexts
 
@@ -104,9 +104,9 @@ PubkeyAuthentication yes
 AllowUsers *@10.8.0.0/16 *@10.9.0.0/16
 ```
 
-SYS05 later added `AllowGroups ssh-admins` ([ssh-security.md](ssh-security.md)). sshd applies both: a login must come from an approved network **and** belong to `ssh-admins` (`sudo sshd -T` shows `allowusers *@10.8.0.0/16`, `allowusers *@10.9.0.0/16` and `allowgroups ssh-admins`).
+SYS05 later added `AllowGroups ssh-admins` ([ssh-security.md](../ssh-security.md)). sshd applies both: a login must come from an approved network **and** belong to `ssh-admins` (`sudo sshd -T` shows `allowusers *@10.8.0.0/16`, `allowusers *@10.9.0.0/16` and `allowgroups ssh-admins`).
 
-`AllowUsers user@network` accepts a login only when the source address is in one of the networks; `*` keeps the check per network, and the accounts themselves are controlled by SYS05 ([ssh-security.md](ssh-security.md)). A connection from any other address is refused whatever key is used, and sshd logs `User <name> from <address> not allowed because not listed in AllowUsers`.
+`AllowUsers user@network` accepts a login only when the source address is in one of the networks; `*` keeps the check per network, and the accounts themselves are controlled by SYS05 ([ssh-security.md](../ssh-security.md)). A connection from any other address is refused whatever key is used, and sshd logs `User <name> from <address> not allowed because not listed in AllowUsers`.
 
 Every team member has an individual account with key authentication (one key per device). A change is checked with `sudo sshd -t` before `sudo systemctl reload ssh`, with a second SSH session kept open, so a mistake cannot lock everyone out.
 
@@ -123,8 +123,8 @@ The back-end nginx also replaced `X-Forwarded-For` with `$remote_addr`, which di
 The network rule only decides who may **reach** the API. Every request that passes it still goes through the application checks of Sprint 1/2:
 
 * protected endpoints require a valid access token (JWT) → `401 Unauthorized` without one;
-* the role and permission matrix (AA05, [ADR-0046](../adr/0046-permission-based-authorization-matrix.md)) → `403 Forbidden` for a role without the permission;
-* login lockout ([ADR-0043](../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md)) and rate limits ([ADR-0008](../adr/0008-implement-rate-limiting-policies.md)) use the real client address (`TRUST_PROXY`, see above).
+* the role and permission matrix (AA05, [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md)) → `403 Forbidden` for a role without the permission;
+* login lockout ([ADR-0022](../../adr/0022-local-login-without-account-enumeration-and-with-progressive-lockout.md)) and rate limits ([ADR-0009](../../adr/0009-implement-rate-limiting-policies.md)) use the real client address (`TRUST_PROXY`, see above).
 
 ## Operation
 
@@ -138,7 +138,7 @@ sudo journalctl -u ssh --since today | grep "not allowed"        # refused SSH l
 
 ## Evidence
 
-Screenshots in `docs/sys-admin/img/sys02/`.
+Screenshots in `docs/sys-admin/network-access-restriction/img/sys02/`.
 
 | # | Acceptance criterion | Evidence | How to obtain it |
 |---|---|---|---|

@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest) |
 | Success response | 200 OK `{ accessToken, tokenType, expiresIn, user }` and the refresh cookie `lp_rt` |
 | Error handling | 400 `VALIDATION_FAILED`, 401 `INVALID_CREDENTIALS` (unknown account or wrong password, same body), 403 `ACCOUNT_INACTIVE` / `ACCOUNT_DISABLED` (only with the correct password), 403 `NO_ACTIVE_ROLE`, 429 `TOO_MANY_ATTEMPTS` (account waiting) or `RATE_LIMITED` (IP), both with `Retry-After` |
-| ADRs | [ADR-0004](../../adr/0004-authentication-and-authorization.md), [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md), [ADR-0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0043](../../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md) |
+| ADRs | [ADR-0003](../../adr/0003-authentication-and-authorization.md), [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md), [ADR-0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0022](../../adr/0022-local-login-without-account-enumeration-and-with-progressive-lockout.md) |
 
 ## Description
 

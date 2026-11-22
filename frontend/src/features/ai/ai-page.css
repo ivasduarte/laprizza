@@ -245,7 +245,8 @@ summary {
 }
 .ai-json {
   width: 100%;
-  font-family: monospace;
+  font-family: var(--font-app);
+  font-variant-numeric: tabular-nums;
 }
 .ai-prompt {
   white-space: pre-wrap;

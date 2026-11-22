@@ -19,3 +19,28 @@ export function safeRedirectPath(candidate, fallback = '/') {
   if (/^\/login(?:[/?#]|$)/.test(candidate)) return fallback;
   return candidate;
 }
+
+/** Permissions of a customer account (catalogue, own data, shared folder): nothing else to do. */
+const CUSTOMER_ONLY_PERMISSIONS = new Set([
+  'catalogue:read',
+  'customers:read:own',
+  'customers:write:own',
+  'resources:read',
+]);
+
+/**
+ * Where to go after a login. A customer account that has no customer record yet goes to My data,
+ * where it completes its data (and first its contact phone, AA02); accounts with other
+ * responsibilities (staff, administration) are never redirected. Otherwise the requested page.
+ *
+ * @param {{customerId?: string|null, phoneRequired?: boolean, permissions?: string[]}|null} user
+ * @param {string} [requested='/'] - Already checked with safeRedirectPath.
+ * @returns {string}
+ */
+export function afterLoginPath(user, requested = '/') {
+  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  const customerOnly = permissions.every((permission) => CUSTOMER_ONLY_PERMISSIONS.has(permission));
+  const ownData = user?.phoneRequired || permissions.includes('customers:write:own');
+  if (user && !user.customerId && ownData && customerOnly && requested === '/') return '/my-data';
+  return requested;
+}

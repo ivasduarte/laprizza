@@ -3,6 +3,7 @@ import { Roles } from '../users/users.domain.js';
 export const Permission = Object.freeze({
   CATALOGUE_READ: 'catalogue:read',
   CUSTOMERS_READ_OWN: 'customers:read:own',
+  CUSTOMERS_WRITE_OWN: 'customers:write:own',
   CUSTOMERS_READ: 'customers:read',
   CUSTOMERS_WRITE: 'customers:write',
   PRODUCTS_READ: 'products:read',
@@ -54,11 +55,14 @@ export const ADMIN_PERMISSIONS = Object.freeze([
 ]);
 
 export const ROLE_PERMISSIONS = Object.freeze({
-  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN, P.RESOURCES_READ]),
+  // The own customer record: read it, and create it once when the account has none.
+  [Roles.CUSTOMER]: Object.freeze([P.CUSTOMERS_READ_OWN, P.CUSTOMERS_WRITE_OWN, P.RESOURCES_READ]),
 
+  // Table 1 (Restaurant Staff): catalogue, products and the kitchen viewer, read-only.
   [Roles.EMPLOYEE]: Object.freeze([
     P.PRODUCTS_READ,
     P.STOCK_READ,
+    P.KITCHEN_READ,
     P.RESOURCES_READ,
   ]),
 
@@ -88,11 +92,23 @@ export const ROLE_PERMISSIONS = Object.freeze({
   [Roles.ADMINISTRATOR]: Object.freeze([...ADMIN_PERMISSIONS, P.RESOURCES_READ, P.RESOURCES_WRITE]),
 });
 
-export function permissionsFor(roles = []) {
+/**
+ * AA02: customer features withheld while the account has no contact phone. Add here every new
+ * permission that only a Customer uses (e.g. placing orders).
+ */
+export const CUSTOMER_CONTACT_PERMISSIONS = Object.freeze([P.CUSTOMERS_READ_OWN, P.CUSTOMERS_WRITE_OWN]);
+
+/**
+ * @param {string[]} [roles=[]]
+ * @param {{contactPhoneMissing?: boolean}} [options] - true withholds CUSTOMER_CONTACT_PERMISSIONS.
+ * @returns {string[]}
+ */
+export function permissionsFor(roles = [], { contactPhoneMissing = false } = {}) {
   const granted = new Set(GUEST_PERMISSIONS);
   for (const role of Array.isArray(roles) ? roles : []) {
     for (const permission of ROLE_PERMISSIONS[role] ?? []) granted.add(permission);
   }
+  if (contactPhoneMissing) CUSTOMER_CONTACT_PERMISSIONS.forEach((p) => granted.delete(p));
   return [...granted].sort(); // .sort() serve para obter um /auth/me estável.
 }
 

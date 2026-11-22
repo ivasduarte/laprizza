@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `forecasts:read`) |
 | Success response | 200 OK, array of forecast DTOs (active versions only) or one forecast DTO |
 | Error handling | 400 `BAD_REQUEST` (invalid query or id format), 404 `NOT_FOUND` "Forecast not found." (unknown or inactive id), 401/403 (no valid token or no permission) |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md) |
 
 ## Description
 

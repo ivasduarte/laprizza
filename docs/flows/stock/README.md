@@ -16,7 +16,7 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams of the **Back-end
 
 - Only stock-controlled products have stock, otherwise the request fails with 400.
 - When a product has no stock record yet, one is created with quantity 0 the first time the stock is consulted or adjusted.
-- Adjusting the stock increases or decreases the quantity by the given amount, and an operation that would leave a negative quantity is rejected (400).
+- Adjusting the stock increases or decreases the quantity by the given amount, or sets the counted quantity (`set`, WEB04). A result below 0 or above 100 000 units is rejected (400); the SPA asks for confirmation of movements of 1000 units or more.
 - All operations are open to Manager and Employee.
 
 ## Notation key

@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), who see the viewer on `/visualization3d` and `/kitchen-configurations` |
 | Success response | n/a (the view slides parallel to the floor) |
 | Error handling | Pan past the limits: the target stops at the floor bounds plus the margin. Move into an object: the last allowed position is restored. |
-| ADRs | [ADR-0054](../../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+| ADRs | [ADR-0050](../../adr/0050-perspective-camera-controls-with-limits-derived-from-the-kitchen.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) |
 
 ## Description
 

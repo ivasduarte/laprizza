@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER |
 | Success response | 200 OK |
 | Error handling | 400 (Validation error), 401/403 (no valid token or role not allowed), 404 (not found) |
-| ADRs | [ADR-0022](../../adr/0022-content-validation-strategy.md), [ADR-0024](../../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md), [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+| ADRs | [ADR-0027](../../adr/0027-content-validation-strategy.md), [ADR-0029](../../adr/0029-rules-for-editing-and-deleting-the-active-configuration.md), [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md) |
 
 ## Description
 

@@ -1,5 +1,12 @@
 const SENSITIVE_KEY = /pass|token|secret|cookie|authorization|hash/i;
 
+/**
+ * GDPR (GDP01, data minimisation): network addresses are never written to the logs, so no
+ * log line can be tied to a person through an IP. The rate limiter still uses req.ip in
+ * memory, without storing it.
+ */
+const NETWORK_ADDRESS_KEY = /^(ip|ips|remoteAddress|clientIp|xForwardedFor|forwardedFor)$/i;
+
 const SENSITIVE_VALUE =
   /^Bearer\s|^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$|^\$argon2/i;
 
@@ -15,7 +22,10 @@ function sanitizeValue(value) {
 function sanitizeFields(details) {
   return Object.fromEntries(
     Object.entries(details)
-      .filter(([key, value]) => value !== undefined && !SENSITIVE_KEY.test(key))
+      .filter(
+        ([key, value]) =>
+          value !== undefined && !SENSITIVE_KEY.test(key) && !NETWORK_ADDRESS_KEY.test(key),
+      )
       .map(([key, value]) => [key, sanitizeValue(value)]),
   );
 }

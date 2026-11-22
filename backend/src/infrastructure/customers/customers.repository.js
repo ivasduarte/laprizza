@@ -47,3 +47,13 @@ export async function findById(id) {
 export async function update(id, updateData) {
   return Customers.findByIdAndUpdate(id, updateData, { returnDocument: 'after' });
 }
+
+/**
+ * Removes a customer document. Only used to undo a self-service creation whose link to the
+ * account could not be written.
+ *
+ * @param {string} id - The MongoDB ObjectId of the customer.
+ */
+export async function deleteById(id) {
+  return Customers.deleteOne({ _id: id });
+}

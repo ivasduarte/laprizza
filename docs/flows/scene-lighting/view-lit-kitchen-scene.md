@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), required by the `/visualization3d` and `/kitchen-configurations` routes |
 | Success response | n/a (the kitchen is rendered with the default lighting and shadows) |
 | Error handling | No active configuration (404) or a failed request: empty state "No active kitchen configuration to display." and no scene (WEB06). Assembly line not loaded: the kitchen is shown with a warning and the line spotlight aims at the room centre. |
-| ADRs | [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0037](../../adr/0037-scene-lighting-setup.md), [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+| ADRs | [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md), [ADR-0044](../../adr/0044-scene-lighting-setup.md), [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) |
 
 ## Description
 

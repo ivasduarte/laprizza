@@ -83,21 +83,21 @@ The back end maps the answers of the push path in `AiServiceClient`: 422 stays 4
 - **Simulation.** A scenario snapshot has `meta.simulated: true`, the scenario and its orders are simulated, and supplier scenarios are always simulated. In Prolog `kb_is_simulation/0` is true if any of them is, and the result has `simulation: true`.
 - **Validation without defaults.** `snapshot_entries/3` turns each entry into a fact or a problem, keeps checking the rest and then runs the cross checks (`check_problem/2`). Codes: `INVALID_SNAPSHOT`, `INVALID_QUANTITY`, `DUPLICATE_ENTRY`, `UNKNOWN_ITEM`, `STOCK_NOT_CONTROLLED`, `INCOMPLETE_AGGREGATE`, `NESTED_AGGREGATE`, `PIZZA_AS_COMPONENT`, `PURCHASED_WITH_COMPOSITION`. The forecast and supplier sections report their first error (missing key, invalid date, period, quantity, price, stock units, lead time or supply limit, duplicate entry, supplier or offer) as one `INVALID_SNAPSHOT` problem of that section. The `issues` of the back end are loaded as `kb_issue` facts.
 - **Atomic load, one calculation at a time.** With any problem, `load_unlocked/1` throws `kb_error(invalid_data(Problems))` and loads nothing; otherwise it replaces the facts in one `transaction`. `with_snapshot/2` runs inside `with_mutex(kb, ...)`, calls the calculation once and always clears the facts (`setup_call_cleanup`).
-- **Refresh policy.** Every calculation gets a new snapshot. The scenario snapshot is never cached. Only the snapshot without a scenario, which the calculations do not use, is cached for 60 s (`cached('ai-data', key, 60, ...)`, only when Redis is configured, [ADR-0015](../../adr/0015-introduce-redis-for-caching.md)). If the back end does not answer in time (`AI_BACKEND_TIMEOUT_SECONDS`, 10 s by default, plus 0.5 s), the pull fails with 504 and nothing is calculated.
+- **Refresh policy.** Every calculation gets a new snapshot. The scenario snapshot is never cached. Only the snapshot without a scenario, which the calculations do not use, is cached for 60 s (`cached('ai-data', key, 60, ...)`, only when Redis is configured, [ADR-0016](../../adr/0016-introduce-redis-for-caching.md)). If the back end does not answer in time (`AI_BACKEND_TIMEOUT_SECONDS`, 10 s by default, plus 0.5 s), the pull fails with 504 and nothing is calculated.
 - **Read-only.** `ai-data` and `planning` never write stock nor purchase orders; the only write of an execution is the planning run (WEB07). The flow `planning-test-flow.http` checks that the real stock and the stock of the AI scenario are unchanged after the executions.
 
 ## Related ADRs
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0005](../../adr/0005-contract-first-rest-api.md) | Contract-first REST API | Accepted |
-| [ADR-0014](../../adr/0014-api-uri-routing-versioning-strategy.md) | API URI versioning | Accepted |
-| [ADR-0015](../../adr/0015-introduce-redis-for-caching.md) | Redis for caching | Accepted |
-| [ADR-0017](../../adr/0017-secrets-management-strategy.md) | Secrets management (`AI_SERVICE_KEY`) | Accepted |
-| [ADR-0028](../../adr/0028-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
-| [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md) | Recording planning runs with their input versions | Accepted |
-| [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the single data contract between back end and Prolog (pull with user token, push with service key) | Accepted |
-| [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation (mutex, transaction, cleared after use) | Accepted |
+| [ADR-0004](../../adr/0004-contract-first-rest-api.md) | Contract-first REST API | Accepted |
+| [ADR-0015](../../adr/0015-api-uri-routing-versioning-strategy.md) | API URI versioning | Accepted |
+| [ADR-0016](../../adr/0016-introduce-redis-for-caching.md) | Redis for caching | Accepted |
+| [ADR-0018](../../adr/0018-secrets-management-strategy.md) | Secrets management (`AI_SERVICE_KEY`) | Accepted |
+| [ADR-0033](../../adr/0033-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
+| [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md) | Recording planning runs with their input versions | Accepted |
+| [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the single data contract between back end and Prolog (pull with user token, push with service key) | Accepted |
+| [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation (mutex, transaction, cleared after use) | Accepted |
 
 ## Notation key
 
@@ -162,6 +162,6 @@ All facts are `dynamic` and listed in `kb_predicates/1`, so `clear_unlocked` rem
 - **Two snapshot formats.** Without `scenarioId`, `GET /ai-data/snapshot` returns the older format (`buildSnapshot`: no `scenario`, `orders` or `pizzas`, `aggregates: []`, `simulated: false`, cached for 60 s). The calculations always use the scenario format, because `scenarioId` is required by the Prolog routes and by `/planning/*`.
 - The Prolog service never writes the user token to the console nor puts it in an error, and `normalize_backend_url` rejects URLs with credentials.
 - Tests:
-  - Back end ([ADR-0028](../../adr/0028-mock-based-unit-testing.md)): `test/application/ai-data.service.test.js` (BOM rows, issues instead of defaults, no customer data, stable `snapshotId`, scenario snapshot, live and scenario stock, no cache, 404 and 400), `test/api/api.ai-data.test.js` (401/403/200, formats, invalid query reads nothing, 404, 400), `test/planning/ai-service.client.test.js`, `test/planning/planning.service.test.js`.
+  - Back end ([ADR-0033](../../adr/0033-mock-based-unit-testing.md)): `test/application/ai-data.service.test.js` (BOM rows, issues instead of defaults, no customer data, stable `snapshotId`, scenario snapshot, live and scenario stock, no cache, 404 and 400), `test/api/api.ai-data.test.js` (401/403/200, formats, invalid query reads nothing, 404, 400), `test/planning/ai-service.client.test.js`, `test/planning/planning.service.test.js`.
   - Prolog (`ai-scheduling/run-tests.sh`, SWI-Prolog ≥ 9): `test/kb.plt`, `test/kb_ai01.plt`, `test/service.plt`, `test/server.plt`, with the snapshot fixtures in `ai-scheduling/fixtures/`.
   - httpyac flows: `backend/test-flows/ai-data-test-flow.http` (401, 200, integer stock units, only stock-controlled products in the stock, no customer data) and `planning-test-flow.http` (stock unchanged after the executions).

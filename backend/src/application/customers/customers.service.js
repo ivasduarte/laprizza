@@ -121,6 +121,96 @@ export async function getOwnCustomer(principal, customersRepository = defaultCus
   return getCustomerById(customerId, customersRepository);
 }
 
+/** Error codes of the self-service creation of the own customer record. */
+export const OwnCustomerError = Object.freeze({
+  PROFILE_EXISTS: 'CUSTOMER_PROFILE_EXISTS',
+  EMAIL_IN_USE: 'CUSTOMER_EMAIL_IN_USE',
+  PHONE_IN_USE: 'PHONE_IN_USE',
+  PHONE_INVALID: 'PHONE_INVALID',
+});
+
+/**
+ * A Customer account without a customer record creates its own (once). The e-mail is always
+ * the one of the account and the record is linked to it; the personal data comes from the
+ * data subject, never from an Administrator.
+ *
+ * A customer record that already uses the e-mail of the account is never linked automatically
+ * (same rule as the external login, AA02): the answer asks the user to contact LaPrizza.
+ *
+ * @param {{userId: string, customerId?: string|null}} principal - The session principal.
+ * @param {{name: string, phoneNumber?: string, address: object, dietaryRestrictions?: string[]}} data
+ * @param {{customersRepository?: object, usersRepository: object, postalCodeValidator: object}} deps
+ * @returns {Promise<Object>} The created customer DTO.
+ * @throws {AppError} 409 CUSTOMER_PROFILE_EXISTS / CUSTOMER_EMAIL_IN_USE / PHONE_IN_USE,
+ *   400 PHONE_INVALID or an invalid address, 404 when the account no longer exists.
+ */
+export async function createOwnCustomer(
+  principal,
+  data,
+  { customersRepository = defaultCustomerRepo, usersRepository, postalCodeValidator },
+) {
+  const exists = () =>
+    new AppError(
+      'A customer profile is already linked to this account.',
+      409,
+      null,
+      OwnCustomerError.PROFILE_EXISTS,
+    );
+  if (principal?.customerId) throw exists();
+
+  const user = await usersRepository.findById(principal?.userId);
+  if (!user) throw new AppError('Account not found.', 404);
+  if (user.customerId) throw exists();
+
+  await assertValidAddress(data.address, postalCodeValidator);
+  const phoneNumber = normalizePhoneNumber(data.phoneNumber ?? user.phoneNumber ?? '');
+  if (!phoneNumber) {
+    throw new AppError(
+      'Invalid phone number format.',
+      400,
+      [{ field: 'phoneNumber', type: 'phone.invalid', message: 'Invalid phone number format.' }],
+      OwnCustomerError.PHONE_INVALID,
+    );
+  }
+
+  let customer;
+  try {
+    customer = await customersRepository.create({
+      name: data.name,
+      email: user.email,
+      phoneNumber,
+      address: data.address,
+      dietaryRestrictions: data.dietaryRestrictions ?? [],
+    });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    const field = Object.keys(err.keyPattern ?? {})[0];
+    if (field === 'phoneNumber') {
+      throw new AppError(
+        'Phone number already in use.',
+        409,
+        [{ field: 'phoneNumber', type: 'phone.inUse', message: 'Phone number already in use.' }],
+        OwnCustomerError.PHONE_IN_USE,
+      );
+    }
+    throw new AppError(
+      'A customer record already uses the e-mail of this account. Contact LaPrizza.',
+      409,
+      null,
+      OwnCustomerError.EMAIL_IN_USE,
+    );
+  }
+
+  // Standalone MongoDB (no transactions): link atomically and undo the creation if another
+  // request linked a record first.
+  const linked = await usersRepository.linkCustomerIfUnlinked(user._id, customer._id);
+  if (!linked) {
+    await customersRepository.deleteById(customer._id);
+    throw exists();
+  }
+  return toCustomerDto(customer);
+}
+
 /**
  * Updates an existing customer's information.
  * Conditionally validates the address and normalizes the phone number if they are provided in the update payload.

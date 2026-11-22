@@ -9,11 +9,11 @@
 | Allowed roles | Public (Guest): the account is not active yet |
 | Success response | 303 to the identity provider; after the sign-in, 302 to `/auth/callback?status=activated` (no session, no refresh cookie) |
 | Error handling | Always a redirect to the SPA with a public code: `INVITATION_INVALID` (malformed, unknown, used, replaced or expired link, or local account), `INVITATION_MISMATCH` (another identity), `ACCESS_DENIED` (cancelled at the provider), `AUTH_FAILED` (origin not allowed, provider disabled, failed code exchange, missing or tampered transaction) |
-| ADRs | [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| ADRs | [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0052](../../adr/0052-account-activation-method-session-and-oidc-transaction.md) |
 
 ## Description
 
-An external account is created inactive, with `CUSTOMER` and its identity already linked, by the first external login of the user (AA02), and AA06 sends its invitation. After [UC1](./inspect-activation-link.md) answered `method: "external"`, `ExternalActivation` shows "The account <masked e-mail> signs in with <provider>. Continue with the <provider> account this invitation was sent to, to confirm it is you." and the "Continue with <provider>" button.
+Since 2026-11-21 the first external login creates the account **active** (AA02 clarification), and a successful login at the linked provider also activates an account still waiting for activation (`activateIfPending` in `ExternalAuthService`). This flow therefore only concerns external accounts created inactive before that change that still hold a valid invitation; it is kept so those links keep working. After [UC1](./inspect-activation-link.md) answered `method: "external"`, `ExternalActivation` shows "The account <masked e-mail> signs in with <provider>. Continue with the <provider> account this invitation was sent to, to confirm it is you." and the "Continue with <provider>" button.
 
 **Step 1 - start (`POST /auth/external/activate`).** The button calls `authApi.startExternalActivation(token)`, which builds a hidden form (`externalActivationForm`, `submitForm`) and submits it as a top-level POST. The token travels in the body, never in a URL, and the answer can set a cookie and redirect like the AA02 login. The button is disabled after the first click. The Back-end API:
 

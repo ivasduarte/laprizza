@@ -22,6 +22,7 @@ export default function App() {
               route.requiresAuth || route.permission ? (
                 <RequireAuth
                   requiresAuth={Boolean(route.requiresAuth)}
+                  requiresContactPhone={Boolean(route.requiresContactPhone)}
                   permission={route.permission}
                 >
                   <route.Page />

@@ -38,9 +38,18 @@ flowchart LR
             UC_OpenPage(Open a Page by URL)
             UC_Reflect(Reflect Role and Status Changes)
         end
+        subgraph Feedback [WEB04: User Feedback and Validation]
+            UC_SubmitForm(Submit a Form)
+            UC_ConfirmAction(Confirm a Significant Action)
+            UC_Wait(Wait for Information)
+            UC_Recover(Recover from a Failure)
+        end
         subgraph Kitchen [WEB06: Kitchen Configuration]
             UC_Kitchen(Manage Kitchen Configurations)
             UC_ActiveKitchen(Get Active Kitchen Configuration)
+        end
+        subgraph KitchenLayout [VIS02: Kitchen Layout and Equipment]
+            UC_Layout(View the Kitchen Layout)
         end
         subgraph Planning [WEB07: AI Planning]
             UC_Forecasts(Manage Forecasts)
@@ -58,6 +67,10 @@ flowchart LR
         subgraph BillOfMaterials [AI01: Bill of Materials]
             UC_Aggregates(Define Product Aggregates)
             UC_BOM(Calculate Bill of Materials)
+        end
+        subgraph RequirementsPlanning [AI02: Requirements Planning]
+            UC_Requirements(Calculate Requirements Planning)
+            UC_SelectSuppliers(Select Suppliers)
         end
         subgraph PlanningData [AI06: Planning Data]
             UC_Snapshot(Provide Planning Snapshot)
@@ -99,6 +112,8 @@ flowchart LR
     Manager --> UC_Planning
     Manager --> UC_Aggregates
     Manager --> UC_BOM
+    Manager --> UC_Requirements
+    Manager --> UC_Layout
     Manager --> UC_Lit
     Manager --> UC_AdjustLight
     Manager --> UC_Explore
@@ -109,12 +124,18 @@ flowchart LR
     SystemUser --> UC_EndSessions
     SystemUser --> UC_RecoverPwd
     SystemUser --> UC_ChangePwd
+    SystemUser --> UC_SubmitForm
+    SystemUser --> UC_ConfirmAction
+    SystemUser --> UC_Wait
+    SystemUser --> UC_Recover
+    UC_SubmitForm -.->|include| UC_Recover
 
     Employee -.->|read-only| UC_Prod
     Employee -.->|read-only| UC_Configs
     Employee -.->|read-only| UC_Predef
     Employee -.->|read-only, active products| UC_Stock
     Employee --> UC_Catalog
+    Employee --> UC_Layout
 
     Customer --> UC_Catalog
     Customer --> UC_OwnData
@@ -133,12 +154,17 @@ flowchart LR
     UC_OwnData -.->|include| UC_Authorize
 
     Viz3D -->|consumes| UC_ActiveKitchen
+    Viz3D -->|renders| UC_Layout
+    UC_Layout -.->|uses| UC_ActiveKitchen
     Viz3D -->|renders| UC_Lit
     Viz3D -->|re-renders| UC_AdjustLight
     Viz3D -->|re-renders| UC_Explore
     Viz3D -->|re-renders| UC_ResetView
     UC_BOM -->|executes| AI
     UC_BOM -.->|uses| UC_Snapshot
+    UC_Requirements -->|executes| AI
+    UC_Requirements -.->|include| UC_SelectSuppliers
+    UC_Requirements -.->|uses| UC_Snapshot
     UC_Planning -->|executes| AI
     AI -->|pulls| UC_Snapshot
     AI --> UC_KB

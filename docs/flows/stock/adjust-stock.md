@@ -8,11 +8,21 @@
 | Endpoint | `PATCH /stock/:productId` |
 | Allowed roles | MANAGER, EMPLOYEE |
 | Success response | 200 OK |
-| Error handling | 404 (product not found), 400 (product not stock-controlled, invalid amount or negative resulting quantity) |
+| Error handling | 404 (product not found), 400 (product not stock-controlled, `VALIDATION_FAILED`, `STOCK_INVALID_AMOUNT`, `STOCK_NEGATIVE` or `STOCK_ABOVE_MAXIMUM`) |
 
 ## Description
 
-A Manager or Employee increases or decreases the stock of a stock-controlled product. The stock record is created on first use and an operation that would leave a negative quantity is rejected.
+A Manager or Employee changes the stock of a stock-controlled product in one of three ways (WEB04):
+
+| `operation` | `amount` | Result | Example (current 150) |
+|---|---|---|---|
+| `increase` | units received, > 0 | `quantity + amount` | 10 → 160 |
+| `decrease` | units removed, > 0 | `quantity - amount` | 72 → 78 |
+| `set` | counted quantity, >= 0 | `amount` | 78 → 78 (physical count, no subtraction by the user) |
+
+The stock record is created on first use. The result must stay between 0 and `MAX_STOCK_QUANTITY` (100 000 units, `stock.domain.js`); outside that range the change is refused (`STOCK_NEGATIVE`, `STOCK_ABOVE_MAXIMUM`). The rule lives in the domain function `nextStockQuantity`.
+
+In the SPA (`stock-adjust-form.jsx`, `stock-rules.js`), every movement of 1000 units or more (`UNUSUAL_CHANGE_UNITS`) is shown back to the user (from → to) for confirmation before it is sent; a stock out below that is confirmed as before.
 
 ## Diagram
 
@@ -33,7 +43,7 @@ sequenceDiagram
     end
 
     activate user
-    user->>route: PATCH /stock/:productId { amount, operation }
+    user->>route: PATCH /stock/:productId { amount, operation: increase | decrease | set }
     activate route
     route->>route: verifyToken() & requireRole([MANAGER, EMPLOYEE])
     route->>route: Validate Object ID & Payload (Joi)
@@ -53,43 +63,33 @@ sequenceDiagram
     else Product Not Stock-Controlled
       service-->>controller: AppError(400)
     else Valid Product
-      service->>domain: validateStockChange(amount)
+      service->>repo: findByProductId(productId)
+      activate repo
+      repo-->>service: Stock Entity (or null)
+      deactivate repo
+
+      opt Stock Entity is null
+        service->>repo: create({ productId, quantity: 0 })
+        activate repo
+        repo-->>service: New Stock Entity
+        deactivate repo
+      end
+
+      service->>domain: nextStockQuantity(quantity, amount, operation)
       activate domain
-      domain-->>service: validAmount / DomainError
+      domain-->>service: newQuantity / DomainError(code)
       deactivate domain
 
-      alt Domain Validation Failed
-        service-->>controller: AppError(400)
-      else Amount valid
-        service->>repo: findByProductId(productId)
+      alt Invalid amount, below 0 or above MAX_STOCK_QUANTITY
+        service-->>controller: AppError(400, STOCK_INVALID_AMOUNT | STOCK_NEGATIVE | STOCK_ABOVE_MAXIMUM)
+      else Success
+        service->>repo: updateQuantity(productId, newQuantity)
         activate repo
-        repo-->>service: Stock Entity (or null)
+        repo-->>service: Updated Stock Entity
         deactivate repo
 
-        opt Stock Entity is null
-          service->>repo: create({ productId, quantity: 0 })
-          activate repo
-          repo-->>service: New Stock Entity
-          deactivate repo
-        end
-
-        alt operation is increase
-          service->>service: newQuantity = quantity + amount
-        else operation is decrease
-          service->>service: newQuantity = quantity - amount
-        end
-
-        alt newQuantity is below 0
-          service-->>controller: AppError(400, "Cannot result in negative quantity")
-        else Success
-          service->>repo: updateQuantity(productId, newQuantity)
-          activate repo
-          repo-->>service: Updated Stock Entity
-          deactivate repo
-
-          service->>service: toStockDTO(Stock)
-          service-->>controller: Stock DTO
-        end
+        service->>service: toStockDTO(Stock)
+        service-->>controller: Stock DTO
       end
     end
     deactivate service

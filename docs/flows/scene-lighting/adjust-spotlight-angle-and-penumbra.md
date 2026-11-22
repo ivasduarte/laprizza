@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), who see the viewer on `/visualization3d` and `/kitchen-configurations` |
 | Success response | n/a (the spotlight cone is drawn with the new angle or penumbra from the next frame) |
 | Error handling | None: the sliders keep the value within their limits. Both controls are disabled while the spotlight is off ([UC1](./switch-light-on-off.md)). |
-| ADRs | [ADR-0038](../../adr/0038-lighting-controls-with-lil-gui.md), [ADR-0037](../../adr/0037-scene-lighting-setup.md) |
+| ADRs | [ADR-0045](../../adr/0045-lighting-controls-with-lil-gui.md), [ADR-0044](../../adr/0044-scene-lighting-setup.md) |
 
 ## Description
 

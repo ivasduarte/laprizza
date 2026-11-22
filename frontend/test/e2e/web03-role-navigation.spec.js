@@ -7,7 +7,7 @@ import { GUEST_PERMISSIONS, SESSIONS } from './support/sessions.js';
  * cookie would), so opening a URL directly is exactly "typing it in the address bar".
  */
 
-// Wider than the 80rem breakpoint, so the menu is shown expanded (not behind the menu button).
+// The menu is always behind the ☰ button (every width); the tests open it before reading it.
 test.use({ viewport: { width: 1440, height: 900 } });
 
 /** Mocks the API for one persona (null = Guest). Returns a setter to change the user later. */
@@ -61,14 +61,16 @@ async function mockBackend(page, persona) {
 }
 
 const menu = (page) => page.locator('.layout-nav').getByRole('link');
+const openMenu = (page) =>
+  page.locator('.layout-nav').getByRole('button', { name: /open menu/i }).click();
 const pageTitle = (page) => page.getByRole('heading', { level: 1 }).first();
 
 const MENUS = {
   GUEST: ['Home'],
   CUSTOMER: ['Home', 'Shared resources'],
   NO_ROLES: ['Home'],
-  // The kitchen (configurations and 3D viewer) is MANAGER only.
-  EMPLOYEE: ['Home', 'Shared resources'],
+  // The staff consults the kitchen (configurations and 3D viewer) read-only (Table 1).
+  EMPLOYEE: ['Home', '3D Visualization', 'Kitchen Configuration', 'Shared resources'],
   MANAGER: [
     'Home',
     '3D Visualization',
@@ -90,6 +92,7 @@ test.describe('WEB03 - menu follows the permissions of the session', () => {
     test(`${persona} sees only the sections they may use`, async ({ page }) => {
       await mockBackend(page, persona === 'GUEST' ? null : persona);
       await page.goto('/');
+      await openMenu(page);
       await expect(menu(page)).toHaveText(links);
     });
   }
@@ -106,8 +109,8 @@ const DIRECT_ACCESS = [
   ['CUSTOMER', '/visualization3d', 'denied'],
   ['NO_ROLES', '/kitchen-configurations', 'denied'],
   ['EMPLOYEE', '/ai', 'denied'],
-  ['EMPLOYEE', '/kitchen-configurations', 'denied'],
-  ['EMPLOYEE', '/visualization3d', 'denied'],
+  ['EMPLOYEE', '/kitchen-configurations', 'allow'],
+  ['EMPLOYEE', '/visualization3d', 'allow'],
   ['EMPLOYEE', '/shared-resources', 'allow'],
   ['MANAGER', '/ai', 'allow'],
   ['MANAGER', '/kitchen-configurations', 'allow'],
@@ -180,6 +183,7 @@ test.describe('WEB03 - access denied and not found pages', () => {
     await mockBackend(page, 'EMPLOYEE');
     await page.goto('/this-page-does-not-exist');
     await expect(pageTitle(page)).toHaveText(/page not found/i);
+    await openMenu(page);
     await expect(menu(page).first()).toBeVisible();
   });
 });
@@ -206,6 +210,7 @@ test.describe('WEB03 - role changes apply without a new login', () => {
     ]);
 
     await expect(pageTitle(page)).toHaveText(/access denied/i);
+    await openMenu(page);
     await expect(menu(page)).toHaveText(MENUS.EMPLOYEE);
   });
 });

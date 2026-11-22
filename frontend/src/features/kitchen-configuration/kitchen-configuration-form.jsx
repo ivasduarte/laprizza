@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   kitchenConfigurationApi,
@@ -16,11 +16,33 @@ import {
 import FieldError from '../../shared/ui/feedback/field-error.jsx';
 import FormErrors from '../../shared/ui/feedback/form-errors.jsx';
 import Spinner from '../../shared/ui/feedback/spinner.jsx';
+import JsonEditor from '../../shared/json/json-editor.jsx';
+import {
+  jsonPointerLines,
+  lineForPointer,
+  syntaxErrorLocation,
+  violationPointer,
+} from '../../shared/json/json-locations.js';
 
 const SCHEMA = { name: [required()], content: [required()] };
 
-const DEFAULT_KITCHEN_CONTENT =
-  '{\n  "dimensions": {\n    "width": 10,\n    "length": 15,\n    "height": 3\n  },\n  "elements": []\n}';
+// VIS04/WEB04: the floor is textured from the start (every object needs textures).
+const DEFAULT_KITCHEN_CONTENT = JSON.stringify(
+  {
+    dimensions: { width: 10, length: 15, height: 3 },
+    floor: {
+      material: {
+        colorMap: '/textures/tiled_floor_001/diffuse.jpg',
+        normalMap: '/textures/tiled_floor_001/normal.jpg',
+        roughnessMap: '/textures/tiled_floor_001/rough.jpg',
+        repeat: { x: 6, y: 6 },
+      },
+    },
+    elements: [],
+  },
+  null,
+  2
+);
 
 /**
  * JSON configuration form shared by kitchen and assembly line configurations:
@@ -54,12 +76,14 @@ export function ConfigurationForm({
 
   // JSON syntax problems are found in the browser, before any request.
   const [localError, setLocalError] = useState(null);
+  const [syntaxLine, setSyntaxLine] = useState(null);
   const { submit, submitting, error } = useSubmit();
   const { errors, setErrors, fromApi, clearField } = useFieldErrors(formRef);
 
   const changeContent = (value) => {
     setContent(value);
     setLocalError(null);
+    setSyntaxLine(null);
     clearField('content');
   };
 
@@ -91,8 +115,15 @@ export function ConfigurationForm({
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
-    } catch {
-      setLocalError(t('kitchenConfig.form.parseError'));
+    } catch (parseError) {
+      // WEB04: say where the syntax error is and highlight its line.
+      const location = syntaxErrorLocation(content, parseError);
+      setSyntaxLine(location?.line ?? null);
+      setLocalError(
+        location
+          ? t('kitchenConfig.form.parseErrorAt', location)
+          : t('kitchenConfig.form.parseError')
+      );
       return;
     }
 
@@ -118,6 +149,36 @@ export function ConfigurationForm({
   const hasDetails =
     error && (error.fieldErrors.length > 0 || error.formErrors.length > 0);
 
+  // WEB04: each content violation is located in the JSON text (line written in the message
+  // and highlighted in the editor). Missing properties point to the object that needs them.
+  const pointerLines = useMemo(() => jsonPointerLines(content), [content]);
+  const located = (error?.formErrors ?? []).map((violation) => ({
+    violation,
+    line: violation.raw
+      ? lineForPointer(pointerLines, violationPointer(violation.raw))
+      : null,
+  }));
+  const shownError = hasDetails
+    ? {
+        ...error,
+        formErrors: located.map(({ violation, line }) =>
+          line
+            ? {
+                ...violation,
+                raw: t('kitchenConfig.form.onLine', {
+                  line,
+                  message: violation.raw,
+                }),
+              }
+            : violation
+        ),
+      }
+    : null;
+  const errorLines = [
+    ...located.map(({ line }) => line),
+    syntaxLine,
+  ].filter(Boolean);
+
   return (
     <form
       ref={formRef}
@@ -128,7 +189,7 @@ export function ConfigurationForm({
     >
       <FormErrors
         errors={errors}
-        error={hasDetails ? error : null}
+        error={shownError}
         labels={labels}
         idFor={idFor}
       />
@@ -182,10 +243,10 @@ export function ConfigurationForm({
           style={{ display: 'none' }}
           onChange={handleFileUpload}
         />
-        <textarea
-          className="json-editor"
+        <JsonEditor
           value={content}
-          onChange={(e) => changeContent(e.target.value)}
+          onChange={changeContent}
+          errorLines={errorLines}
           {...fieldProps('content', errors, idFor)}
         />
         <FieldError id={`${ids.content}-error`} error={errors.content} />

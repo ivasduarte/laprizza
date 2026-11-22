@@ -9,11 +9,11 @@
 | Allowed roles | MANAGER |
 | Success response | 200 OK (also when the configuration is already active; nothing is written) |
 | Error handling | 400 (malformed id), 404 (configuration not found, also when it is deleted during the activation), 409 (another activation is in progress), 500 (unexpected failure, generic message without internal details) |
-| ADRs | [ADR-0023](../../adr/0023-atomic-activation-strategy.md), [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md) |
+| ADRs | [ADR-0028](../../adr/0028-atomic-activation-strategy.md), [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md) |
 
 ## Description
 
-A Manager makes a stored configuration the active one. Only one configuration can be active at a time, so the switch must be atomic: `KitchenConfigurationRepository.activateAtomic(id)` deactivates the current active configuration and activates the selected one inside a single database transaction, backed by a partial unique index on `isActive: true` (named `active_kitchen_config_unique`, created by the migration and declared in the model with the same name; ADR-0023). The system is therefore never left without an active configuration or with two of them. If the transaction fails, it is aborted and the previous active configuration is kept.
+A Manager makes a stored configuration the active one. Only one configuration can be active at a time, so the switch must be atomic: `KitchenConfigurationRepository.activateAtomic(id)` deactivates the current active configuration and activates the selected one inside a single database transaction, backed by a partial unique index on `isActive: true` (named `active_kitchen_config_unique`, created by the migration and declared in the model with the same name; ADR-0028). The system is therefore never left without an active configuration or with two of them. If the transaction fails, it is aborted and the previous active configuration is kept.
 
 The service translates the repository outcome into HTTP semantics:
 
@@ -26,7 +26,7 @@ The service translates the repository outcome into HTTP semantics:
 
 Activating a configuration that is already active is idempotent: the service returns it with 200 without opening a transaction.
 
-After a successful activation the page refreshes the list and changes the React key of the embedded `KitchenViewer`, which remounts it. On mount, the viewer fetches the new active configuration ([UC3 - Get Active Kitchen Configuration](./get-active-kitchen-configuration.md)), without a full page refresh (ADR-0027). The Activate button is only offered to Managers, on configurations that are not active, after a confirmation dialog.
+After a successful activation the page refreshes the list and changes the React key of the embedded `KitchenViewer`, which remounts it. On mount, the viewer fetches the new active configuration ([UC3 - Get Active Kitchen Configuration](./get-active-kitchen-configuration.md)), without a full page refresh (ADR-0032). The Activate button is only offered to Managers, on configurations that are not active, after a confirmation dialog.
 
 ## Diagram
 

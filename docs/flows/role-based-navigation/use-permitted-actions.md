@@ -9,7 +9,7 @@
 | Allowed roles | Those with the write permission of the action (for example Manager for `stock:write`) |
 | Success response | The answer of the action (for example 200 with the adjusted stock) |
 | Error handling | Without the permission the action is not offered. If the request is sent anyway (permission removed meanwhile, or a crafted request), the API answers `403 FORBIDDEN` (recorded) and the Web Application reloads the user ([UC5](./reflect-role-and-status-changes.md)) |
-| ADRs | [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| ADRs | [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md), [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) |
 
 ## Description
 

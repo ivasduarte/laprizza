@@ -27,6 +27,8 @@ const schemas = {
   change: Joi.object({ currentPassword: password, newPassword: password }),
   activationInspect: Joi.object({ token }),
   activationLocal: Joi.object({ token, newPassword: password }),
+  // Format only; the Portuguese numbering rules are checked by the domain (PHONE_INVALID).
+  contactPhone: Joi.object({ phoneNumber: Joi.string().trim().max(20).required() }),
 };
 
 /** Joi validation with a stable code. Joi messages do not include the values sent. */
@@ -114,6 +116,14 @@ export default function authRouterFactory({
     : passThrough;
 
   router.get('/me', noStore, requireAuthenticated, controller.me);
+  // AA02: contact phone asked after the first external login (before the customer features).
+  router.put(
+    '/me/phone',
+    noStore,
+    requireAuthenticated,
+    validateBody(schemas.contactPhone),
+    controller.setContactPhone,
+  );
   router.get('/guest-permissions', controller.guestPermissions);
 
   // Only /login and /password/change use the login limiter (see the routes below); applying it

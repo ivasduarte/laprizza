@@ -1,5 +1,5 @@
 [Unit]
-Description=LaPrizza – Mailpit (SMTP local dos convites e da recuperação de password, ADR-0045)
+Description=LaPrizza – Mailpit (SMTP local dos convites e da recuperação de password, ADR-0024)
 After=network-online.target
 Before=laprizza-api.service
 

@@ -16,6 +16,7 @@ const mockRepo = {
 
 const validContent = {
   dimensions: { width: 10, length: 10, height: 3 },
+  floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
   elements: [],
 };
 
@@ -66,7 +67,7 @@ test('validateConfigurationContent validates dry-run data', async () => {
   );
 });
 
-test('getActiveConfiguration throws 404 explicitly if no configuration is active (ADR-0025)', async (t) => {
+test('getActiveConfiguration throws 404 explicitly if no configuration is active (ADR-0030)', async (t) => {
   t.mock.method(mockRepo, 'getActive', async () => null);
 
   await assert.rejects(
@@ -170,7 +171,11 @@ test('activateConfiguration is idempotent for an already active configuration', 
 });
 
 test('createConfiguration forwards the property paths as AppError details (400)', async () => {
-  const badContent = { dimensions: { width: 10, length: 10, height: 3 }, elements: [] };
+  const badContent = {
+        dimensions: { width: 10, length: 10, height: 3 },
+        floor: { material: { colorMap: '/textures/tiled_floor_001/diffuse.jpg', normalMap: '/textures/tiled_floor_001/normal.jpg' } },
+        elements: [],
+      };
   badContent.elements.push({
     id: 'a',
     type: 'equipment',
@@ -206,4 +211,4 @@ test('activateConfiguration successfully returns activated configuration', async
 
   const dto = await service.activateConfiguration('123', mockRepo);
   assert.equal(dto.isActive, true);
-});
+});

@@ -2,15 +2,16 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKitchenConfiguration } from './use-kitchen-configuration.js';
 import KitchenScene from '../visualization3d/kitchen-scene.jsx';
+import Loading from '../../shared/ui/feedback/loading.jsx';
 
 /**
  * Integration point of the 3D Visualization module (VIS01-VIS07).
  *
  * It fetches the active kitchen configuration from `GET /kitchen-configurations/active`
  * when it is mounted and renders a placeholder until the Three.js scene is plugged in.
- * The parent changes its React key to force a remount (ADR-0027), which triggers a new fetch.
+ * The parent changes its React key to force a remount (ADR-0032), which triggers a new fetch.
  * When no configuration is active (404) it shows an explicit empty state and never falls
- * back to a hardcoded layout (ADR-0025).
+ * back to a hardcoded layout (ADR-0030).
  *
  * The assembly line referenced by the kitchen (content.assemblyLine) is resolved too. If it
  * cannot be loaded, the kitchen is still shown with a visible warning, never with another line.
@@ -31,7 +32,7 @@ export default function KitchenViewer() {
     loadActive().catch(() => {});
   }, [loadActive]);
 
-  if (loading) return <p role="status">{t('layout.loading')}</p>;
+  if (loading) return <Loading />;
 
   if (error || !activeConfig) {
     return (

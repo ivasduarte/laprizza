@@ -9,10 +9,11 @@ import type { PatchStockProductIdBodyOperation } from './patchStockProductIdBody
 
 export type PatchStockProductIdBody = {
   /**
-     * Positive integer amount to adjust.
-     * @minimum 1
+     * increase/decrease: units to move (> 0). set: the counted quantity (>= 0) that replaces the current one (WEB04).
+     * @minimum 0
+     * @maximum 100000
      */
   amount: number;
-  /** Type of adjustment. Cannot decrease below 0. */
+  /** Type of adjustment. The result must stay between 0 and 100000 units. */
   operation: PatchStockProductIdBodyOperation;
 };

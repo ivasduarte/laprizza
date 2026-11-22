@@ -199,3 +199,27 @@ test('listStock filters inactive products unless includeInactive is true', async
   assert.deepEqual(quantities(await listStock({ includeInactive: true }, { stockRepository })), [1, 2]);
   assert.deepEqual(quantities(await listStock({ includeInactive: 'true' }, { stockRepository })), [1]);
 });
+
+/**
+ * Unit test (WEB04): the counted quantity is set directly; a value above the maximum is refused.
+ */
+test('adjustStock sets the counted quantity and refuses astronomical values', async () => {
+  const repos = {
+    productsRepository: createProductsRepository(),
+    stockRepository: {
+      findByProductId: mock.fn(async () => ({ _id: STOCK_ID, productId: PRODUCT_WITH_STOCK_ID, quantity: 150 })),
+      create: mock.fn(),
+      updateQuantity: mock.fn(async (productId, quantity) => ({ _id: STOCK_ID, productId, quantity })),
+    },
+  };
+
+  const counted = await adjustStock(PRODUCT_WITH_STOCK_ID, 78, 'set', repos);
+  assert.equal(counted.quantity, 78);
+  assert.deepEqual(repos.stockRepository.updateQuantity.mock.calls[0].arguments, [PRODUCT_WITH_STOCK_ID, 78]);
+
+  await assert.rejects(
+    async () => await adjustStock(PRODUCT_WITH_STOCK_ID, 1_000_000, 'set', repos),
+    (err) => err instanceof AppError && err.status === 400 && err.code === 'STOCK_ABOVE_MAXIMUM',
+  );
+  assert.equal(repos.stockRepository.updateQuantity.mock.callCount(), 1);
+});

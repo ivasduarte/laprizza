@@ -12,11 +12,11 @@ const authSessionSchema = new mongoose.Schema(
         expiresAt: { type: Date, required: true },
         revokedAt: { type: Date, default: null },
         userAgent: { type: String, maxLength: 256 },
-        ip: { type: String, maxLength: 64 },
+        // GDP01: no client IP (sessions created before keep theirs until they expire, max. 7 days).
     },
     { collection: 'Auth Sessions', versionKey: false },
 );
 
 authSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.model('AuthSession', authSessionSchema);
+export default mongoose.model('AuthSession', authSessionSchema);

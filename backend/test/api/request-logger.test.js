@@ -46,3 +46,11 @@ test('request log never contains the Authorization header or cookies', async () 
   assert.match(line, / 200 /);
   assert.ok(!line.includes('secret'), line);
 });
+
+test('request log (production) never contains the client address or the user agent (GDP01)', async () => {
+  const line = await logOf('production', '/api/v1/customers', { 'User-Agent': 'UA-test-1234' });
+
+  assert.match(line, / 200 /);
+  assert.ok(!line.includes('127.0.0.1') && !line.includes('::1'), line);
+  assert.ok(!line.includes('UA-test-1234'), line);
+});

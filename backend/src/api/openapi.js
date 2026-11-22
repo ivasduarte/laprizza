@@ -145,6 +145,36 @@ const baseSpec = {
         },
       },
     },
+    '/auth/me/phone': {
+      put: {
+        summary: 'Sets the contact phone of the current account (AA02)',
+        description:
+          'Asked after the first external login, because the identity providers do not supply it. While `phoneRequired` is true the customer permissions (e.g. customers:read:own) are withheld.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['phoneNumber'],
+                properties: { phoneNumber: { type: 'string', maxLength: 20, example: '912345678' } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'The updated session user.',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/SessionUser' } },
+            },
+          },
+          400: errorResponse('VALIDATION_FAILED or PHONE_INVALID (not a Portuguese number)'),
+          401: errorResponse('No valid session'),
+        },
+      },
+    },
     '/auth/guest-permissions': {
       get: {
         summary: 'Permissions of a visitor without a session (public)',
@@ -205,7 +235,13 @@ const baseSpec = {
                 type: 'object',
                 required: ['name', 'email', 'phoneNumber', 'address'],
                 properties: {
-                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 50,
+                    description:
+                      'WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen.',
+                  },
                   email: { type: 'string', format: 'email' },
                   phoneNumber: {
                     type: 'string',
@@ -282,7 +318,13 @@ const baseSpec = {
                 type: 'object',
                 minProperties: 1,
                 properties: {
-                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 50,
+                    description:
+                      'WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen.',
+                  },
                   email: { type: 'string', format: 'email' },
                   phoneNumber: { type: 'string', example: '+351 912 345 678' },
                   address: { $ref: '#/components/schemas/Address' },
@@ -326,6 +368,46 @@ const baseSpec = {
           404: errorResponse('No customer linked to this account (CUSTOMER_PROFILE_NOT_FOUND)'),
         },
       },
+      post: {
+        summary: 'Create the own customer record of a Customer account that has none (self-service)',
+        description:
+          'The e-mail is the one of the account (an email in the body is ignored) and the record is linked to the account. ' +
+          'Without phoneNumber the contact phone of the account is used. Allowed once per account.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'address'],
+                properties: {
+                  name: { type: 'string', example: 'Ana Costa' },
+                  phoneNumber: { type: 'string', example: '912345678' },
+                  address: { $ref: '#/components/schemas/Address' },
+                  dietaryRestrictions: {
+                    type: 'array',
+                    items: { type: 'string', pattern: '^[0-9a-fA-F]{24}$' },
+                    description: 'Allergen ids',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Customer record created and linked to the account. Never cached.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Customer' } } },
+          },
+          400: errorResponse('Validation failed, invalid address or PHONE_INVALID'),
+          401: errorResponse('No valid session'),
+          403: errorResponse('Missing permission customers:write:own (FORBIDDEN; also while the contact phone is missing)'),
+          409: errorResponse(
+            'CUSTOMER_PROFILE_EXISTS (already linked), CUSTOMER_EMAIL_IN_USE (a record already uses the e-mail of the account) or PHONE_IN_USE',
+          ),
+        },
+      },
     },
     '/pizza-size': {
       get: {
@@ -365,7 +447,13 @@ const baseSpec = {
                 type: 'object',
                 required: ['name'],
                 properties: {
-                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 50,
+                    description:
+                      'WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen.',
+                  },
                 },
               },
             },
@@ -431,7 +519,13 @@ const baseSpec = {
                 type: 'object',
                 minProperties: 1,
                 properties: {
-                  name: { type: 'string', minLength: 3, maxLength: 50 },
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 50,
+                    description:
+                      'WEB04: letters only (any alphabet, accents), words separated by one space, apostrophe or hyphen.',
+                  },
                   isActive: { type: 'boolean' },
                 },
               },
@@ -1519,13 +1613,16 @@ const baseSpec = {
                 properties: {
                   amount: {
                     type: 'integer',
-                    minimum: 1,
-                    description: 'Positive integer amount to adjust.',
+                    minimum: 0,
+                    maximum: 100000,
+                    description:
+                      'increase/decrease: units to move (> 0). set: the counted quantity (>= 0) that replaces the current one (WEB04).',
                   },
                   operation: {
                     type: 'string',
-                    enum: ['increase', 'decrease'],
-                    description: 'Type of adjustment. Cannot decrease below 0.',
+                    enum: ['increase', 'decrease', 'set'],
+                    description:
+                      'Type of adjustment. The result must stay between 0 and 100000 units.',
                   },
                 },
               },
@@ -1539,7 +1636,9 @@ const baseSpec = {
               'application/json': { schema: { $ref: '#/components/schemas/Stock' } },
             },
           },
-          400: errorResponse('Validation error, not stock controlled, or negative stock result'),
+          400: errorResponse(
+            'VALIDATION_FAILED, not stock controlled, STOCK_NEGATIVE (below 0) or STOCK_ABOVE_MAXIMUM (above 100000)',
+          ),
           401: errorResponse('Unauthorized'),
           403: errorResponse('Forbidden'),
           404: errorResponse('Product not found'),
@@ -2315,18 +2414,30 @@ const baseSpec = {
           },
           permissions: { type: 'array', items: { type: 'string' } },
           customerId: { type: 'string', nullable: true },
+          phoneRequired: {
+            type: 'boolean',
+            description: 'AA02: Customer without a contact phone; customer features are withheld.',
+          },
         },
       },
       Address: {
         type: 'object',
         required: ['street', 'houseNumber', 'postalCode', 'city', 'district'],
         properties: {
-          street: { type: 'string' },
-          houseNumber: { type: 'string' },
-          complement: { type: 'string' },
+          street: { type: 'string', maxLength: 100 },
+          houseNumber: { type: 'string', maxLength: 10 },
+          complement: { type: 'string', maxLength: 100 },
           postalCode: { type: 'string', pattern: '^\\d{4}-\\d{3}$', example: '4460-123' },
-          city: { type: 'string' },
-          district: { type: 'string' },
+          city: {
+            type: 'string',
+            maxLength: 60,
+            description: 'Letters; spaces, apostrophes, hyphens or dots between words.',
+          },
+          district: {
+            type: 'string',
+            maxLength: 40,
+            description: 'Letters; spaces, apostrophes, hyphens or dots between words.',
+          },
         },
       },
       Allergen: {
@@ -2566,7 +2677,7 @@ const baseSpec = {
             type: 'string',
             format: 'uri-reference',
             description:
-              'Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0021). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).',
+              'Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0026). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).',
             example: '/assets/models/conveyor.gltf',
           },
           position: { $ref: '#/components/schemas/Vector3' },
@@ -2578,7 +2689,7 @@ const baseSpec = {
       Material: {
         type: 'object',
         description:
-          'Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0021). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.',
+          'Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0026). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.',
         additionalProperties: false,
         properties: {
           color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', example: '#c0c0c0' },

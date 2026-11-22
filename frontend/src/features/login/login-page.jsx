@@ -3,7 +3,8 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../../shared/auth/auth-api.js';
 import { useSession } from '../../shared/auth/use-session.js';
-import { safeRedirectPath } from '../../shared/auth/redirect.js';
+import { afterLoginPath, safeRedirectPath } from '../../shared/auth/redirect.js';
+import { sessionStore } from '../../shared/auth/session-store.js';
 import { useSubmit } from '../../shared/forms/use-submit.js';
 import { useFieldErrors } from '../../shared/forms/use-field-errors.js';
 import { fieldProps } from '../../shared/forms/field-props.js';
@@ -46,7 +47,8 @@ export default function LoginPage() {
 
     const result = await submit(() => authApi.login(email, password));
     if (result.ok) {
-      navigate(target, { replace: true });
+      // A customer without customer data goes to My data to complete it.
+      navigate(afterLoginPath(sessionStore.getState().user, target), { replace: true });
     } else if (result.error) {
       fromApi(result.error);
       setPassword(''); // the e-mail is kept; a rejected password is never kept

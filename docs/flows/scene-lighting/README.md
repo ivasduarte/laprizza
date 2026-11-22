@@ -81,25 +81,25 @@ Data flow: a control changes the panel's own state object (a copy of `DEFAULT_LI
 - **Depth without overexposure or excessive darkness:** a weak base light (ambient 0.35, hemisphere 0.45 with a dark ground colour) keeps every face visible, while the directional light and the spotlights shape volume and contours.
 - **Shadows without significant performance degradation:** only two lights cast shadows (2048 and 1024 maps), the canvas pixel ratio is capped at 2 (`dpr={[1, 2]}`) and `ShadowGroup` marks each mesh once (`userData.shadowsSet`), checking the group every 30 frames. The check is periodic because meshes can be remounted when their textures finish loading (VIS04). No frame rate measurement is documented.
 - **Consistent across zoom levels and camera angles:** light positions are derived from the room, not from the camera. The shadow frustum covers the whole floor. The camera controls (VIS07, [Camera Interaction](../camera-interaction/README.md)) keep the camera within distance, angle and pan limits derived from the kitchen dimensions, always above the floor.
-- **No active configuration:** `KitchenViewer` shows "No active kitchen configuration to display." and no scene is created (WEB06, [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)). If only the assembly line cannot be loaded, the kitchen is shown with a warning and the line spotlight aims at the room centre.
+- **No active configuration:** `KitchenViewer` shows "No active kitchen configuration to display." and no scene is created (WEB06, [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md)). If only the assembly line cannot be loaded, the kitchen is shown with a warning and the line spotlight aims at the room centre.
 - **Access:** the viewer is shown on `/visualization3d` and `/kitchen-configurations`, which both require the `kitchen:read` permission (Manager and Employee).
 - **One folder per light source** with an "On" checkbox, a colour picker and an intensity slider with per-light limits; the two spotlight folders add the cutoff angle (degrees in the panel, radians in Three.js) and the penumbra.
 - **A light that is off** keeps its place in the scene with intensity 0 (`level(light) = enabled ? intensity : 0`), so the shaders are not recompiled. Its colour, intensity, cutoff angle and penumbra controls are disabled (`sync()`), and enabled again when it is switched on.
 - **Reset** copies `DEFAULT_LIGHTING` back into the panel state, refreshes every control (`updateDisplay()`), re-applies the enabled or disabled state and sends the defaults to the scene.
-- **No persistence:** the settings are kept only in memory. They go back to the defaults whenever the viewer is mounted again (for example after an activation on the Kitchen Configuration page, which remounts the viewer, [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md)), and no endpoint is called.
+- **No persistence:** the settings are kept only in memory. They go back to the defaults whenever the viewer is mounted again (for example after an activation on the Kitchen Configuration page, which remounts the viewer, [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md)), and no endpoint is called.
 
 ## Related ADRs
 
 | ADR | Decision | Status |
 |---|---|---|
 | [ADR-0007](../../adr/0007-web-application-%28spa%29-technology-and-structure.md) | Web Application (SPA) technology and structure | Accepted |
-| [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no-fallback policy | Accepted |
-| [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) | Adoption of R3F for 3D module integration | Accepted |
-| [ADR-0037](../../adr/0037-scene-lighting-setup.md) | Scene lighting setup: fixed world-space lights, two shadow casters | Accepted |
-| [ADR-0038](../../adr/0038-lighting-controls-with-lil-gui.md) | Lighting controls with the lil-gui bundled in Three.js, state lifted to the scene | Accepted |
-| [ADR-0054](../../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md) | Perspective camera controls with limits derived from the kitchen (VIS07) | Accepted |
-| [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
-| [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism: state-based React key reset | Accepted |
+| [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no-fallback policy | Accepted |
+| [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) | Adoption of R3F for 3D module integration | Accepted |
+| [ADR-0044](../../adr/0044-scene-lighting-setup.md) | Scene lighting setup: fixed world-space lights, two shadow casters | Accepted |
+| [ADR-0045](../../adr/0045-lighting-controls-with-lil-gui.md) | Lighting controls with the lil-gui bundled in Three.js, state lifted to the scene | Accepted |
+| [ADR-0050](../../adr/0050-perspective-camera-controls-with-limits-derived-from-the-kitchen.md) | Perspective camera controls with limits derived from the kitchen (VIS07) | Accepted |
+| [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
+| [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism: state-based React key reset | Accepted |
 
 ## Notation key
 
@@ -139,7 +139,7 @@ Data flow: a control changes the panel's own state object (a copy of `DEFAULT_LI
 - The light positions and the shadow settings are fixed in code; only the values in `DEFAULT_LIGHTING` (colour, intensity, on/off, spotlight angle and penumbra) are meant to change.
 - Mesh shadows are set by `ShadowGroup` and not per model, so models added later (VIS03, VIS04) cast and receive shadows without changes.
 - While the models load, the scene shows a yellow wireframe cube (`Suspense` fallback).
-- The panel texts ("Lighting", the folder titles, "On", "Color", "Intensity", "Cutoff angle (°)", "Penumbra", "Reset") are fixed in English in `lighting-controls.jsx` and do not go through i18next ([ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
+- The panel texts ("Lighting", the folder titles, "On", "Color", "Intensity", "Cutoff angle (°)", "Penumbra", "Reset") are fixed in English in `lighting-controls.jsx` and do not go through i18next ([ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
 - `package.json` lists `lil-gui` as a direct dependency, but the code imports the copy bundled with Three.js (`three/examples/jsm/libs/lil-gui.module.min.js`), so the direct dependency is not used.
 - The user stories name the LaPrizza Manager, but the viewer and the panel are shown to every user with `kitchen:read`, which includes the Employee. The changes are local to the browser and never stored.
 - Tests: there are no automated tests of the lighting or of the panel (unit or E2E); they are validated manually by opening the viewer, orbiting, zooming and using each control.

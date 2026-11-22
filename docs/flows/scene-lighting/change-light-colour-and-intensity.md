@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), who see the viewer on `/visualization3d` and `/kitchen-configurations` |
 | Success response | n/a (the light is drawn with the new colour or intensity from the next frame) |
 | Error handling | None: the colour picker returns a valid colour and the slider keeps the value within its limits. Both controls are disabled while the light is off ([UC1](./switch-light-on-off.md)). |
-| ADRs | [ADR-0038](../../adr/0038-lighting-controls-with-lil-gui.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+| ADRs | [ADR-0045](../../adr/0045-lighting-controls-with-lil-gui.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) |
 
 ## Description
 

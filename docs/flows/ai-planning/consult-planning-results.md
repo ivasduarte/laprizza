@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`) |
 | Success response | 200 OK. List: up to 100 run summaries, newest first, `{ id, kind, createdAt, requestedBy, request, snapshotId, scenario, forecast, supplierScenario, bomVersion, stockSource, status, summary, feasible }` without `result`. Detail: the same fields plus the full `result`. |
 | Error handling | 400 `VALIDATION_ERROR` (query: `kind` not `bom`/`requirements`, ids not 24 hex), 400 `BAD_REQUEST` "Invalid ID format" (run id), 404 `PLANNING_RUN_NOT_FOUND`, 401/403 |
-| ADRs | [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| ADRs | [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md) |
 
 ## Description
 

@@ -2,9 +2,10 @@ import Ajv from 'ajv';
 import { DomainError } from '../domain-error.js';
 import schema from './assembly-line-configuration.schema.json' with { type: 'json' };
 import {
-  collectMaterialViolations,
+  collectRequiredTextureViolations,
   isValidAssetReference,
 } from '../material/material.domain.js';
+import { collectElementBoundsViolations, Frame } from '../spatial/bounds.domain.js';
 
 // Kept as part of this module's API (used by existing callers and tests).
 export { isValidAssetReference };
@@ -45,9 +46,13 @@ export function validateAssemblyLineConfigurationContent(content) {
         `/elements/${index}/modelReference must be an absolute http(s) URL or a root-relative path`,
       );
     }
-    // Textures and material properties (VIS04)
-    violations.push(...collectMaterialViolations(element.material, `/elements/${index}/material`));
+    // Textures (VIS04/WEB04): every component is textured
+    violations.push(
+      ...collectRequiredTextureViolations(element.material, `/elements/${index}/material`),
+    );
   }
+  // Positions and sizes inside the line footprint (WEB04)
+  violations.push(...collectElementBoundsViolations(content.elements, content.dimensions, Frame.LINE));
   if (violations.length > 0) throw contentError(violations);
   return content;
 }

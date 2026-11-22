@@ -7,9 +7,9 @@ import { Surface } from './scene-materials.jsx';
  * towards the kitchen. Every model stands on y = 0 of its own origin, so the JSON
  * position places its base (e.g. on the counter top, y = 0.9).
  *
- * `material` (VIS04) is the material of the element (from the JSON, or the texture of
- * its type when the JSON has none, see scene-textures.js). It is applied to every mesh,
- * so the whole model is textured; the colours below are only used if it is missing.
+ * `material` (VIS04) is the textured material of the element from the JSON, applied to every
+ * part of the model (no untextured surface in the scene). The colours below are only used by
+ * configurations stored before textures became mandatory.
  *
  * Parts that will be animated in Sprint 3 are named groups with their pivot at the
  * joint, so animating means rotating or moving that group:

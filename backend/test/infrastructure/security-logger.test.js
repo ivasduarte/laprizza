@@ -53,9 +53,9 @@ test('log drops sensitive keys', () => {
  */
 test('log omits undefined fields', () => {
   const { logger, lines } = createCapturingLogger();
-  logger.log('TEST', { userId: undefined, ip: '::1' });
+  logger.log('TEST', { userId: undefined, reason: 'X' });
   assert.ok(!('userId' in lines[0]));
-  assert.equal(lines[0].ip, '::1');
+  assert.equal(lines[0].reason, 'X');
 });
 
 /**
@@ -115,4 +115,14 @@ test('log keeps ids, paths, routes, emails and user agents', () => {
   logger.log('ACCESS_DENIED', details);
 
   for (const [key, value] of Object.entries(details)) assert.deepEqual(lines[0][key], value, key);
+});
+
+/**
+ * Unit test (GDP01): no IP address is ever written, at any depth.
+ */
+test('log never writes IP addresses', () => {
+  const { logger, lines } = createCapturingLogger();
+  logger.log('LOGIN_FAILED', { ip: '203.0.113.7', meta: { clientIp: '203.0.113.7' }, reason: 'X' });
+  assert.ok(!JSON.stringify(lines[0]).includes('203.0.113.7'));
+  assert.equal(lines[0].reason, 'X');
 });

@@ -1,6 +1,6 @@
 import * as defaultStockRepository from '../../infrastructure/stock/stock.repository.js';
 import * as defaultProductsRepository from '../../infrastructure/products/products.repository.js';
-import { validateStockChange } from '../../domain/stock/stock.domain.js';
+import { nextStockQuantity } from '../../domain/stock/stock.domain.js';
 import { AppError } from '../app-error.js';
 import { DomainError } from '../../domain/domain-error.js';
 import { toProductDTO } from '../products/products.service.js';
@@ -36,6 +36,12 @@ export async function getStockByProductId(
   return toStockDTO(stock);
 }
 
+/**
+ * Applies a stock movement (WEB04): `increase`/`decrease` by `amount` units, or `set` the
+ * counted quantity. The result stays between 0 and MAX_STOCK_QUANTITY.
+ * @throws {AppError} 404 product; 400 not stock controlled, STOCK_INVALID_AMOUNT,
+ *   STOCK_INVALID_OPERATION, STOCK_NEGATIVE or STOCK_ABOVE_MAXIMUM.
+ */
 export async function adjustStock(
   productId,
   amount,
@@ -49,14 +55,6 @@ export async function adjustStock(
   if (!product) throw new AppError('Product not found.', 404);
   if (!product.stockControlled) throw new AppError('Product is not stock controlled.', 400);
 
-  let validAmount;
-  try {
-    validAmount = validateStockChange(amount);
-  } catch (error) {
-    if (error instanceof DomainError) throw new AppError(error.message, 400);
-    throw error;
-  }
-
   let stock = await repos.stockRepository.findByProductId(productId);
   if (!stock) {
     stock = await repos.stockRepository.create({ productId, quantity: 0 });
@@ -64,14 +62,14 @@ export async function adjustStock(
     stock.productId = product;
   }
 
+  // WEB04: increase/decrease by an amount, or set the counted quantity (no mental arithmetic).
   let newQuantity;
-  if (operation === 'increase') {
-    newQuantity = stock.quantity + validAmount;
-  } else if (operation === 'decrease') {
-    newQuantity = stock.quantity - validAmount;
-    if (newQuantity < 0)
-      throw new AppError('Stock reduction cannot result in a negative quantity', 400);
-  } else throw new AppError('Invalid operation. Use increase or decrease.', 400);
+  try {
+    newQuantity = nextStockQuantity(stock.quantity, amount, operation);
+  } catch (error) {
+    if (error instanceof DomainError) throw new AppError(error.message, 400, null, error.code);
+    throw error;
+  }
 
   const updatedStock = await repos.stockRepository.updateQuantity(productId, newQuantity);
   await invalidate('ai-data');

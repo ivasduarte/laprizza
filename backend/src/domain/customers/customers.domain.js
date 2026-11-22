@@ -1,5 +1,26 @@
 import { DomainError } from '../domain-error.js';
 
+/**
+ * WEB04: a person's name is made of letters (any alphabet, with accents) in words separated by
+ * one space, apostrophe or hyphen. It never starts or ends with a digit, symbol or space.
+ */
+export const PERSON_NAME_PATTERN = /^\p{L}[\p{L}\p{M}]*(?:[ '’-]\p{L}[\p{L}\p{M}]*)*$/u;
+
+/** City and district names: letters, with spaces, apostrophes, hyphens or dots between words. */
+export const PLACE_NAME_PATTERN = /^\p{L}[\p{L}\p{M}]*(?:[ '’.-]+\p{L}[\p{L}\p{M}]*)*$/u;
+
+/** WEB04: maximum number of characters of each customer field (same values in the SPA). */
+export const CUSTOMER_FIELD_LIMITS = Object.freeze({
+  name: 50,
+  email: 254,
+  phoneNumber: 20,
+  street: 100,
+  houseNumber: 10,
+  complement: 100,
+  city: 60,
+  district: 40,
+});
+
 export async function validateAddress(address, postalCodeValidator) {
   const isMatch = await postalCodeValidator.isValidMatch(address.postalCode, address.city);
   if (!isMatch) {

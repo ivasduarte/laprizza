@@ -9,9 +9,21 @@
       "id": "oven-01",
       "type": "equipment",
       "modelReference": "/assets/models/oven.glb",
-      "position": { "x": 2.0, "y": 0.0, "z": -4.5 },
-      "rotation": { "x": 0.0, "y": 90.0, "z": 0.0 },
-      "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "position": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": -4.5
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
       "material": {
         "colorMap": "/textures/rock_wall_08/diffuse.jpg",
         "roughnessMap": "/assets/textures/bricks-roughness.png",
@@ -22,12 +34,38 @@
       "id": "prep-table-01",
       "type": "equipment",
       "modelReference": "/assets/models/prep-table.glb",
-      "position": { "x": -2.0, "y": 0.0, "z": 0.0 },
-      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
-      "scale": { "x": 1.5, "y": 1.0, "z": 1.0 },
+      "position": {
+        "x": -2.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.5,
+        "y": 1.0,
+        "z": 1.0
+      },
       "material": {
-        "color": "#cccccc"
+        "color": "#cccccc",
+        "colorMap": "/textures/metal_plate/diffuse.jpg",
+        "normalMap": "/textures/metal_plate/normal.jpg",
+        "roughnessMap": "/textures/metal_plate/rough.jpg"
       }
     }
-  ]
+  ],
+  "floor": {
+    "material": {
+      "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+      "normalMap": "/textures/tiled_floor_001/normal.jpg",
+      "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+      "repeat": {
+        "x": 6,
+        "y": 6
+      }
+    }
+  }
 }

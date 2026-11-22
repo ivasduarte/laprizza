@@ -21,6 +21,7 @@ import {
   toDay,
 } from './forecast-model.js';
 import ForecastForm from './forecast-form.jsx';
+import Loading from '../../../shared/ui/feedback/loading.jsx';
 
 /**
  * WEB07 forecasts: list (grouped by name, every active version), detail, create, "edit"
@@ -150,7 +151,7 @@ export default function ForecastsPanel({ onRun }) {
         )}
 
         {forecasts.isPending ? (
-          <p role="status">{t('layout.loading')}</p>
+          <Loading />
         ) : groups.length === 0 && !forecasts.error ? (
           <p className="message">{t('ai.fc.empty')}</p>
         ) : (

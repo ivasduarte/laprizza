@@ -107,6 +107,8 @@ export function loadConfig(env = process.env) {
     auth: {
       accessTokenTtlSeconds: toInt(env.ACCESS_TOKEN_TTL_MINUTES, 60) * 60,
       refreshTokenTtlMs: toInt(env.REFRESH_TOKEN_TTL_DAYS, 7) * 86_400_000,
+      // AA04: a session not used for this long ends (0 = only the absolute expiry).
+      sessionIdleTimeoutMs: toInt(env.SESSION_IDLE_TIMEOUT_MINUTES, 30) * 60_000,
       lockoutThreshold: toInt(env.LOGIN_LOCKOUT_THRESHOLD, 3),
       lockoutStepsMs: toList(env.LOGIN_LOCKOUT_STEPS_SECONDS ?? '60,300,1800').map(
         (s) => toInt(s, 60) * 1000,
@@ -267,6 +269,7 @@ export function createApp(config = loadConfig(), repos = {}) {
     customersRouterFactory(
       repos.customersRepository,
       repos.postalCodeValidator ?? dummyPostalCodeValidator,
+      repos.usersRepository,
     ),
   );
   api.use(

@@ -9,20 +9,63 @@
       "id": "conveyor-belt-main",
       "type": "assembly-line",
       "modelReference": "/assets/models/conveyor-belt.gltf",
-      "position": { "x": 0.0, "y": 0.85, "z": 0.0 },
-      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
-      "scale": { "x": 8.0, "y": 1.0, "z": 1.2 }
+      "position": {
+        "x": 0.0,
+        "y": 0.85,
+        "z": 0.0
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 8.0,
+        "y": 1.0,
+        "z": 1.2
+      },
+      "material": {
+        "colorMap": "/textures/metal_plate/diffuse.jpg",
+        "normalMap": "/textures/metal_plate/normal.jpg",
+        "roughnessMap": "/textures/metal_plate/rough.jpg"
+      }
     },
     {
       "id": "robotic-arm-sauce",
       "type": "assembly-line",
       "modelReference": "/assets/models/robotic-arm.gltf",
-      "position": { "x": -3.0, "y": 1.0, "z": 0.5 },
-      "rotation": { "x": 0.0, "y": 180.0, "z": 0.0 },
-      "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "position": {
+        "x": -3.0,
+        "y": 1.0,
+        "z": 0.5
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 180.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
       "material": {
-        "color": "#e32636"
+        "color": "#e32636",
+        "colorMap": "/textures/metal_plate/diffuse.jpg",
+        "normalMap": "/textures/metal_plate/normal.jpg",
+        "roughnessMap": "/textures/metal_plate/rough.jpg"
       }
     }
-  ]
+  ],
+  "floor": {
+    "material": {
+      "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+      "normalMap": "/textures/tiled_floor_001/normal.jpg",
+      "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+      "repeat": {
+        "x": 6,
+        "y": 6
+      }
+    }
+  }
 }

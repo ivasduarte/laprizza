@@ -9,7 +9,7 @@
 | Allowed roles | Authenticated (any active account with a valid session) |
 | Success response | 204 No Content (the current session is kept) |
 | Error handling | 400 `VALIDATION_FAILED`, 400 `CURRENT_PASSWORD_INCORRECT` (the session is not ended), 400 `PASSWORD_POLICY_VIOLATION`, 401 `TOKEN_MISSING`, `TOKEN_INVALID`, `SESSION_REVOKED`, 429 `RATE_LIMITED` (failed attempts per IP, shared with the login) with `Retry-After` |
-| ADRs | [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0044](../../adr/0044-password-recovery-with-single-use-hashed-tokens.md) |
+| ADRs | [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0023](../../adr/0023-password-recovery-with-single-use-hashed-tokens.md) |
 
 ## Description
 

@@ -75,10 +75,10 @@ Content-Type: application/json
 }
 ?? status == 403
 
-### 2.4 Token de Employee não tem acesso (403 Forbidden - a cozinha é só do Manager)
+### 2.4 Token de Employee consegue LER (200 OK - kitchen:read, o Employee vê a cozinha em modo de leitura)
 GET {{baseUrl}}/kitchen-configurations
 Authorization: Bearer {{empToken}}
-?? status == 403
+?? status == 200
 
 
 ### ==========================================
@@ -116,7 +116,15 @@ Content-Type: application/json
 {
   "content": {
     "dimensions": { "width": 10, "length": 15, "height": 3 },
-    "elements": []
+    "elements": [],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 200
@@ -151,9 +159,22 @@ Content-Type: application/json
         "modelReference": "models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 400
@@ -174,9 +195,22 @@ Content-Type: application/json
         "modelReference": "https://cdn.laprizza.pt/models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 200
@@ -203,9 +237,22 @@ Content-Type: application/json
         "modelReference": "/assets/models/oven.gltf",
         "position": { "x": 0, "y": 0, "z": 0 },
         "rotation": { "x": 0, "y": 0, "z": 0 },
-        "scale": { "x": 1, "y": 1, "z": 1 }
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "material": {
+          "colorMap": "/textures/metal_plate/diffuse.jpg",
+          "normalMap": "/textures/metal_plate/normal.jpg",
+          "roughnessMap": "/textures/metal_plate/rough.jpg"
+        }
       }
-    ]
+    ],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 201
@@ -221,7 +268,15 @@ Content-Type: application/json
   "name": "Automated Line {{dynamicSuffix}}",
   "content": {
     "dimensions": { "width": 12, "length": 20, "height": 4 },
-    "elements": []
+    "elements": [],
+    "floor": {
+      "material": {
+        "colorMap": "/textures/tiled_floor_001/diffuse.jpg",
+        "normalMap": "/textures/tiled_floor_001/normal.jpg",
+        "roughnessMap": "/textures/tiled_floor_001/rough.jpg",
+        "repeat": { "x": 6, "y": 10 }
+      }
+    }
   }
 }
 ?? status == 201
@@ -265,10 +320,11 @@ DELETE {{baseUrl}}/kitchen-configurations/{{configA_Id}}
 Authorization: Bearer {{adminToken}}
 ?? status == 204
 
-### 5.6b Employee não consegue ler a configuração ativa (403 Forbidden - a cozinha é só do Manager)
+### 5.6b Employee consegue ler a configuração ativa (200 OK - kitchen:read, é a B ativada no 5.4)
 GET {{baseUrl}}/kitchen-configurations/active
 Authorization: Bearer {{empToken}}
-?? status == 403
+?? status == 200
+?? body id == {{configB_Id}}
 
 ### 5.6c Employee não consegue ativar (403 Forbidden)
 PATCH {{baseUrl}}/kitchen-configurations/{{configA_Id}}/activate
@@ -283,4 +339,4 @@ Authorization: Bearer {{adminToken}}
 ### 5.7 Obter a Configuração A (404 Not Found)
 GET {{baseUrl}}/kitchen-configurations/{{configA_Id}}
 Authorization: Bearer {{adminToken}}
-?? status == 404
+?? status == 404

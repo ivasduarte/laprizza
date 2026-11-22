@@ -683,6 +683,7 @@ test('API GET /auth/me returns the current user without secrets', async (t) => {
     'email',
     'id',
     'permissions',
+    'phoneRequired',
     'roles',
     'status',
   ]);

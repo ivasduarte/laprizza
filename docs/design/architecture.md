@@ -74,11 +74,11 @@ Software and hardware platforms on which the system is built and deployed.
 | Platform / Technology                           | Used For                                            | Decided In                                                                  |
 | :---------------------------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------- |
 | `GitHub`                                        | Version control, issue tracking, project board      | ENG01 (Sprint 1 user stories)                                               |
-| `Node.js (JavaScript)`                          | Back-end                                            | [ADR-0001](../adr/0001-back-end-platform-and-technology-stack.md)           |
-| `Express`                                       | HTTP framework of the back-end REST API             | [ADR-0001](../adr/0001-back-end-platform-and-technology-stack.md)           |
-| `npm`                                           | Package management                                  | [ADR-0001](../adr/0001-back-end-platform-and-technology-stack.md)           |
-| `OpenAPI`                                       | Machine-readable API contract                       | [ADR-0005](../adr/0005-contract-first-rest-api.md)                          |
-| `Database MongoDB`                              | Persistence of the business information             | [ADR-0003](../adr/0003-persistence-and-seed-data-mechanism.md)              |
+| `Node.js (JavaScript)`                          | Back-end                                            | [ADR-0005](../adr/0005-back-end-platform-and-technology-stack.md)           |
+| `Express`                                       | HTTP framework of the back-end REST API             | [ADR-0005](../adr/0005-back-end-platform-and-technology-stack.md)           |
+| `npm`                                           | Package management                                  | [ADR-0005](../adr/0005-back-end-platform-and-technology-stack.md)           |
+| `OpenAPI`                                       | Machine-readable API contract                       | [ADR-0004](../adr/0004-contract-first-rest-api.md)                          |
+| `Database MongoDB`                              | Persistence of the business information             | [ADR-0002](../adr/0002-persistence-and-seed-data-mechanism.md)              |
 | `WebGL` and `Three.js`                          | 3D Visualization (SGRAI, Sprint 2 onwards)          | Imposed by the System Specification (II.3.3)                                |
 | `Prolog`                                        | AI planning and scheduling (IART, Sprint 2 onwards) | Imposed by the System Specification (II.3.4)                                |
 | `PlantUML`                                      | Diagrams as text in the repository                  | Team documentation convention                                               |

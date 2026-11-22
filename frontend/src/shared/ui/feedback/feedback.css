@@ -148,6 +148,25 @@ button.danger:hover {
   background: var(--color-error-bg);
 }
 
+/* Loading placeholders: reserve the room of the content that is coming (WEB02, no CLS). */
+.loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.loading-page {
+  min-height: 60vh;
+  min-height: 60dvh;
+}
+
+.loading-region {
+  min-height: 16rem;
+}
+
 /* Inline spinner (buttons while an action is running) */
 .spinner {
   display: inline-block;

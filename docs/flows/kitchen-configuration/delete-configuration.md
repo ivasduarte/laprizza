@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER |
 | Success response | 204 No Content |
 | Error handling | 400 (invalid id format), 401/403 (no valid token or role not allowed), 404 (not found), 409 (Cannot delete active configuration) |
-| ADRs | [ADR-0024](../../adr/0024-rules-for-editing-and-deleting-the-active-configuration.md) |
+| ADRs | [ADR-0029](../../adr/0029-rules-for-editing-and-deleting-the-active-configuration.md) |
 
 ## Description
 

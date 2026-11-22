@@ -111,4 +111,17 @@ export function evaluateStatusChange(user, isActive) {
  */
 export function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
-}
+}
+
+/**
+ * AA02: a Customer must give a contact phone before using the customer features. The phone
+ * comes from the linked Customer record or, until that record exists, from the account itself
+ * (external providers usually do not supply it).
+ *
+ * @param {{customerId?: unknown, phoneNumber?: string|null}} user
+ * @param {string[]} roles - Active roles already resolved for the account.
+ * @returns {boolean}
+ */
+export function isContactPhoneMissing(user, roles = []) {
+  return roles.includes(Roles.CUSTOMER) && !user?.customerId && !user?.phoneNumber;
+}

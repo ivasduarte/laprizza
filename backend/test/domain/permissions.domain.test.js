@@ -9,6 +9,7 @@ import {
   ROLE_PERMISSIONS,
   RoleChangeDenial,
   permissionsFor,
+  CUSTOMER_CONTACT_PERMISSIONS,
   hasPermission,
   roleAssignmentPermission,
   evaluateRoleChange,
@@ -63,11 +64,13 @@ test('base roles follow Table 1', () => {
   assert.deepEqual(permissionsFor([Roles.CUSTOMER]), [
     'catalogue:read',
     'customers:read:own',
+    'customers:write:own',
     'resources:read',
   ]);
 
   assert.deepEqual(permissionsFor([Roles.EMPLOYEE]), [
     'catalogue:read',
+    'kitchen:read',
     'products:read',
     'resources:read',
     'stock:read',
@@ -111,9 +114,9 @@ test('base roles follow Table 1', () => {
   ]);
 });
 
-test('Employee has no access to the kitchen (configurations, viewer, assembly lines)', () => {
+test('Employee consults the kitchen viewer and configurations but never changes them (Table 1)', () => {
   const employee = permissionsFor([Roles.EMPLOYEE]);
-  assert.ok(!hasPermission(employee, Permission.KITCHEN_READ));
+  assert.ok(hasPermission(employee, Permission.KITCHEN_READ));
   assert.ok(!hasPermission(employee, Permission.KITCHEN_WRITE));
 });
 
@@ -249,4 +252,17 @@ test('AA06: a Manager cannot grant ADMINISTRATOR (no administrative role without
     reason: RoleChangeDenial.ROLE_NOT_ASSIGNABLE,
     roles: ['ADMINISTRATOR'],
   });
+});
+
+test('AA02: without a contact phone the customer permissions are withheld, the rest kept', () => {
+  const full = permissionsFor([Roles.CUSTOMER]);
+  const gated = permissionsFor([Roles.CUSTOMER], { contactPhoneMissing: true });
+  for (const p of CUSTOMER_CONTACT_PERMISSIONS) {
+    assert.ok(full.includes(p));
+    assert.ok(!gated.includes(p));
+  }
+  assert.deepEqual(
+    gated,
+    full.filter((p) => !CUSTOMER_CONTACT_PERMISSIONS.includes(p)),
+  );
 });

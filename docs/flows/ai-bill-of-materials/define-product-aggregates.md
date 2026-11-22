@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `products:write`) |
 | Success response | 201 Created / 200 OK, the product with `aggregate { classification, items[{ productId, quantity }] }` or `aggregate: null` |
 | Error handling | 401 (no valid token), 403 (no permission), 400 `BAD_REQUEST` (Joi `details`), 400 with an `AGGREGATE_*` code (domain rules), 404 (product not found on update), 409 (duplicate name on create) |
-| ADRs | [ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0002](../../adr/0002-layered-domain-driven-design-(ddd)-architecture.md), [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) |
+| ADRs | [ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0001](../../adr/0001-layered-domain-driven-design-(ddd)-architecture.md), [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) |
 
 ## Description
 
@@ -34,7 +34,7 @@ The aggregate is an optional part of the product, so it is created and changed w
 
 4. The product is saved with the aggregate, and the caches `catalogue` and `ai-data` are invalidated, so the next planning snapshot already has the new composition ([AI06 UC1](../ai-knowledge-base/provide-planning-snapshot.md)).
 
-The stock of an aggregate is the stock of the product itself (BCK09): a produced dough that is already made is counted in the stock of the dough, not in the stock of its ingredients. The same rules are checked again by the knowledge base when a snapshot is loaded ([ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md)).
+The stock of an aggregate is the stock of the product itself (BCK09): a produced dough that is already made is counted in the stock of the dough, not in the stock of its ingredients. The same rules are checked again by the knowledge base when a snapshot is loaded ([ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md)).
 
 ## Diagram
 

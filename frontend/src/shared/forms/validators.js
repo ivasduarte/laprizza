@@ -59,6 +59,46 @@ export const maxValue = (limit) => (value) =>
     ? { type: 'number.max', limit }
     : null;
 
+/**
+ * Portuguese phone number, same rule as the back end (customers.domain.js): 9 digits starting
+ * with 2[1-9] or 91/92/93/96, optional +351 / 00351. @returns {Rule}
+ */
+export const portuguesePhone = () => (value) => {
+  if (isBlank(value)) return null;
+  let digits = String(value).replace(/[\s\-().]/g, '');
+  if (digits.startsWith('+351')) digits = digits.slice(4);
+  else if (digits.startsWith('00351')) digits = digits.slice(5);
+  else if (digits.startsWith('351') && digits.length === 12)
+    digits = digits.slice(3);
+  return /^(2[1-9]|9[1236])\d{7}$/.test(digits)
+    ? null
+    : { type: 'customer.phone' };
+};
+
+/**
+ * WEB04: a person's name: letters (any alphabet, with accents) in words separated by one space,
+ * apostrophe or hyphen; no digits or symbols, never at the start or the end. Same rule as the
+ * back end (customers.domain.js PERSON_NAME_PATTERN).
+ */
+export const PERSON_NAME_PATTERN =
+  /^\p{L}[\p{L}\p{M}]*(?:[ '’-]\p{L}[\p{L}\p{M}]*)*$/u;
+
+/** City and district names: letters, with spaces, apostrophes, hyphens or dots between words. */
+export const PLACE_NAME_PATTERN =
+  /^\p{L}[\p{L}\p{M}]*(?:[ '’.-]+\p{L}[\p{L}\p{M}]*)*$/u;
+
+/** @returns {Rule} */
+export const personName = () => (value) =>
+  isBlank(value) || PERSON_NAME_PATTERN.test(String(value).trim())
+    ? null
+    : { type: 'person.name' };
+
+/** @returns {Rule} */
+export const placeName = () => (value) =>
+  isBlank(value) || PLACE_NAME_PATTERN.test(String(value).trim())
+    ? null
+    : { type: 'place.name' };
+
 /** Value must equal another field (e.g. password confirmation). @returns {Rule} */
 export const sameAs =
   (otherField) =>

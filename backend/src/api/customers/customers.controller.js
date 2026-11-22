@@ -56,6 +56,19 @@ export const getById = async (req, res, next, customersRepository) => {
   }
 };
 
+/**
+ * Creates the customer record of the signed-in Customer account and links it (self-service).
+ * The e-mail is the one of the account; it is never taken from the body.
+ */
+export const createMe = async (req, res, next, deps) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.status(201).json(await customersService.createOwnCustomer(req.user, req.body, deps));
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getMe = async (req, res, next, customersRepository) => {
   try {
     res.set('Cache-Control', 'no-store');

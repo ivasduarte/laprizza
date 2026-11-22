@@ -77,10 +77,16 @@ test('createKitchenConfigurationData rejects missing or blank names', () => {
   }
 });
 
-// --- Asset reference rules (ADR-0021: absolute http(s) URL or root-relative path) ---
+// --- Asset reference rules (ADR-0026: absolute http(s) URL or root-relative path) ---
+
+const TEXTURED = {
+  colorMap: '/textures/metal_plate/diffuse.jpg',
+  normalMap: '/textures/metal_plate/normal.jpg',
+};
 
 const buildContent = (elementOverrides = {}) => ({
   dimensions: { width: 10, length: 15, height: 3 },
+  floor: { material: TEXTURED },
   elements: [
     {
       id: 'oven-01',
@@ -89,6 +95,7 @@ const buildContent = (elementOverrides = {}) => ({
       position: { x: 0, y: 0, z: 0 },
       rotation: { x: 0, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 },
+      material: TEXTURED,
       ...elementOverrides,
     },
   ],
@@ -191,9 +198,60 @@ test('validateKitchenConfigurationContent exposes schema violations in details',
     },
   );
 });
+
+test('WEB04/VIS04: every object and the floor need textures (colorMap + detail map)', () => {
+  const content = buildContent({ material: undefined });
+  delete content.elements[0].material;
+  content.floor = { material: { color: '#ffffff' } };
+  content.elements.push({
+    ...buildContent().elements[0],
+    id: 'flat',
+    material: { colorMap: '/t/c.jpg' },
+  });
+
+  assert.throws(
+    () => validateKitchenConfigurationContent(content),
+    (err) => {
+      assert.ok(err.details.some((d) => d.startsWith('/elements/0/material is required')));
+      assert.ok(err.details.some((d) => d.startsWith('/elements/1/material must include')));
+      assert.ok(err.details.some((d) => d.startsWith('/floor/material must have textures')));
+      return true;
+    },
+  );
+});
+
+test('WEB04: positions, sizes and the assembly line placement must be inside the kitchen', () => {
+  // Kitchen 10 x 15 x 3, origin at the floor centre: x in [-5, 5], z in [-7.5, 7.5], y in [0, 3].
+  const content = buildContent({
+    position: { x: 5.5, y: -1, z: 0 },
+    scale: { x: 11, y: 1, z: 1 },
+  });
+  content.assemblyLine = {
+    configurationId: 'a'.repeat(24),
+    position: { x: 0, y: 0, z: 8 },
+    rotation: { x: 0, y: 0, z: 0 },
+  };
+  assert.throws(
+    () => validateKitchenConfigurationContent(content),
+    (err) => {
+      assert.deepEqual(err.details, [
+        '/elements/0/position/x must be between -5 and 5 (inside the kitchen)',
+        '/elements/0/position/y must be between 0 and 3 (inside the kitchen)',
+        '/elements/0/scale/x must be at most 10 (the size of the kitchen)',
+        '/assemblyLine/position/z must be between -7.5 and 7.5 (inside the kitchen)',
+      ]);
+      return true;
+    },
+  );
+  assert.doesNotThrow(() =>
+    validateKitchenConfigurationContent(buildContent({ position: { x: -5, y: 3, z: 7.5 } })),
+  );
+});
+
 test('kitchen furniture model (VIS03): known models are accepted, unknown ones rejected', () => {
   const content = (model) => ({
     dimensions: { width: 10, length: 15, height: 3 },
+    floor: { material: TEXTURED }, // VIS04: every object is textured
     elements: [
       {
         id: 'fridge-01',
@@ -202,6 +260,7 @@ test('kitchen furniture model (VIS03): known models are accepted, unknown ones r
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 90, z: 0 },
         scale: { x: 0.9, y: 2, z: 0.8 },
+        material: TEXTURED,
       },
     ],
   });

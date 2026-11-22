@@ -4,8 +4,9 @@
  *
  * Local coordinates (metres): x along the line (left -> right), y up, z from the wall
  * towards the kitchen. Counter top at y = 0.9; crust platform and overhead dispenser on
- * the left, conveyor belt in the middle (length = scale.x), robotic arms behind the belt,
- * wood-fired oven on the right. No modelReference: every component is procedural.
+ * the left, conveyor belt in the middle (length = scale.x), six robotic arms behind the belt
+ * (one per ingredient station, 1 m apart, so a pizza with many ingredients is assembled in one
+ * pass), wood-fired oven on the right. No modelReference: every component is procedural.
  *
  * VIS04: each component has its own textured material (Poly Haven, CC0), served from
  * public/textures/<slug>/{diffuse,normal,rough}.jpg.
@@ -127,7 +128,7 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
       id: 'arm-01',
       type: 'robotic-arm',
       position: {
-        x: -2.2,
+        x: -2.5,
         y: 0.9,
         z: 0.15,
       },
@@ -151,7 +152,7 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
       id: 'arm-02',
       type: 'robotic-arm',
       position: {
-        x: -0.8,
+        x: -1.5,
         y: 0.9,
         z: 0.15,
       },
@@ -175,7 +176,7 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
       id: 'arm-03',
       type: 'robotic-arm',
       position: {
-        x: 0.6,
+        x: -0.5,
         y: 0.9,
         z: 0.15,
       },
@@ -199,7 +200,55 @@ export const DEFAULT_ASSEMBLY_LINE_CONTENT = {
       id: 'arm-04',
       type: 'robotic-arm',
       position: {
-        x: 2.0,
+        x: 0.5,
+        y: 0.9,
+        z: 0.15,
+      },
+      rotation: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      scale: {
+        x: 1,
+        y: 1,
+        z: 1,
+      },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
+      },
+    },
+    {
+      id: 'arm-05',
+      type: 'robotic-arm',
+      position: {
+        x: 1.5,
+        y: 0.9,
+        z: 0.15,
+      },
+      rotation: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      scale: {
+        x: 1,
+        y: 1,
+        z: 1,
+      },
+      material: {
+        colorMap: '/textures/polystyrene/diffuse.jpg',
+        normalMap: '/textures/polystyrene/normal.jpg',
+        roughnessMap: '/textures/polystyrene/rough.jpg',
+      },
+    },
+    {
+      id: 'arm-06',
+      type: 'robotic-arm',
+      position: {
+        x: 2.5,
         y: 0.9,
         z: 0.15,
       },

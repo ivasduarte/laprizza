@@ -49,7 +49,8 @@ export function errorHandler(err, _req, res, _next) {
     res.set('Retry-After', String(err.retryAfterSeconds));
 
   const response = { error: { status, code, message } };
-  if (err.details) response.error.details = err.details;
+  // Details only describe client errors; a 5xx never exposes internal data.
+  if (err.details && status < 500) response.error.details = err.details;
 
   res.status(status).json(response);
 }

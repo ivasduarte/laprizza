@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (`planning:execute`); back end to Prolog with `X-Api-Key` |
 | Success response | 200 OK per calculation, each with its own `snapshotId` and `meta.sources` |
 | Error handling | Back end unavailable: push 503 `AI_SERVICE_UNAVAILABLE` / 504 `AI_SERVICE_TIMEOUT` (from the back end), pull 503 `AI_DATA_UNAVAILABLE` / 504 `AI_DATA_TIMEOUT` (from the Prolog service). Nothing is calculated with older data and no run is saved. |
-| ADRs | [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md), [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| ADRs | [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md), [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md) |
 
 ## Description
 

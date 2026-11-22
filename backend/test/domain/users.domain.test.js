@@ -7,6 +7,7 @@ import {
   normalizeEmail,
   evaluateStatusChange,
   StatusChangeDenial,
+  isContactPhoneMissing,
 } from '../../src/domain/users/users.domain.js';
 
 /**
@@ -77,4 +78,12 @@ test('AA06: disabling is always allowed; enabling needs a previous activation', 
       reason: StatusChangeDenial.ACTIVATION_REQUIRED,
     });
   }
+});
+
+test('AA02: isContactPhoneMissing only for Customers with neither phone nor Customer record', () => {
+  assert.equal(isContactPhoneMissing({}, ['CUSTOMER']), true);
+  assert.equal(isContactPhoneMissing({ phoneNumber: '912345678' }, ['CUSTOMER']), false);
+  assert.equal(isContactPhoneMissing({ customerId: 'c1' }, ['CUSTOMER']), false);
+  assert.equal(isContactPhoneMissing({}, ['EMPLOYEE']), false);
+  assert.equal(isContactPhoneMissing({}, []), false);
 });

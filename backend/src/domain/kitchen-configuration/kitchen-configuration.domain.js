@@ -1,7 +1,15 @@
 import Ajv from 'ajv';
 import { DomainError } from '../domain-error.js';
 import schema from './kitchen-configuration.schema.json' with { type: 'json' };
-import { collectMaterialViolations, isValidAssetReference } from '../material/material.domain.js';
+import {
+  collectRequiredTextureViolations,
+  isValidAssetReference,
+} from '../material/material.domain.js';
+import {
+  collectElementBoundsViolations,
+  collectPlacementViolations,
+  Frame,
+} from '../spatial/bounds.domain.js';
 
 // Kept as part of this module's API (used by existing callers and tests).
 export { isValidAssetReference };
@@ -58,12 +66,28 @@ export function validateKitchenConfigurationContent(content) {
       );
     }
 
-    // 2.3 Textures and material properties (VIS04)
-    violations.push(...collectMaterialViolations(element.material, `/elements/${index}/material`));
+    // 2.3 Textures (VIS04/WEB04): every object is textured
+    violations.push(
+      ...collectRequiredTextureViolations(element.material, `/elements/${index}/material`),
+    );
   }
 
-  // 2.4 Floor material (VIS04)
-  violations.push(...collectMaterialViolations(content.floor?.material, '/floor/material'));
+  // 2.4 Floor textures (VIS04/WEB04)
+  violations.push(...collectRequiredTextureViolations(content.floor?.material, '/floor/material'));
+
+  // 2.5 Positions and sizes inside the kitchen (WEB04), assembly line placed inside it
+  violations.push(
+    ...collectElementBoundsViolations(content.elements, content.dimensions, Frame.KITCHEN),
+  );
+  if (content.assemblyLine) {
+    violations.push(
+      ...collectPlacementViolations(
+        content.assemblyLine.position,
+        content.dimensions,
+        '/assemblyLine/position',
+      ),
+    );
+  }
 
   if (violations.length > 0) throw contentError(violations);
 

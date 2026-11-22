@@ -9,7 +9,7 @@
 | Allowed callers | `POST /bom`, `POST /requirements` (Manager token, pull) and `POST /service/bom`, `POST /service/requirements` (`X-Api-Key`, push) |
 | Success response | n/a (facts loaded for one calculation; the calculation answers 200) |
 | Error handling | Any problem in the snapshot: nothing is loaded, 422 `AI_INVALID_DATA` with `details { scenario, inputs, problems }`. An unexpected failure of the calculation: 500 `INTERNAL_ERROR`. The facts are cleared in every case. |
-| ADRs | [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md), [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) |
+| ADRs | [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md), [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md) |
 
 ## Description
 
