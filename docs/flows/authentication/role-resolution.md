@@ -10,7 +10,7 @@
 | Endpoints | `POST /users`, `POST /auth/login`, `GET /auth/external/{provider}/callback`, `POST /auth/refresh`, `GET /auth/me`, every protected endpoint |
 | Allowed roles | Public (login, refresh, callback), ADMINISTRATOR (`POST /users`, since AA06), authenticated (`GET /auth/me`) |
 | Error handling | 403 `NO_ACTIVE_ROLE`, 503 `ROLES_UNAVAILABLE`, 403 `FORBIDDEN` (missing permission) |
-| Decision records | Builds on [ADR 0004](../../adr/0004-authentication-and-authorization.md) (as amended by AA04 and AA03) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| Decision records | Builds on [ADR 0003](../../adr/0003-authentication-and-authorization.md) (as amended by AA04 and AA03) and [ADR 0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 
@@ -112,7 +112,7 @@ Both codes are on the closed list of the external login callback, so they can ap
 | API | `backend/test/api/api.auth.test.js` | Local registration answers with `CUSTOMER` |
 | Front end | `frontend/test/shared/auth/aa03-role-errors.test.js` | Messages of `NO_ACTIVE_ROLE` and `ROLES_UNAVAILABLE` in English and Portuguese, local and external login |
 
-The tests use `node:test` with its native `mock` ([ADR 0028](../../adr/0028-mock-based-unit-testing.md)).
+The tests use `node:test` with its native `mock` ([ADR 0033](../../adr/0033-mock-based-unit-testing.md)).
 
 ### Manual validation
 
@@ -134,7 +134,7 @@ The development accounts of `npm run seed:dev-users` include `customer@laprizza.
 
 | Item | Impact | Proposal |
 |:---|:---|:---|
-| Roles are read on every protected request | One extra read per request | Cache with invalidation on role change, if load requires it ([ADR 0015](../../adr/0015-introduce-redis-for-caching.md)) |
+| Roles are read on every protected request | One extra read per request | Cache with invalidation on role change, if load requires it ([ADR 0016](../../adr/0016-introduce-redis-for-caching.md)) |
 
 ## Use of AI
 

@@ -9062,7 +9062,7 @@
           "modelReference": {
             "type": "string",
             "format": "uri-reference",
-            "description": "Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0021). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).",
+            "description": "Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0026). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).",
             "example": "/assets/models/conveyor.gltf"
           },
           "position": {
@@ -9081,7 +9081,7 @@
       },
       "Material": {
         "type": "object",
-        "description": "Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0021). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.",
+        "description": "Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0026). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.",
         "additionalProperties": false,
         "properties": {
           "color": {

@@ -9,7 +9,7 @@
 | Allowed roles | Authenticated (any active account with a valid session) |
 | Success response | 204 No Content, refresh cookie cleared |
 | Error handling | 401 `TOKEN_MISSING`, `TOKEN_INVALID`, `SESSION_REVOKED` (the HTTP client refreshes an expired token before the logout), 403 `ORIGIN_NOT_ALLOWED` (logout from another origin) |
-| ADRs | [ADR-0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| ADRs | [ADR-0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 

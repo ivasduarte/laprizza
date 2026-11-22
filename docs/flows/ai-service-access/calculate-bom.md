@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`); the back end calls the AI Scheduling Module with its service identity |
 | Success response | 200 OK, `{ status: "ok", simulation: true, feasible, calculatedAt, scenario, inputs, orders[], items[], shortages[], production[], warnings[], runId }` |
 | Error handling | 401/403; 400 `VALIDATION_ERROR` / `MALFORMED_JSON` (body), 400 `SCENARIO_WITHOUT_STOCK`; 404 `AI_SCENARIO_NOT_FOUND`; 422 `AI_INVALID_DATA` (`details.problems`, for example `MISSING_SCENARIO_STOCK`, `INCOMPLETE_RECIPE`); 503 `AI_SERVICE_UNAVAILABLE` (`details.reason`, `Retry-After: 5`); 504 `AI_SERVICE_TIMEOUT`. No run is saved on any error. |
-| ADRs | [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md), [ADR-0017](../../adr/0017-secrets-management-strategy.md) |
+| ADRs | [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md), [ADR-0049](../../adr/0049-synchronous-ai-execution-with-duplicate-submission-guard.md), [ADR-0018](../../adr/0018-secrets-management-strategy.md) |
 
 ## Description
 

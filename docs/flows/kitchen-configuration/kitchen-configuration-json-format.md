@@ -109,7 +109,7 @@ The assembly line configuration applies the same rules in its own frame (x from 
 
 ## Asset references
 
-`modelReference` and the texture maps are self-contained references that the viewer loads directly, without going through the Back-End ([ADR-0021](../../adr/0021-asset-references-strategy.md)). Accepted forms:
+`modelReference` and the texture maps are self-contained references that the viewer loads directly, without going through the Back-End ([ADR-0026](../../adr/0026-asset-references-strategy.md)). Accepted forms:
 
 | Form | Example | Result |
 |---|---|---|

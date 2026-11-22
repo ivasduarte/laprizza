@@ -33,7 +33,7 @@ Chosen option: "Synchronous request with a client-side lock".
 ### Positive Consequences
 
 * No job infrastructure; the result is shown as soon as it is calculated.
-* One request per click, and failures save nothing ([ADR-0034](./0034-recording-planning-runs-with-their-input-versions.md)).
+* One request per click, and failures save nothing ([ADR-0047](./0047-recording-planning-runs-with-their-input-versions.md)).
 
 ### Negative Consequences
 

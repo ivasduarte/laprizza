@@ -65,7 +65,7 @@ The pull path only sends `scenarioId` and `stockMode`, so the back end puts the 
 
 ## Calculation rules
 
-`requirements_calculate/2,3` runs on the knowledge base of one snapshot ([ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md)) and follows [ADR-0055](../../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md):
+`requirements_calculate/2,3` runs on the knowledge base of one snapshot ([ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md)) and follows [ADR-0058](../../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md):
 
 1. **Validation first (phase A).** Every problem is collected: invalid request or a snapshot of another scenario (as in AI01), no forecast (`MISSING_FORECAST`), a forecast line of a pizza without a size or with a size the pizza does not have (`INVALID_SIZE`), a line with a size that is not a predefined pizza (`NOT_PREDEFINED_PIZZA`), an incomplete recipe (`INCOMPLETE_RECIPE`), an invalid reference date (`INVALID_SNAPSHOT`). With any problem there is no calculation (422, no quantities).
 2. **Gross demand per day.** A forecast line with a size is a pizza: Σ (quantity × consumption of each component in that pizza and size). A line without a size is the direct demand of a directly sold product, one stock unit per unit sold.
@@ -119,9 +119,9 @@ An invalid calculation answers 422 `AI_INVALID_DATA` with `details { scenario, i
 
 ## Business rules shown in the diagrams
 
-- **The back end owns the data.** Forecasts, supplier scenarios, catalogue, BOM and stock reach the Prolog service only in the snapshot, never from the database ([ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md)). Each offer keeps its product, price in EUR, quoted stock units and lead time.
-- **No double counting.** The stock of a produced aggregate is used first, and only the part produced reaches its ingredients ([ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md)).
-- **Dates first, then cost.** An offer that arrives on time always wins over a late one; among the on-time offers the cheapest unit price wins ([ADR-0055](../../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md)).
+- **The back end owns the data.** Forecasts, supplier scenarios, catalogue, BOM and stock reach the Prolog service only in the snapshot, never from the database ([ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md)). Each offer keeps its product, price in EUR, quoted stock units and lead time.
+- **No double counting.** The stock of a produced aggregate is used first, and only the part produced reaches its ingredients ([ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md)).
+- **Dates first, then cost.** An offer that arrives on time always wins over a late one; among the on-time offers the cheapest unit price wins ([ADR-0058](../../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md)).
 - **Capacity is never invented.** A stated limit is applied over the whole plan; a missing limit is flagged, not read as zero or as verified.
 - **Missing data and unsuitable suppliers are explained.** Missing data answer 422 with every problem; needs without a suitable supplier are listed in `unmet`, and the plan is not feasible.
 - **Calculation separate from stock and purchase orders.** Hypothetical balances and planned deliveries are results only; no stock is changed and no purchase order is created, so repeated requests create nothing. An operational order would need a separate explicit confirmation through the back end.
@@ -131,12 +131,12 @@ An invalid calculation answers 422 `AI_INVALID_DATA` with `details { scenario, i
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0055](../../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) | Requirements planning with chronological net needs and the cheapest on-time supplier | Accepted |
-| [ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md) | Product aggregates and stock-first BOM expansion | Accepted |
-| [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) | Immutable, versioned forecasts and supplier scenarios | Accepted |
-| [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract with the AI service | Accepted |
-| [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
-| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization (`planning:execute`) | Accepted |
+| [ADR-0058](../../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) | Requirements planning with chronological net needs and the cheapest on-time supplier | Accepted |
+| [ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md) | Product aggregates and stock-first BOM expansion | Accepted |
+| [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md) | Immutable, versioned forecasts and supplier scenarios | Accepted |
+| [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract with the AI service | Accepted |
+| [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization (`planning:execute`) | Accepted |
 
 ## Notation key
 

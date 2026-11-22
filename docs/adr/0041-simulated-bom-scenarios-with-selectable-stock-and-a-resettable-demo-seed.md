@@ -57,7 +57,7 @@ Chosen option: "Versioned AI scenarios stored by the back end, with a stock mode
 ### Orders and stock in the request body
 
 * Good, because there is nothing to store.
-* Bad, because the client would become the source of business data, bypassing the rules and the versioning of the back end ([ADR-0039](./0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md)), and results would not be reproducible from a known scenario.
+* Bad, because the client would become the source of business data, bypassing the rules and the versioning of the back end ([ADR-0020](./0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md)), and results would not be reproducible from a known scenario.
 
 ### Stored scenarios, stock mode per calculation, idempotent seed
 

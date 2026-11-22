@@ -35,8 +35,8 @@ Chosen option: "One planning snapshot endpoint, delivered by pull or push".
 ### Positive Consequences
 
 * One contract to document, test and version; the snapshot can be stored as a fixture.
-* The versions of the inputs come from the back end and are recorded in the planning run ([ADR-0034](./0034-recording-planning-runs-with-their-input-versions.md)).
-* In the push path the AI service only needs a shared key ([ADR-0017](./0017-secrets-management-strategy.md)).
+* The versions of the inputs come from the back end and are recorded in the planning run ([ADR-0047](./0047-recording-planning-runs-with-their-input-versions.md)).
+* In the push path the AI service only needs a shared key ([ADR-0018](./0018-secrets-management-strategy.md)).
 
 ### Negative Consequences
 

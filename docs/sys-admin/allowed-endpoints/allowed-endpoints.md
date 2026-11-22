@@ -6,7 +6,7 @@ SYS03 builds on SYS02. SYS02 restricts the staging back-end VM (`laprizza-backen
 
 SYS03 applies only to staging. Production is public through `vs-gate` and has no allowlist ([Production Environment](../production-environment.md)).
 
-Decisions: [ADR-0050 – Network Restriction at the nginx Reverse Proxy](../../adr/0050-network-restriction-at-the-nginx-reverse-proxy.md), which keeps the rules in their own file so the list can be maintained separately.
+Decisions: [ADR-0037 – Network Restriction at the nginx Reverse Proxy](../../adr/0037-network-restriction-at-the-nginx-reverse-proxy.md), which keeps the rules in their own file so the list can be maintained separately.
 
 ## Overview
 
@@ -146,7 +146,7 @@ Screenshots in `docs/sys-admin/allowed-endpoints/img/sys03/`.
 
 | Item | Impact | Mitigation |
 |---|---|---|
-| Only the HTTP rules (nginx) are generated | The SSH rules of SYS02 (`AllowUsers` in `/etc/ssh/sshd_config.d/99-laprizza.conf`) keep their own copy of the networks ([ADR-0051](../../adr/0051-ssh-restricted-to-approved-networks-with-allowusers.md)) | Change both when a network is added or removed; SSH changes need `sudo sshd -t && sudo systemctl reload ssh` |
+| Only the HTTP rules (nginx) are generated | The SSH rules of SYS02 (`AllowUsers` in `/etc/ssh/sshd_config.d/99-laprizza.conf`) keep their own copy of the networks ([ADR-0038](../../adr/0038-ssh-restricted-to-approved-networks-with-allowusers.md)) | Change both when a network is added or removed; SSH changes need `sudo sshd -t && sudo systemctl reload ssh` |
 | The author is recorded by `laprizza-allowlist-edit` | A change made as `root` without the edit command is still validated and applied, but recorded as `author=unknown` | Administrators use individual accounts and the edit command (SYS05); `root` login is disabled (SYS02) |
 | `auditd` does not run on the staging VM | No kernel-level record of who wrote the file | The edit command, the change log and the sudo refusals in the journal |
 | `10.9.0.0/16` still allows every DEI virtual server | Other teams' VMs could reach the API (authentication still applies) | Narrow the list to the team's VMs with `laprizza-allowlist-edit` when their addresses are stable (SYS02) |

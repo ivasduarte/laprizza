@@ -65,7 +65,7 @@ The service listens only on `127.0.0.1` (`AI_PORT`, 5000 by default). The other 
 
 ## Calculation rules
 
-`bom_calculate/2` runs on the knowledge base of one snapshot ([ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md)) and follows [ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md):
+`bom_calculate/2` runs on the knowledge base of one snapshot ([ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md)) and follows [ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md):
 
 1. **Validation first (phase A).** Every problem is collected: invalid request, snapshot without a scenario or of another scenario (`SCENARIO_MISMATCH`), ordered pizza that is not predefined (`NOT_PREDEFINED_PIZZA`), size not allowed (`INVALID_SIZE`), incomplete recipe (`INCOMPLETE_RECIPE`: no BOM lines, a missing or invalid consumption, an unknown component, a produced aggregate without a measured consumption). With any problem there is no calculation, and the answer is 422 without quantities.
 2. **Direct demand.** For each component: Σ (ordered quantity × consumption in that pizza and size).
@@ -103,10 +103,10 @@ An invalid calculation answers 422 `AI_INVALID_DATA` with `details { scenario, i
 
 ## Business rules shown in the diagrams
 
-- **The back end owns the data and the classification.** The Prolog service gets everything from the snapshot, never from the database, and uses the production-or-purchase classification of the back end ([ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md)).
+- **The back end owns the data and the classification.** The Prolog service gets everything from the snapshot, never from the database, and uses the production-or-purchase classification of the back end ([ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md)).
 - **One level of aggregates.** An aggregate cannot contain a pizza or another aggregate, so recipes cannot be cyclic; the rules are checked when the product is saved and again when the snapshot is loaded.
 - **No double counting.** The stock of an aggregate is used first, and only the remaining demand of a produced aggregate reaches its ingredients.
-- **Same rules for real and simulated inputs.** Live and scenario stock produce the same snapshot format and the same calculation; only `meta.sources.stock` changes ([ADR-0053](../../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md)).
+- **Same rules for real and simulated inputs.** Live and scenario stock produce the same snapshot format and the same calculation; only `meta.sources.stock` changes ([ADR-0041](../../adr/0041-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md)).
 - **Calculation separate from consumption.** Balances are results only. The real stock changes only through an explicit stock operation of the back end (BCK09), and the stock of a scenario only through the seed.
 - **Problems are reported, never hidden.** Unknown items, invalid quantities and incomplete recipes answer 422 with every problem; nothing is replaced by a default.
 - **The user's token is never logged** by the AI Scheduling Module, and only the back end decides who may calculate (`planning:execute`).
@@ -115,12 +115,12 @@ An invalid calculation answers 422 `AI_INVALID_DATA` with `details { scenario, i
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md) | Product aggregates and stock-first BOM expansion | Accepted |
-| [ADR-0053](../../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md) | Simulated BOM scenarios with selectable stock and a resettable demo seed | Accepted |
-| [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract (pull path with the user's token) | Accepted |
-| [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
-| [ADR-0010](../../adr/0010-isolate-database-versioning-with-migrations.md) | Database versioning with migrations (`ai01-bom-aggregates-and-scenarios`) | Accepted |
-| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization (`products:write`, `planning:execute`) | Accepted |
+| [ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md) | Product aggregates and stock-first BOM expansion | Accepted |
+| [ADR-0041](../../adr/0041-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md) | Simulated BOM scenarios with selectable stock and a resettable demo seed | Accepted |
+| [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract (pull path with the user's token) | Accepted |
+| [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
+| [ADR-0011](../../adr/0011-isolate-database-versioning-with-migrations.md) | Database versioning with migrations (`ai01-bom-aggregates-and-scenarios`) | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization (`products:write`, `planning:execute`) | Accepted |
 
 ## Notation key
 
@@ -160,7 +160,7 @@ An invalid calculation answers 422 `AI_INVALID_DATA` with `details { scenario, i
 - **Configuration of the AI Scheduling Module** (`ai-scheduling/.env`, template `.env.example`): `AI_BACKEND_URL` (default `http://127.0.0.1:3000/api/v1`), `AI_PORT` (5000), `AI_BACKEND_TIMEOUT_SECONDS` (10). Variables already set in the environment win over the file.
 - **No endpoint for AI scenarios.** They are created and reset by the seed; the back end only reads them.
 - Tests:
-  - Back end ([ADR-0028](../../adr/0028-mock-based-unit-testing.md)): `test/domain/products.domain.test.js`, `test/application/products.service.test.js` and `test/api/api.products.test.js` (aggregate rules), `test/domain/ai-scenario.domain.test.js`, `test/infrastructure/ai01.models.test.js`, `test/scripts/seed-ai01-demo.test.js`, `test/application/ai-data.service.test.js` and `test/api/api.ai-data.test.js` (scenario snapshot, both stock modes, 404/400, no cache, original format unchanged).
-  - Integration ([ADR-0013](../../adr/0013-use-testcontainers-for-automated-integration-testing.md)): `test-integration/infrastructure/ai01.integration.test.js` (migration, repositories, seed idempotent, the snapshot of `DEMO-PARTIAL` built from the seed equals the fixture of the Prolog tests).
+  - Back end ([ADR-0033](../../adr/0033-mock-based-unit-testing.md)): `test/domain/products.domain.test.js`, `test/application/products.service.test.js` and `test/api/api.products.test.js` (aggregate rules), `test/domain/ai-scenario.domain.test.js`, `test/infrastructure/ai01.models.test.js`, `test/scripts/seed-ai01-demo.test.js`, `test/application/ai-data.service.test.js` and `test/api/api.ai-data.test.js` (scenario snapshot, both stock modes, 404/400, no cache, original format unchanged).
+  - Integration ([ADR-0014](../../adr/0014-use-testcontainers-for-automated-integration-testing.md)): `test-integration/infrastructure/ai01.integration.test.js` (migration, repositories, seed idempotent, the snapshot of `DEMO-PARTIAL` built from the seed equals the fixture of the Prolog tests).
   - Prolog (`ai-scheduling/run-tests.sh`, not run by the CI): `test/kb_ai01.plt` (fixtures and validation of aggregates and scenarios), `test/bom.plt` (demonstration scenarios, reference example, problems, warnings), `test/server.plt` (routes, validation, error mapping, token never exposed, concurrent requests).
   - httpyac: `backend/test-flows/bom-demo-test-flow.http` (four scenarios, live stock unchanged, 401, 403, 404, 400).

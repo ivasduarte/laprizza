@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `forecasts:write`) |
 | Success response | 201 Created, forecast DTO with `version` = highest version of the name + 1 |
 | Error handling | Same as [UC1](./create-forecast.md): 400 `BAD_REQUEST` (Joi), 400 `VALIDATION_ERROR` (business rules), 409 `CONFLICT` (concurrent save), 401/403 |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md) |
 
 ## Description
 

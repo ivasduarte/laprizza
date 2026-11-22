@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest): the account is not active yet |
 | Success response | 204 No Content (no session, no cookie) |
 | Error handling | 400 `VALIDATION_FAILED`, 400 `PASSWORD_POLICY_VIOLATION` (checked before the link is used), 400 `INVITATION_INVALID` (invalid, used, replaced or expired link, account not waiting for activation, or account that must be activated at its identity provider), 429 `RATE_LIMITED` |
-| ADRs | [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| ADRs | [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0052](../../adr/0052-account-activation-method-session-and-oidc-transaction.md) |
 
 ## Description
 

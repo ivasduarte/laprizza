@@ -4,7 +4,7 @@
 
 | Need | Without HTTPS |
 |---|---|
-| The refresh cookie (`lp_rt`) is `Secure` (ADR 0011/0032) | The browser drops it on `http://` (except `localhost`): every F5 or new tab ends the session |
+| The refresh cookie (`lp_rt`) is `Secure` (ADR 0012/0032) | The browser drops it on `http://` (except `localhost`): every F5 or new tab ends the session |
 | The SPA serializes token refreshes across tabs with Web Locks (`refresh-lock.js`) | Web Locks only exist in secure contexts: two tabs refreshing at once look like token reuse and the back end revokes the session |
 
 Turning `REFRESH_COOKIE_SECURE` off is **not** the fix: the cookie would travel in clear text.

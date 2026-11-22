@@ -2677,7 +2677,7 @@ const baseSpec = {
             type: 'string',
             format: 'uri-reference',
             description:
-              'Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0021). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).',
+              'Optional imported 3D model: absolute http(s) URL or root-relative path (ADR-0026). Protocol-relative (//) and other schemes are rejected. When absent, the element is created procedurally from its type (VIS03).',
             example: '/assets/models/conveyor.gltf',
           },
           position: { $ref: '#/components/schemas/Vector3' },
@@ -2689,7 +2689,7 @@ const baseSpec = {
       Material: {
         type: 'object',
         description:
-          'Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0021). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.',
+          'Textures and material properties of a 3D object (VIS04). Texture maps are absolute http(s) URLs or root-relative paths (ADR-0026). A textured material needs a colorMap and at least one of roughnessMap, bumpMap or normalMap.',
         additionalProperties: false,
         properties: {
           color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', example: '#c0c0c0' },

@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER, EMPLOYEE), required by the `/visualization3d` and `/kitchen-configurations` routes and by both endpoints |
 | Success response | 200 OK, the assembly line configuration `{ id, name, content: { dimensions, elements[] }, ... }`; the line is drawn at the placement of the kitchen |
 | Error handling | No active configuration: empty state, no scene (WEB06). Line not loaded (404, 403, network): the kitchen is drawn without the line and the viewer shows "This kitchen's assembly line could not be loaded and is not shown." with the reason; no other line is drawn in its place. Kitchen without `content.assemblyLine`: the kitchen is drawn without a line |
-| ADRs | [ADR-0031](../../adr/0031-assembly-line-referenced-by-kitchen.md), [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+| ADRs | [ADR-0042](../../adr/0042-assembly-line-referenced-by-kitchen.md), [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) |
 
 ## Description
 

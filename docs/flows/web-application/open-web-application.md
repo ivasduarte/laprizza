@@ -9,7 +9,7 @@
 | Allowed roles | Guest and any authenticated user, as the access rule of the page allows (WEB03) |
 | Success response | The page rendered inside the common layout with the data returned by the back end |
 | Error handling | Unknown path: "Page not found". Page not allowed: login (Guest) or "access denied" (WEB03). `401` on a data request: one refresh and one retry, then the login. Network failure, timeout or `5xx`: translated message and "Retry" (WEB04) |
-| ADRs | [ADR-0007](../../adr/0007-web-application-%28spa%29-technology-and-structure.md), [ADR-0009](../../adr/0009-generate-dynamic-http-client-with-orval.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| ADRs | [ADR-0007](../../adr/0007-web-application-%28spa%29-technology-and-structure.md), [ADR-0010](../../adr/0010-generate-dynamic-http-client-with-orval.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) |
 
 ## Description
 

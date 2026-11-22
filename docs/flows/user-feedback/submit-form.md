@@ -9,7 +9,7 @@
 | Allowed roles | The write permission of the form (example: `customers:write`, MANAGER); the form is only rendered with it (WEB03) |
 | Success response | 201 Created / 200 OK with the saved resource; the page shows a success toast ("Customer … created.") and the saved data |
 | Error handling | Client violations: shown on the fields, no request. 400 `details[{ field, type, message, limit? }]`: shown on the fields and in the summary. 409 (e-mail or phone already in use): shown on the field concerned. 404: feature text. Network, timeout, 5xx, 403: global toast ([UC4](./recover-from-failure.md)). In every failure the typed values are kept |
-| ADRs | [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md), [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
+| ADRs | [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md), [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
 
 ## Description
 

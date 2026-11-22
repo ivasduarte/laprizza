@@ -1,7 +1,7 @@
 /**
  * Material rules shared by every configuration that describes 3D objects
  * (kitchen and assembly line). VIS04: textures and material properties come from
- * the back end as JSON; asset references follow ADR-0021.
+ * the back end as JSON; asset references follow ADR-0026.
  */
 
 /** Texture maps a material can reference. */

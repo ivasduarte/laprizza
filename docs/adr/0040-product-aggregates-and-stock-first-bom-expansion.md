@@ -12,7 +12,7 @@ A pizza consumes components (for example a dough, a sauce, a cheese) in abstract
 
 ## Decision Drivers
 
-* The back end owns the classification and the composition; the Prolog service only reads them ([ADR-0039](./0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md)).
+* The back end owns the classification and the composition; the Prolog service only reads them ([ADR-0020](./0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md)).
 * No double counting between an aggregate and its ingredients.
 * Cycles and inconsistent compositions must be impossible or reported, never resolved silently.
 * Deterministic and explainable results, so that the demonstration scenarios have fixed expected values.

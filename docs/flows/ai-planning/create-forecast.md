@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `forecasts:write`) |
 | Success response | 201 Created, forecast DTO `{ id, name, version, startDate, endDate, entries[], isActive }` with the version assigned by the back end (1 for a new name) |
 | Error handling | 400 `BAD_REQUEST` (body rejected by Joi: missing field, date not `YYYY-MM-DD`, id not 24 hex, quantity not an integer ≥ 0), 400 `VALIDATION_ERROR` (business rules, every problem at once), 409 `CONFLICT` (the same version was saved by a concurrent request: try again), 401/403 (no valid token or no permission). Validation errors carry `details` `[{ field, type, message }]`. |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0005](../../adr/0005-contract-first-rest-api.md), [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md), [ADR-0004](../../adr/0004-contract-first-rest-api.md), [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) |
 
 ## Description
 

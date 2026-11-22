@@ -9,7 +9,7 @@
 | Allowed roles | Any authenticated user (`requireAuthenticated`) |
 | Success response | 200 OK `{ id, email, status, roles, permissions, customerId }`, `Cache-Control: no-store` |
 | Error handling | `401` (account disabled or deleted, session revoked, token expired and refresh refused): the session ends and the user goes to the login. Network or `503` failure: the current user is kept until the next attempt |
-| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| ADRs | [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md), [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) |
 
 ## Description
 

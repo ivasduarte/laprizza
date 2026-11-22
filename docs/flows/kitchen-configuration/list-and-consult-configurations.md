@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER, EMPLOYEE |
 | Success response | 200 OK |
 | Error handling | 400 (invalid id format), 401/403 (no valid token or role not allowed), 404 (not found) |
-| ADRs | [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) |
+| ADRs | [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) |
 
 ## Description
 

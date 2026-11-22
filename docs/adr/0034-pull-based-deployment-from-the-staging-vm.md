@@ -17,7 +17,7 @@ The obvious choice, a GitHub Actions workflow deploying to the VM, is not availa
 - Fully automated and repeatable, with a configurable schedule (SYS01).
 - Nothing from outside may connect to the VM (SYS02).
 - Work within the policy of the GitHub organization.
-- No deployment secrets stored in GitHub; the VM only needs read access to the repository ([ADR-0017](./0017-secrets-management-strategy.md)).
+- No deployment secrets stored in GitHub; the VM only needs read access to the repository ([ADR-0018](./0018-secrets-management-strategy.md)).
 - The deployment, its validation and its logs must be checkable on the VM.
 
 ## Considered Options
@@ -34,7 +34,7 @@ Chosen option: "The VM pulls the repository on a schedule and deploys itself", b
 
 - `laprizza-deploy.timer` starts `laprizza-deploy.service` every 30 minutes (`OnCalendar=*:0/30`, changed with `systemctl edit`). The service runs `laprizza-deploy.sh deploy` as the `deploy` account; administrators can also run it by hand, publish another branch (`DEPLOY_BRANCH`) or the same commit again (`FORCE=true`).
 - The script fetches the configured branch (`main`) and stops when the commit is already running, so nothing is restarted without a change. A lock (`flock`) allows only one run at a time.
-- A new commit is built and validated (`npm ci`, lint, tests of the test plan, database reachable, migrations), activated, and checked through `/health` and `/version`; an unhealthy release is rolled back automatically ([ADR-0049](./0049-release-directories-and-systemd-instead-of-containers.md)).
+- A new commit is built and validated (`npm ci`, lint, tests of the test plan, database reachable, migrations), activated, and checked through `/health` and `/version`; an unhealthy release is rolled back automatically ([ADR-0035](./0035-release-directories-and-systemd-instead-of-containers.md)).
 - Each run writes the logs of every step (including the full test output in `tests.log`) to `/var/log/laprizza/deploys/<timestamp>-<action>-<sha>/` and one line (`SUCCESS`, `FAILED`, `DB_UNAVAILABLE`, `FETCH_FAILED`, `ROLLED_BACK`, `ROLLBACK_FAILED`) to `history.log`. Any status other than `SUCCESS` ends the service with exit code 1.
 - GitHub is read with a **read-only deploy key** for this repository only, over SSH on port 443 (`ssh.github.com`).
 

@@ -69,7 +69,7 @@ flowchart LR
     G -. "issuer, subject, verified e-mail" .-> A
 ```
 
-- **Processed locally, no third parties.** The SPA, the API, the database, the order management (planned) and the AI module run on the infrastructure operated for LaPrizza, on the virtual machines of the DEI. No third party has access to the personal data. The e-mails go to a local SMTP server (Mailpit, [ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)) and the postal-code check runs locally.
+- **Processed locally, no third parties.** The SPA, the API, the database, the order management (planned) and the AI module run on the infrastructure operated for LaPrizza, on the virtual machines of the DEI. No third party has access to the personal data. The e-mails go to a local SMTP server (Mailpit, [ADR-0024](../adr/0024-e-mail-delivery-with-nodemailer-and-mailpit.md)) and the postal-code check runs locally.
 - **AI module.** The planning snapshot sent to the Prolog module contains products, stock, recipes and forecasts only: no names, contacts or dietary profiles (AI06).
 - **External sign-in, the only exception.** When a user chooses "Continue with Google/Microsoft", the provider only confirms the identity. LaPrizza receives the issuer, the subject and the verified e-mail, never the password.
 - **Security measures.** HTTPS; passwords hashed with argon2; tokens stored as hashes; permissions checked by the back end on every request (AA03, AA05); revocable sessions limited in time and inactivity (AA04); errors never return internal details; restricted network and SSH access ([SYS03](../sys-admin/allowed-endpoints/allowed-endpoints.md), [SYS05](../sys-admin/ssh-security.md)); backups with restricted access ([SYS08](../sys-admin/backup-strategy/backup-strategy.md)).
@@ -110,6 +110,6 @@ Informing the customers is not required when the data was made unintelligible (f
 
 ## Related
 
-- [ADR 0032 - Secure session handling](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)
+- [ADR 0043 - Secure session handling](../adr/0043-secure-session-handling-in-the-api-and-the-spa.md)
 - [Operational risk assessment](../sys-admin/operational-risk-assessment.md)
 - [HTTPS](../sys-admin/https.md)

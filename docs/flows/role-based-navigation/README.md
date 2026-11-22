@@ -68,7 +68,7 @@ A user with several roles sees the union of the sections of their roles. The but
 
 ## Business rules shown in the diagrams
 
-- **Permissions from the back end only.** `usePermissions` returns `user.permissions` of the session when authenticated, otherwise the Guest permissions; `useCan(permission)` answers whether one is granted ([ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md)). Nothing read from the browser storage can grant access: the session status only changes with an answer of the back end (login, refresh).
+- **Permissions from the back end only.** `usePermissions` returns `user.permissions` of the session when authenticated, otherwise the Guest permissions; `useCan(permission)` answers whether one is granted ([ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md)). Nothing read from the browser storage can grant access: the session status only changes with an answer of the back end (login, refresh).
 - **Loaded before the first page.** At start the Web Application restores the session with the refresh cookie (`POST /auth/refresh`, [Session Handling](../authentication/session-handling.md)) and loads the Guest permissions. Until the session is known, protected routes show "Loading" (`wait`), so a typed URL is never decided too early.
 - **Route guard.** `resolveGuard(status, { requiresAuth, allowed })`: `wait` while the session is unknown; `login` for a Guest on a page that needs a session or a permission the Guest does not have, keeping the requested page to return to after the login; `denied` for a session without the permission; `allow` otherwise. Only on `allow` is the page component loaded, so a refused page never sends its data requests.
 - **Generic "access denied".** Shown at the requested URL, inside the normal layout: title, "You do not have permission to open this page" and a link to the home page. It never names the permission, the role or anything of the page. Unknown URLs show "Page not found".
@@ -81,11 +81,11 @@ A user with several roles sees the union of the sections of their roles. The but
 | ADR | Decision | Status |
 |---|---|---|
 | [ADR-0007](../../adr/0007-web-application-%28spa%29-technology-and-structure.md) | Web Application (SPA) technology and structure | Accepted |
-| [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
-| [ADR-0029](../../adr/0029-frontend-end-to-end-%28e2e%29-testing-framework.md) | Frontend end-to-end (e2e) testing framework | Accepted |
-| [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
-| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
-| [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) | Permission-driven navigation in the Web Application | Accepted |
+| [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
+| [ADR-0036](../../adr/0036-frontend-end-to-end-%28e2e%29-testing-framework.md) | Frontend end-to-end (e2e) testing framework | Accepted |
+| [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization with a single role matrix | Accepted |
+| [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) | Permission-driven navigation in the Web Application | Accepted |
 
 ## Notation key
 
@@ -121,7 +121,7 @@ A user with several roles sees the union of the sections of their roles. The but
 ## Notes
 
 - The Web Application side is in `src/features/registry.js` (pages and their access rule), `src/features/navigation.js` (`visibleFeatures`), `src/shared/auth/guard.js` (`resolveGuard`), `src/shared/auth/require-auth.jsx` (route wrapper), `src/shared/auth/use-can.js` (`usePermissions`, `useCan`), `src/shared/auth/permissions.js`, `src/shared/auth/guest-permissions.js` (Guest store), `src/shared/auth/session-store.js` (`reloadUser`), `src/shared/api/index.js` (`onForbidden`, `onSessionExpired`), `src/shared/ui/access-denied.jsx`, `src/shared/ui/not-found.jsx` and `src/main.jsx` (start and `visibilitychange`).
-- All texts are in English and Portuguese, in `message.js` (`access.deniedTitle`, `access.deniedMessage`, `access.notFoundTitle`, `access.notFoundMessage`, `access.goHome`) ([ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
+- All texts are in English and Portuguese, in `message.js` (`access.deniedTitle`, `access.deniedMessage`, `access.notFoundTitle`, `access.notFoundMessage`, `access.goHome`) ([ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
 - Tests:
   - Unit tests with `node:test`: `test/features/navigation.test.js` (menu of each base role, of users with several roles and without roles), `test/features/registry-permissions.test.js` (every page classified, permission equal to its API routes), `test/features/no-role-names.test.js` (no role names in the components), `test/features/route-protection.test.js`, `test/features/app-routes.test.js`, `test/shared/auth/guard.test.js`, `test/shared/auth/guard-permissions.test.js`, `test/shared/auth/permissions.test.js`, `test/shared/auth/guest-permissions.test.js`, `test/shared/auth/auth-api-permissions.test.js`, `test/shared/auth/session-store-user.test.js` (`reloadUser`).
-  - End-to-end (Playwright, [ADR-0029](../../adr/0029-frontend-end-to-end-%28e2e%29-testing-framework.md)): `test/e2e/web03-role-navigation.spec.js` with a simulated back end: menu per persona (Guest, Customer, Employee, Manager, Manager + Employee, user without roles), typed URLs (`login`, `denied`, `allow`, and no data request when denied), return to the requested page after the login, generic access-denied page, not-found page, and a role removed while the page is open. `kitchen-configuration.spec.js` and `assembly-line-configuration.spec.js` check that an Employee gets "access denied".
+  - End-to-end (Playwright, [ADR-0036](../../adr/0036-frontend-end-to-end-%28e2e%29-testing-framework.md)): `test/e2e/web03-role-navigation.spec.js` with a simulated back end: menu per persona (Guest, Customer, Employee, Manager, Manager + Employee, user without roles), typed URLs (`login`, `denied`, `allow`, and no data request when denied), return to the requested page after the login, generic access-denied page, not-found page, and a role removed while the page is open. `kitchen-configuration.spec.js` and `assembly-line-configuration.spec.js` check that an Employee gets "access denied".

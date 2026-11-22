@@ -4,7 +4,7 @@ Requirement: a repeatable deployment pipeline for a system module in a controlle
 
 The deployed module is the **back end** (`backend/`, Node.js + Express). It runs on the staging VM `laprizza-backend` and uses the MongoDB server of the DEI (`10.9.22.16`). The same model was later reused for the front end (`deploy/laprizza-deploy-web.sh`) and for production (`DEPLOY_TAG`, see [production-environment.md](../production-environment.md)).
 
-Decisions: [ADR-0048 – Pull-Based Deployment from the Staging VM](../../adr/0048-pull-based-deployment-from-the-staging-vm.md) and [ADR-0049 – Release Directories and systemd instead of Containers](../../adr/0049-release-directories-and-systemd-instead-of-containers.md).
+Decisions: [ADR-0034 – Pull-Based Deployment from the Staging VM](../../adr/0034-pull-based-deployment-from-the-staging-vm.md) and [ADR-0035 – Release Directories and systemd instead of Containers](../../adr/0035-release-directories-and-systemd-instead-of-containers.md).
 
 ## Overview
 
@@ -127,7 +127,7 @@ The rollback switches `current`, restarts the API and runs the same health check
 - Secrets (`MONGODB_URI`, `JWT_SECRET`, `SEED_MANAGER_PASSWORD`, SMTP) exist only in `/opt/laprizza/.env` (`600`, owner `deploy`) and in the team password manager. The file is loaded by systemd (`EnvironmentFile=`) and never copied into a release.
 - `.env` files are ignored by Git; the repository only contains `backend/.env.example` and `deploy/deploy.conf.example` without values.
 - The pipeline never prints environment variables; migration and test logs contain no secrets.
-- GitHub access uses a **read-only deploy key** for this repository (`/home/deploy/.ssh/github_deploy`) over `ssh.github.com:443`, because the DEI network blocks outbound port 22. Self-hosted GitHub runners are disabled by the organization ([ADR-0048](../../adr/0048-pull-based-deployment-from-the-staging-vm.md)).
+- GitHub access uses a **read-only deploy key** for this repository (`/home/deploy/.ssh/github_deploy`) over `ssh.github.com:443`, because the DEI network blocks outbound port 22. Self-hosted GitHub runners are disabled by the organization ([ADR-0034](../../adr/0034-pull-based-deployment-from-the-staging-vm.md)).
 
 ## Evidence
 

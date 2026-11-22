@@ -9,7 +9,7 @@
 | Allowed roles | Any user |
 | Success response | The retried request answers 200 and the page shows the data |
 | Error handling | This use case is the error handling of the others: network failure, timeout (15 s reads, 30 s writes), 5xx, 403, 429, an expired access token |
-| ADRs | [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| ADRs | [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 

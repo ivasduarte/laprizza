@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER), who see the viewer on `/visualization3d` and `/kitchen-configurations` |
 | Success response | n/a (the light is drawn at its intensity, or at 0, from the next frame) |
 | Error handling | None: the checkbox only accepts on or off |
-| ADRs | [ADR-0038](../../adr/0038-lighting-controls-with-lil-gui.md), [ADR-0037](../../adr/0037-scene-lighting-setup.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) |
+| ADRs | [ADR-0045](../../adr/0045-lighting-controls-with-lil-gui.md), [ADR-0044](../../adr/0044-scene-lighting-setup.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) |
 
 ## Description
 

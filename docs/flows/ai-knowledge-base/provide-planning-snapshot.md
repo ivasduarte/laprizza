@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`) |
 | Success response | 200 OK, planning snapshot ([format](./snapshot-format.md)) |
 | Error handling | Back end: 401 (no valid token), 403 (no permission), 400 `BAD_REQUEST` (invalid query; nothing is read), 404 `AI_SCENARIO_NOT_FOUND`, 400 `SCENARIO_WITHOUT_STOCK`, 404 `FORECAST_NOT_FOUND` / `SUPPLIER_SCENARIO_NOT_FOUND`. As seen by a client of the Prolog service (pull): 401/403 of the back end as received, 404 `AI_SCENARIO_NOT_FOUND`, 422 `AI_INVALID_DATA` (other 400 of the back end), 503 `AI_DATA_UNAVAILABLE`, 504 `AI_DATA_TIMEOUT`. |
-| ADRs | [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0005](../../adr/0005-contract-first-rest-api.md), [ADR-0017](../../adr/0017-secrets-management-strategy.md) |
+| ADRs | [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0004](../../adr/0004-contract-first-rest-api.md), [ADR-0018](../../adr/0018-secrets-management-strategy.md) |
 
 ## Description
 

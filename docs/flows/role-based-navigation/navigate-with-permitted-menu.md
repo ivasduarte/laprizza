@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest) and any authenticated user |
 | Success response | Session user `{ id, email, status, roles, permissions, customerId }` with a new access token, or `401` without a session; `{ "permissions": [...] }` for the Guest |
 | Error handling | Refresh refused (no or invalid cookie): the visitor is a Guest. Guest permissions unavailable: an empty list, so only the public pages without a permission are shown |
-| ADRs | [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| ADRs | [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md), [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md), [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) |
 
 ## Description
 

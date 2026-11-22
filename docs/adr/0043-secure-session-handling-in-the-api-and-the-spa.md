@@ -8,11 +8,11 @@ Technical Story: [AA04] Secure Session Handling
 
 ## Context and Problem Statement
 
-[ADR 0011](./0011-implement-refresh-tokens-for-secure-sessions.md) introduced a short-lived access token, plus a rotating refresh token in an `HttpOnly` cookie, backed by the `AuthSession`collection. 
+[ADR 0012](./0012-implement-refresh-tokens-for-secure-sessions.md) introduced a short-lived access token, plus a rotating refresh token in an `HttpOnly` cookie, backed by the `AuthSession`collection. 
 
 AA04 asks for more than a valid token: the session must be checked on every protected operation; an ended session must never be reusable; nothing about the session may leak (URLs, messages, logs); and going back to a page after logout must not reveal protected information.
 
-After ADR 0011, the following gaps remained:
+After ADR 0012, the following gaps remained:
 
 - Only `/auth/*` and `/health` sent `Cache-Control: no-store`;
 - Two tabs refreshing at the same time could trigger the reuse detection and revoke a healthy session;
@@ -42,13 +42,13 @@ After ADR 0011, the following gaps remained:
 
 ## Considered Options
 
-* Keep the ADR 0011 model and close the gaps
+* Keep the ADR 0012 model and close the gaps
 * Replace it with opaque server-side sessions only
 * Add an idle timeout on top of the absolute expiry
 
 ## Decision Outcome
 
-Chosen option: "Keep the ADR 0011 model and close the gaps", because the model already revalidates the user and the session on every request, and the remaining problems are local and cheap to fix.
+Chosen option: "Keep the ADR 0012 model and close the gaps", because the model already revalidates the user and the session on every request, and the remaining problems are local and cheap to fix.
 
 ### Positive Consequences
 
@@ -58,14 +58,14 @@ Chosen option: "Keep the ADR 0011 model and close the gaps", because the model a
 
 ### Negative Consequences
 
-* `no-store` disables HTTP caching of API reads. Server-side caching is covered by [ADR 0015](./0015-introduce-redis-for-caching.md).
+* `no-store` disables HTTP caching of API reads. Server-side caching is covered by [ADR 0016](./0016-introduce-redis-for-caching.md).
 * Every protected request reads the user and the session from the database.
 * Web Locks and `BroadcastChannel` don't exist in old browsers or insecure contexts. The SPA degrades to the previous behaviour in that case.
 * A user who leaves the application open without any request for longer than the idle window must sign in again (no warning is shown before it ends).
 
 ## Pros and Cons of the Options
 
-### Keep the ADR 0011 model and close the gaps
+### Keep the ADR 0012 model and close the gaps
 
 * Good, because the changes are small, isolated and testable.
 * Good, because local and external authentication share `establishSession`, so they end in the same kind of session.
@@ -73,7 +73,7 @@ Chosen option: "Keep the ADR 0011 model and close the gaps", because the model a
 
 ### Replace it with opaque server-side sessions only
 
-(See [ADR 0011](./0011-implement-refresh-tokens-for-secure-sessions.md))
+(See [ADR 0012](./0012-implement-refresh-tokens-for-secure-sessions.md))
 
 * Good, because the browser guarantees one holder at a time across tabs, with no polling.
 * Bad, because it needs a secure context (HTTPS or `localhost`).

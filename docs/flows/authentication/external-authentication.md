@@ -11,7 +11,7 @@
 | Allowed roles | Public (no authentication) |
 | Success response | 302 to the SPA with `status=success` and the refresh cookie `lp_rt` |
 | Error handling | 404 `PROVIDER_NOT_FOUND` (login) and 302 to the SPA with `status=error&code=<CODE>` (callback) |
-| Decision records | [ADR 0053](../../adr/0053-external-authentication-with-openid-connect.md), [ADR 0054](../../adr/0054-external-identity-model-and-account-resolution.md), builds on [ADR 0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| Decision records | [ADR 0056](../../adr/0056-external-authentication-with-openid-connect.md), [ADR 0057](../../adr/0057-external-identity-model-and-account-resolution.md), builds on [ADR 0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md) and [ADR 0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 
@@ -24,7 +24,7 @@ When the ID token is valid, the back end identifies the user by `(issuer, sub)`:
 * **Known identity and account deactivated after activation, or disabled:** no session, `ACCOUNT_INACTIVE` or `ACCOUNT_DISABLED` (a login never reactivates it, AA03).
 * **Unknown identity with a verified e-mail that no user has:** an `active` account with the role `CUSTOMER` is created and linked to the identity, and the session is created (AA02 clarification). No invitation is sent. If the identity link fails, the new account is deleted, so the e-mail is never left blocked.
 * **Contact phone:** the providers do not supply it. While a `CUSTOMER` account has neither a phone nor a Customer record, the session user has `phoneRequired: true` and the customer permissions (`CUSTOMER_CONTACT_PERMISSIONS`, today `customers:read:own`) are withheld by the back end. The SPA sends the user to `/complete-profile`, which calls `PUT /auth/me/phone`.
-* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0054](../../adr/0054-external-identity-model-and-account-resolution.md)).
+* **Unknown identity whose e-mail belongs to another user:** refused (`ACCOUNT_LINK_REQUIRED`). There is no automatic linking by e-mail ([ADR 0057](../../adr/0057-external-identity-model-and-account-resolution.md)).
 
 A cancelled or failed login never creates a session. Logout is the existing `POST /auth/logout`.
 
@@ -274,13 +274,13 @@ The URL never carries provider messages, tokens or e-mail addresses.
 | `API_PUBLIC_URL` | none, required when a provider is enabled | Public origin of the API, without a path. Used to build the redirect URI | `https://` origin of the API |
 | `APP_BASE_URL` | `http://localhost:4200` | Base of the SPA. The callback redirects to `{APP_BASE_URL}/auth/callback` | Public URL of the SPA |
 | `OIDC_TRANSACTION_TTL_MINUTES` | `10` | Lifetime of the cookie `lp_oidc` | `10` |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Google OAuth client. Both or none | Secret from the secret store ([ADR 0017](../../adr/0017-secrets-management-strategy.md)) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Google OAuth client. Both or none | Secret from the secret store ([ADR 0018](../../adr/0018-secrets-management-strategy.md)) |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | empty (provider disabled) | Credentials of the Microsoft app registration. Both or none | Secret from the secret store |
 | `MICROSOFT_TENANT` | none, required when Microsoft is enabled | Tenant id, or `consumers`. `common` and `organizations` are refused | The tenant id |
 
 The application does not start if only one of the two credentials of a provider is set, if `API_PUBLIC_URL` is not an `https://` origin (only `localhost` may use `http://`), or if the Microsoft tenant is missing or `common`/`organizations`.
 
-The client secrets are secrets in the sense of ADR 0017: they never go to the repository, to the SPA or to the logs.
+The client secrets are secrets in the sense of ADR 0018: they never go to the repository, to the SPA or to the logs.
 
 ### Redirect URI
 
@@ -318,7 +318,7 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | E7 | Tokens or secrets in URLs, messages and logs | Only a closed list of codes in the URL. The session is restored by cookie. The security logger drops keys that look like secrets. The log of a failed exchange keeps only the error name, never its message. No e-mail in the events of this flow | `external-auth.controller.test.js`, `external-auth.service.test.js` | Events from `establishSession` follow the rules of AA04 |
 | E8 | Open redirect | The target of every redirect is built from configuration (`APP_BASE_URL`), never from a request value. The callback URL used for the exchange comes from `API_PUBLIC_URL`, not from the `Host` header | `external-auth.controller.test.js` | None identified |
 | E9 | Unknown or crafted provider name | Pattern `^[a-z]{2,20}$` and a lookup with `Object.hasOwn` in the configured providers (so `__proto__` is refused) | `external-auth.service.test.js` | None identified |
-| E10 | Abuse of the login endpoints | Per-IP rate limit on `/login` and `/callback` | `auth.routes.js` | In-memory limiter ([ADR 0008](../../adr/0008-implement-rate-limiting-policies.md)) |
+| E10 | Abuse of the login endpoints | Per-IP rate limit on `/login` and `/callback` | `auth.routes.js` | In-memory limiter ([ADR 0009](../../adr/0009-implement-rate-limiting-policies.md)) |
 | E11 | Provider outage or slow discovery | The failure ends in `AUTH_FAILED` and is not cached: the next login tries the discovery again. Local login is not affected | `oidc-client.js` | No timeout is configured for the provider requests beyond the library default |
 
 ## AA02 acceptance criteria
@@ -326,7 +326,7 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | Criterion | How it is met | Evidence |
 |---|---|---|
 | The user can choose an external provider in addition to local authentication | Buttons on the login page, from `GET /auth/external/providers`, shown only for enabled providers | `external-login-buttons.jsx`, flow 1.1 in `external-auth-test-flow.http` |
-| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0053](../../adr/0053-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
+| OpenID Connect with OAuth 2.0 | Authorization Code with PKCE, `state` and `nonce` ([ADR 0056](../../adr/0056-external-authentication-with-openid-connect.md)) | `oidc-client.js`, `oidc-transaction.test.js` |
 | The user is sent to the provider and returned to the application | `GET /login` redirects (302), `GET /callback` redirects to the SPA | `external-auth.controller.test.js`, flows 1.4 to 1.6 |
 | A verified identity exists before protected functionality is available | ID token validated by the library. The identity is `(issuer, sub)`. The session is only created after that validation; customer features also need the contact phone | `external-auth.service.test.js`, `external-identity.domain.test.js` |
 | (Clarification) The account is created active after a successful external login; a missing phone is asked before the customer features | `active` account and session on the first login; `phoneRequired` + `PUT /auth/me/phone`; `/complete-profile` in the SPA | `external-auth.service.test.js`, `auth.session-policy.test.js`, `guard.test.js` |
@@ -348,7 +348,7 @@ No new variable. The SPA uses `VITE_API_BASE_URL` to reach the API. The button l
 | Front end | `external-auth.test.js` | Login URL, callback parameters, texts in English and Portuguese, route not in the menu |
 | Flow | `external-auth-test-flow.http` | Provider list, unknown provider, cancelled login and missing cookie, without a provider account |
 
-The tests use `node:test` with its native `mock` ([ADR 0028](../../adr/0028-mock-based-unit-testing.md)). They do not contact a real provider: the OIDC client is replaced by a mock.
+The tests use `node:test` with its native `mock` ([ADR 0033](../../adr/0033-mock-based-unit-testing.md)). They do not contact a real provider: the OIDC client is replaced by a mock.
 
 ### Manual validation with the real providers
 

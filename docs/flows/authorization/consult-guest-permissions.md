@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest); listed in `PUBLIC_ENTRY_POINTS` |
 | Success response | 200 OK `{ "permissions": ["catalogue:read"] }`, `Cache-Control: public, max-age=300` |
 | Error handling | None specific (the answer does not depend on the request) |
-| ADRs | [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) |
+| ADRs | [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) |
 
 ## Description
 

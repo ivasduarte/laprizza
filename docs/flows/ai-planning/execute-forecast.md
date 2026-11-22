@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`) |
 | Success response | 200 OK, result of the AI Scheduling Module plus `runId`: `{ status: "ok", simulation: true, calculatedAt, scenario, inputs, plan, summary, requirements[], production[], purchases[], warnings[], runId }` |
 | Error handling | 400 `VALIDATION_ERROR` (body: `scenarioId` must match `^[A-Z0-9-]{1,64}$`, `stockMode` `live` or `scenario`, ids 24 hex), 400 `SCENARIO_WITHOUT_STOCK` (`stockMode: "scenario"` on an AI scenario without stock), 404 `AI_SCENARIO_NOT_FOUND`, 404 `FORECAST_NOT_FOUND` / `SUPPLIER_SCENARIO_NOT_FOUND` (unknown or inactive id), 422 `AI_INVALID_DATA` (the data needed is invalid or incomplete, `details.problems`, for example `MISSING_FORECAST`), 503 `AI_SERVICE_UNAVAILABLE` (`details.reason`: `not_configured`, `connection_failed`, `invalid_ai_response`, `service_auth_failed`, `ai_service_error`; header `Retry-After: 5`), 504 `AI_SERVICE_TIMEOUT`, 401/403 |
-| ADRs | [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md), [ADR-0036](../../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) |
+| ADRs | [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md), [ADR-0049](../../adr/0049-synchronous-ai-execution-with-duplicate-submission-guard.md) |
 
 ## Description
 

@@ -9,7 +9,7 @@
 | Allowed roles | The write permission of the action (example: `customers:write`, MANAGER); the button is only rendered with it (WEB03) |
 | Success response | 200 OK; the page shows a success toast ("Customer … deactivated.") and the updated data |
 | Error handling | Cancel or Esc: nothing is sent. 404 / 409: feature text next to the action. Network, timeout, 5xx, 403: global toast ([UC4](./recover-from-failure.md)) |
-| ADRs | [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| ADRs | [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
 
 ## Description
 
@@ -19,7 +19,7 @@ Actions with significant consequences ask for confirmation before the request is
 |---|---|---|
 | Deactivate a customer, an allergen, a product, a size, a component type, a predefined pizza, a category | Detail pages of WEB05 | "Deactivate the customer "…"? The data is kept and the customer can be reactivated later." |
 | Stock out | Stock adjust form | "Remove N unit(s) of "…"? Current stock: M." |
-| Stock movement of 1000 units or more (`UNUSUAL_CHANGE_UNITS`) | Stock adjust form | "The stock of "…" will change from X to Y units. This is far from a usual movement: please confirm the value." ([ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D5) |
+| Stock movement of 1000 units or more (`UNUSUAL_CHANGE_UNITS`) | Stock adjust form | "The stock of "…" will change from X to Y units. This is far from a usual movement: please confirm the value." ([ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D5) |
 | Delete a kitchen or assembly line configuration, deactivate a forecast or a supplier scenario | WEB06, WEB07 pages | Name of the item and the consequence |
 
 1. The page calls `useConfirm()` with the title, the message and its parameters, the label of the confirm button and `tone: "danger"`.

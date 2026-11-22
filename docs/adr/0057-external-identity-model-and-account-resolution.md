@@ -2,7 +2,7 @@
 
 * Status: accepted (revised 2026-11-21 by the AA02/AA07 clarification)
 * Deciders: Development Team
-* Date: 2026-11-21 (records the decisions taken when AA02 was implemented; previously cited as "ADR 0034", a number already used; renumbered from 0045, a number already used)
+* Date: 2026-11-21 (records the decisions taken when AA02 was implemented; previously cited as "ADR 0034", a number already used)
 
 Technical Story: [AA02] External Identity Provider Integration, [AA03] Internal Role Resolution
 
@@ -37,4 +37,4 @@ After a valid ID token, the back end must decide which internal account the iden
 ## Links
 
 * [External Authentication (AA02)](../flows/authentication/external-authentication.md)
-* [ADR 0042 - Account activation](./0042-account-activation-method-session-and-oidc-transaction.md)
+* [ADR 0052 - Account activation](./0052-account-activation-method-session-and-oidc-transaction.md)

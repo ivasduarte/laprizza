@@ -131,7 +131,7 @@ export async function activateConfiguration(id, kitchenRepo = defaultKitchenRepo
 export async function getActiveConfiguration(kitchenRepo = defaultKitchenRepo) {
   const activeConfig = await kitchenRepo.getActive();
 
-  // ADR-0025: Strict 404 No-Fallback policy
+  // ADR-0030: Strict 404 No-Fallback policy
   if (!activeConfig) {
     throw new AppError('No active kitchen configuration found.', 404);
   }

@@ -8,7 +8,7 @@ Technical Story: [VIS07] Perspective Camera Interaction
 
 ## Context and Problem Statement
 
-VIS07 asks the Manager to explore the kitchen with a perspective camera and the mouse: the initial target is the centre of the kitchen floor, left drag pans, right drag orbits around the target, the wheel dollies, all within reasonable limits and without jitter or excessive sensitivity. Until VIS06, the scene used the `OrbitControls` of `@react-three/drei` with the default mouse buttons (left orbits, right pans), fixed limits (minimum distance 2, polar angle just under 90°) and no pan limit. The kitchens have different sizes ([ADR-0020](./0020-strorage-model-of-kitchen-configurations.md)), so fixed limits fit some kitchens and not others. We must decide which controls to use, where the limits come from and how they are enforced.
+VIS07 asks the Manager to explore the kitchen with a perspective camera and the mouse: the initial target is the centre of the kitchen floor, left drag pans, right drag orbits around the target, the wheel dollies, all within reasonable limits and without jitter or excessive sensitivity. Until VIS06, the scene used the `OrbitControls` of `@react-three/drei` with the default mouse buttons (left orbits, right pans), fixed limits (minimum distance 2, polar angle just under 90°) and no pan limit. The kitchens have different sizes ([ADR-0025](./0025-strorage-model-of-kitchen-configurations.md)), so fixed limits fit some kitchens and not others. We must decide which controls to use, where the limits come from and how they are enforced.
 
 ## Decision Drivers
 
@@ -73,6 +73,6 @@ Chosen option: "Three.js `OrbitControls` in a component of our own, with limits 
 
 ## Links
 
-* [ADR-0030](./0030-adoption-of-r3f-for-3d-module-integration.md) - Adoption of R3F for 3D module integration
-* [ADR-0027](./0027-viewer-reload-mechanism-in-the-frontend.md) - Viewer reload mechanism: state-based React key reset
+* [ADR-0039](./0039-adoption-of-r3f-for-3d-module-integration.md) - Adoption of R3F for 3D module integration
+* [ADR-0032](./0032-viewer-reload-mechanism-in-the-frontend.md) - Viewer reload mechanism: state-based React key reset
 * [Three.js OrbitControls documentation](https://threejs.org/docs/#examples/en/controls/OrbitControls)

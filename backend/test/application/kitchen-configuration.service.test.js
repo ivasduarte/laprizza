@@ -67,7 +67,7 @@ test('validateConfigurationContent validates dry-run data', async () => {
   );
 });
 
-test('getActiveConfiguration throws 404 explicitly if no configuration is active (ADR-0025)', async (t) => {
+test('getActiveConfiguration throws 404 explicitly if no configuration is active (ADR-0030)', async (t) => {
   t.mock.method(mockRepo, 'getActive', async () => null);
 
   await assert.rejects(

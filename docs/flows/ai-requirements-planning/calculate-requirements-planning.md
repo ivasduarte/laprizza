@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`), with the `Authorization: Bearer` token forwarded by the AI Scheduling Module to the back end |
 | Success response | 200 OK, `{ status: "ok", simulation: true, calculatedAt, scenario, inputs, plan, summary, requirements[], production[], purchases[], warnings[] }` |
 | Error handling | 401 `TOKEN_MISSING`, 400 `VALIDATION_ERROR`, 401/403 of the back end (as received), 404 `AI_SCENARIO_NOT_FOUND`, 422 `AI_INVALID_DATA` (scenario without stock in scenario mode, invalid snapshot, no forecast, invalid forecast line or recipe, missing stock, invalid reference date), 503 `AI_DATA_UNAVAILABLE`, 504 `AI_DATA_TIMEOUT` |
-| ADRs | [ADR-0055](../../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md), [ADR-0052](../../adr/0052-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md) |
+| ADRs | [ADR-0058](../../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md), [ADR-0040](../../adr/0040-product-aggregates-and-stock-first-bom-expansion.md), [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md) |
 
 ## Description
 

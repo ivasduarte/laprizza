@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest): the account is not active yet |
 | Success response | 303 to the identity provider; after the sign-in, 302 to `/auth/callback?status=activated` (no session, no refresh cookie) |
 | Error handling | Always a redirect to the SPA with a public code: `INVITATION_INVALID` (malformed, unknown, used, replaced or expired link, or local account), `INVITATION_MISMATCH` (another identity), `ACCESS_DENIED` (cancelled at the provider), `AUTH_FAILED` (origin not allowed, provider disabled, failed code exchange, missing or tampered transaction) |
-| ADRs | [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| ADRs | [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0052](../../adr/0052-account-activation-method-session-and-oidc-transaction.md) |
 
 ## Description
 

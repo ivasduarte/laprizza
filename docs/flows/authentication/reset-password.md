@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest): the link proves control of the account |
 | Success response | 204 No Content (no session opened, refresh cookie cleared) |
 | Error handling | 400 `VALIDATION_FAILED` (malformed token, the value is never echoed), 400 `PASSWORD_POLICY_VIOLATION` (checked before the link is used), 400 `RESET_TOKEN_INVALID` (unknown, used, replaced or expired link, or account no longer active) |
-| ADRs | [ADR-0044](../../adr/0044-password-recovery-with-single-use-hashed-tokens.md), [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) |
+| ADRs | [ADR-0023](../../adr/0023-password-recovery-with-single-use-hashed-tokens.md), [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) |
 
 ## Description
 

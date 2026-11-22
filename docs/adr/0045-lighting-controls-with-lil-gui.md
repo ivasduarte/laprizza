@@ -8,7 +8,7 @@ Technical Story: [VIS06] Interactive Light Controls
 
 ## Context and Problem Statement
 
-VIS06 asks for a GUI, organised in one folder per light source, to switch each light on and off, change its colour and intensity and, for spotlights, its cutoff angle and penumbra, with the other controls of a light disabled while it is off. lil-gui (bundled with Three.js) is recommended. The scene is rendered with React Three Fiber ([ADR-0030](./0030-adoption-of-r3f-for-3d-module-integration.md)), so we must decide which GUI to use and how its values reach the lights.
+VIS06 asks for a GUI, organised in one folder per light source, to switch each light on and off, change its colour and intensity and, for spotlights, its cutoff angle and penumbra, with the other controls of a light disabled while it is off. lil-gui (bundled with Three.js) is recommended. The scene is rendered with React Three Fiber ([ADR-0039](./0039-adoption-of-r3f-for-3d-module-integration.md)), so we must decide which GUI to use and how its values reach the lights.
 
 ## Decision Drivers
 
@@ -41,7 +41,7 @@ Chosen option: "lil-gui with its own state, sending a copy to the scene state".
 
 ### Negative Consequences
 
-* The panel texts are fixed in English and are not translated ([ADR-0018](./0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
+* The panel texts are fixed in English and are not translated ([ADR-0019](./0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
 * The panel is created imperatively in a `useEffect`, outside the React tree.
 * The settings are lost when the viewer is remounted.
 

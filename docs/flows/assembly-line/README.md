@@ -1,6 +1,6 @@
 # Assembly Line - Design Diagrams (Mermaid)
 
-The automated pizza assembly line (VIS03) is drawn on one wall of the kitchen: a large counter, a rectangular receiving platform on the left fed by an overhead crust dispenser, a conveyor belt, robotic arms along the line and a wood-fired oven on the right. It is drawn by the **3D Visualization** module embedded in the **Web Application**, from an assembly line configuration read from the back end as JSON and referenced by the active kitchen configuration ([WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md), [ADR-0031](../../adr/0031-assembly-line-referenced-by-kitchen.md)). The textures and materials of its components are VIS04 ([Textures and Materials](../textures-and-materials/README.md)).
+The automated pizza assembly line (VIS03) is drawn on one wall of the kitchen: a large counter, a rectangular receiving platform on the left fed by an overhead crust dispenser, a conveyor belt, robotic arms along the line and a wood-fired oven on the right. It is drawn by the **3D Visualization** module embedded in the **Web Application**, from an assembly line configuration read from the back end as JSON and referenced by the active kitchen configuration ([WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md), [ADR-0042](../../adr/0042-assembly-line-referenced-by-kitchen.md)). The textures and materials of its components are VIS04 ([Textures and Materials](../textures-and-materials/README.md)).
 
 Process View (SAD), Level 3, documented as a C4 dynamic diagram of the **Web Application**, **3D Visualization** and **Back-end API** containers.
 
@@ -51,7 +51,7 @@ The line is a configuration of its own (`Assembly Line Configurations`), describ
 | `elements[].id` | Unique in the line; the viewer names the 3D group after it, so Sprint 3 can find each component |
 | `elements[].position`, `rotation`, `scale` | In the line frame (metres, degrees): x along the line from left to right, y up, z from the wall towards the kitchen; inside the line dimensions (x from `-width/2` to `width/2`, z from `0` to `length`, y from `0` to `height`) |
 | `elements[].material` | Required textured material ([VIS04](../textures-and-materials/README.md)) |
-| `elements[].modelReference` | Optional URL of an imported model (absolute `http(s)` URL or root-relative path, [ADR-0021](../../adr/0021-asset-references-strategy.md)); without it the component is procedural |
+| `elements[].modelReference` | Optional URL of an imported model (absolute `http(s)` URL or root-relative path, [ADR-0026](../../adr/0026-asset-references-strategy.md)); without it the component is procedural |
 
 The SPA proposes a new line with the VIS03 arrangement (`default-assembly-line.js`, the same content as the back-end fixture `valid-vis03-line.json`): a 9 m counter, the receiving platform and the overhead dispenser on the left, the conveyor belt along the counter, six robotic arms 1 m apart behind the belt (one per ingredient station) and the wood-fired oven on the right, every component with its own texture. The kitchen page places a new line against the back wall, centred.
 
@@ -91,12 +91,12 @@ Every model stands on y = 0 of its own origin, so its JSON position places its b
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0020](../../adr/0020-strorage-model-of-kitchen-configurations.md) | Storage model of kitchen configurations | Accepted |
-| [ADR-0021](../../adr/0021-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
-| [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no fallback policy | Accepted |
-| [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
-| [ADR-0031](../../adr/0031-assembly-line-referenced-by-kitchen.md) | Assembly line referenced by the kitchen | Accepted |
-| [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: positions inside the line and the kitchen) | Accepted |
+| [ADR-0025](../../adr/0025-strorage-model-of-kitchen-configurations.md) | Storage model of kitchen configurations | Accepted |
+| [ADR-0026](../../adr/0026-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
+| [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no fallback policy | Accepted |
+| [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
+| [ADR-0042](../../adr/0042-assembly-line-referenced-by-kitchen.md) | Assembly line referenced by the kitchen | Accepted |
+| [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: positions inside the line and the kitchen) | Accepted |
 
 ## Notation key
 

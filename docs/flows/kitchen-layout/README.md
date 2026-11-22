@@ -1,6 +1,6 @@
 # Kitchen Layout and Equipment - Design Diagrams (Mermaid)
 
-The kitchen layout (VIS02) is drawn by the **3D Visualization** module embedded in the **Web Application**, from the active kitchen configuration read from the back end as JSON ([WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md)): the floor with the kitchen dimensions, the four walls, and every equipment, furniture and tool element at its position, orientation and scale. No layout is embedded in the SPA, and when no configuration is active nothing is drawn in its place ([ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)). The assembly line placed in the kitchen is VIS03 ([Assembly Line](../assembly-line/README.md)), the textures and materials are VIS04 ([Textures and Materials](../textures-and-materials/README.md)) and the lighting is VIS05 ([Scene Lighting](../scene-lighting/README.md)).
+The kitchen layout (VIS02) is drawn by the **3D Visualization** module embedded in the **Web Application**, from the active kitchen configuration read from the back end as JSON ([WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md)): the floor with the kitchen dimensions, the four walls, and every equipment, furniture and tool element at its position, orientation and scale. No layout is embedded in the SPA, and when no configuration is active nothing is drawn in its place ([ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md)). The assembly line placed in the kitchen is VIS03 ([Assembly Line](../assembly-line/README.md)), the textures and materials are VIS04 ([Textures and Materials](../textures-and-materials/README.md)) and the lighting is VIS05 ([Scene Lighting](../scene-lighting/README.md)).
 
 Process View (SAD), Level 3, documented as a C4 dynamic diagram of the **Web Application**, **3D Visualization** and **Back-end API** containers.
 
@@ -53,7 +53,7 @@ The layout is the `content` of the kitchen configuration ([JSON Format](../kitch
 | `elements[].rotation` | Required | Degrees, converted to radians |
 | `elements[].scale` | Each axis greater than 0 and not larger than the kitchen (x ≤ width, y ≤ height, z ≤ length) | Size of the element in metres (models are built at unit size) |
 | `elements[].material` | Required, textured (VIS04) | Material of the whole element |
-| `elements[].modelReference` | Optional URL of an imported model ([ADR-0021](../../adr/0021-asset-references-strategy.md)) | Validated and stored, not drawn yet (see Notes) |
+| `elements[].modelReference` | Optional URL of an imported model ([ADR-0026](../../adr/0026-asset-references-strategy.md)) | Validated and stored, not drawn yet (see Notes) |
 
 ### Models by element
 
@@ -74,22 +74,22 @@ The `model` is checked before the type, so an element with a `model` is always d
 ## Business rules shown in the diagrams
 
 - **Everything from the back end as JSON.** Dimensions, positions, orientations, scales, furniture models and materials come from the active configuration; the SPA embeds no layout.
-- **The active configuration only.** The viewer draws the configuration activated in WEB06. Without an active configuration (404) it shows "No active kitchen configuration to display." and no scene, never a default layout ([ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)).
-- **Inside the kitchen.** The back end rejects positions outside the kitchen and sizes larger than it, so every element is drawn inside the walls ([ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D7).
+- **The active configuration only.** The viewer draws the configuration activated in WEB06. Without an active configuration (404) it shows "No active kitchen configuration to display." and no scene, never a default layout ([ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md)).
+- **Inside the kitchen.** The back end rejects positions outside the kitchen and sizes larger than it, so every element is drawn inside the walls ([ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D7).
 - **Real sizes.** A scale is a size in metres; furniture is built at that size, so legs, handles and boards keep their thickness.
-- **Reload after activation.** After a new configuration is activated, the viewer is remounted and reads the active configuration again ([ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md)).
+- **Reload after activation.** After a new configuration is activated, the viewer is remounted and reads the active configuration again ([ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md)).
 
 ## Related ADRs
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0020](../../adr/0020-strorage-model-of-kitchen-configurations.md) | Storage model of kitchen configurations | Accepted |
-| [ADR-0021](../../adr/0021-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
-| [ADR-0022](../../adr/0022-content-validation-strategy.md) | Content validation strategy (JSON Schema and domain rules) | Accepted |
-| [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no fallback policy | Accepted |
-| [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism in the frontend | Accepted |
-| [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
-| [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: positions and sizes inside the kitchen) | Accepted |
+| [ADR-0025](../../adr/0025-strorage-model-of-kitchen-configurations.md) | Storage model of kitchen configurations | Accepted |
+| [ADR-0026](../../adr/0026-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
+| [ADR-0027](../../adr/0027-content-validation-strategy.md) | Content validation strategy (JSON Schema and domain rules) | Accepted |
+| [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no fallback policy | Accepted |
+| [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism in the frontend | Accepted |
+| [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
+| [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: positions and sizes inside the kitchen) | Accepted |
 
 ## Notation key
 

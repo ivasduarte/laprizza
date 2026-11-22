@@ -43,7 +43,7 @@ Chosen option: "Nodemailer with Mailpit in every environment", because it delive
 ### Negative Consequences
 
 * Docker is needed to receive the e-mails locally.
-* Nothing is delivered to real mailboxes; a production deployment needs an SMTP provider, its credentials in the secrets management of [ADR 0017](./0017-secrets-management-strategy.md), and SPF/DKIM.
+* Nothing is delivered to real mailboxes; a production deployment needs an SMTP provider, its credentials in the secrets management of [ADR 0018](./0018-secrets-management-strategy.md), and SPF/DKIM.
 * Mailpit keeps the messages, including recovery links, until they are deleted; it must not be exposed outside the development machine.
 
 ## Pros and Cons of the Options

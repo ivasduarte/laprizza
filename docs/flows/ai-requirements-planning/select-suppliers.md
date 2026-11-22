@@ -9,7 +9,7 @@
 | Allowed callers | `POST /requirements` (Manager token, pull) and `POST /service/requirements` (`X-Api-Key`, push, [WEB07 UC9](../ai-planning/execute-forecast.md)) |
 | Success response | n/a (part of the 200 result of UC1): `purchases[]` and `summary` |
 | Error handling | No error of its own. A product without offers is `unavailable` with `unmet` reason `NO_SUPPLIER_OFFER`; capacity exhausted gives `partial` or `unavailable` with `INSUFFICIENT_SUPPLY`; without a supplier scenario every product is `unavailable` and the result has the warning `NO_SUPPLIER_SCENARIO` |
-| ADRs | [ADR-0055](../../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) |
+| ADRs | [ADR-0058](../../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md) |
 
 ## Description
 

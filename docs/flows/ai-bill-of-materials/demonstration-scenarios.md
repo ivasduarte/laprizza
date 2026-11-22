@@ -7,7 +7,7 @@ cd backend
 npm run seed:ai01-demo -- --confirm
 ```
 
-The seed writes nothing without `--confirm`, never overwrites a document that is not a demonstration document, and restores the demonstration data to the values below every time it runs. Running it again is how the scenarios and the real stock of the `[Demo]` products are reset ([ADR-0053](../../adr/0053-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md)). All the documents use fixed ids (`de01…`) and names with the prefix `[Demo] `.
+The seed writes nothing without `--confirm`, never overwrites a document that is not a demonstration document, and restores the demonstration data to the values below every time it runs. Running it again is how the scenarios and the real stock of the `[Demo]` products are reset ([ADR-0041](../../adr/0041-simulated-bom-scenarios-with-selectable-stock-and-a-resettable-demo-seed.md)). All the documents use fixed ids (`de01…`) and names with the prefix `[Demo] `.
 
 The main expected values below are checked automatically: against the seeded data by `backend/test-flows/bom-demo-test-flow.http`, and against the same data as fixtures by the Prolog tests (`ai-scheduling/test/bom.plt`, `ai-scheduling/fixtures/demo-*.json`). The integration test `ai01.integration.test.js` checks that the snapshot built from the seed matches the fixture. All quantities are in abstract stock units.
 

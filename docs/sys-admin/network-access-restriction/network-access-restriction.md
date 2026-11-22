@@ -4,7 +4,7 @@ Requirement: development and staging access restricted to the DEI internal netwo
 
 The restriction described here applies to the staging back-end VM `laprizza-backend` (`vs534`, `10.9.22.22`), which hosts the REST API; the staging front-end VM (`vs814`) reaches the API through it.
 
-Decisions: [ADR-0050 – Network Restriction at the nginx Reverse Proxy](../../adr/0050-network-restriction-at-the-nginx-reverse-proxy.md) and [ADR-0051 – SSH Restricted to Approved Networks with AllowUsers](../../adr/0051-ssh-restricted-to-approved-networks-with-allowusers.md).
+Decisions: [ADR-0037 – Network Restriction at the nginx Reverse Proxy](../../adr/0037-network-restriction-at-the-nginx-reverse-proxy.md) and [ADR-0038 – SSH Restricted to Approved Networks with AllowUsers](../../adr/0038-ssh-restricted-to-approved-networks-with-allowusers.md).
 
 ## Approved network contexts
 
@@ -123,8 +123,8 @@ The back-end nginx also replaced `X-Forwarded-For` with `$remote_addr`, which di
 The network rule only decides who may **reach** the API. Every request that passes it still goes through the application checks of Sprint 1/2:
 
 * protected endpoints require a valid access token (JWT) → `401 Unauthorized` without one;
-* the role and permission matrix (AA05, [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md)) → `403 Forbidden` for a role without the permission;
-* login lockout ([ADR-0043](../../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md)) and rate limits ([ADR-0008](../../adr/0008-implement-rate-limiting-policies.md)) use the real client address (`TRUST_PROXY`, see above).
+* the role and permission matrix (AA05, [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md)) → `403 Forbidden` for a role without the permission;
+* login lockout ([ADR-0022](../../adr/0022-local-login-without-account-enumeration-and-with-progressive-lockout.md)) and rate limits ([ADR-0009](../../adr/0009-implement-rate-limiting-policies.md)) use the real client address (`TRUST_PROXY`, see above).
 
 ## Operation
 

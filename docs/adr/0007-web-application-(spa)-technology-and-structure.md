@@ -43,4 +43,4 @@ Chosen option: "React with Vite and Feature-based Structure", because React is c
 
 ## Amendments
 
-* WEB03 ([ADR 0047](0047-permission-driven-navigation-in-the-web-application.md)): the navigation, the route guards and the action buttons are decided with the permissions returned by the back end (AA05), never with role names. Each page declares its access rule (`requiresAuth`, `permission`) in the feature registry, which feeds both the menu and the route guard.
+* WEB03 ([ADR 0054](0054-permission-driven-navigation-in-the-web-application.md)): the navigation, the route guards and the action buttons are decided with the permissions returned by the back end (AA05), never with role names. Each page declares its access rule (`requiresAuth`, `permission`) in the feature registry, which feeds both the menu and the route guard.

@@ -50,22 +50,22 @@ The use cases are described in the [Use Case Views](../../analysis/use-case-view
 | No answer | `network` | "Could not reach the server. Check your connection." | Toast |
 | Timeout (15 s reads, 30 s writes) | `timeout` | "The server took too long to respond." | Toast |
 
-A failed write without an answer (network or timeout) adds "The operation may have been completed. Check the current data before trying again." (`outcomeUnknown`). The texts are in English and Portuguese (`message.js`, [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
+A failed write without an answer (network or timeout) adds "The operation may have been completed. Check the current data before trying again." (`outcomeUnknown`). The texts are in English and Portuguese (`message.js`, [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md)).
 
 | Back-end component | Rule |
 |---|---|
 | `joiDetails` (`joi-details.js`) | Maps a Joi error to `details[{ field, type, message, limit? }]` with every violation (`abortEarly: false`); the submitted value is never copied (redacted from the message) |
-| `errorHandler` (`error-handler.js`) | One JSON format for every error; 5xx answers keep only the generic status text and never include `details` ([ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D4); `Retry-After` when the error carries it; malformed JSON is 400 `MALFORMED_JSON`; Mongoose validation and cast errors are 400 `VALIDATION_FAILED` with only the field paths |
+| `errorHandler` (`error-handler.js`) | One JSON format for every error; 5xx answers keep only the generic status text and never include `details` ([ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D4); `Retry-After` when the error carries it; malformed JSON is 400 `MALFORMED_JSON`; Mongoose validation and cast errors are 400 `VALIDATION_FAILED` with only the field paths |
 
 ## Business rules shown in the diagrams
 
-- **Validate twice, explain once.** Client rules (`validators.js`: `required`, `minLength`, `maxLength`, `email`, `pattern`, `integer`, `minValue`, `maxValue`, `portuguesePhone`, `personName`, `placeName`, `sameAs`) return the same `{ type, limit? }` as the API, so client and server errors share one translation path. The same patterns are used in Joi and in the SPA ([ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D6). The back end checks everything again.
+- **Validate twice, explain once.** Client rules (`validators.js`: `required`, `minLength`, `maxLength`, `email`, `pattern`, `integer`, `minValue`, `maxValue`, `portuguesePhone`, `personName`, `placeName`, `sameAs`) return the same `{ type, limit? }` as the API, so client and server errors share one translation path. The same patterns are used in Joi and in the SPA ([ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D6). The back end checks everything again.
 - **Errors on the fields.** Each violation is shown under its input (`FieldError`, bound with `aria-invalid` and `aria-describedby`) and in a summary at the top with links to the inputs (`FormErrors`); the focus moves to the first invalid input (`useFieldErrors`).
 - **Inputs are kept.** Form values live in the page component and are never cleared on failure; a failed operation is never shown as completed.
 - **One submission at a time.** `createSubmitGuard` is a synchronous lock, so two clicks in the same tick cannot both send; the button is disabled while `submitting`.
 - **Success is confirmed.** `useSubmit(..., { successKey })` shows a success toast; every toast closes after 3 s, paused while hovered or focused, and identical toasts are not stacked (at most 4).
 - **Confirmation before significant actions.** `useConfirm()` opens a native `<dialog>` with the consequence; Cancel has the initial focus and Esc cancels; only one dialog at a time.
-- **Loading is visible and stable.** Every request goes through one HTTP client that feeds a pending-request counter (`GlobalProgress`, shown after 0.15 s); pages and lists show a placeholder that keeps the room of the content ([ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D2).
+- **Loading is visible and stable.** Every request goes through one HTTP client that feeds a pending-request counter (`GlobalProgress`, shown after 0.15 s); pages and lists show a placeholder that keeps the room of the content ([ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D2).
 - **No internal details.** The UI translates errors by `kind` and `code`, never by the server text; details are only read for validation errors.
 - **Safe retry.** Lists offer "Try again" (not for a 400, which would fail the same way) and keep the last data under the error; a write that may have been executed is reported as such, and the list is refreshed before the user tries again.
 
@@ -73,11 +73,11 @@ A failed write without an answer (network or timeout) adds "The operation may ha
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation after the Sprint 2 review | Accepted |
-| [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
+| [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation after the Sprint 2 review | Accepted |
+| [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
 | [ADR-0007](../../adr/0007-web-application-%28spa%29-technology-and-structure.md) | Web Application (SPA) technology and structure | Accepted |
-| [ADR-0009](../../adr/0009-generate-dynamic-http-client-with-orval.md) | Generated HTTP client with Orval | Accepted |
-| [ADR-0029](../../adr/0029-frontend-end-to-end-%28e2e%29-testing-framework.md) | Frontend end-to-end (e2e) testing framework | Accepted |
+| [ADR-0010](../../adr/0010-generate-dynamic-http-client-with-orval.md) | Generated HTTP client with Orval | Accepted |
+| [ADR-0036](../../adr/0036-frontend-end-to-end-%28e2e%29-testing-framework.md) | Frontend end-to-end (e2e) testing framework | Accepted |
 
 ## Notation key
 
@@ -117,8 +117,8 @@ A failed write without an answer (network or timeout) adds "The operation may ha
 ## Notes
 
 - The shared modules are in `frontend/src/shared/forms`, `frontend/src/shared/feedback`, `frontend/src/shared/api` and `frontend/src/shared/ui/feedback`; `GlobalProgress`, `ToastRegion` and `ConfirmDialogHost` are mounted once in `ui/layout.jsx`.
-- Domain-specific feedback that uses these modules is documented with its feature: [Adjust Stock](../stock/adjust-stock.md) (stock limits and unusual movements, [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D5), [Kitchen Configuration JSON Format](../kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04) (JSON errors with their line, D8) and the AI pages of WEB07 (progress of an execution and duplicate-submission guard, [ADR-0036](../../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md)).
+- Domain-specific feedback that uses these modules is documented with its feature: [Adjust Stock](../stock/adjust-stock.md) (stock limits and unusual movements, [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D5), [Kitchen Configuration JSON Format](../kitchen-configuration/kitchen-configuration-json-format.md#errors-in-the-editor-web04) (JSON errors with their line, D8) and the AI pages of WEB07 (progress of an execution and duplicate-submission guard, [ADR-0049](../../adr/0049-synchronous-ai-execution-with-duplicate-submission-guard.md)).
 - Tests:
   - Front end (`node:test`): `test/shared/forms/submit-guard.test.js`, `validators.test.js`, `name-rules.test.js`; `test/shared/feedback/feedback-store.test.js`, `confirm-store.test.js`, `error-reporter.test.js`; `test/shared/api/error-normalizer.test.js`, `error-text.test.js`, `http-client.test.js`, `http-client-feedback.test.js`; `test/features/stock-rules.test.js`; `test/shared/json/json-locations.test.js`.
-  - End-to-end (Playwright, [ADR-0029](../../adr/0029-frontend-end-to-end-%28e2e%29-testing-framework.md)): `test/e2e/web04-feedback.spec.js`: empty required fields explained without a request, loading indicator and one request on submit, API field errors bound to the input with the typed value kept, a 500 shown as a generic toast without internal details, a connection failure that warns that the write may have happened and allows a safe retry, a success toast after an update, a failed list load with a safe retry, deletion only after confirmation (cancel sends nothing, Esc does not confirm).
+  - End-to-end (Playwright, [ADR-0036](../../adr/0036-frontend-end-to-end-%28e2e%29-testing-framework.md)): `test/e2e/web04-feedback.spec.js`: empty required fields explained without a request, loading indicator and one request on submit, API field errors bound to the input with the typed value kept, a 500 shown as a generic toast without internal details, a connection failure that warns that the write may have happened and allows a safe retry, a success toast after an update, a failed list load with a safe retry, deletion only after confirmation (cancel sends nothing, Esc does not confirm).
   - Back end: `test/middleware/error-handler.test.js`, `test/middleware/joi-details.test.js`, `test/api/api.validation-details.test.js`.

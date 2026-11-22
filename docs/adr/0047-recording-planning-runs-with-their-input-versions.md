@@ -33,7 +33,7 @@ Chosen option: "Store each successful result as a planning run with the versions
 
 ### Positive Consequences
 
-* A result can be consulted later with its inputs, even after those inputs were edited (new version) or deactivated ([ADR-0033](./0033-immutable-versioned-forecasts-and-supplier-scenarios.md)).
+* A result can be consulted later with its inputs, even after those inputs were edited (new version) or deactivated ([ADR-0046](./0046-immutable-versioned-forecasts-and-supplier-scenarios.md)).
 * The snapshot id and the BOM hash show whether two runs used the same data.
 
 ### Negative Consequences

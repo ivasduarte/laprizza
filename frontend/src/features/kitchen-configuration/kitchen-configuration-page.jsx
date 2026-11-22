@@ -94,13 +94,13 @@ export default function KitchenConfigurationPage() {
     });
     if (result.ok || result.error?.outcomeUnknown) await fetchConfigs();
     if (result.ok) {
-      // ADR-0027: remount the viewer, which fetches the new active configuration
+      // ADR-0032: remount the viewer, which fetches the new active configuration
       setViewerKey(Date.now());
     }
   };
 
   const handleFormSuccess = () => {
-    // ADR-0024/0027: an edit of the active configuration must reload the viewer
+    // ADR-0029/0027: an edit of the active configuration must reload the viewer
     if (editingConfig?.isActive) setViewerKey(Date.now());
     setIsFormOpen(false);
     setEditingConfig(null);
@@ -231,7 +231,7 @@ export default function KitchenConfigurationPage() {
             onChanged={() => setViewerKey(Date.now())}
           />
 
-          {/* Integration point for the VIS module - the React key reset applies ADR-0027 */}
+          {/* Integration point for the VIS module - the React key reset applies ADR-0032 */}
           <KitchenViewer key={viewerKey} />
         </>
       )}

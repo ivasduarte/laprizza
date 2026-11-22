@@ -9,7 +9,7 @@
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER, EMPLOYEE) |
 | Success response | n/a (every object is drawn with its textured material) |
 | Error handling | While a texture loads: the object is drawn with its plain material (colour and properties of the JSON). A texture that cannot be loaded: the plain material stays and a warning is written to the console; the rest of the scene is not affected. Invalid materials never reach the viewer: the back end refuses them when the configuration is saved |
-| ADRs | [ADR-0021](../../adr/0021-asset-references-strategy.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| ADRs | [ADR-0026](../../adr/0026-asset-references-strategy.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md), [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
 
 ## Description
 

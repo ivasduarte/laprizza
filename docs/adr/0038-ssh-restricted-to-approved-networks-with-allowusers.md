@@ -8,7 +8,7 @@ Technical Story: [SYS02] Institutional Network Access Restriction
 
 ## Context and Problem Statement
 
-Besides the API, the staging VM `laprizza-backend` is reached by the team over SSH, to administer it and to run deployments (SYS01). SYS02 requires that this access also be limited to the DEI internal network (`10.9.0.0/16`) or the ISEP VPN (`10.8.0.0/16`), and that refused attempts be logged. The nginx rule of [ADR-0050](./0050-network-restriction-at-the-nginx-reverse-proxy.md) does not cover SSH. A mistake in the SSH configuration can lock every administrator out of the VM, and the DEI console is the only way back.
+Besides the API, the staging VM `laprizza-backend` is reached by the team over SSH, to administer it and to run deployments (SYS01). SYS02 requires that this access also be limited to the DEI internal network (`10.9.0.0/16`) or the ISEP VPN (`10.8.0.0/16`), and that refused attempts be logged. The nginx rule of [ADR-0037](./0037-network-restriction-at-the-nginx-reverse-proxy.md) does not cover SSH. A mistake in the SSH configuration can lock every administrator out of the VM, and the DEI console is the only way back.
 
 ## Decision Drivers
 

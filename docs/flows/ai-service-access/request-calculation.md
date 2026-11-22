@@ -9,7 +9,7 @@
 | Allowed roles | The Back-End Application with `X-Api-Key: <AI_SERVICE_KEY>`; a client with the `Authorization: Bearer` token of a user with `planning:execute` (MANAGER). The service listens only on `127.0.0.1` |
 | Success response | 200 OK, the result of `bom_calculate/2` or `requirements_calculate/2` (`status: "ok"`, `simulation: true`, `scenario`, `inputs`, ...) |
 | Error handling | Push: 401 `SERVICE_UNAUTHORIZED`, 400 `VALIDATION_ERROR` (`request.*`, `snapshot`), 422 `AI_INVALID_DATA`. Pull: 401 `TOKEN_MISSING`, 400 `VALIDATION_ERROR`, 401/403 of the back end (as received), 404 `AI_SCENARIO_NOT_FOUND`, 422 `AI_INVALID_DATA`, 503 `AI_DATA_UNAVAILABLE`, 504 `AI_DATA_TIMEOUT`. Both: 404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED` |
-| ADRs | [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md), [ADR-0017](../../adr/0017-secrets-management-strategy.md) |
+| ADRs | [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md), [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md), [ADR-0018](../../adr/0018-secrets-management-strategy.md) |
 
 ## Description
 

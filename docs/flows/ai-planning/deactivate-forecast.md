@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `forecasts:write`) |
 | Success response | 200 OK, forecast DTO with `isActive: false` |
 | Error handling | 400 `BAD_REQUEST` (invalid id format, or a body other than `{ "isActive": false }`: "Only deactivation is supported: isActive must be false"), 404 `NOT_FOUND` "Forecast not found." (unknown or already inactive), 401/403 |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md) |
 
 ## Description
 

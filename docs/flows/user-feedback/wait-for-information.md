@@ -9,7 +9,7 @@
 | Allowed roles | The read permission of the page (example: `customers:read`, MANAGER) |
 | Success response | 200 OK with the data; the page shows the list, the empty state ("There are no customers yet.") or "No customer matches "…"." |
 | Error handling | Load failure: message with "Try again", the last data kept when a refresh fails ([UC4](./recover-from-failure.md)). Detail not found or invalid id: "This customer does not exist." with a link back to the list |
-| ADRs | [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) (D2), [ADR-0009](../../adr/0009-generate-dynamic-http-client-with-orval.md) |
+| ADRs | [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) (D2), [ADR-0010](../../adr/0010-generate-dynamic-http-client-with-orval.md) |
 
 ## Description
 

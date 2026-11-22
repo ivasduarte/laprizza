@@ -2,7 +2,7 @@
 
 * Status: accepted
 * Deciders: Development Team
-* Date: 2026-11-21 (records the decisions taken when AA02 was implemented; previously cited as "ADR 0033", a number already used; renumbered from 0044, a number already used)
+* Date: 2026-11-21 (records the decisions taken when AA02 was implemented; previously cited as "ADR 0033", a number already used)
 
 Technical Story: [AA02] External Identity Provider Integration
 
@@ -46,5 +46,5 @@ Chosen option: **(A)**.
 ## Links
 
 * [External Authentication (AA02)](../flows/authentication/external-authentication.md)
-* [ADR 0054 - External identity model and account resolution](./0054-external-identity-model-and-account-resolution.md)
-* [ADR 0032 - Secure session handling](./0032-secure-session-handling-in-the-api-and-the-spa.md)
+* [ADR 0057 - External identity model and account resolution](./0057-external-identity-model-and-account-resolution.md)
+* [ADR 0043 - Secure session handling](./0043-secure-session-handling-in-the-api-and-the-spa.md)

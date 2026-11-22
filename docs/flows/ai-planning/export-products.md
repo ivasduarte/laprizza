@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `planning:execute`) |
 | Success response | 200 OK `{ "exportedAt": "<ISO date>", "products": [{ id, name, kind, stockUnit, sellable, sellingPriceEur? }] }` |
 | Error handling | 401/403 (no valid token or no permission); no business errors |
-| ADRs | [ADR-0035](../../adr/0035-supplier-import-with-client-side-checks-and-server-dry-run.md) |
+| ADRs | [ADR-0048](../../adr/0048-supplier-import-with-client-side-checks-and-server-dry-run.md) |
 
 ## Description
 

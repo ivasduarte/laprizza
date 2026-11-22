@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest): the account is not active yet |
 | Success response | 200 OK `{ "method": "local" \| "external", "provider"?, "email": "<masked>", "expiresAt": "<ISO date>" }` |
 | Error handling | 400 `VALIDATION_FAILED` (malformed token, value never echoed), 400 `INVITATION_INVALID` (unknown, used, replaced or expired link, or account not waiting for activation), 429 `RATE_LIMITED` |
-| ADRs | [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0042](../../adr/0042-account-activation-method-session-and-oidc-transaction.md) |
+| ADRs | [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md), [ADR-0052](../../adr/0052-account-activation-method-session-and-oidc-transaction.md) |
 
 ## Description
 

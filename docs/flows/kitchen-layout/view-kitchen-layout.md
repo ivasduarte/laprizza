@@ -8,8 +8,8 @@
 | Endpoints | `GET /kitchen-configurations/active` ([WEB06 UC3](../kitchen-configuration/get-active-kitchen-configuration.md)) |
 | Allowed roles | Users with the `kitchen:read` permission (MANAGER, EMPLOYEE), required by the `/visualization3d` and `/kitchen-configurations` routes and by the endpoint |
 | Success response | 200 OK, `{ id, name, content: { dimensions, floor, elements[], assemblyLine? }, isActive: true }`; the kitchen is drawn and its name is shown ("Showing: …") |
-| Error handling | No active configuration (404) or the request fails: "No active kitchen configuration to display." and no scene; no other layout is drawn in its place ([ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)). An element without `position`, `rotation` or `scale` is skipped (the back end never stores one) |
-| ADRs | [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0020](../../adr/0020-strorage-model-of-kitchen-configurations.md), [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md), [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
+| Error handling | No active configuration (404) or the request fails: "No active kitchen configuration to display." and no scene; no other layout is drawn in its place ([ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md)). An element without `position`, `rotation` or `scale` is skipped (the back end never stores one) |
+| ADRs | [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md), [ADR-0025](../../adr/0025-strorage-model-of-kitchen-configurations.md), [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md), [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) |
 
 ## Description
 
@@ -24,7 +24,7 @@ The Manager (or an Employee) opens the 3D Visualization page or the Kitchen Conf
    - the assembly line of `content.assemblyLine` (VIS03, [View the Automated Assembly Line](../assembly-line/view-assembly-line.md)).
 4. Every element is a camera obstacle (VIS07) and casts and receives shadows under the scene lighting (VIS05). The viewer shows the name of the configuration above the scene.
 
-Every element is drawn inside the kitchen, because the back end rejects positions outside it and sizes larger than it when the configuration is saved (WEB06, [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D7). After another configuration is activated, the viewer is remounted and the flow starts again ([ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md)).
+Every element is drawn inside the kitchen, because the back end rejects positions outside it and sizes larger than it when the configuration is saved (WEB06, [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) D7). After another configuration is activated, the viewer is remounted and the flow starts again ([ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md)).
 
 ## Diagram
 

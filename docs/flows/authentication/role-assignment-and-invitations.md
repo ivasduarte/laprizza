@@ -11,7 +11,7 @@
 | Allowed roles | ADMINISTRATOR |
 | Success response | 200 OK, 201 Created |
 | Error handling | 400 (validation, password refused), 403 `FORBIDDEN`, `SELF_ROLE_CHANGE`, `ROLE_NOT_ASSIGNABLE`, 404, 409 `ACTIVATION_REQUIRED`, `ACCOUNT_ALREADY_ACTIVATED`, `ACCOUNT_DISABLED`, `EMAIL_MISSING`, duplicate e-mail, 503 (role change not recorded) |
-| Decision records | [ADR 0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md), builds on [Role Resolution (AA03)](./role-resolution.md) and [Session Handling (AA04)](./session-handling.md) |
+| Decision records | [ADR 0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md), builds on [Role Resolution (AA03)](./role-resolution.md) and [Session Handling (AA04)](./session-handling.md) |
 
 ## Description
 

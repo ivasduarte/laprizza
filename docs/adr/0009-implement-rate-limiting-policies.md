@@ -57,11 +57,11 @@ A Node.js library that implements basic rate-limiting directly within Express ro
 
 ## Amendments
 
-- AA01 ([ADR 0043](0043-local-login-without-account-enumeration-and-with-progressive-lockout.md), [ADR 0044](0044-password-recovery-with-single-use-hashed-tokens.md)): the policies applied to the authentication routes are:
+- AA01 ([ADR 0022](0022-local-login-without-account-enumeration-and-with-progressive-lockout.md), [ADR 0023](0023-password-recovery-with-single-use-hashed-tokens.md)): the policies applied to the authentication routes are:
 
   | Limiter  | Routes                                           | Limit per IP      | Counts                                                 | Variables                                                   |
   | -------- | ------------------------------------------------ | ----------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
   | `login`  | `POST /auth/login`, `POST /auth/password/change` | 10 per 15 minutes | Failed requests only; reset after a successful request | `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW_MINUTES`     |
   | `forgot` | `POST /auth/password/forgot`                     | 3 per 60 minutes  | Every request                                          | `FORGOT_RATE_LIMIT_MAX`, `FORGOT_RATE_LIMIT_WINDOW_MINUTES` |
 
-  A blocked request answers `429 RATE_LIMITED` with `Retry-After` and writes a `RATE_LIMITED` security event. `POST /auth/refresh` and the logout routes are not limited, so that a renewal is never counted as a login attempt. The client IP is read through `TRUST_PROXY`, and the limits are disabled with `RATE_LIMIT_ENABLED=false` (default in `NODE_ENV=test`, and in `test-flows/.env.flows` for the httpyac flows). The per-IP limit complements the progressive per-account lockout of ADR 0043, which is stored in the database and survives restarts.
+  A blocked request answers `429 RATE_LIMITED` with `Retry-After` and writes a `RATE_LIMITED` security event. `POST /auth/refresh` and the logout routes are not limited, so that a renewal is never counted as a login attempt. The client IP is read through `TRUST_PROXY`, and the limits are disabled with `RATE_LIMIT_ENABLED=false` (default in `NODE_ENV=test`, and in `test-flows/.env.flows` for the httpyac flows). The per-IP limit complements the progressive per-account lockout of ADR 0022, which is stored in the database and survives restarts.

@@ -64,7 +64,7 @@ All paths are under `/api/v2`, and `/api/v1` is a deprecated alias. Every route 
 | `GET /planning/runs[?kind&forecastId&supplierScenarioId]` | UC3 | `kind` `bom` or `requirements` | 200, summaries (100 most recent, without `result`) | 400 `VALIDATION_ERROR` |
 | `GET /planning/runs/{id}` | UC3 | - | 200, with `result` | 400 `BAD_REQUEST`, 404 `PLANNING_RUN_NOT_FOUND` |
 
-The OpenAPI description (`planning.openapi.js`, Swagger UI at `/api/v2/docs`, JSON at `/api/v2/openapi.json`) has the request and response examples of these routes ([ADR-0005](../../adr/0005-contract-first-rest-api.md)).
+The OpenAPI description (`planning.openapi.js`, Swagger UI at `/api/v2/docs`, JSON at `/api/v2/openapi.json`) has the request and response examples of these routes ([ADR-0004](../../adr/0004-contract-first-rest-api.md)).
 
 ### AI Scheduling Module
 
@@ -99,30 +99,30 @@ Most invalid input never leaves the browser: `validatePlanningInput` applies the
 | Back end (service identity) | `POST /service/{bom,requirements}` | `X-Api-Key: <AI_SERVICE_KEY>` | `service_key_ok/1` compares the key with the configured one. Without `AI_SERVICE_KEY` the routes are closed | 401 `SERVICE_UNAUTHORIZED`. The back end logs it and answers 503 `service_auth_failed`, because it is a configuration error and not a user error |
 | Direct client | `POST /bom`, `POST /requirements` | `Authorization: Bearer <token>` | The Prolog service forwards the token to `GET /ai-data/snapshot`, where the back end checks `planning:execute` | 401 `TOKEN_MISSING`. An Employee or Customer token gets the 403 of the back end |
 
-The user token never reaches the Prolog service in the push path, and the Prolog service never logs it in the pull path. The service key is a secret of both `.env` files ([ADR-0017](../../adr/0017-secrets-management-strategy.md)). The start-up warns when it is missing or shorter than 32 characters.
+The user token never reaches the Prolog service in the push path, and the Prolog service never logs it in the pull path. The service key is a secret of both `.env` files ([ADR-0018](../../adr/0018-secrets-management-strategy.md)). The start-up warns when it is missing or shorter than 32 characters.
 
 ## Business rules shown in the diagrams
 
 - **JSON and back-end identifiers.** Requests and results are JSON. A calculation uses only the identifiers of the snapshot: the AI scenario code (`scenarioId`, `^[A-Z0-9-]{1,64}$`) and the back-end ids of products, pizzas, sizes, forecasts and supplier scenarios. The result carries `scenario { id, name, version, stockMode }` and `inputs { snapshotId, sources }`, so each quantity can be traced to the data it came from. The only new id is the `runId` of the saved planning run.
-- **One request, one fresh snapshot.** The back end builds the snapshot for every calculation and sends it in the body (`{ request, snapshot }`). The Prolog service loads it, calculates and clears the knowledge base ([AI06 UC3](../ai-knowledge-base/refresh-per-calculation.md), [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md)).
+- **One request, one fresh snapshot.** The back end builds the snapshot for every calculation and sends it in the body (`{ request, snapshot }`). The Prolog service loads it, calculates and clears the knowledge base ([AI06 UC3](../ai-knowledge-base/refresh-per-calculation.md), [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md)).
 - **Validation in three places.** The SPA checks the form, the back end checks the body with Joi (400, nothing is read) and the snapshot query, and the Prolog service checks the request and the whole snapshot. Missing or invalid data answer 422 with every problem together, never a default.
 - **Warnings never block.** For example `PIZZA_STOCK_IGNORED` or `UNMEASURED_NON_STOCK_COMPONENT` in the BOM, and `NO_SUPPLIER_SCENARIO` in the requirements. They are returned in `warnings[]` next to a 200 result.
-- **Synchronous call with a timeout.** The back end waits up to `AI_SERVICE_TIMEOUT_SECONDS` (15 s by default) and then answers 504. The page sends one request per click (synchronous `useRef` lock) and shows a progress bar ([ADR-0036](../../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md)).
-- **No silent changes.** `bom.pl` and `requirements.pl` only read the facts: stock balances, production and purchases are results only, and `purchases[]` are suggestions. The only write of a calculation is the `PlanningRun` document, saved only after a successful calculation ([ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md)). A change to the stock is an explicit action of the user through the stock endpoints of the back end (BCK09). AI05 creates no purchase orders.
+- **Synchronous call with a timeout.** The back end waits up to `AI_SERVICE_TIMEOUT_SECONDS` (15 s by default) and then answers 504. The page sends one request per click (synchronous `useRef` lock) and shows a progress bar ([ADR-0049](../../adr/0049-synchronous-ai-execution-with-duplicate-submission-guard.md)).
+- **No silent changes.** `bom.pl` and `requirements.pl` only read the facts: stock balances, production and purchases are results only, and `purchases[]` are suggestions. The only write of a calculation is the `PlanningRun` document, saved only after a successful calculation ([ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md)). A change to the stock is an explicit action of the user through the stock endpoints of the back end (BCK09). AI05 creates no purchase orders.
 - **Service unavailable is explicit.** A refused connection, an invalid answer, a rejected key or a missing configuration become 503 `AI_SERVICE_UNAVAILABLE` with `details.reason` (`connection_failed`, `invalid_ai_response`, `service_auth_failed`, `not_configured`, `ai_service_error`) and `Retry-After: 5`. No run is saved.
 
 ## Related ADRs
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0005](../../adr/0005-contract-first-rest-api.md) | Contract-first REST API | Accepted |
-| [ADR-0014](../../adr/0014-api-uri-routing-versioning-strategy.md) | API URI versioning (`/api/v2`, `/api/v1` deprecated alias) | Accepted |
-| [ADR-0017](../../adr/0017-secrets-management-strategy.md) | Secrets management (`AI_SERVICE_KEY`) | Accepted |
-| [ADR-0028](../../adr/0028-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
-| [ADR-0034](../../adr/0034-recording-planning-runs-with-their-input-versions.md) | Recording planning runs with their input versions | Accepted |
-| [ADR-0036](../../adr/0036-synchronous-ai-execution-with-duplicate-submission-guard.md) | Synchronous AI execution with a duplicate-submission guard | Accepted |
-| [ADR-0039](../../adr/0039-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract (push with service key, pull with user token) | Accepted |
-| [ADR-0040](../../adr/0040-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
+| [ADR-0004](../../adr/0004-contract-first-rest-api.md) | Contract-first REST API | Accepted |
+| [ADR-0015](../../adr/0015-api-uri-routing-versioning-strategy.md) | API URI versioning (`/api/v2`, `/api/v1` deprecated alias) | Accepted |
+| [ADR-0018](../../adr/0018-secrets-management-strategy.md) | Secrets management (`AI_SERVICE_KEY`) | Accepted |
+| [ADR-0033](../../adr/0033-mock-based-unit-testing.md) | Mock-based unit testing with `node:test` | Accepted |
+| [ADR-0047](../../adr/0047-recording-planning-runs-with-their-input-versions.md) | Recording planning runs with their input versions | Accepted |
+| [ADR-0049](../../adr/0049-synchronous-ai-execution-with-duplicate-submission-guard.md) | Synchronous AI execution with a duplicate-submission guard | Accepted |
+| [ADR-0020](../../adr/0020-planning-snapshot-as-the-data-contract-with-the-ai-service.md) | Planning snapshot as the data contract (push with service key, pull with user token) | Accepted |
+| [ADR-0021](../../adr/0021-knowledge-base-loaded-per-calculation.md) | Knowledge base loaded per calculation | Accepted |
 
 ## Notation key
 
@@ -168,7 +168,7 @@ The user token never reaches the Prolog service in the push path, and the Prolog
 - **Saved BOM runs.** `POST /planning/bom` saves a run with `kind: "bom"`. The Results tab of the page lists the requirements runs, and the BOM runs are available through `GET /planning/runs?kind=bom`.
 - **Demonstration in the common solution.** With the back end, the Prolog service and the AI01 demo seed (`npm run seed:ai01-demo -- --confirm`), the Manager opens `/ai` → Execution, chooses "Bill of Materials", `DEMO-PARTIAL` and "Scenario stock", and executes. The result shows the shortage of mozzarella and the production of dough. A Requirements execution is in [WEB07 UC9](../ai-planning/execute-forecast.md).
 - Tests:
-  - Back end ([ADR-0028](../../adr/0028-mock-based-unit-testing.md)): `test/planning/planning.service.test.js` (snapshot then calculation, errors propagated, no run on failure), `test/planning/ai-service.client.test.js` (service key, 422, 503 reasons, 504, `Retry-After`), `test/api/api.planning-runs.test.js` (an execution recorded with its versions, validations, 404 and RBAC of the runs) and `api.authorization-matrix.test.js` (`POST /planning/bom` and `/planning/requirements` are MANAGER only).
+  - Back end ([ADR-0033](../../adr/0033-mock-based-unit-testing.md)): `test/planning/planning.service.test.js` (snapshot then calculation, errors propagated, no run on failure), `test/planning/ai-service.client.test.js` (service key, 422, 503 reasons, 504, `Retry-After`), `test/api/api.planning-runs.test.js` (an execution recorded with its versions, validations, 404 and RBAC of the runs) and `api.authorization-matrix.test.js` (`POST /planning/bom` and `/planning/requirements` are MANAGER only).
   - Prolog (`ai-scheduling/run-tests.sh`): `test/service.plt` (service routes: key missing, wrong or a user token is 401; routes closed without a configured key; 400 with prefixed fields; malformed JSON; 422; 405), `test/server.plt`, `test/bom.plt`, `test/requirements.plt`.
   - SPA: `frontend/test/ai/planning-errors.test.js` (the four outcomes) and `frontend/test/e2e/web07-ai.spec.js`.
   - httpyac flows: `backend/test-flows/bom-demo-test-flow.http` (pull path: four demo scenarios, live stock unchanged, 401 without a token, 403 for an Employee, 404 unknown scenario, 400 invalid body) and `planning-test-flow.http` (push path through `/planning/requirements`, stock unchanged).

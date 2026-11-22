@@ -2,7 +2,7 @@
 
 * Status: accepted
 * Deciders: Development Team
-* Date: 2026-11-21 (renumbered from 0043, a number already used)
+* Date: 2026-11-21
 
 Technical Story: [WEB02] Consistent Layout and Navigation, [WEB03] Role-Based Navigation, [WEB04] User Feedback and Validation, [VIS04] Textures
 

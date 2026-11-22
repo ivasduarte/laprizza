@@ -9,7 +9,7 @@
 | Allowed roles | Those with the permission of the page ([page registry](./README.md#page-registry)) |
 | Success response | The page with its data |
 | Error handling | Guest: login page, then back to the requested page. Session without the permission: "access denied" at the same URL (UC3), no data request. Unknown path: "page not found". The API answers `401`/`403` anyway if a request is sent (AA05) |
-| ADRs | [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md), [ADR-0047](../../adr/0047-permission-driven-navigation-in-the-web-application.md) |
+| ADRs | [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md), [ADR-0054](../../adr/0054-permission-driven-navigation-in-the-web-application.md) |
 
 ## Description
 

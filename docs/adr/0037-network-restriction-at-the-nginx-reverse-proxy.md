@@ -8,7 +8,7 @@ Technical Story: [SYS02] Institutional Network Access Restriction
 
 ## Context and Problem Statement
 
-The staging back end runs on the DEI virtual server `laprizza-backend` (`10.9.22.22`), deployed by SYS01 ([ADR-0048](./0048-pull-based-deployment-from-the-staging-vm.md), [ADR-0049](./0049-release-directories-and-systemd-instead-of-containers.md)). SYS02 requires that access to development and staging be limited to the DEI internal network or the ISEP VPN, with host or proxy rules; that access from any other network be denied **and logged**; and that the application's authentication and role checks stay active.
+The staging back end runs on the DEI virtual server `laprizza-backend` (`10.9.22.22`), deployed by SYS01 ([ADR-0034](./0034-pull-based-deployment-from-the-staging-vm.md), [ADR-0035](./0035-release-directories-and-systemd-instead-of-containers.md)). SYS02 requires that access to development and staging be limited to the DEI internal network or the ISEP VPN, with host or proxy rules; that access from any other network be denied **and logged**; and that the application's authentication and role checks stay active.
 
 The approved networks are the ISEP VPN (`10.8.0.0/16`) and the DEI internal network (`10.9.0.0/16`). The VM is an unprivileged LXD container created from a DEI template, so the team does not control the host's packet filter. Where should the HTTP rule be enforced?
 
@@ -36,7 +36,7 @@ Chosen option: "nginx reverse proxy with `allow`/`deny` rules, API bound to `127
 * The site includes `/etc/laprizza/allowed-endpoints.conf`: `allow 127.0.0.1; allow ::1; allow 10.8.0.0/16; allow 10.9.0.0/16; deny all;`. A refused client gets `403 Forbidden`, and nginx writes `access forbidden by rule, client: <address>` to `/var/log/nginx/laprizza.error.log`.
 * The API listens only on `127.0.0.1` (`HOST=127.0.0.1`), so it cannot be called without going through nginx.
 * `TRUST_PROXY=loopback,10.9.23.46`: Express accepts `X-Forwarded-For` only from the local nginx and the staging front-end VM (whose nginx forwards `/api/` to this nginx), so it gets the real client address and a client cannot forge it.
-* Authentication (JWT) and the permission matrix ([ADR-0046](./0046-permission-based-authorization-matrix.md)) are not changed.
+* Authentication (JWT) and the permission matrix ([ADR-0053](./0053-permission-based-authorization-matrix.md)) are not changed.
 * The rules file is separate from the site, so the list of networks can be maintained on its own (SYS03 now generates it from `/etc/laprizza/allowed-clients.conf`).
 
 ### Positive Consequences
@@ -48,7 +48,7 @@ Chosen option: "nginx reverse proxy with `allow`/`deny` rules, API bound to `127
 
 ### Negative Consequences
 
-* Only HTTP through nginx is covered; SSH needs its own rule ([ADR-0051](./0051-ssh-restricted-to-approved-networks-with-allowusers.md)).
+* Only HTTP through nginx is covered; SSH needs its own rule ([ADR-0038](./0038-ssh-restricted-to-approved-networks-with-allowusers.md)).
 * A wrong `TRUST_PROXY` value would make every client appear as one address or let clients forge their address; it lists the trusted proxies and must be updated if the front-end VM changes address.
 * `10.9.0.0/16` includes every DEI virtual server, not only the team's.
 

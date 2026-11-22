@@ -55,7 +55,7 @@ flowchart LR
 | `NODE_ENV` | development/staging | `production` (the dev-users seed refuses to run) |
 | Swagger UI | Available | Blocked by nginx (404) |
 | Versions | Ubuntu 24.04, Node 24.22.2, nginx 1.24.0, MongoDB 9.0.4, mongosh 2.14.1 | Same versions, held with `apt-mark hold`; SWI-Prolog 9.x from Ubuntu (staging has none: the Prolog service runs locally) |
-| E-mail | Mailpit (Docker) | Mailpit as a systemd service on `127.0.0.1` (`laprizza-mailpit.service`): no e-mail leaves the VM; read through an SSH tunnel ([ADR-0045](../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md)) |
+| E-mail | Mailpit (Docker) | Mailpit as a systemd service on `127.0.0.1` (`laprizza-mailpit.service`): no e-mail leaves the VM; read through an SSH tunnel ([ADR-0024](../adr/0024-e-mail-delivery-with-nodemailer-and-mailpit.md)) |
 
 Files: `deploy/production/` (nginx site, systemd units, configuration examples and scripts). The deploy scripts are the same as staging (`deploy/laprizza-deploy.sh`, `deploy/laprizza-deploy-web.sh`); they now also accept `DEPLOY_TAG`.
 
@@ -94,7 +94,7 @@ nc -zv -w 5 10.9.22.16 27017      # the production database server must answer
 
 ### 2. MongoDB (database on the staging server)
 
-Run from `vs944` with the MongoDB administrator account of `10.9.22.16` (the team keeps its credentials as secrets, ADR 0017). mongosh asks for the administrator password and then for the new password of `laprizza_prod_app`:
+Run from `vs944` with the MongoDB administrator account of `10.9.22.16` (the team keeps its credentials as secrets, ADR 0018). mongosh asks for the administrator password and then for the new password of `laprizza_prod_app`:
 
 ```bash
 mongosh "mongodb://<admin user>@10.9.22.16:27017/admin" --quiet --eval '

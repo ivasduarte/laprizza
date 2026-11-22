@@ -8,7 +8,7 @@ Technical Story: [SYS01] Automated Deployment and Validation
 
 ## Context and Problem Statement
 
-The pipeline of [ADR-0048](./0048-pull-based-deployment-from-the-staging-vm.md) needs a deployment unit: something that holds one version of the back end, can be activated atomically and can be replaced by the previous version when the new one is unhealthy. The first plan was a Docker image per commit run with Docker Compose.
+The pipeline of [ADR-0034](./0034-pull-based-deployment-from-the-staging-vm.md) needs a deployment unit: something that holds one version of the back end, can be activated atomically and can be replaced by the previous version when the new one is unhealthy. The first plan was a Docker image per commit run with Docker Compose.
 
 The staging VM was created from the DEI template "Ubuntu 24.04 LTS – base system", which is an LXD container. Docker installs, but cannot start containers there, because the container does not allow the overlay file system:
 
@@ -22,7 +22,7 @@ A QEMU/KVM virtual server would run Docker, but costs twice as much of the team'
 
 * Each version built from an exact commit, with locked dependencies (reproducible).
 * Atomic activation and a rollback in seconds.
-* Run as an unprivileged account, with the secrets outside the code ([ADR-0017](./0017-secrets-management-strategy.md)).
+* Run as an unprivileged account, with the secrets outside the code ([ADR-0018](./0018-secrets-management-strategy.md)).
 * Work on the existing LXD container, without a new VM or more quota.
 
 ## Considered Options

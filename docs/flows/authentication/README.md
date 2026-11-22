@@ -56,15 +56,15 @@ Process View (SAD), Level 3, documented as C4 dynamic diagrams. The BCK01 diagra
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0004](../../adr/0004-authentication-and-authorization.md) | Authentication and authorization | Accepted, amended |
-| [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md) | Rate limiting policies (`login` and `forgot` limiters) | Accepted, amended |
-| [ADR-0011](../../adr/0011-implement-refresh-tokens-for-secure-sessions.md) | Refresh tokens for secure sessions | Accepted |
-| [ADR-0032](../../adr/0032-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
-| [ADR-0043](../../adr/0043-local-login-without-account-enumeration-and-with-progressive-lockout.md) | Local login without account enumeration and with progressive lockout | Accepted |
-| [ADR-0044](../../adr/0044-password-recovery-with-single-use-hashed-tokens.md) | Password recovery with single-use hashed tokens | Accepted |
-| [ADR-0045](../../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md) | E-mail delivery with Nodemailer and Mailpit | Accepted |
-| [ADR-0041](../../adr/0041-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations (AA06) | Accepted |
-| [ADR-0046](../../adr/0046-permission-based-authorization-matrix.md) | Permission-based authorization matrix (AA05; roles resolved per request, AA03) | Accepted |
+| [ADR-0003](../../adr/0003-authentication-and-authorization.md) | Authentication and authorization | Accepted, amended |
+| [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md) | Rate limiting policies (`login` and `forgot` limiters) | Accepted, amended |
+| [ADR-0012](../../adr/0012-implement-refresh-tokens-for-secure-sessions.md) | Refresh tokens for secure sessions | Accepted |
+| [ADR-0043](../../adr/0043-secure-session-handling-in-the-api-and-the-spa.md) | Secure session handling in the API and the SPA | Accepted |
+| [ADR-0022](../../adr/0022-local-login-without-account-enumeration-and-with-progressive-lockout.md) | Local login without account enumeration and with progressive lockout | Accepted |
+| [ADR-0023](../../adr/0023-password-recovery-with-single-use-hashed-tokens.md) | Password recovery with single-use hashed tokens | Accepted |
+| [ADR-0024](../../adr/0024-e-mail-delivery-with-nodemailer-and-mailpit.md) | E-mail delivery with Nodemailer and Mailpit | Accepted |
+| [ADR-0051](../../adr/0051-administrator-role-role-change-records-and-activation-invitations.md) | Administrator role, role change records and activation invitations (AA06) | Accepted |
+| [ADR-0053](../../adr/0053-permission-based-authorization-matrix.md) | Permission-based authorization matrix (AA05; roles resolved per request, AA03) | Accepted |
 
 ## Notation key
 

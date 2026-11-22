@@ -24,7 +24,7 @@ Supplier data is prepared outside the system, by hand or with an LLM, as a JSON 
 
 ## Decision Outcome
 
-Chosen option: "Check in the browser, then a server dry-run, then save on confirmation", in line with [ADR-0026](./0026-import-approach.md) (file read in the browser and sent as JSON).
+Chosen option: "Check in the browser, then a server dry-run, then save on confirmation", in line with [ADR-0031](./0031-import-approach.md) (file read in the browser and sent as JSON).
 
 * **Inspect** parses the text (`parseSupplierJson`, syntax error with line and column), builds the body (`toScenarioPayload`) and runs `validateScenarioStructure`, with the same field paths and types as the Joi schema. Product references are left to the server.
 * It then calls `POST /supplier-scenarios/validate`, which runs the same Joi schema and business rules as the save, stores nothing and returns `{ valid: true, nextVersion }`. The page shows the preview and "Nothing has been saved yet."

@@ -83,9 +83,9 @@ The browser context menu is disabled on the canvas, so the right button only orb
 - **No camera inside objects:** after the pan limit, `isCameraPositionAllowed` checks the camera against the obstacle boxes and the minimum height. If the move is not allowed, the last allowed position and target are restored. The obstacle boxes are the objects marked with `userData.cameraBlocker` (kitchen elements and assembly line components), recomputed at most every 500 ms because models can load late. The walls are not obstacles: the kitchen is seen from outside, like a dollhouse.
 - **Responsive and smooth:** damping 0.08 with one `update()` per frame (`useFrame` with priority −1, so R3F keeps rendering the scene), and speeds below the `OrbitControls` defaults for rotation and pan.
 - **Reset view:** the button moves the camera to the initial view after flushing the pending inertia (one `update()` without damping), so it stops exactly there, and records it as the last allowed position.
-- **Active configuration changes:** the setup is memoised on the dimensions; when they change, the controls are rebuilt and the view starts again from the floor centre. An activation on the Kitchen Configuration page also remounts the viewer ([ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md)).
+- **Active configuration changes:** the setup is memoised on the dimensions; when they change, the controls are rebuilt and the view starts again from the floor centre. An activation on the Kitchen Configuration page also remounts the viewer ([ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md)).
 - **Clean-up:** on unmount, the `change` and `contextmenu` listeners are removed and `controls.dispose()` is called; R3F disposes the renderer and stops the frame loop. React `StrictMode` mounts the component twice in development: the controls are created inside the effect, so the first instance is disposed before the second one is created.
-- **No active configuration:** `KitchenViewer` shows "No active kitchen configuration to display." and no scene or camera is created (WEB06, [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md)).
+- **No active configuration:** `KitchenViewer` shows "No active kitchen configuration to display." and no scene or camera is created (WEB06, [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md)).
 - **Access:** the viewer is shown on `/visualization3d` and `/kitchen-configurations`, which both require the `kitchen:read` permission (Manager).
 - **No persistence:** the camera position is kept only in memory and no endpoint is called.
 
@@ -93,11 +93,11 @@ The browser context menu is disabled on the canvas, so the right button only orb
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0054](../../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md) | Perspective camera controls with the Three.js `OrbitControls` and limits derived from the kitchen | Accepted |
-| [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) | Adoption of R3F for 3D module integration | Accepted |
-| [ADR-0025](../../adr/0025-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no-fallback policy | Accepted |
-| [ADR-0027](../../adr/0027-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism: state-based React key reset | Accepted |
-| [ADR-0018](../../adr/0018-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
+| [ADR-0050](../../adr/0050-perspective-camera-controls-with-limits-derived-from-the-kitchen.md) | Perspective camera controls with the Three.js `OrbitControls` and limits derived from the kitchen | Accepted |
+| [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) | Adoption of R3F for 3D module integration | Accepted |
+| [ADR-0030](../../adr/0030-active-configuration-endpoint-and-no-fallback-policy.md) | Active configuration endpoint and no-fallback policy | Accepted |
+| [ADR-0032](../../adr/0032-viewer-reload-mechanism-in-the-frontend.md) | Viewer reload mechanism: state-based React key reset | Accepted |
+| [ADR-0019](../../adr/0019-internationalization-of-the-web-application-%28english-and-portuguese%29.md) | Internationalization of the Web Application (English and Portuguese) | Accepted |
 
 ## Notation key
 
@@ -131,7 +131,7 @@ The diagrams show only containers. The table lists the front-end modules inside 
 
 ## Notes
 
-- The drei `OrbitControls` used until VIS06 was replaced by the Three.js implementation (`three/examples/jsm/controls/OrbitControls.js`), see [ADR-0054](../../adr/0054-perspective-camera-controls-with-limits-derived-from-the-kitchen.md).
+- The drei `OrbitControls` used until VIS06 was replaced by the Three.js implementation (`three/examples/jsm/controls/OrbitControls.js`), see [ADR-0050](../../adr/0050-perspective-camera-controls-with-limits-derived-from-the-kitchen.md).
 - The initial distance frames the floor in a wide viewer (16:9). In a nearly square viewer, the side corners of a square kitchen may start slightly outside the view; one wheel step back shows them.
 - The obstacles are axis-aligned bounding boxes, so the camera stops a little before rotated or round models.
 - The user story names the LaPrizza Manager; only the MANAGER role has `kitchen:read`.

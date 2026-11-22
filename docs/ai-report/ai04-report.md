@@ -33,7 +33,7 @@ The three are kept apart. Only the back end owns stock and purchase-order record
 | Concept | Who | What changes | How |
 | --- | --- | --- | --- |
 | **Calculation** (BOM, Requirements Planning) | Prolog service, called through the back end | Nothing. Balances, "hypothetical remaining stock", production and purchase proposals are results only (`simulation: true`) | `POST /api/v2/planning/bom`, `POST /api/v2/planning/requirements` |
-| **Planning run** | Back end | One record with the inputs and the result of a successful calculation (ADR-0034) | Saved by the back end after a `200`; consulted with `GET /api/v2/planning/runs[/{id}]` |
+| **Planning run** | Back end | One record with the inputs and the result of a successful calculation (ADR-0047) | Saved by the back end after a `200`; consulted with `GET /api/v2/planning/runs[/{id}]` |
 | **Stock change** | Back end | The stored stock of a product | Only an explicit stock operation of the Manager: `PATCH /api/v2/stock/{productId}` (BCK09/WEB05). A calculation never calls it, so a consumption cannot be deducted twice |
 | **Purchase-order confirmation** | Back end | Nothing in Sprint 2 | No purchase-order record exists yet. Purchase proposals are never turned into orders automatically; a future confirmation will be a separate, explicit back-end operation. Repeating a calculation therefore cannot create duplicate orders |
 
@@ -59,7 +59,7 @@ No endpoint of the AI service writes stock or purchase orders. The knowledge bas
 ### 3.1 Data and simulated inputs
 
 - The calculation uses only the planning snapshot of the back end (section 7): products, sizes, the BOM of each pizza and size in abstract stock units, the aggregates, the stock and the ordered pizzas.
-- **AI scenarios** hold the simulated orders and, optionally, a simulated stock (ADR-0053).
+- **AI scenarios** hold the simulated orders and, optionally, a simulated stock (ADR-0041).
 - **Stock mode:** `live` uses the real stock at the time of the execution; `scenario` uses the stock stored in the scenario, for reproducible evaluations. Both follow the same rules and format, so real and simulated data can replace each other without changing the calculation.
 - Every result identifies the scenario (`id`, `name`, `version`, `stockMode`) and the inputs (`snapshotId`, origin and version of the catalogue, stock and orders).
 
@@ -70,7 +70,7 @@ No endpoint of the AI service writes stock or purchase orders. The knowledge bas
 3. **Pass 1, aggregates:** the stock of the aggregate is used first. Only the missing part of a **produced** aggregate is expanded into its ingredients; the missing part of a **purchased** aggregate is a replenishment need.
 4. **Pass 2, simple products:** each one is counted once, with its direct demand plus the demand derived from the produced aggregates.
 
-Pass 2 counts each product once, so an aggregate and the ingredients it already represents are never both counted (ADR-0052).
+Pass 2 counts each product once, so an aggregate and the ingredients it already represents are never both counted (ADR-0040).
 
 ### 3.3 Results
 
@@ -111,7 +111,7 @@ Result: `feasible: false`, `shortages: [mozzarella 2]`, `production: [dough 2, c
 
 ### 4.1 Input
 
-A forecast version (daily quantities of sellable products; pizzas with a size), the BOM and stock rules of AI01, the stock (live or scenario) and the confirmed supplier scenario (offers: supplier, price in EUR, stock units, lead time in days, optional supply limit). Forecasts and supplier scenarios are immutable and versioned (ADR-0033).
+A forecast version (daily quantities of sellable products; pizzas with a size), the BOM and stock rules of AI01, the stock (live or scenario) and the confirmed supplier scenario (offers: supplier, price in EUR, stock units, lead time in days, optional supply limit). Forecasts and supplier scenarios are immutable and versioned (ADR-0046).
 
 ### 4.2 Algorithm (`requirements.pl`)
 
@@ -128,7 +128,7 @@ A forecast version (daily quantities of sellable products; pizzas with a size), 
 
 ### 4.4 Supplier selection criteria and rationale
 
-The decision and the alternatives considered are recorded in [ADR-0055](../adr/0055-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md); the flows are in [AI Requirements Planning](../flows/ai-requirements-planning/README.md).
+The decision and the alternatives considered are recorded in [ADR-0058](../adr/0058-requirements-planning-with-chronological-net-needs-and-on-time-cheapest-supplier.md); the flows are in [AI Requirements Planning](../flows/ai-requirements-planning/README.md).
 
 | Pass | Needs | Choice | Why |
 | --- | --- | --- | --- |
@@ -204,7 +204,7 @@ The SPA never calls Prolog directly. It calls the back end, which authorizes the
 | Prolog | `POST /bom`, `POST /requirements` | Client with a Manager token, forwarded to the back end | Direct calls for tests and demos (pull) |
 | Prolog | `GET /health` | None | Liveness; does not call the back end |
 
-The back-end routes are documented in OpenAPI (`/api/v2/docs`). `/api/v1` is a deprecated alias of the same router (ADR-0014). The Prolog routes, with all requests, responses and errors, are documented in [AI Service Interface](../flows/ai-service-access/service-interface.md).
+The back-end routes are documented in OpenAPI (`/api/v2/docs`). `/api/v1` is a deprecated alias of the same router (ADR-0015). The Prolog routes, with all requests, responses and errors, are documented in [AI Service Interface](../flows/ai-service-access/service-interface.md).
 
 ### 6.2 Requests and results
 
@@ -275,7 +275,7 @@ No answer within the timeout gives `504 AI_SERVICE_TIMEOUT`. On the Prolog pull 
 | Missing information | `422 AI_INVALID_DATA` with `details.problems` | List of problems with the product or pizza ids |
 | Service unavailable | `503 AI_SERVICE_UNAVAILABLE` (`details.reason`, `Retry-After: 5`), `504 AI_SERVICE_TIMEOUT` | "Service unavailable", with a retry hint |
 
-The same rules are checked in the SPA (`validatePlanningInput`), in the back end (Joi) and in Prolog (`validate_input/3` plus the validation of the whole snapshot). The SPA blocks a second submission while a calculation is running (ADR-0036).
+The same rules are checked in the SPA (`validatePlanningInput`), in the back end (Joi) and in Prolog (`validate_input/3` plus the validation of the whole snapshot). The SPA blocks a second submission while a calculation is running (ADR-0049).
 
 ### 6.5 Access control
 
@@ -299,7 +299,7 @@ The same cases are automated in `bom-demo-test-flow.http` (pull path) and `plann
 
 ### 7.1 Back-end data source
 
-- Prolog gets all business data from one JSON document, the _planning snapshot_, built only by the back end at `GET /ai-data/snapshot?scenarioId&stockMode[&forecastId&supplierScenarioId]` (Manager only, `planning:execute`). It has no direct database access, no separate authoritative copy and no customer data (ADR-0039).
+- Prolog gets all business data from one JSON document, the _planning snapshot_, built only by the back end at `GET /ai-data/snapshot?scenarioId&stockMode[&forecastId&supplierScenarioId]` (Manager only, `planning:execute`). It has no direct database access, no separate authoritative copy and no customer data (ADR-0020).
 - The snapshot contains products, sizes, pizzas and their sizes, the BOM per pizza and size, aggregates (production/purchase), stock (live or scenario), the simulated orders, the forecast and the supplier offers (price EUR, stock units, lead time, optional limit). Its format is in [Snapshot format](../flows/ai-knowledge-base/snapshot-format.md).
 - `meta` records `snapshotId`, `retrievedAt`, `simulated` and the origin and version of each input (`sources`).
 - Missing or invalid values found by the back end are reported in `issues[]`, never defaulted.
@@ -323,7 +323,7 @@ The whole snapshot is validated before anything is loaded. Problems such as `INV
 
 ### 7.3 Refresh policy
 
-- **One snapshot per calculation.** `with_snapshot/2` loads it under a mutex and in a transaction, runs the calculation and always clears the knowledge base, even when the calculation fails (ADR-0040).
+- **One snapshot per calculation.** `with_snapshot/2` loads it under a mutex and in a transaction, runs the calculation and always clears the knowledge base, even when the calculation fails (ADR-0021).
 - Two calculations never see each other's data, and old and new versions are never mixed: if the back end is unavailable the calculation fails (`503`/`504`) instead of using older facts.
 - Scenario snapshots are never cached.
 - Any simulated input makes the result `simulation: true`.

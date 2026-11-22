@@ -9,7 +9,7 @@
 | Allowed roles | MANAGER (permission `suppliers:import`) |
 | Success response | 200 OK, supplier scenario DTO with `isActive: false` |
 | Error handling | 400 `BAD_REQUEST` (invalid id format, or a body other than `{ "isActive": false }`), 404 `NOT_FOUND` "Supplier Scenario not found." (unknown or already inactive), 401/403 |
-| ADRs | [ADR-0033](../../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md) |
+| ADRs | [ADR-0046](../../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md) |
 
 ## Description
 

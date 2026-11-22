@@ -57,9 +57,9 @@ The textures delivered with the SPA are in `frontend/public/textures/<name>/` (`
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-0021](../../adr/0021-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
-| [ADR-0030](../../adr/0030-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
-| [ADR-0052](../../adr/0052-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: every object textured) | Accepted |
+| [ADR-0026](../../adr/0026-asset-references-strategy.md) | Asset references strategy (URLs and root-relative paths) | Accepted |
+| [ADR-0039](../../adr/0039-adoption-of-r3f-for-3d-module-integration.md) | React Three Fiber for the 3D module | Accepted |
+| [ADR-0055](../../adr/0055-ui-consistency-and-input-validation-after-the-sprint-2-review.md) | UI consistency and input validation (D7: every object textured) | Accepted |
 
 ## Notation key
 

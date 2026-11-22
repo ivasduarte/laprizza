@@ -106,7 +106,7 @@ test('createAssemblyLineConfigurationData rejects missing or blank names', () =>
   }
 });
 
-// --- Asset reference rules (ADR-0021: absolute http(s) URL or root-relative path) ---
+// --- Asset reference rules (ADR-0026: absolute http(s) URL or root-relative path) ---
 
 const TEXTURED = {
   colorMap: '/textures/metal_plate/diffuse.jpg',

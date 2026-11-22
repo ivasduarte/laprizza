@@ -20,7 +20,7 @@ All information was extracted from the business rules present in **PART II - SYS
 ### 1.3. `AuthSession` *(belongs to, 1)* `User`
 > **PART IV, AA04 (p. 9):** "The authenticated session must be maintained securely while the user works in the application."
 > **PART IV, AA04 (p. 10):** "Logout must prevent the ended session from being reused to perform protected operations."
-- **Justification:** A session is created at login, renewed, and revoked at logout independently of the `User`, so it is its own aggregate that references the user ([ADR-0011](../adr/0011-implement-refresh-tokens-for-secure-sessions.md), [ADR-0032](../adr/0032-secure-session-handling-in-the-api-and-the-spa.md)).
+- **Justification:** A session is created at login, renewed, and revoked at logout independently of the `User`, so it is its own aggregate that references the user ([ADR-0012](../adr/0012-implement-refresh-tokens-for-secure-sessions.md), [ADR-0043](../adr/0043-secure-session-handling-in-the-api-and-the-spa.md)).
 - **Multiplicity:** `*` to `1`, because a user may be signed in on several devices, and each session belongs to exactly one user.
 
 ### 1.4. `PasswordResetToken` *(resets password of, 1)* `User`
@@ -123,7 +123,7 @@ All information was extracted from the business rules present in **PART II - SYS
 ### 6.3. `KitchenConfiguration` *(places line, 0..1)* `AssemblyLineConfiguration`
 > **PART IV, WEB06 (p. 6):** "It must include kitchen dimensions and the placement, orientation, and scale of equipment and assembly-line elements."
 > **PART IV, WEB06 (p. 6):** "The JSON format must be documented and include the model references and visual properties required by the VIS User Stories, either directly or through resolvable back-end references."
-- **Justification:** The kitchen configuration places a reusable assembly line definition through a reference, so only the kitchen configuration has an active state ([ADR-0031](../adr/0031-assembly-line-referenced-by-kitchen.md)).
+- **Justification:** The kitchen configuration places a reusable assembly line definition through a reference, so only the kitchen configuration has an active state ([ADR-0042](../adr/0042-assembly-line-referenced-by-kitchen.md)).
 - **Multiplicity:** `0..1`, because the placement is optional so that existing configurations stay valid; the same line may be placed by several kitchen configurations, and it cannot be deleted while referenced.
 
 ## 7. Forecasts
@@ -141,7 +141,7 @@ All information was extracted from the business rules present in **PART II - SYS
 ## 8. Supplier Scenarios
 ### 8.1. `SupplierScenario` *(suppliers, 0..\*)* `Supplier` and *(products, 0..\*)* `ScenarioProduct`
 > **PART IV, WEB07 (p. 7):** "It must contain two lists: suppliers with unique identifiers (names optional), and products with existing system identifiers and a list of supplier offers for each product."
-- **Justification:** Suppliers and products only exist inside the imported scenario (Composition). Scenarios are immutable and versioned ([ADR-0033](../adr/0033-immutable-versioned-forecasts-and-supplier-scenarios.md)).
+- **Justification:** Suppliers and products only exist inside the imported scenario (Composition). Scenarios are immutable and versioned ([ADR-0046](../adr/0046-immutable-versioned-forecasts-and-supplier-scenarios.md)).
 
 ### 8.2. `ScenarioProduct` *(product, 1)* `Product`
 > **PART IV, WEB07 (p. 7):** "It must contain two lists: suppliers with unique identifiers (names optional), and products with existing system identifiers and a list of supplier offers for each product."
@@ -159,7 +159,7 @@ All information was extracted from the business rules present in **PART II - SYS
 ## 9. Planning
 ### 9.1. `PlanningRun` *(request, 1)* `PlanningRequest` and *(forecast, supplierScenario, 0..2)* `InputVersion`
 > **PART IV, WEB07 (p. 7):** "Associate each result with the forecast version, stock snapshot, pizza BOM, and supplier scenario used."
-- **Justification:** The request and the versions of the inputs used have no meaning outside the run (Composition) ([ADR-0034](../adr/0034-recording-planning-runs-with-their-input-versions.md)).
+- **Justification:** The request and the versions of the inputs used have no meaning outside the run (Composition) ([ADR-0047](../adr/0047-recording-planning-runs-with-their-input-versions.md)).
 - **Multiplicity:** `0..2` for `InputVersion`: one for the forecast and one for the supplier scenario, each only when used.
 
 ### 9.2. `PlanningRun` *(used, 0..1)* `Forecast` and `SupplierScenario`

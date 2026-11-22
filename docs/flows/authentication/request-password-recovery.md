@@ -9,7 +9,7 @@
 | Allowed roles | Public (Guest) |
 | Success response | 202 Accepted `{ "code": "PASSWORD_RESET_REQUESTED" }`, always the same |
 | Error handling | 400 `VALIDATION_FAILED` (malformed e-mail), 429 `RATE_LIMITED` (3 requests per hour per IP) with `Retry-After`. Nothing that depends on the account is ever returned |
-| ADRs | [ADR-0008](../../adr/0008-implement-rate-limiting-policies.md), [ADR-0044](../../adr/0044-password-recovery-with-single-use-hashed-tokens.md), [ADR-0045](../../adr/0045-e-mail-delivery-with-nodemailer-and-mailpit.md) |
+| ADRs | [ADR-0009](../../adr/0009-implement-rate-limiting-policies.md), [ADR-0023](../../adr/0023-password-recovery-with-single-use-hashed-tokens.md), [ADR-0024](../../adr/0024-e-mail-delivery-with-nodemailer-and-mailpit.md) |
 
 ## Description
 
