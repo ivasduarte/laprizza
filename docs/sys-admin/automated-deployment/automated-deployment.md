@@ -2,9 +2,9 @@
 
 Requirement: a repeatable deployment pipeline for a system module in a controlled DEI environment; validation based on the project test plan; deployment logs and test results archived; configurable schedule; a failed validation never presented as a successful deployment; identifiable deployed version and configuration, with a documented recovery to a previously working version; sensitive configuration kept apart from published source and deployment logs (Sprint 2 User Stories v1.0, p. 19).
 
-The deployed module is the **back end** (`backend/`, Node.js + Express). It runs on the staging VM `laprizza-backend` and uses the MongoDB server of the DEI (`10.9.22.16`). The same model was later reused for the front end (`deploy/laprizza-deploy-web.sh`) and for production (`DEPLOY_TAG`, see [production-environment.md](production-environment.md)).
+The deployed module is the **back end** (`backend/`, Node.js + Express). It runs on the staging VM `laprizza-backend` and uses the MongoDB server of the DEI (`10.9.22.16`). The same model was later reused for the front end (`deploy/laprizza-deploy-web.sh`) and for production (`DEPLOY_TAG`, see [production-environment.md](../production-environment.md)).
 
-Decisions: [ADR-0048 – Pull-Based Deployment from the Staging VM](../adr/0048-pull-based-deployment-from-the-staging-vm.md) and [ADR-0049 – Release Directories and systemd instead of Containers](../adr/0049-release-directories-and-systemd-instead-of-containers.md). Use cases: [SYS01 use-case view](sys01/use-case-view.md).
+Decisions: [ADR-0048 – Pull-Based Deployment from the Staging VM](../../adr/0048-pull-based-deployment-from-the-staging-vm.md) and [ADR-0049 – Release Directories and systemd instead of Containers](../../adr/0049-release-directories-and-systemd-instead-of-containers.md).
 
 ## Overview
 
@@ -62,7 +62,7 @@ flowchart LR
 | 11  | Health check: `/api/v2/health` 2xx **and** `/api/v2/version` contains the new sha, within 60 s          | `run.log`                                            | automatic rollback (`ROLLED_BACK`)          |
 | 12  | Keep the last 5 releases (always the current and the previous one)                                      | `run.log`                                            | –                                           |
 
-Validation (steps 4–6 and 11) follows the project test plan ([../test-plan.md](../test-plan.md)). The tests run **before** the staging variables are loaded, so they never touch the staging database.
+Validation (steps 4–6 and 11) follows the project test plan ([Project Test Plan](../test-plan.md)). The tests run **before** the staging variables are loaded, so they never touch the staging database.
 
 ## Outcomes and records
 
@@ -127,11 +127,11 @@ The rollback switches `current`, restarts the API and runs the same health check
 - Secrets (`MONGODB_URI`, `JWT_SECRET`, `SEED_MANAGER_PASSWORD`, SMTP) exist only in `/opt/laprizza/.env` (`600`, owner `deploy`) and in the team password manager. The file is loaded by systemd (`EnvironmentFile=`) and never copied into a release.
 - `.env` files are ignored by Git; the repository only contains `backend/.env.example` and `deploy/deploy.conf.example` without values.
 - The pipeline never prints environment variables; migration and test logs contain no secrets.
-- GitHub access uses a **read-only deploy key** for this repository (`/home/deploy/.ssh/github_deploy`) over `ssh.github.com:443`, because the DEI network blocks outbound port 22. Self-hosted GitHub runners are disabled by the organization ([ADR-0048](../adr/0048-pull-based-deployment-from-the-staging-vm.md)).
+- GitHub access uses a **read-only deploy key** for this repository (`/home/deploy/.ssh/github_deploy`) over `ssh.github.com:443`, because the DEI network blocks outbound port 22. Self-hosted GitHub runners are disabled by the organization ([ADR-0048](../../adr/0048-pull-based-deployment-from-the-staging-vm.md)).
 
 ## Evidence
 
-Screenshots in `docs/sys-admin/img/sys01/`.
+Screenshots in `docs/sys-admin/automated-deployment/img/sys01/`.
 Screenshots 01, 06, 07 and 08 were taken on 2026-11-05/06, before the API moved from `/api/v1` to `/api/v2`.
 
 | #   | Acceptance criterion                          | Evidence                                                                                                                                                                          | How to obtain it                                                                                                                                         |
@@ -152,7 +152,7 @@ Screenshots 01, 06, 07 and 08 were taken on 2026-11-05/06, before the API moved 
 | Acceptance criterion                                                                             | Where                                                                                                                    |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | Deploy at least one module through an automated pipeline to a reproducible, isolated environment | `deploy/laprizza-deploy.sh`, `deploy/systemd/`, `laprizza-api.service`, `deploy` account and sudoers rule; evidence 1, 2 |
-| Execute validation based on the project test plan                                                | Steps 4–6 and 11, [../test-plan.md](../test-plan.md); evidence 3                                                         |
+| Execute validation based on the project test plan                                                | Steps 4–6 and 11, [Project Test Plan](../test-plan.md); evidence 3                                                         |
 | Archive deployment logs and test results                                                         | `/var/log/laprizza/deploys/`, `history.log`, `tests.log`; evidence 4                                                     |
 | Make the deployment schedule configurable                                                        | `laprizza-deploy.timer` (`systemctl edit`); evidence 5                                                                   |
 | A failed validation must prevent a deployment from being presented as successful                 | Status values, exit code 1, automatic rollback, failed release removed; evidence 6, 7                                    |

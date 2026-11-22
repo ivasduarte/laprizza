@@ -4,16 +4,9 @@ Requirement: a simple configuration file for allowed client endpoints; valid cha
 
 SYS03 builds on SYS02. SYS02 restricts the staging back-end VM (`laprizza-backend`, where nginx exposes the REST API under `/api/`) to the approved networks with nginx `allow`/`deny` rules in `/etc/laprizza/allowed-endpoints.conf`, included by the site (`/etc/nginx/sites-available/laprizza`). SYS03 does not add a second set of rules: that file is now **generated** from a simpler file that administrators edit, and every change is validated, applied without a restart, restricted to administrators and recorded.
 
-### Migration from the SYS02 file
+SYS03 applies only to staging. Production is public through `vs-gate` and has no allowlist ([Production Environment](../production-environment.md)).
 
-`install.sh` converts the existing `allow …;` lines of `/etc/laprizza/allowed-endpoints.conf` into `/etc/laprizza/allowed-clients.conf` (`laprizza-allowlist-apply.sh import`), keeps a copy of the original in `/var/lib/laprizza/allowlist/allowed-endpoints.conf.sys02-original`, and regenerates the same rules. From then on `allowed-endpoints.conf` must not be edited by hand.
-
-| SYS02 (before) | SYS03 (after) |
-|---|---|
-| `allow 127.0.0.1;` | always added by the script |
-| `allow 10.8.0.0/16;  # VPN do ISEP` | `10.8.0.0/16  # VPN do ISEP` |
-| `allow 10.9.0.0/16;  # VNET1 – VMs do DEI` | `10.9.0.0/16  # VNET1 – VMs do DEI` |
-| `deny all;` | always added by the script |
+Decisions: [ADR-0050 – Network Restriction at the nginx Reverse Proxy](../../adr/0050-network-restriction-at-the-nginx-reverse-proxy.md), which keeps the rules in their own file so the list can be maintained separately.
 
 ## Overview
 
@@ -102,15 +95,25 @@ Example of `allowlist.log`:
 2026-11-19T11:45:31Z ERROR   error: line 3: '10.9.0.300' is not a valid IP address or CIDR network (…)
 ```
 
-## Installation (web VM, once)
+## Installation (back-end VM `laprizza-backend`, once)
 
 ```bash
 cd /opt/laprizza/repo && git pull
-sudo apt install -y auditd            # if not installed
 sudo ./deploy/allowlist/install.sh    # idempotent
 ```
 
-The script installs the apply script, the example configuration (only if none exists), the sudoers rule, the audit rule and the systemd units, and applies the file once. The nginx site already includes `/etc/laprizza/allowed-endpoints.conf` (SYS02); `deploy/nginx/laprizza.conf` in the repository now mirrors that line.
+The script installs the apply script, the edit command (`/usr/local/sbin/laprizza-allowlist-edit`), the example configuration (only if none exists), the sudoers rule and the systemd units, and applies the file once. It also installs an `auditd` rule when `auditd` is available; on the staging VM it is not (the DEI virtual server is a container), so the author comes from the edit command, as described above. The nginx site already includes `/etc/laprizza/allowed-endpoints.conf` (SYS02); `deploy/nginx/laprizza.conf` in the repository now mirrors that line.
+
+## Migration from the SYS02 file
+
+`install.sh` converts the existing `allow …;` lines of `/etc/laprizza/allowed-endpoints.conf` into `/etc/laprizza/allowed-clients.conf` (`laprizza-allowlist-apply.sh import`), keeps a copy of the original in `/var/lib/laprizza/allowlist/allowed-endpoints.conf.sys02-original`, and regenerates the same rules. From then on `allowed-endpoints.conf` must not be edited by hand.
+
+| SYS02 (before) | SYS03 (after) |
+|---|---|
+| `allow 127.0.0.1;` | always added by the script |
+| `allow 10.8.0.0/16;  # VPN do ISEP` | `10.8.0.0/16  # VPN do ISEP` |
+| `allow 10.9.0.0/16;  # VNET1 – VMs do DEI` | `10.9.0.0/16  # VNET1 – VMs do DEI` |
+| `deny all;` | always added by the script |
 
 ## Tests
 
@@ -118,7 +121,7 @@ The script installs the apply script, the example configuration (only if none ex
 
 ## Evidence
 
-Screenshots in `docs/sys-admin/img/sys03/`.
+Screenshots in `docs/sys-admin/allowed-endpoints/img/sys03/`.
 
 | # | Acceptance criterion | Evidence | How to obtain it |
 |---|---|---|---|
@@ -138,3 +141,18 @@ Screenshots in `docs/sys-admin/img/sys03/`.
 | Detect and log invalid changes, keeping the last valid configuration active | `validate()` and `REJECTED` in `laprizza-allowlist-apply.sh`, `test-allowlist.sh`; evidence 4 |
 | Only authorized administrators change the configuration | `root:root 644`, `sudoers-laprizza-allowlist` (`ssh-admins`), `laprizza-allowlist-edit`; evidence 5 |
 | Record those changes | `allowlist.log` and journal, author from `$SUDO_USER` in `laprizza-allowlist-edit`; evidence 6 |
+
+## Known limitations
+
+| Item | Impact | Mitigation |
+|---|---|---|
+| Only the HTTP rules (nginx) are generated | The SSH rules of SYS02 (`AllowUsers` in `/etc/ssh/sshd_config.d/99-laprizza.conf`) keep their own copy of the networks ([ADR-0051](../../adr/0051-ssh-restricted-to-approved-networks-with-allowusers.md)) | Change both when a network is added or removed; SSH changes need `sudo sshd -t && sudo systemctl reload ssh` |
+| The author is recorded by `laprizza-allowlist-edit` | A change made as `root` without the edit command is still validated and applied, but recorded as `author=unknown` | Administrators use individual accounts and the edit command (SYS05); `root` login is disabled (SYS02) |
+| `auditd` does not run on the staging VM | No kernel-level record of who wrote the file | The edit command, the change log and the sudo refusals in the journal |
+| `10.9.0.0/16` still allows every DEI virtual server | Other teams' VMs could reach the API (authentication still applies) | Narrow the list to the team's VMs with `laprizza-allowlist-edit` when their addresses are stable (SYS02) |
+
+## Related
+
+- [SYS02 – Institutional Network Access Restriction](../network-access-restriction/network-access-restriction.md): the nginx site that includes the generated rules, and the SSH rules.
+- [SYS05 – SSH Security and Access Control](../ssh-security.md): the `ssh-admins` group and the individual administrative accounts.
+- [Production Environment](../production-environment.md): production is public and does not install the allowlist.
