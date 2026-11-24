@@ -48,53 +48,53 @@ Deliver a fully integrated, reproducible, and resilient final increment of the *
 
 | User Story | Description | Area | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- |
-| **ENG04** | Integrated Sprint Planning and Regression Evidence | ENG | High | All Team | All Team | Sprint 1 & 2 | Sprint backlog, shared JSON contracts, automated E2E/regression tests, failure-recovery demos. |
-| **ENG05** | Final Demonstration and Individual Contribution | ENG | High | All Team | All Team | All Sprint 3 US | Deployment guide, `sprint-3-submission` tag ZIP, self/peer evaluations, live demo script. |
-| **ENG06** | Evolution of the Solution | ENG | High | All Team | All Team | Sprint 1 & 2 Reviews | Consolidated review-issue tracker, commits/tests per fix, PDF + editable report in repo. |
-| **ARC06** | Updated Architecture and Integration Contracts | ARC | High | `[Membro]` | `[Revisor]` | BCK12–18, AI07, WEB11 | Updated C4/deployment diagrams, versioned API/JSON schemas, contract & E2E tests. |
+| **ENG04** | Integrated Sprint Planning and Regression Evidence | ENG | High | **All Team** | **All Team** | Sprint 1 & 2 | Sprint backlog, shared JSON contracts, automated E2E/regression tests, failure-recovery demos. |
+| **ENG05** | Final Demonstration and Individual Contribution | ENG | High | **All Team** | **All Team** | All Sprint 3 US | Deployment guide, `sprint-3-submission` tag ZIP, self/peer evaluations, live demo script. |
+| **ENG06** | Evolution of the Solution | ENG | High | **All Team** | **All Team** | Sprint 1 & 2 Reviews | Consolidated review-issue tracker, commits/tests per fix, PDF + editable report in repo. |
+| **ARC06** | Updated Architecture and Integration Contracts | ARC | High | **All Team** | **All Team** | BCK12–18, AI07, WEB11 | Updated C4/deployment diagrams, versioned API/JSON schemas, contract & E2E tests. |
 
 ### 2. Back-End Implementation (BCK)
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **BCK12** | Customer Orders and Pizza Preparation Queue | High | `[Membro]` | `[Revisor]` | Sprint 2 Orders/BOM | Unit/integration tests for atomic `M01–M99` marker locking, idempotent submission, and pending pizza feed. |
-| **BCK13** | Kitchen Resources and Preparation Definitions | High | `[Membro]` | `[Revisor]` | Sprint 2 Kitchen/BOM | Versioned employees/ovens/slots config, availability blocking intervals, and timing-rule endpoints. |
-| **BCK14** | Generate and Save Preparation Plans | High | `[Membro]` | `[Revisor]` | BCK12, BCK13, AI07 | Plan lifecycle (`Proposed`, `Saved`, `Active`, `Superseded`), version binding, and single-active-allocation checks. |
-| **BCK15** | Amend Plans and Identify Missing Work | Medium | `[Membro]` | `[Revisor]` | BCK14, AI08 | Unplanned items query, diff preview before superseding, optimistic concurrency/version rejection tests. |
-| **BCK16** | Start a Preparation Execution | High | `[Membro]` | `[Revisor]` | BCK14 | Execution record creation linked to Active plan, duplicate-start prevention, departure reason logging. |
-| **BCK17** | Record Activity Progress and Actual Resource Use | High | `[Membro]` | `[Revisor]` | BCK16 | Idempotent activity start/end endpoints, chronology validation, planned-vs-actual variance tracking. |
-| **BCK18** | Execution History and Completion | Medium | `[Membro]` | `[Revisor]` | BCK17 | Filtered history API, read-only completed records, atomic marker release only when all order pizzas finish. |
+| **BCK12** | Customer Orders and Pizza Preparation Queue | High | **Gonçalo Tavares** | **João Ferreira** | Sprint 2 Orders/BOM | Unit/integration tests for atomic `M01–M99` marker locking, idempotent submission, and pending pizza feed. |
+| **BCK13** | Kitchen Resources and Preparation Definitions | High | **Gonçalo Tavares** | **João Ferreira** | Sprint 2 Kitchen/BOM | Versioned employees/ovens/slots config, availability blocking intervals, and timing-rule endpoints. |
+| **BCK14** | Generate and Save Preparation Plans | High | **João Ferreira** | **Gonçalo Tavares** | BCK12, BCK13, AI07 | Plan lifecycle (`Proposed`, `Saved`, `Active`, `Superseded`), version binding, and single-active-allocation checks. |
+| **BCK15** | Amend Plans and Identify Missing Work | Medium | **Diogo Silva** | **Iva Silva** | BCK14, AI08 | Unplanned items query, diff preview before superseding, optimistic concurrency/version rejection tests. |
+| **BCK16** | Start a Preparation Execution | High | **Iva Silva** | **Diogo Silva** | BCK14 | Execution record creation linked to Active plan, duplicate-start prevention, departure reason logging. |
+| **BCK17** | Record Activity Progress and Actual Resource Use | High | **Iva Silva** | **Diogo Silva** | BCK16 | Idempotent activity start/end endpoints, chronology validation, planned-vs-actual variance tracking. |
+| **BCK18** | Execution History and Completion | Medium | **Diogo Silva** | **Iva Silva** | BCK17 | Filtered history API, read-only completed records, atomic marker release only when all order pizzas finish. |
 
 ### 3. Front-End & Operational Web Workflows (WEB)
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **WEB08** | Order and Execution Workspace | High | `[Membro]` | `[Revisor]` | BCK12, BCK16–18 | SPA order form with `M01–M99` validation, internal queue/execution views, clear simulation vs. operational badge. |
-| **WEB09** | Planning and Replanning Workspace | High | `[Membro]` | `[Revisor]` | BCK14, BCK15, AI07–08, AI12 | Algorithm selector (Exhaustive + 2 Heuristics), objective comparison table, Save/Activate confirmation modals. |
-| **WEB10** | Viewer Integration and Session Recovery | High | `[Membro]` | `[Revisor]` | BCK13, BCK14, VIS08 | Embedded 3D viewer in SPA, config-version mismatch blocking, feed deduplication, clean route unmount/remount. |
-| **WEB11** | Planning Data and Viewer Timeline Integration | High | `[Membro]` | `[Revisor]` | BCK14, AI07, VIS08 | Shared versioned JSON contract file in repo, shared simulation clock, speed-factor control, contract validation. |
+| **WEB08** | Order and Execution Workspace | High | **Diogo Silva** | **Iva Silva** | BCK12, BCK16–18 | SPA order form with `M01–M99` validation, internal queue/execution views, clear simulation vs. operational badge. |
+| **WEB09** | Planning and Replanning Workspace | High | **João Ferreira** | **Gonçalo Tavares** | BCK14, BCK15, AI07–08, AI12 | Algorithm selector (Exhaustive + 2 Heuristics), objective comparison table, Save/Activate confirmation modals. |
+| **WEB10** | Viewer Integration and Session Recovery | High | **Iva Silva** | **Diogo Silva** | BCK13, BCK14, VIS08 | Embedded 3D viewer in SPA, config-version mismatch blocking, feed deduplication, clean route unmount/remount. |
+| **WEB11** | Planning Data and Viewer Timeline Integration | High | **Gonçalo Tavares** | **João Ferreira** | BCK14, AI07, VIS08 | Shared versioned JSON contract file in repo, shared simulation clock, speed-factor control, contract validation. |
 
 ### 4. Artificial Intelligence & Planning (AI)
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **AI07** | Prolog Scheduling of Pizza Assembly and Cooking | High | `[Membro]` | `[Revisor]` | BCK12, BCK13 | Prolog two-stage scheduler matching exact dough/BOM rules and lexicographic objective (waiting time $\rightarrow$ readiness gap). |
-| **AI08** | Update Pending Pizza Plans after Kitchen Changes | High | `[Membro]` | `[Revisor]` | AI07, BCK13, BCK15 | Replanning predicate preserving completed/in-progress work and original order timestamps. |
-| **AI09** | Robotics, Computer Vision and Investment Study | Medium | `[Membro]` | `[Revisor]` | GDP04–05 | Task analysis, 2 robot ROI & sensitivity calculations (optimistic/baseline/pessimistic), CV privacy safeguards. |
-| **AI10** | Complexity of Exhaustive Oven Sequencing | High | `[Membro]` | `[Revisor]` | AI07 | Benchmark script & table ($N!$ growth, evaluated counts, wall-clock time, memory/timeout limits). |
-| **AI11** | Consolidated AI Technical Report | High | `[Membro]` | `[Revisor]` | AI07–10, AI12–13 | 4-part PDF + editable source in repo with reproducible Prolog seeds/queries and integration evidence. |
-| **AI12** | Two Prolog Heuristics and Comparative Evaluation | High | `[Membro]` | `[Revisor]` | AI07, AI10 | Two distinct heuristics exposed via API/SPA, small-instance optimality gap vs. exhaustive, large-instance scalability. |
+| **AI07** | Prolog Scheduling of Pizza Assembly and Cooking | High | **Gonçalo Tavares** | **João Ferreira** | BCK12, BCK13 | Prolog two-stage scheduler matching exact dough/BOM rules and lexicographic objective (waiting time $\rightarrow$ readiness gap). |
+| **AI08** | Update Pending Pizza Plans after Kitchen Changes | High | **João Ferreira** | **Gonçalo Tavares** | AI07, BCK13, BCK15 | Replanning predicate preserving completed/in-progress work and original order timestamps. |
+| **AI09** | Robotics, Computer Vision and Investment Study | Medium | **Diogo Silva** | **Iva Silva** | GDP04–05 | Task analysis, 2 robot ROI & sensitivity calculations (optimistic/baseline/pessimistic), CV privacy safeguards. |
+| **AI10** | Complexity of Exhaustive Oven Sequencing | High | **Diogo Silva** | **Iva Silva** | AI07 | Benchmark script & table ($N!$ growth, evaluated counts, wall-clock time, memory/timeout limits). |
+| **AI11** | Consolidated AI Technical Report | High | **All Team** | **All Team** | AI07–10, AI12–13 | 4-part PDF + editable source in repo with reproducible Prolog seeds/queries and integration evidence. |
+| **AI12** | Two Prolog Heuristics and Comparative Evaluation | High | **Iva Silva** | **Diogo Silva** | AI07, AI10 | Two distinct heuristics exposed via API/SPA, small-instance optimality gap vs. exhaustive, large-instance scalability. |
 | **AI13** | Generative-AI Promotional Video for Pizza Planning | Low | `[Membro]` | `[Revisor]` | AI07, VIS08 | Playable video file + creation notes (tools, prompts, edits, asset credits) referenced in AI11. |
 
 ### 5. 3D Animated Kitchen & Visualization (VIS)
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **VIS08** | AI-Directed Pizza Assembly-Line Animation | High | `[Membro]` | `[Revisor]` | WEB11, AI07 | Standalone FIFO/5s mode + integrated AI-offset mode (parallel ovens, dispenser, conveyor, robotic arms, speed factor). |
-| **VIS09** | Special Pizza Ingredient Selection | Medium | `[Membro]` | `[Revisor]` | BCK13, VIS08 | Ingredient/size toggle buttons + `Special Order!` trigger validated against size-dependent BOM without affecting stock. |
-| **VIS10** | Special Pizza Preparation Tracking | Medium | `[Membro]` | `[Revisor]` | VIS09, AI08 | Replanned insertion into active flow, persistent visual highlight/outline, button reset upon baking completion. |
-| **VIS11** | Pizza Picking and Information Overlay *(Mandatory: $\ge 4$ members)* | Medium | `[Membro]` | `[Revisor]` | VIS08, VIS10 | Raycast hover highlight + floating viewport tooltip (type, order ID, ingredients/size; no PII). |
-| **VIS12** | Baking Completion and Pizza-Ready Notification | Medium | `[Membro]` | `[Revisor]` | VIS08, BCK17 | Centered 3s queued overlay upon baking finish (simulation vs. validated execution); *audio bell/horn N/A for 4 members*. |
+| **VIS08** | AI-Directed Pizza Assembly-Line Animation | High | **Gonçalo Tavares** | **João Ferreira** | WEB11, AI07 | Standalone FIFO/5s mode + integrated AI-offset mode (parallel ovens, dispenser, conveyor, robotic arms, speed factor). |
+| **VIS09** | Special Pizza Ingredient Selection | Medium | **Iva Silva** | **Diogo Silva** | BCK13, VIS08 | Ingredient/size toggle buttons + `Special Order!` trigger validated against size-dependent BOM without affecting stock. |
+| **VIS10** | Special Pizza Preparation Tracking | Medium | **Gonçalo Tavares** | **João Ferreira** | VIS09, AI08 | Replanned insertion into active flow, persistent visual highlight/outline, button reset upon baking completion. |
+| **VIS11** | Pizza Picking and Information Overlay *(Mandatory: $\ge 4$ members)* | Medium | **Diogo Silva** | **Iva Silva** | VIS08, VIS10 | Raycast hover highlight + floating viewport tooltip (type, order ID, ingredients/size; no PII). |
+| **VIS12** | Baking Completion and Pizza-Ready Notification | Medium | **João Ferreira** | **Gonçalo Tavares** | VIS08, BCK17 | Centered 3s queued overlay upon baking finish (simulation vs. validated execution); *audio bell/horn N/A for 4 members*. |
 | **VIS13** | Background Music *(Mandatory only for $\ge 5$ members)* | N/A | — | — | — | Not required for a 4-student team (optional if time permits). |
 | **VIS14** | Audio Controls *(Mandatory only for $\ge 5$ members)* | N/A | — | — | — | Not required for a 4-student team (optional if time permits). |
 
@@ -102,25 +102,25 @@ Deliver a fully integrated, reproducible, and resilient final increment of the *
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **AA08** | Operational Permission Matrix and Enforcement | High | `[Membro]` | `[Revisor]` | BCK12–18, WEB08–10, GDP05 | Role/ownership permission matrix enforced in SPA & APIs; guest order-token isolation; negative API tests. |
-| **AA09** | Cross-Service Security and Operational Audit Evidence | High | `[Membro]` | `[Revisor]` | AA08, SYS15–16 | Structured audit logs with correlation IDs across SPA/Back-end/AI/Infra; staging access test matrix. |
-| **SYS09** | Disaster Recovery Plan and Exercise | High | `[Membro]` | `[Revisor]` | SYS13, SYS18 | Documented DR runbook + executed recovery drill measuring RTO/RPO/WRT and end-to-end functional validation. |
-| **SYS10** | Infrastructure for a Twenty-Minute Downtime Target | Medium | `[Membro]` | `[Revisor]` | SYS09 | Architecture/cost/capacity design for $\le 20\text{ min}$ MTD, comparing measured RTO vs. target and quantifying gaps. |
-| **SYS11** | Final Business Impact and Risk Review | Medium | `[Membro]` | `[Revisor]` | SYS09, SYS10 | Updated BIA and Sprint 2 $\rightarrow$ Sprint 3 risk register matrix linked to continuity objectives. |
-| **SYS12** | Load Balancing and Failover for the SPA | High | `[Membro]` | `[Revisor]` | WEB08–10 | $\ge 2$ SPA instances behind health-checked reverse proxy; node-kill failover test with latency/availability logs. |
-| **SYS13** | Scheduled Cloud Database Backups | High | `[Membro]` | `[Revisor]` | BCK12–18, GDP04–05 | Automated cron/systemd backups (`<db-name>_yyyymmdd`), overwrite protection, encrypted cloud transfer logs. |
-| **SYS14** | Automated Tiered Backup Retention | Medium | `[Membro]` | `[Revisor]` | SYS13 | Retention script (7 daily, 4 weekly, 12 monthly) with `--dry-run`, boundary tests, and last-valid-copy safeguard. |
-| **SYS15** | Backup Logging and Administrator Alerts | Medium | `[Membro]` | `[Revisor]` | SYS13, SYS14, SYS18 | Syslog/journald entries + persistent SSH login MOTD/banner alert on failure, cleared only after validated success. |
-| **SYS16** | Key-Based Administrative SSH Access | High | `[Membro]` | `[Revisor]` | Sprint 2 SSH/MFA | Password/keyboard-interactive SSH disabled; individual SSH keys + non-password MFA; revocation & lockout tests. |
-| **SYS17** | Authenticated SMB or NFS Resource Sharing | Low | `[Membro]` | `[Revisor]` | SYS16 | Authenticated SMB/NFS share with read/admin-write ACLs, Linux/Windows mount guides, and denied-write logs. |
-| **SYS18** | Automated Restore and Integrity Validation | High | `[Membro]` | `[Revisor]` | SYS13, GDP05 | Isolated temp-DB restore script running integrity queries + GDP05 erasure reconciliation + cleanup. |
+| **AA08** | Operational Permission Matrix and Enforcement | High | **Gonçalo Tavares** <br> **Diogo Silva** | **João Ferreira** <br> **Iva Silva** | BCK12–18, WEB08–10, GDP05 | Role/ownership permission matrix enforced in SPA & APIs; guest order-token isolation; negative API tests. |
+| **AA09** | Cross-Service Security and Operational Audit Evidence | High | **João Ferreira** <br> **Iva Silva** | **Gonçalo Tavares** <br> **Diogo Silva** | AA08, SYS15–16 | Structured audit logs with correlation IDs across SPA/Back-end/AI/Infra; staging access test matrix. |
+| **SYS09** | Disaster Recovery Plan and Exercise | High | **João Ferreira** | **Gonçalo Tavares** | SYS13, SYS18 | Documented DR runbook + executed recovery drill measuring RTO/RPO/WRT and end-to-end functional validation. |
+| **SYS10** | Infrastructure for a Twenty-Minute Downtime Target | Medium | **Iva Silva** | **Diogo Silva** | SYS09 | Architecture/cost/capacity design for $\le 20\text{ min}$ MTD, comparing measured RTO vs. target and quantifying gaps. |
+| **SYS11** | Final Business Impact and Risk Review | Medium | **João Ferreira** | **Gonçalo Tavares** | SYS09, SYS10 | Updated BIA and Sprint 2 $\rightarrow$ Sprint 3 risk register matrix linked to continuity objectives. |
+| **SYS12** | Load Balancing and Failover for the SPA | High | **Gonçalo Tavares** | **João Ferreira** | WEB08–10 | $\ge 2$ SPA instances behind health-checked reverse proxy; node-kill failover test with latency/availability logs. |
+| **SYS13** | Scheduled Cloud Database Backups | High | **Diogo Silva** | **Iva Silva** | BCK12–18, GDP04–05 | Automated cron/systemd backups (`<db-name>_yyyymmdd`), overwrite protection, encrypted cloud transfer logs. |
+| **SYS14** | Automated Tiered Backup Retention | Medium | **Iva Silva** | **Diogo Silva** | SYS13 | Retention script (7 daily, 4 weekly, 12 monthly) with `--dry-run`, boundary tests, and last-valid-copy safeguard. |
+| **SYS15** | Backup Logging and Administrator Alerts | Medium | **Iva Silva** | **Diogo Silva** | SYS13, SYS14, SYS18 | Syslog/journald entries + persistent SSH login MOTD/banner alert on failure, cleared only after validated success. |
+| **SYS16** | Key-Based Administrative SSH Access | High | **Diogo Silva** | **Iva Silva** | Sprint 2 SSH/MFA | Password/keyboard-interactive SSH disabled; individual SSH keys + non-password MFA; revocation & lockout tests. |
+| **SYS17** | Authenticated SMB or NFS Resource Sharing | Low | **Gonçalo Tavares** | **João Ferreira** | SYS16 | Authenticated SMB/NFS share with read/admin-write ACLs, Linux/Windows mount guides, and denied-write logs. |
+| **SYS18** | Automated Restore and Integrity Validation | High | **Diogo Silva** | **Iva Silva** | SYS13, GDP05 | Isolated temp-DB restore script running integrity queries + GDP05 erasure reconciliation + cleanup. |
 
 ### 7. GDPR & Data Protection (GDP)
 
 | User Story | Description | Priority | Assigned To | Tested & Reviewed By | Dependencies | Acceptance Evidence (ENG04) |
 | :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| **GDP04** | Privacy Policy Presentation | High | `[Membro]` | `[Revisor]` | AA08, AA09 | Public footer route + archived immutable policy versions (ID, timestamp, publisher) aligned with GDPR Arts. 13–14. |
-| **GDP05** | Exercise of Data Subjects' Rights | High | `[Membro]` | `[Revisor]` | AA08, AA09, SYS18 | SPA workflows for JSON/PDF personal-data export, rectification, and erasure with request receipts & handler review. |
+| **GDP04** | Privacy Policy Presentation | High | **All Team** | **All Team** | AA08, AA09 | Public footer route + archived immutable policy versions (ID, timestamp, publisher) aligned with GDPR Arts. 13–14. |
+| **GDP05** | Exercise of Data Subjects' Rights | High | **All Team** | **All Team** | AA08, AA09, SYS18 | SPA workflows for JSON/PDF personal-data export, rectification, and erasure with request receipts & handler review. |
 
 ---
 
